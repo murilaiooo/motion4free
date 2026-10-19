@@ -48,3 +48,21 @@ Correção de números, negações, múltiplos falantes, fala cortada, short-for
 - MVP: usuário obtém Reel editável sem intervenção técnica.
 - Beta: benchmark humano publicado e regressões resolvidas.
 - Público: privacy review, compatibilidade, licenças dos assets, budget e contenção de abuso validados.
+
+
+## Rubrica premium adicional — qualidade de motion designer experiente
+Executar teste cego com avaliadores de experiência documentada e múltiplas referências profissionais. Cada nota 0–5 precisa de exemplo de frame/trecho, não só opinião global.
+1. Conceito, direção de arte e hierarquia tipográfica.
+2. Timing/easing, física percebida e microanimação.
+3. Sincronização semântica e musicalidade do motion com voz/SFX.
+4. Variação de estrutura, layout e recursos sem perda de coesão.
+5. Qualidade de assets, composição 2D/3D e legibilidade.
+6. Narrativa, gancho não enganoso e impacto emocional.
+7. Fidelidade ao briefing e aos controles de prompt/preset/referência.
+8. Liberdade de clichês (“AI slop”), repetição e transições dispensáveis.
+9. Revisabilidade, consistência em rerender, preview/export.
+10. Preferência cega entre nossa edição, Editonny, baseline template-only e edição humana.
+
+**Teste de diferenciação:** mesma fala com três briefs de estilo opostos deve gerar diferenças **semânticas e visuais significativas**. Mesma identidade de marca em vídeos diferentes deve manter coerência sem repetir cenas mecanicamente. Reportar piores falhas separadamente da média e grau de concordância entre avaliadores.
+
+**Critério decisivo:** um produto que obtém MP4 válido e JSON perfeito, mas perde claramente em direção de arte e personalização, **não passa** a fase premium. [Auditoria](../reviews/2026-10-18-premium-creative-audit.md).
