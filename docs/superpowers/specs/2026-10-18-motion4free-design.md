@@ -1,6 +1,9 @@
 # Motion4Free — design spec (Superpowers)
 
-**Data:** 2026-10-18. **Status:** DRAFT PARA REVISÃO. Este documento registra uma proposta arquitetural; não representa implementação ou aprovação de início do código.
+**Data:** 2026-10-18. **Status:** DRAFT PARA REVISÃO — **requer incorporação do [adendo premium](2026-10-18-premium-personalization-amendment.md)** antes de aprovação. Este documento registra uma proposta arquitetural; não representa implementação ou aprovação de início do código.
+
+## Atualização indispensável em revisão
+Esta versão inicial é **insuficiente** para o requisito confirmado de direção criativa autoral e personalizada. Antes de writing-plans, integrar os contratos `CreativeBrief`, `PresetSpec`, `StyleDNA`, `Storyboard`, `SceneGraph` e `CreativeReview`, conforme [adendo](2026-10-18-premium-personalization-amendment.md) e [auditoria](../../reviews/2026-10-18-premium-creative-audit.md). O catálogo de templates sozinho **não atende** ao objetivo de motion designer profissional.
 
 ## Entendimento do produto
 Criar um editor de vídeo acessível por URL, sem instalação ou cobrança obrigatória, com foco em Reels de pessoas falando. Usuário envia mídia e descreve: “gancho nos primeiros 3 segundos, motion design alinhado à fala, transições modernas, cortes de respiração”. App analisa, edita, produz preview, permite revisão por conversa e exporta MP4 local. Qualidade comparável/superior ao Editonny é **meta testável**, não conquista comprovada.
@@ -15,8 +18,8 @@ Criar um editor de vídeo acessível por URL, sem instalação ou cobrança obri
 2. **Asset loader e storage:** manifestos/chunks (padrões GTA V web), Service Worker/OPFS/IndexedDB (Vice City WASM), carregamento progressivo, integridade, backup do projeto.
 3. **Media workers:** checar codecs, extrair voz/quadros, transcrever local, waveform, faces e proxies. Processamento isolado da thread UI.
 4. **Regras editoriais:** frases completas, cortes que protegem palavras/negações, candidatos a ganchos, reconhecimento de números/listas/CTAs.
-5. **Catálogo semântico:** templates HTML/SVG/CSS/GSAP/WebGL, duração/parametrização, restrição de rosto, assets, licenças e opção nenhuma cena.
-6. **Decision router:** regras -> embeddings/classificadores locais -> modelo WebLLM se suportado -> API grátis opcional autorizada; chamada somente para microdecisões.
+5. **Creative Direction e compositor:** catálogo + composição procedural declarativa (tipografia, vetores, keyframes, máscaras, imagens, shaders e 3D), parametrização semântica, direção visual individual por vídeo, assets licenciados e opção sem animação.
+6. **Diretor IA + roteador:** regras/embeddings locais -> modelo WebLLM se suportado -> API grátis opcional autorizada; a IA toma decisões globais de narrativa/arte, e microdecisões locais, sempre sujeitas a esquema, orçamento e validação.
 7. **Validador de planos:** IA produz apenas dados estruturados com IDs existentes; nunca comandos shell/JS/Python. Verificar fatos, tempos, cenas, parâmetros e escopo.
 8. **Composer/export:** mesma lógica temporal no preview e export, WebCodecs/Mediabunny candidato, WASM para faltas específicas. MP4 final e projeto não destrutivo.
 9. **Quality gate:** sample 8–15s, arquivo exportado, checks de sync, cortes, áudio, textos e revisão criativa humana.
@@ -29,6 +32,12 @@ EditPlan v1: profile, segmentos de origem, hookPhraseId, scene placements, capti
 DecisionEvidence: frase real, alternativas, motivo, modelo e versão do prompt.
 ValidationResult: erros, degradations e trechos que precisam da revisão do usuário.
 CapabilityReport: codecs/GPU/storage/browser suportados. Versões e fingerprints condicionam invalidação de cache.
+
+## Requisitos novos do produto (em revisão)
+- **Prompt de texto e presets editáveis:** ambos alimentam o mesmo briefing; restrições explícitas do usuário prevalecem.
+- **Estilo autoral:** gerar DNA visual por edição, storyboard e scenes gráficas distintas por conteúdo; não aceitar simples mudança de cor em template repetido.
+- **IA no processamento local em background:** direção + composição + crítica bounded por quota/compute; sem prometer servidor trabalhando enquanto navegador está fechado.
+- **Dois gates obrigatórios:** export browser com A/V e teste humano de três direções criativas distintas para a mesma gravação.
 
 ## Fluxo Reels de referência
 1. Import local, preflight e transcrição com timestamps.
