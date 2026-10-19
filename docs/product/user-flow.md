@@ -42,3 +42,11 @@ Render local MP4, salvar projeto, mostrar decisões e eventuais incertezas. Pedi
 }
 ```
 Não é schema de produção. Referências precisam existir e todos os tempos e parâmetros devem ser validados por execução determinística.
+
+
+## Revisão: modo preset + prompt e aprovação visual
+A jornada padrão deve aceitar **(A)** apenas texto livre, **(B)** apenas preset e opções guiadas ou **(C)** preset + texto + referências enviadas. Todos produzem `CreativeBrief`.
+
+Antes de selecionar cenas, o diretor IA decide `StyleDNA` e storyboard vinculados ao áudio/visuais reais. A cena é composta com primitives e assets (não meramente atribuída pelo nome do template). Usuário pode pedir “muda todo o visual para editorial, mas mantém gancho e cortes”, “não use números 3D” ou “refaça apenas os segundos 12–18”. UI mostra escolhas, alternativas, limitações e operações a preservar.
+
+Pipeline criativo: `import -> inspect -> brief -> styleDNA -> storyboard -> shot graph -> preview -> visual QA -> edit/review -> MP4`. Presets não restringem liberdade de prompt. No modo offline limitado, explicar diferença de capacidade criativa. Ver [UX proposta](../creative/presets-and-prompts.md).
