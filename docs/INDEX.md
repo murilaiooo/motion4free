@@ -43,3 +43,13 @@
 - **Gate**: condição que precisa passar para avançar de fase.
 - **Gate duplo:** export de vídeo no navegador **e** qualidade de direção artística personalizada; um MP4 válido não comprova qualidade premium.
 - Preferir módulos independentes; nenhuma dependência de API paga; um projeto em um único repositório.
+
+
+## Auditoria criativa premium (revisão de 18/10/2026)
+- [Auditoria completa — 21 pontos](reviews/2026-10-18-premium-creative-audit.md)
+- [Direção artística e IA criativa](creative/art-direction.md)
+- [Presets, prompts e referências](creative/presets-and-prompts.md)
+- [Composição e SceneGraph](creative/composition-engine.md)
+- [ADR-0004 — diretor criativo, ainda proposta](decisions/0004-creative-director-proposal.md)
+
+**Aviso:** a spec anterior foi complementada com adendo em revisão; os testes e o plano de implementação permanecem não autorizados/pendentes.
