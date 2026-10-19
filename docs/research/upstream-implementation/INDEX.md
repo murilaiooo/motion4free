@@ -45,3 +45,7 @@ Organização proposta, sujeita à spec Superpowers aprovada; evitar importar c�
 - Cada repo pode evoluir: pin por commit/tag no projeto e revalidar API no momento da implementação.
 
 [Auditoria F01–F21](../../reviews/2026-10-19-f01-f21-remediation-plan.md) · [Spec Superpowers](../../superpowers/specs/2026-10-18-motion4free-design.md) · [Adendo premium](../../superpowers/specs/2026-10-18-premium-personalization-amendment.md).
+
+## Atualizações verificadas depois do levantamento inicial
+- [Editonny 19/10/2026 — comparação de commit, código útil e plano de adaptação](../updates/2026-10-19-editonny-guide.md). A atualização mais recente examinada foi concentrada em **guia/React/Next.js e design system**, não no motor de render. Não importar animações de UI dependentes do relógio como se fossem animações de vídeo exportáveis.
+
