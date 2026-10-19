@@ -48,3 +48,22 @@ IDs de origem imutáveis; trechos por tempo e frame; esquema versionado. Eventos
 
 ## Qualidade e rastreabilidade
 Toda escolha semântica registra origem da frase, alternativas, modelo/versão do prompt, evidência e razão. Métricas reproduzíveis alimentam [benchmarks](ai/evaluation.md), evitando otimizações baseadas em impressão.
+
+
+## Revisão premium: direção artística além de templates (proposta)
+O pipeline original `regras -> escolha do scene_id` é útil para casos simples, mas **insuficiente como arquitetura criativa completa**. Novo pipeline:
+```text
+Prompt livre + preset editável + referências do usuário
+  -> CreativeBrief validado
+  -> AI Creative Director (conceito, StyleDNA, storyboard)
+  -> Creative Planner (shot list, evidências, assets e ritmo)
+  -> Creative Composer (SceneGraph seguro, primitives/recursos curados)
+  -> Render local (mesmo relógio temporal em preview e MP4)
+  -> Technical QA + Creative Review visual
+  -> revisão focal por prompt/controles de cena
+```
+IA continua sem executar JS/shell arbitrário. O catálogo anterior é um conjunto de **primitives + cenas de referência**, não um mecanismo de saída única. Renderizador aceita combinações/contextualização, com limites de segurança e verificações de performance/licença.
+
+Tecnologias de autoria a testar: Motion Canvas, PixiJS, Theatre.js, Motion/GSAP, Three.js/R3F, dotLottie Web, OpenTimelineIO (modelo de timeline). Nenhuma escolhida sem POC de render determinístico, seek, export e licenciamento.
+
+Ver [Creative Composer](creative/composition-engine.md), [auditoria](reviews/2026-10-18-premium-creative-audit.md) e [ADR-0004](decisions/0004-creative-director-proposal.md). A especificação final permanece aguardando aprovação.
