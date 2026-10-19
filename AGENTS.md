@@ -31,3 +31,7 @@ Uma mudança em motor de corte exige casos de fala, sync e áudio. Motion exige 
 
 ## Estrutura
 Todo código futuro deverá ficar dentro deste repositório, com nomes humanos para papéis/agentes se houver painel de agentes, e identificações de executor separadas. Não assumir stack já definida.
+
+## Manual de instruções dos repositórios upstream
+Antes de escolher, integrar ou portar código de terceiros, consultar `docs/research/upstream-implementation/INDEX.md` e `05-integration-matrix.md`. Cada upstream tem instruções específicas, limites do navegador, licenças e provas de integração. Não tratar repositório público como licença universal, não copiar código/asset sem permissão correspondente e não afirmar testes que não rodaram.
+
