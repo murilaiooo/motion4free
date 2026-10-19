@@ -16,6 +16,12 @@ Ler primeiro `README.md`, `docs/INDEX.md`, `docs/superpowers/specs/2026-10-18-mo
 - Cada recurso copiado requer verificação de licença, provenance e notices.
 - Não modificar configuração sensível de repo/segredos/visibilidade sem autorização expressa.
 
+## Vibe Coding Toolkit integrado
+- Toolkit upstream disponível como **submódulo Git versionado** em `tooling/vibe-coding-toolkit` (inicializar com `git submodule update --init --recursive`). Leia [docs/setup.md](docs/setup.md) para matriz de cobertura e limites.
+- `CLAUDE.md` apenas importa `AGENTS.md`; não duplicar nem sobrescrever estas regras com o template genérico do upstream.
+- Kit é fonte de **prompts, referências, qualidade e harness**; não é dependência do editor nem licença para instalar apps globais, migrar para Next.js/Drizzle ou ativar serviços pagos.
+- Avaliar capabilities por necessidade; preservar stack ainda não escolhida. Comandos `npm`/`pnpm`/`build` não existem nesta fase. Qualidade real de vídeo exige benchmarks e revisão humana, além de checks técnicos.
+
 ## Processos Superpowers
 Este repositório está em **fase de especificação para revisão**. Não executar trabalho de produto antes de aprovar spec, plano e modo de execução. Seguir `@Superpowers`: brainstorming → design/spec → review → writing-plans → implementação/TDD → verificação.
 Documentar decisões arquiteturais em ADR, atualizar docs com testes e exemplos reproduzíveis.
