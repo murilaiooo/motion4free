@@ -51,3 +51,14 @@ Arquitetura completa: alta complexidade, estimativa qualitativa 7–8/10; a inte
 
 ## Não fazer no início
 Não construir dez adapters antes do editor funcionar; não criar backend pago; não baixar todos modelos/efeitos no loading; não implementar múltiplos formatos de export, cloud rendering e multicâmera no mesmo MVP.
+
+
+## Adendo de roadmap: trilha de excelência criativa (pendente de revisão)
+- **Gate C0:** rever/aprovar spec atualizada e ADR-0004; criar matriz de referências de motion design com materiais autorizados e rubrica humana.
+- **Gate C1 (paralelo ao MP4 POC):** provar SceneGraph declarativo + preview/export fiel com uma cena verdadeiramente customizada.
+- **Gate C2:** mesma gravação sob **3 prompts/presets diferentes** produz storyboards, composições, movimentos e ritmos diferentes; avaliadores de motion design identificam coesão, significado e qualidade.
+- **Gate C3:** usuário altera prompt/preset/referência e ajusta uma cena sem prejudicar segmentos travados, voz/legendas ou escolhas anteriores.
+- **Gate C4:** benchmark cego versus humano experiente/Editonny; evitar transição repetitiva, “AI slop”, movimentos genéricos e stock/ícones irrelevantes.
+- **Gate C5:** custo zero medido para distribuição e fallback, sem esconder queda de qualidade onde hardware/quotas não permitem direção automática.
+
+**Mudança de prioridade:** premium motion **não** pode ficar apenas na antiga fase 5; sua viabilidade precisa ser testada junto com a prova técnica inicial. Leia [auditoria](reviews/2026-10-18-premium-creative-audit.md).
