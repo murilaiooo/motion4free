@@ -1,0 +1,32 @@
+name: Relatar falha
+description: Erro técnico ou regressão reprodutível, sem divulgar mídia privada
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: expected
+    attributes:
+      label: Esperado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: O que ocorreu
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Passos para reproduzir
+      description: Use mídia sintética ou anonimizada, nunca dados pessoais.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser / sistema / GPU
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs e evidências sem dados privados
