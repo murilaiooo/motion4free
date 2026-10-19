@@ -50,3 +50,20 @@
 - [MDN WebCodecs](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API)
 - [MDN OPFS](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API/Origin_private_file_system)
 - [MDN Service Worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API)
+
+
+## Pesquisa complementar de motion design autoral
+Ver [auditoria premium](../reviews/2026-10-18-premium-creative-audit.md).
+
+| Projeto | Fonte | Contribuição potencial | Avaliação pendente |
+|---|---|---|---|
+| Motion Canvas | https://github.com/motion-canvas/motion-canvas | Motion programático, keyframes, composição e storytelling | Se export frame-by-frame no browser funciona |
+| PixiJS | https://github.com/pixijs/pixijs | Render gráfico 2D e shaders acelerados | Time/seek determinístico e composição vídeo |
+| Theatre.js | https://github.com/theatre-js/theatre | Authoring/timeline de animações | Licença diferente por componente, manutenção |
+| Motion | https://github.com/motiondivision/motion | Motion JS, easing e orquestração | Compatibilidade com rendering offline por frame |
+| React Three Fiber | https://github.com/pmndrs/react-three-fiber | Cena 3D/objetos/câmera via Three.js | GPU, export, complexidade e bundle |
+| dotLottie Web | https://github.com/LottieFiles/dotlottie-web | Reproduzir animações vetoriais em WASM | Biblioteca de animações não é compositor completo |
+| OpenTimelineIO | https://github.com/AcademySoftwareFoundation/OpenTimelineIO | Estrutura de timeline/intercâmbio | Não é executor de vídeo |
+| Glaxnimate | https://github.com/mbasaglia/glaxnimate | Estudo de editor vetorial e animação | GPL e integração |
+ 
+**Evitar assumir:** licença de repositório cobre todos os assets; studio de editor é tão permissivo quanto core; biblioteca JS faz render MP4 automaticamente; estrelas atestam qualidade. Testar antes de selecionar stack.
