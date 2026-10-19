@@ -83,6 +83,10 @@ O preço para o usuário e a operação sem custo são **restrições de projeto
 
 Originais devem permanecer no dispositivo do usuário por padrão. APIs externas só poderão receber dados com informação clara e consentimento apropriado. A mídia original nunca deve ser alterada.
 
+## Plano de resolução dos 21 achados
+
+A [matriz de remediação F01–F21](docs/reviews/2026-10-19-f01-f21-remediation-plan.md) define **como fechar cada ponto com evidência**, distinguindo documentação de testes reais. O objetivo é 100% de cobertura auditável, não alegar qualidade humana perfeita sem provas.
+
 ## Toolkit de desenvolvimento com agentes
 O [Vibe Coding Toolkit](https://github.com/soumatheusgomes/vibe-coding-toolkit) foi adicionado como **submódulo Git** em `tooling/vibe-coding-toolkit`, fixado na revisão `790a895`. Ele fornece instruções para Claude/Codex, ferramentas, prompts e verificações, **não** o motor de edição.
 
