@@ -53,3 +53,13 @@ Valores acima são **exemplo de schema**, não metadados copiados ou medidos do 
 - [GSAP](https://github.com/greensock/GSAP), [Three.js](https://github.com/mrdoob/three.js), [Mediabunny](https://github.com/Vanilagy/mediabunny).
 
 **Licença:** Motion4Free ainda não adotou licença própria. Não redistribuir em massa o pacote de terceiros do Editonny antes de auditoria dos recursos e termos.
+
+
+## Revisão essencial: biblioteca é matéria-prima, não limite de composição
+A hipótese de “selecionar entre 145 cenas” sozinha contraria a exigência premium. Nossa arquitetura candidata usa biblioteca com cenas aprovadas **mais composição procedural** guiada por `StyleDNA`, `Storyboard` e `SceneGraph`, para criar identidade por projeto e variação real em direção visual, estrutura, tipografia, materiais, B-roll e movimentos.
+
+Cada cena deve ter elementos parametrizáveis combináveis (layout, keyframes/easing, vetores, shapes, gráficos, mídia licenciada, texto e máscaras), não apenas slots de texto/cor. A IA diretora pode reorganizar primitives e sugerir movimentos contextualizados, mas não executar código arbitrário.
+
+Avaliar como bases: [Motion Canvas](https://github.com/motion-canvas/motion-canvas), [PixiJS](https://github.com/pixijs/pixijs), [Theatre.js](https://github.com/theatre-js/theatre), [Motion](https://github.com/motiondivision/motion), [React Three Fiber](https://github.com/pmndrs/react-three-fiber), [dotLottie](https://github.com/LottieFiles/dotlottie-web). Nem toda ferramenta inclui export vídeo nativo de navegador: testar paridade por frame, seek, GPU, licença e custo.
+
+Ver [Creative Composer](../creative/composition-engine.md) e [auditoria](../reviews/2026-10-18-premium-creative-audit.md). A curadoria de assets por licença continua mandatória.
