@@ -1,0 +1,31 @@
+name: "Pesquisa / prova técnica"
+description: "Nova hipótese, benchmark, integração ou experimento"
+title: "[Research] "
+labels: ["research"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Pergunta ou hipótese
+      description: Formulação testável; inclua por que isso importa para custo zero ou qualidade
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Fontes / repositórios
+      description: URLs e versões
+  - type: textarea
+    id: method
+    attributes:
+      label: Método de avaliação
+      description: Dados, casos, comparação, medição e execução reproduzível
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aprovação
+      description: O que precisamos observar para aceitar ou rejeitar?
+    validations:
+      required: true
