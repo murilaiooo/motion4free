@@ -92,3 +92,12 @@ Leia [AGENTS.md](AGENTS.md) se for trabalhar com agentes, [CONTRIBUTING.md](CONT
 ---
 
 *Motion4Free: a criatividade na direção, a precisão no motor, o processamento no navegador.*
+
+## Revisão de qualidade premium — em avaliação
+A [auditoria arquitetural e criativa](docs/reviews/2026-10-18-premium-creative-audit.md) encontrou lacunas críticas: somente escolher templates não basta para gerar edições realmente personalizadas. A proposta atual acrescenta **AI Creative Director**, **Creative Composer/SceneGraph**, **presets editáveis + prompt livre** e uma prova de originalidade/qualidade **antes** de considerar o produto profissional.
+- [Direção de arte assistida por IA](docs/creative/art-direction.md)
+- [Presets, prompts e referências](docs/creative/presets-and-prompts.md)
+- [Compositor de cenas e tecnologias](docs/creative/composition-engine.md)
+- [ADR-0004 — proposta não aprovada](docs/decisions/0004-creative-director-proposal.md)
+
+**Status:** mudança arquitetural em revisão Superpowers; não há implementação e não há promessa de qualidade superior sem benchmark.
