@@ -1,0 +1,35 @@
+name: "Bug report"
+description: "Registrar um defeito reproduzível (quando o produto existir)"
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Não inclua vídeos privados, tokens ou dados pessoais. Durante a fase de planejamento, use preferencialmente issues de pesquisa."
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema e resultado observado
+      description: O que aconteceu e o que deveria acontecer?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Como reproduzir
+      description: Passos, configurações e arquivos de teste públicos/autorizados
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Navegador, SO e versão
+  - type: textarea
+    id: logs
+    attributes:
+      label: Evidências não sensíveis
+      description: Logs/prints sanitizados, sem mídia privada ou credenciais
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Mitigação temporária
