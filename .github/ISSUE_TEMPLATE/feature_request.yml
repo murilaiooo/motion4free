@@ -1,0 +1,31 @@
+name: "Proposta de funcionalidade"
+description: "Solicitar capacidade nova, documentar dependências e riscos"
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Resultado desejado
+      description: O que um usuário precisa fazer e por quê?
+    validations:
+      required: true
+  - type: textarea
+    id: approaches
+    attributes:
+      label: Abordagens possíveis
+      description: Inclua opção sem IA e alternativas quando couber
+  - type: textarea
+    id: risks
+    attributes:
+      label: Riscos e custo zero
+      description: Hardware, hosting, privacidade, licenças, segurança, qualidade
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aceitação
+      description: Testes mensuráveis e benchmark
+    validations:
+      required: true
