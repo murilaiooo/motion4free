@@ -121,3 +121,8 @@ A [auditoria arquitetural e criativa](docs/reviews/2026-10-18-premium-creative-a
 
 Antes de implementar, consulte o [Manual técnico de integração upstream](docs/research/upstream-implementation/INDEX.md). Ele organiza instruções de **23 projetos centrais** por subsistema, indica as entradas reais da documentação/código, as adaptações ao Motion4Free e os gates de teste e licença. Veja também a [matriz de cobertura](docs/research/upstream-implementation/05-integration-matrix.md). As bibliotecas listadas **não estão instaladas no editor**, que ainda não foi implementado.
 
+
+## Pesquisa de atualizações do Editonny
+
+A [auditoria de 19/10/2026](docs/research/updates/2026-10-19-editonny-guide.md) documenta o novo design system, builder localizado de pedidos, presets/controles, padrões de persistência e testes de acessibilidade. **A revisão não modifica o motor do Motion4Free nem justifica adotar Next.js por padrão**. Essas técnicas complementam os [manuais de upstream](docs/research/upstream-implementation/INDEX.md).
+
