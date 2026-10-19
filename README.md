@@ -116,3 +116,8 @@ A [auditoria arquitetural e criativa](docs/reviews/2026-10-18-premium-creative-a
 - [ADR-0004 — proposta não aprovada](docs/decisions/0004-creative-director-proposal.md)
 
 **Status:** mudança arquitetural em revisão Superpowers; não há implementação e não há promessa de qualidade superior sem benchmark.
+
+## Guias técnicos extraídos dos repositórios
+
+Antes de implementar, consulte o [Manual técnico de integração upstream](docs/research/upstream-implementation/INDEX.md). Ele organiza instruções de **23 projetos centrais** por subsistema, indica as entradas reais da documentação/código, as adaptações ao Motion4Free e os gates de teste e licença. Veja também a [matriz de cobertura](docs/research/upstream-implementation/05-integration-matrix.md). As bibliotecas listadas **não estão instaladas no editor**, que ainda não foi implementado.
+
