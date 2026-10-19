@@ -6,7 +6,7 @@
 Editores profissionais exigem experiência, horas de trabalho ou assinaturas. IAs generativas podem operar ferramentas, mas custos, quotas, latência e imprevisibilidade impedem um serviço público ilimitado se toda operação depender delas.
 
 ## Tese
-**A qualidade deve morar no produto, e não no tamanho do modelo.** Construir uma biblioteca de composições profissionais, um motor determinístico de edição e uma camada editorial especializada. Usar IA somente para compreender significado, comparar candidatos e selecionar decisões que não são redutíveis a regras.
+**A qualidade deve morar no produto, e não no tamanho do modelo.** Construir uma biblioteca autoral de assets e primitives, um compositor procedural seguro, um motor determinístico e uma **IA diretora de arte** que cria um conceito e storyboard para cada vídeo. A IA também resolve decisões semânticas difíceis, mas não deve ser limitada à escolha de templates.
 
 ## Princípios não negociáveis
 1. **Custo monetário zero como objetivo de operação** para o usuário e mantenedor; não afirmar sustentabilidade ilimitada antes de medir banda, cotas e suporte.
@@ -34,3 +34,9 @@ De um vídeo real de pessoa falando + pedido em linguagem natural, entregar uma 
 - Servidor próprio de GPU para todos os usuários.
 - Promessa de atender qualquer hardware com o mesmo desempenho.
 - Criação de uma rede de contas/chaves para contornar termos de provedores.
+
+
+## Exigência premium (revisão proposta)
+O criador quer edição **comparável à de motion designer experiente**, com visual próprio e consistente, sem clichês ou repetição de gráficos entre vídeos. Prompt livre e presets editáveis, enriquecidos por referências opcionais, devem alimentar o mesmo motor de direção artística. Personalização significa decisões individuais em narrativa, tipografia, composição, movimento, asset, ritmo e efeitos — não só trocar cores ou IDs de cena. A IA trabalha durante a edição e revisão, limitada por regras de custo, segurança e consentimento.
+
+É meta de qualidade **a ser verificada por motion designers em comparação cega**; não promessa de criatividade humana universal ou geração gratuita ilimitada. [Direção de arte proposta](creative/art-direction.md) · [Auditoria](reviews/2026-10-18-premium-creative-audit.md).
