@@ -62,3 +62,14 @@
 - [ADR-0004 — diretor criativo, ainda proposta](decisions/0004-creative-director-proposal.md)
 
 **Aviso:** a spec anterior foi complementada com adendo em revisão; os testes e o plano de implementação permanecem não autorizados/pendentes.
+
+## Manuais técnicos dos repositórios upstream (pesquisa de 19/10/2026)
+- [Manual de integração e mapa de fontes](research/upstream-implementation/INDEX.md)
+- [Editor, áudio e exportação](research/upstream-implementation/01-media-and-editor.md)
+- [Motion design e composição](research/upstream-implementation/02-motion-and-composition.md)
+- [IA gratuita e avaliação](research/upstream-implementation/03-ai-and-evaluation.md)
+- [Cache, distribuição, toolkit e licenças](research/upstream-implementation/04-distribution-and-tooling.md)
+- [Matriz de 23 repositórios e gates](research/upstream-implementation/05-integration-matrix.md)
+
+**Status:** instruções extraídas/adaptadas da fonte; bibliotecas não instaladas no runtime nem comprovadas por POC. Os manuais orientam os agentes antes de cada integração aprovada.
+
