@@ -56,3 +56,11 @@ Inventar preço, resultado, prova, marca, tratamento, depoimento, estatística; 
 
 ## Critério de sucesso
 Aprovação técnica de JSON é necessária, mas não suficiente: benchmarks cegos e comparação qualitativa de motion/gancho são gate separado.
+
+
+## Adendo: IA como diretora de arte e não só seletora
+A hierarquia de microdecisões permanece útil para economizar tokens e proteger fatos. Porém o requisito premium exige uma **passagem criativa global**: gerar `CreativeBrief -> StyleDNA -> Storyboard` com coerência entre cenas, ritmo, fontes, materiais, escolha de B-roll e transições. Só depois a IA toma decisões locais com curadoria de alternativas e constrói um **SceneGraph declarativo** novo, usando primitives e assets permitidos.
+
+Não confundir criação de composição com execução de código gerado pela IA. Um motor de composição interpreta apenas nós e parâmetros validados. Uma revisão posterior pode usar informações visuais reais do preview (quando computacionalmente viável), mas autocrítica de LLM não substitui avaliação humana experiente.
+
+Otimização deve pontuar **diversidade sem incoerência**, fidelidade a texto/preset/referência, harmonia de tipografia, originalidade relativa e movimento contextual, não apenas sucesso de JSON. Ver [direção de arte](../creative/art-direction.md) e [auditoria](../reviews/2026-10-18-premium-creative-audit.md).
