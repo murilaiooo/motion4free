@@ -1,0 +1,34 @@
+# Secrets
+.env
+.env.*
+!.env.example
+# Dependencies and builds
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+.tmp/
+.venv/
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+Thumbs.db
+# User media, generated video/audio, model weights
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+*.wav
+*.mp3
+*.flac
+*.onnx
+*.gguf
+*.safetensors
+local-projects/
+user-media/
+renders/
+exports/
+models-cache/
