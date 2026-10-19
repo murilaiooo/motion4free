@@ -32,3 +32,18 @@
 
 ## Política de não prometer o que não foi medido
 Nunca afirmar: “100% offline em qualquer browser”, “IA grátis ilimitada”, “igual ao Editonny”, “vídeo viral garantido”, “GTA V prova a performance de nosso vídeo”, “nenhum custo em qualquer escala”. Mensagens devem apresentar limitações conhecidas e verificadas.
+
+
+## Riscos premium adicionais
+| ID | Risco | Severidade | Mitigação | Gate |
+|---|---|---|---|---|
+| R19 | Repetição estética de templates e ícones entre usuários | Crítica | Creative Director + SceneGraph + métricas de diversidade significativa | 3 briefs, 1 gravação, revisão cega |
+| R20 | “AI slop” e animações genéricas incoerentes | Crítica | Direção visual global e revisão artística humana | benchmark especializado |
+| R21 | IA grátis incapaz de planejar cenas profissionais | Alta | divisão em brief global e passos curtos, referências, heurísticas e seleção de modelos por benchmark | comparação por gênero e hardware |
+| R22 | Criatividade 100% dinâmica gera render não determinístico | Alta | gramática declarativa, asset allowlist, seek/teste por frame | export vs preview idênticos |
+| R23 | Preset/prompt conflitantes ou usuário perde escolha manual | Alta | regra de prioridade, scene locks, undo e diffs visuais | testes UX e regressão |
+| R24 | Envio de referência visual sem licença/consentimento | Alta | import local, direitos explícitos, opt-in por API, proveniência | privacy/license gate |
+| R25 | Tempo, banda ou cota para revisão multimodal excessivos | Alta | review seletivo e budget, medições por dispositivo/projeto | carga/custo e fallback |
+| R26 | Técnica de motion open source não permite export/uso legal | Alta | prova técnica + auditoria licença **por componente** | POC e checklist |
+ 
+A tecnologia e o prompt não substituem curadoria e avaliação: **qualidade de referência humana permanece hipótese** até benchmark. [Auditoria](reviews/2026-10-18-premium-creative-audit.md).
