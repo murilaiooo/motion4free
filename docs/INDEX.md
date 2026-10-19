@@ -51,6 +51,9 @@
 - Preferir módulos independentes; nenhuma dependência de API paga; um projeto em um único repositório.
 
 
+## Plano de fechamento dos 21 achados
+- [Matriz de remediação, provas e gates F01–F21](reviews/2026-10-19-f01-f21-remediation-plan.md)
+
 ## Auditoria criativa premium (revisão de 18/10/2026)
 - [Auditoria completa — 21 pontos](reviews/2026-10-18-premium-creative-audit.md)
 - [Direção artística e IA criativa](creative/art-direction.md)
