@@ -18,6 +18,11 @@
 - [Pipeline audiovisual](engine/media-pipeline.md)
 - [Motion design e assets](motion/catalog-and-assets.md)
 
+## Histórico e organização
+- [Contexto consolidado da conversa](history/conversation-decisions.md)
+- [Configurações GitHub e pendências administrativas](github-setup.md)
+- [Issues e trabalho priorizado](https://github.com/murilaiooo/motion4free/issues)
+
 ## Governança e pesquisa
 - [Repositórios de referência e licenças](research/repositories.md)
 - [Riscos e limitações](risks.md)
