@@ -1,8 +1,9 @@
 # Editorial Decision Engine: precisão com modelos gratuitos
 
-**Hipótese:** bons resultados emergem de restrições, bons candidatos e referências, não de pedir a uma IA genérica que edite tudo.
+**Hipótese:** bons resultados emergem de restrições, bons candidatos, referências e direção global, não de pedir a uma IA genérica que edite tudo. **Atualização:** este módulo não deve ser o diretor artístico exclusivo; ver [Creative Director](creative-director.md) e [auditoria premium](../reviews/2026-10-18-premium-creative-audit.md).
 
 ## 1. Hierarquia de decisão
+**A direção artística global deve ocorrer antes das microdecisões:** `CreativeBrief -> StyleDNA -> Storyboard`. As regras e shortlists a seguir dão suporte a cenas existentes, mas novas composições seguras e declarativas podem combinar primitives e assets para atingir o requisito de personalização.
 - **Determinismo primeiro:** formato, transcrição temporal, silêncio, limites de áudio, alinhamento, zoneamento de texto e aplicação de templates são código.
 - **Classificador/embeddings locais:** reconhecer eventos (lista, número, comparação, preço, chamada para ação, alerta) e buscar cenas.
 - **Modelo de linguagem:** comparar 3–5 opções de gancho, narrativa, cenas e ritmo; responder em JSON validado.
