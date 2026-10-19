@@ -72,3 +72,17 @@
 - Sem cota/hardware adequado, informar degradação criativa; não rotular fallback determinístico como “equivalente a motion designer experiente”.
 
 Os P0 técnicos acima continuam como pré-requisitos. Ver [auditoria](reviews/2026-10-18-premium-creative-audit.md) e [UX](creative/presets-and-prompts.md).
+
+## Propostas de aceitação derivadas do Editonny (revisão de 19/10/2026)
+
+**Requisitos complementares em revisão**, sem alterar os gates P0/P1 existentes nem declarar funções entregues. Fontes, riscos e limites no [estudo fixado do upstream](research/updates/2026-10-19-editonny-guide.md).
+
+- **Builder**: prompt, preset e controle por trecho produzem um único briefing validado, editável, versionado e com diff/undo; instruções explícitas, inclusive “sem efeitos”, não podem ser sobrescritas implicitamente.
+- **Idioma**: rótulos traduzidos não mudam chaves estruturais, conteúdo da gravação, referências ou proibições do usuário.
+- **Estado**: quando storage falhar, mostrar claramente que as alterações estão apenas na sessão; projetos/mídia permanecem locais por padrão. Links de presets públicos não carregam dados privados.
+- **Timeline**: waveform medida da gravação e captions com timestamps reais, sem transformar animações demonstrativas por intervalos em engine de vídeo.
+- **Design da UI**: identidade original e contratos de tokens, variantes e showcase após definição da stack; teste de teclado, contraste, foco e reduced-motion.
+- **Qualidade**: QA de interface e QA audiovisual separados; teste do MP4 real, paridade de frames, fala e legibilidade final, além de avaliação cega criativa.
+- **Compatibilidade/custo/licença**: não exigir Next.js, backend, CLI ou API paga por causa do upstream. Componentes, assets, fontes, modelos e codecs passam por avaliação individual de licença, funcionalidade e desempenho.
+
+Critérios de teste detalhados em [quality.md](quality.md) e prioridade de prova em [roadmap.md](roadmap.md).

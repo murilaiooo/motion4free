@@ -49,3 +49,22 @@ Todos têm **variáveis e limites**, não presets monocromáticos replicados. Us
 
 ## Critério de UX
 Uma pessoa leiga consegue obter boa edição só com preset. Pessoa avançada consegue instruir cenas individuais por texto e controles finos. Prompt e preset produzem projeto editável com mesmo nível de precisão.
+
+## Builder localizado e schema seguro (aprendizado do Editonny de 19/10)
+
+**Proposta em revisão, não implementada.** O novo builder do [Editonny](https://github.com/soumatheusgomes/editonny/blob/05d3dedcddcf6717001b0a3ef91411ec08f614d4/web/src/features/request/draft.ts) demonstra três práticas úteis: IDs de opções estáveis, `parseDraft` defensivo e `applyExample` que modifica apenas campos aplicáveis. Para o Motion4Free, estas são regras de contrato, não código pronto para copiar.
+
+1. **Entrada**: prompt livre, preset, marca, referências autorizadas, escolhas da UI e mudanças locais entram pelo mesmo `CreativeBrief`. Identidade de cena e opções são chaves estáveis, não textos traduzidos.
+2. **Validação**: cada campo externo ou recuperado do storage deve ter tipo, enum/faixa, limite de comprimento e IDs reconhecidos. Descartar campo inválido sem eliminar escolhas válidas. Versionar schema e definir migrações explícitas antes de persistir projetos.
+3. **Precedência**: segurança, integridade factual, licença, privacidade e trechos travados são constraints. Depois prevalece escolha explícita do usuário, regras de marca aprovadas, instruções contextuais, preset e defaults. Informar conflito em vez de escolher silenciosamente.
+4. **Proibição explícita é persistente**: se a pessoa pedir *sem efeitos*, selecionar uma cena não liga efeitos automaticamente. O `withScene` do Editonny altera `effects: none` para `subtle`; esse comportamento é inadequado para nosso contrato.
+5. **Aplicar preset é um patch com diff**: alterar só propriedades declaradas pelo preset e mostrar quais escolhas existentes seriam sobrescritas. Referências/locks/dados originais ficam intactos; revogar alterações deve ser possível.
+6. **Localização**: UI e descrições inicialmente em pt-BR/en-US/es, enquanto conteúdo gravado, texto do usuário, nome de marca e transcrição preservam o idioma original. Gerar a mesma estrutura semântica e IDs independentemente do idioma da interface.
+7. **Plano executável**: a string amigável de instruções nunca é usada como comando shell ou JS. O motor consome operações tipadas e validadas, com whitelist e possibilidade de rollback. `$editonny`/`/editonny` são entradas específicas do upstream, não dependências do navegador.
+8. **Compartilhamento**: parâmetros de URL só descrevem opções públicas de catálogo. Nunca serializar prompt particular, transcrição, paths de mídia, tokens ou identidade privada na URL.
+
+Campos adicionais candidatos ao schema existente: `schemaVersion`, `uiLocale`, `presetVersion`, `explicitChoices`, `perSceneOverrides`, `brandProfileId` e `saveStatus`. A tipagem final será acordada com `CreativeBrief`/SceneGraph na revisão da spec; **não** criar um segundo contrato incompatível.
+
+**Casos de aceite a desenvolver**: campo inválido preserva os demais; versão de preset desconhecida; preset + prompt contraditórios; `none` + cena; texto em pt-BR com UI em inglês; alteração de 12–18s preserva o restante; referência excluída; trecho travado; rollback; modo sem LLM/API; storage bloqueado; link de preset sem dados pessoais. Testes de teclado e leitor de tela são obrigatórios no builder.
+
+Ver [auditoria do commit](../research/updates/2026-10-19-editonny-guide.md) para módulos, versões e limites concretos.

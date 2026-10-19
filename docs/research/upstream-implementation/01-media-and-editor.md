@@ -114,3 +114,16 @@ No CLI original, momentos ativos/inativos são rotulados; expressão `audio`, `m
 5. Somente então adicionar diretor de arte automático.
 
 [Índice](INDEX.md) · [Motion](02-motion-and-composition.md) · [Matriz](05-integration-matrix.md).
+
+## Atualização 19/10/2026: novo guia web e design system do Editonny
+
+A instrução original da seção 1 continua válida para **engine editorial**. O commit [`05d3ded`](https://github.com/soumatheusgomes/editonny/commit/05d3dedcddcf6717001b0a3ef91411ec08f614d4) **não atualizou a engine Python/HyperFrames nem o conjunto de 145 cenas**; concentra-se em `web/`, `design-system/`, i18n e testes.
+
+Para a implementação autorizada, consultar a [auditoria detalhada do novo guia](../updates/2026-10-19-editonny-guide.md) antes de desenvolver:
+- Interface de briefing: `web/src/features/request/{draft,options,prompt}.ts` e `create/BriefForm.tsx`, **adaptar para schema e operações tipadas** e preservar a escolha “nenhum efeito”.
+- Design system: `DESIGN.md`, `design-system/{tokens,components,showcase}/` e testes de contrato, **criar identidade do Motion4Free**, não copiar marca.
+- Catálogo/persistência: `library/useLibraryState.ts` e `preferences/store.ts`, **compartilhar só presets públicos** e avisar sobre fallback de memória volátil.
+- Timeline e movimento: `components/editor/{Timeline,Waveform,KineticCaption}.tsx`; os exemplos não trazem waveform extraída de áudio nem alinhamento de fala. Não conectar diretamente à exportação.
+- QA: `web/e2e/{quality,locale}.spec.ts`, `tests/design-system.test.mjs` e `.github/workflows/verify.yml`; ajustar à futura stack e adicionar QA audiovisual real.
+
+**Status:** fonte lida e recomendações distribuídas entre [UX de presets](../../creative/presets-and-prompts.md), [design](../../design.md), [qualidade](../../quality.md) e [requisitos](../../requirements.md). Nenhum adapter ou componente foi incorporado.

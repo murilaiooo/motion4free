@@ -89,6 +89,36 @@ A atualização de 19 de outubro moderniza **o guia público e seu design system
 - Comparar UI/editor OpenReel com componentes Editonny: incorporar o que falta, não manter duas timelines concorrentes.
 - Adotar melhores práticas de testes e documentação sem instalar Next no MVP browser-first sem prova de necessidade.
 
+
+## Decisões complementares de integração (conferência do código-fonte)
+
+Este quadro complementa as seções P0/P1 acima, sem criar outro catálogo ou uma segunda timeline. Fonte fixada: `05d3dedcddcf6717001b0a3ef91411ec08f614d4`. **Estado: critérios propostos; nenhuma adaptação foi executada no Motion4Free.**
+
+| Comportamento confirmado no código upstream | Decisão específica do Motion4Free | Prova exigida |
+|---|---|---|
+| `request/draft.ts` valida cada campo e limita strings a 4.000 caracteres; `options.ts` usa IDs estáveis e quatro proporções | Manter IDs independentes do idioma e um schema versionado, com validação por campo e por referência efetivamente registrada. O limite de tamanho será escolhido por teste, não copiado cegamente | Corrupção/versão desconhecida/ID inexistente não causam execução nem perda de escolhas válidas |
+| `withScene()` troca `effects: none` por `subtle` automaticamente | **Não reproduzir**: uma proibição explícita de efeitos prevalece sobre seleção de cena; explicar conflito e oferecer opção, jamais reativar efeito silenciosamente | Selecionar cena após “sem efeitos” preserva a proibição e solicita decisão explícita antes de compor |
+| `prompt.ts` gera instrução textual localizada com `$editonny` ou `/editonny` | Não expor sintaxe de Codex/Claude como dependência do produto web. Compilar o briefing para `CreativeBrief`/`EditPlan` estruturados; texto de UI não é operação executável | Mesmo briefing em pt-BR/en-US/es gera os mesmos IDs e constraints sem mudar a transcrição fornecida |
+| `BriefForm.tsx` usa radiogroups navegáveis por teclado e seleção acessível | Adotar controles acessíveis, presets editáveis e overrides, não a aparência ou o formulário inteiro do upstream | Navegar, editar e revisar o briefing sem mouse, com leitura compreensível por tecnologias assistivas |
+| `preferences/store.ts` usa fallback em memória se `localStorage` falhar e sincroniza abas | Fallback temporário deve indicar **não salvo**; preferências leves em storage simples, projetos/mídia em OPFS/IndexedDB com recuperação e export do projeto | Storage bloqueado/corrompido/quota cheia, conflito entre abas e reabertura têm tratamento explícito |
+| `library/useLibraryState.ts` usa URL para `q`, categoria e IDs públicos; Back fecha detalhe | Presets e cenas públicas podem usar links compartilháveis; nunca incluir prompts privados, transcrições, paths locais, hashes sensíveis, tokens ou dados de mídia em query string | URLs compartilhadas e histórico do browser permanecem sem informações privadas |
+| `Waveform.tsx` sintetiza barras com seno; `Timeline.tsx` usa essas barras para a demo | Calcular waveform real do áudio decodificado, alinhar cortes/playhead às amostras e timebase do projeto; estudar UX upstream, não adotar esses dados como medição | Waveform acompanha fonte real e permanece alinhada após trim, seek, zoom e export |
+| `KineticCaption.tsx` avança por `wps`; `KineticText` e `Counter` usam relógio/intervalo/RAF de UI | Renderizar motion de vídeo por `renderAt(frame/time)` e timestamps reais; UI pode ter animações decorativas separadas | Frame solicitado fora de ordem é determinístico; legenda destaca palavra correta com seek/export |
+| `web/e2e/quality.spec.ts` audita duas cores, 15 rotas e acessibilidade, mas exclui legendas ilustrativas da análise axe | Adaptar suíte web quando a stack existir **e acrescentar** auditoria de legenda final, contraste sobre footage, safe areas e legibilidade quadro a quadro | QA de UI e QA do vídeo são independentes; não usar exclusão de demo para encobrir problemas da saída final |
+| `design-system/README.md`, `DESIGN.md` e `tests/design-system.test.mjs` vinculam tokens, API de componentes e showcase | Um único design system **do aplicativo** com lint/testes; `StyleDNA` **dos vídeos** continua independente e variável por briefing | Alterar um token quebra teste de contrato se CSS/showcase não acompanharem |
+| `verify.yml` executa check/build e browser Playwright; upstream CI foi bem-sucedido | Planejar pipeline equivalente **após selecionar stack**, mais provas de áudio, mídia, memória, licenças e render; não copiar comandos Next.js prematuramente | CI local do Motion4Free apresenta artefatos próprios; CI verde do Editonny não é evidência de vídeo aqui |
+
+A localização atual cobre en-US, pt-BR e es. São línguas iniciais de interface a considerar, **não** limite de idiomas aceitos na fala ou na transcrição. As animações da UI respeitam `prefers-reduced-motion`; isso não pode modificar silenciosamente a exportação solicitada.
+
+### Destinos canônicos, sem duplicação
+- Modelo e precedência dos briefs: [presets e prompts](../../creative/presets-and-prompts.md).
+- Design system do aplicativo: [guia de design](../../design.md).
+- Testes/CI e QA separados: [contrato de qualidade](../../quality.md) e [requisitos](../../requirements.md).
+- Ordem de prova/implantação: [roadmap](../../roadmap.md).
+- Manual do Editonny original e da atualização: [editor e áudio](../upstream-implementation/01-media-and-editor.md).
+- Matriz geral dos 23 projetos: [integração upstream](../upstream-implementation/05-integration-matrix.md).
+
+
 **Limite desta auditoria:** análise estática do commit e módulos citados, sem executar Next.js, navegador ou render de vídeo. O [CI upstream passou](https://github.com/soumatheusgomes/editonny/actions/runs/39210390804), mas nossos testes de integração ainda não foram executados.
 
 [Índice de integrações](../upstream-implementation/INDEX.md) · [Roadmap](../../roadmap.md) · [Auditoria premium](../../reviews/2026-10-18-premium-creative-audit.md).

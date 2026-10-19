@@ -81,3 +81,17 @@ Interromper dependência específica e propor alternativa quando:
 **Não estão concluídos:** instalação de engines no Motion4Free, escolhas definitivas de licenças e qualquer avaliação comparativa com motion designers profissionais. O que está concluído é o **levantamento operacional inicial de instruções para os 23 upstreams centrais**.
 
 [Índice](INDEX.md) · [Checklist de auditoria F01–F21](../../reviews/2026-10-19-f01-f21-remediation-plan.md).
+
+## Delta Editonny 19/10/2026, sem criar um 24º upstream
+
+A linha **01 Editonny** inclui agora duas fontes diferentes no mesmo projeto: (a) engine editorial e catálogo já inventariados; (b) **nova UI localizada, builder tipado, design system, biblioteca e testes do guia** no commit [`05d3ded`](https://github.com/soumatheusgomes/editonny/commit/05d3dedcddcf6717001b0a3ef91411ec08f614d4). Não contar componentes React como efeitos exportáveis.
+
+| Subconjunto da revisão | Destino canônico | Estado |
+|---|---|---|
+| `request/draft.ts`, `options.ts`, `prompt.ts`, `BriefForm.tsx` | [presets + brief validado](../../creative/presets-and-prompts.md) | Design proposto; port pendente |
+| `DESIGN.md` e `design-system/` | [design system da UI](../../design.md) | Padrões estudados; sem stack aprovada |
+| `preferences/store.ts`, `library/useLibraryState.ts` | [auditoria e salvamento/URL](../updates/2026-10-19-editonny-guide.md) | Estratégia identificada; teste pendente |
+| `editor/Timeline.tsx`, `Waveform.tsx`, `KineticCaption.tsx` | [guia audiovisual](01-media-and-editor.md) | UX de referência; **não** engine de render |
+| `quality.spec.ts`, `locale.spec.ts`, `verify.yml` | [matriz de testes](../../quality.md) | Critérios documentados; CI de produto pendente |
+
+**Não foram instaladas novas dependências.** OpenReel/Mediabunny continuam candidatos aos mecanismos de timeline/codec; o guia Editonny não substitui provas de seek, render, áudio ou qualidade artística.

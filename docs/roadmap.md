@@ -9,6 +9,17 @@
 - [ ] Definir hardware-alvo, codecs prioritários e escopo do MVP.
 - [ ] Produzir plano de implementação com Superpowers **após aprovação da spec**.
 
+
+### Integração documental da atualização Editonny 19/10 (proposta G0)
+- [x] Auditar a revisão `05d3ded` e distribuir os aprendizados nos documentos existentes, sem abrir subsistema ou catálogo duplicado.
+- [ ] Resolver o contrato versionado de `CreativeBrief`/presets, regras para escolhas explícitas e fluxo de localização antes de implementar builder.
+- [ ] Definir design system **próprio da UI**, contrato de tokens, states/showcase e política de acessibilidade, sem atrelar StyleDNA do vídeo ao tema do aplicativo.
+- [ ] Escolher stack somente depois dos gates técnicos e licença; mapear testes futuros de UI, storage e i18n em [quality.md](quality.md).
+- [ ] Validar por protótipos que waveform/legendas/efeitos são dados e frames reais, não demos React com temporização de interface.
+
+Rastreabilidade técnica: [auditoria do Editonny](research/updates/2026-10-19-editonny-guide.md). Esta seção descreve preparação de especificação, **não implementação**.
+
+
 ## Fase 1 — Spike obrigatório de navegador
 **Entrega:** vídeo de entrada real -> cortes -> legendas -> motion simples -> MP4, sem servidor.
 - [ ] Avaliar WebCodecs + Mediabunny e alternativa mínima.

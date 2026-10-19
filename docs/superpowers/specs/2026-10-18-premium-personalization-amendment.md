@@ -63,3 +63,9 @@ Enquanto não houver evidências de ambas, o “MVP premium” não está compro
 1. Revisar/aceitar escopo artístico atualizado e este adendo.
 2. Escolher critérios de sucesso do piloto com avaliadores e hardware.
 3. Só então atualizar a spec canônica, aprovar e invocar writing-plans para primeiro spike. Não iniciar implementação agora.
+
+## Refinamento de revisão: aprendizados da UI do Editonny em 19/10/2026
+
+Sem aprovar ou modificar a arquitetura proposta: antes de `writing-plans`, conferir os critérios técnicos de [builder, conflitos e locale](../../creative/presets-and-prompts.md), [design system próprio](../../design.md) e [QA de UI separado de vídeo](../../quality.md), derivados da [auditoria versionada do Editonny](../../research/updates/2026-10-19-editonny-guide.md).
+
+A seleção de uma cena **não pode reativar** efeitos explicitamente proibidos; `CreativeBrief` deve ter schema/versão, validação e resolução explícita de conflitos. O preview não pode utilizar waveform fictícia nem relógio de animação de UI como prova de export reproduzível. A fonte atualizada não valida um editor web nem substitui o compositor autoral do Motion4Free. **Status mantido: especificação em revisão, implementação ainda não autorizada.**
