@@ -59,3 +59,34 @@ Licença própria do Motion4Free; limites de hardware; reutilização direta do 
 Revisar/aprovar esta spec antes de executar o workflow writing-plans para o **POC inicial**. A solicitação atual cobre documentação e organização, não implementação do editor.
 
 [Índice](../../INDEX.md) · [Arquitetura](../../architecture.md) · [Requisitos](../../requirements.md) · [Roadmap](../../roadmap.md) · [Riscos](../../risks.md)
+
+
+---
+
+## ADENDO DE REVISÃO PREMIUM — 18/10/2026 (proposta, **pendente de aprovação**)
+A auditoria [premium](../../reviews/2026-10-18-premium-creative-audit.md) identificou bloqueio conceitual: a spec original restringe a IA a selecionar cenas predefinidas e prioriza um MVP com somente uma animação funcional. Essa solução, isoladamente, não satisfaz a intenção atual: **edições individualizadas ao nível de referência de motion designer experiente, sem identidade visual genérica**. Onde houver conflito, **este adendo representa a revisão proposta**, não uma decisão já homologada.
+
+### Requisitos atualizados do responsável
+- Entrada em **prompt livre e presets guiados** igualmente editáveis; pedidos e opções têm prioridade sobre padrões.
+- IA participa da direção artística durante o processamento, não apenas na escolha de 3–5 templates.
+- Variação significativa de composição, hierarquia, ritmo, assets, motion e linguagem visual entre briefs; identidade global coerente para cada vídeo.
+- Biblioteca e primitivos open source são base de alto valor, não teto de criatividade; nenhuma dependência paga ou instalação obrigatória como premissa.
+- O sistema deve evitar “AI slop”: repetição de cards/ícones, efeitos aleatórios, exagero de zoom, transições sem função e arte sem coerência.
+- Inspiração de vídeos e imagens do usuário pode orientar linguagem visual, respeitados direitos e consentimento.
+
+### Arquitetura criativa candidata
+`CreativeBrief (prompt+presets+referências) -> StyleDNA -> Storyboard -> SceneGraph seguro -> CreativeComposer -> Render -> CreativeReview`.
+O **AI Creative Director** estabelece conceito global e decisões por beat; o **CreativeComposer** constrói cenas a partir de composição declarativa, vetores, tipografia, animação, vídeo, imagens autorizadas, 2D/3D e música/SFX; o motor determinístico executa e valida. Modelo não injeta código arbitrário.
+
+Presets não são vídeos fixos. São **sistemas de direção de arte parametrizáveis**, combináveis e sobrescrevíveis pelo prompt. IA deve considerar material de origem, mensagens, gênero, objetivo, identidade do canal, preferências explícitas, referências e restrições. Um modo local limitado continua necessário quando não houver recursos, mas não se pode prometer a mesma experiência criativa no fallback.
+
+### Entregas incrementais e gates revisados
+**POC 1: export:** vídeo+som+texto+motion em MP4 no navegador.
+**POC 2: autoria visual:** **um mesmo vídeo em três briefs/presets radicalmente diferentes**, com diferenças em composição, hierarquia, ritmo, tipos de movimento e assets; análise cega de avaliadores com experiência em motion design. As duas provas são necessárias para afirmar viabilidade do produto premium.
+**POC 3: controle de intenção:** usuário combina preset+prompt+referência, trava trechos e solicita revisão focal sem destruir escolhas aprovadas.
+Depois MVP e benchmark humano com baseline Editonny e edição profissional.
+
+### Incógnitas a validar
+Compatibilidade de Motion Canvas/PixiJS/Theatre/Motion/Three/dotLottie com seek determinístico e export no navegador; qualidade com IA gratuita/local, tempo de processamento, custo de distribuir assets, disponibilidade de avaliadores e licenças por asset. Não afirmar resultado sem teste.
+
+**Estado Superpowers:** design em revisão, **nenhuma autorização para código nem writing-plans até aprovação desta spec revisada**. Ver [direção de arte](../../creative/art-direction.md), [UX de presets](../../creative/presets-and-prompts.md), [compositor](../../creative/composition-engine.md) e [ADR-0004](../../decisions/0004-creative-director-proposal.md).
