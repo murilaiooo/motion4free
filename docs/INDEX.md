@@ -73,3 +73,8 @@
 
 **Status:** instruções extraídas/adaptadas da fonte; bibliotecas não instaladas no runtime nem comprovadas por POC. Os manuais orientam os agentes antes de cada integração aprovada.
 
+
+## Nova atualização de upstream: Editonny (19/10/2026)
+- [Auditoria da atualização do Editonny — site Next.js, design system, prompts, testes e impacto no Motion4Free](research/updates/2026-10-19-editonny-guide.md)
+- O **motor de edição não recebeu mudanças** no commit examinado; boas ideias estão no criador de briefs, nos tokens, na biblioteca e no QA web.
+
