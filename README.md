@@ -83,6 +83,17 @@ O preço para o usuário e a operação sem custo são **restrições de projeto
 
 Originais devem permanecer no dispositivo do usuário por padrão. APIs externas só poderão receber dados com informação clara e consentimento apropriado. A mídia original nunca deve ser alterada.
 
+## Toolkit de desenvolvimento com agentes
+O [Vibe Coding Toolkit](https://github.com/soumatheusgomes/vibe-coding-toolkit) foi adicionado como **submódulo Git** em `tooling/vibe-coding-toolkit`, fixado na revisão `790a895`. Ele fornece instruções para Claude/Codex, ferramentas, prompts e verificações, **não** o motor de edição.
+
+Para obter o toolkit ao clonar:
+
+```bash
+git clone --recurse-submodules https://github.com/murilaiooo/motion4free.git
+```
+
+Em um clone existente: `git submodule update --init --recursive`. Consulte [setup e matriz de integração](docs/setup.md), [onboarding](docs/onboarding.md), [qualidade](docs/quality.md) e [PRODUCT.md](PRODUCT.md). Nenhum CLI global, framework, chave ou serviço pago foi instalado automaticamente.
+
 ## Colaboração e próximos passos
 
 Leia [AGENTS.md](AGENTS.md) se for trabalhar com agentes, [CONTRIBUTING.md](CONTRIBUTING.md) para contribuir e [SECURITY.md](SECURITY.md) para privacidade. A especificação está **aguardando revisão** antes do plano de implementação do Superpowers.
