@@ -22,6 +22,12 @@
 - [Motion design e assets](motion/catalog-and-assets.md)
 - [Composição procedural](motion/procedural-composition.md): scenes customizadas declarativas 2D/3D.
 
+## Toolkit e onboarding de agentes
+- [Setup e matriz do Vibe Coding Toolkit](setup.md): origem, revisão fixada, componentes e limites.
+- [Onboarding](onboarding.md): como clonar o submódulo e navegar pela documentação.
+- [Contrato de qualidade](quality.md): verificações disponíveis e futuras.
+- [Definição de produto](../PRODUCT.md) · [Ponte Claude](../CLAUDE.md) · [Guia de design](design.md).
+
 ## Histórico e organização
 - [Contexto consolidado da conversa](history/conversation-decisions.md)
 - [Configurações GitHub e pendências administrativas](github-setup.md)
