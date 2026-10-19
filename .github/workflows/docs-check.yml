@@ -1,0 +1,61 @@
+name: Documentation check
+on:
+  push:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - '.github/**'
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'docs/**'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - '.github/**'
+permissions:
+  contents: read
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Validate required documentation and relative Markdown links
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          import re
+          import sys
+          root = pathlib.Path.cwd()
+          required = [
+              'README.md',
+              'docs/INDEX.md',
+              'docs/vision.md',
+              'docs/requirements.md',
+              'docs/architecture.md',
+              'docs/roadmap.md',
+              'docs/risks.md',
+              'docs/superpowers/specs/2026-10-18-motion4free-design.md',
+          ]
+          errors = []
+          for name in required:
+              if not (root / name).is_file():
+                  errors.append('Missing: ' + name)
+          for doc in sorted(root.rglob('*.md')):
+              if '.git' in doc.parts or 'node_modules' in doc.parts:
+                  continue
+              data = doc.read_text(encoding='utf-8')
+              for link in re.findall(r'\[[^\]]+\]\(([^)]+)\)', data):
+                  link = link.split('#', 1)[0].strip()
+                  if not link or '://' in link or link.startswith(('mailto:', '/', '#')):
+                      continue
+                  if not (doc.parent / link).exists():
+                      errors.append(str(doc.relative_to(root)) + ' -> ' + link)
+          if errors:
+              print('\n'.join(errors))
+              sys.exit(1)
+          print('Documentation files and relative links: PASS')
+          PY
