@@ -1,9 +1,9 @@
 # Motion4Free
 
-**Editor de vídeo inteligente, browser-first e com custo monetário zero como objetivo.**  
+**Estúdio inteligente de edição e motion design personalizado, browser-first e com custo monetário zero como objetivo.**  
 Projeto em fase de concepção e arquitetura. Ainda não existe versão funcional para edição de vídeos.
 
-> **Visão:** transforme uma gravação em um Reels profissional por linguagem natural, preservando a voz, o significado e a privacidade. IA gratuita decide apenas o necessário; nosso motor realiza a edição e renderização localmente.
+> **Visão:** transforme uma gravação em um Reels profissional por linguagem natural, preservando a voz, o significado e a privacidade. IA funciona como diretora criativa ao longo do processo, construindo narrativa e direção de arte individual; nosso motor compõe, valida e renderiza localmente sem executar código livre do modelo.
 
 ## A ideia
 
@@ -11,15 +11,17 @@ O usuário abre o site, carrega um vídeo, escreve “edite para Instagram Reels
 
 A experiência-alvo é **sem instalação obrigatória**, com downloads progressivos e cache no próprio navegador, inspirado nas técnicas WebAssembly/OPFS/Service Worker usadas em ports de jogos. O processamento e a renderização devem rodar no dispositivo do usuário sempre que o hardware permitir.
 
-**Não prometemos vídeo viral, qualidade profissional universal, nem IA ilimitada.** Esses são objetivos sujeitos a demonstrações reais, avaliação humana e limites de hardware/API.
+**Não prometemos vídeo viral, qualidade profissional universal, nem IA ilimitada.** A equivalência a um motion designer experiente é um **gate de avaliação artística** a demonstrar, não uma característica já comprovada. Esses são objetivos sujeitos a demonstrações reais, avaliação humana e limites de hardware/API.
 
 ## O diferencial
+
+**Requisito de produto em revisão:** o usuário poderá usar **prompt de texto, presets personalizáveis ou ambos**, com identidade visual própria por vídeo. Uma edição tecnicamente correta mas genérica, repetitiva ou sem qualidade artística **não atende** à definição de pronto. Veja a [auditoria de qualidade premium](docs/reviews/2026-10-18-premium-creative-audit.md).
 
 Em vez de pedir que um modelo de IA execute tudo:
 
 1. **Código determinístico** cuida de transcrição temporal, análise de áudio, cortes e proteção da fala, enquadramento, legendas, render e checks técnicos.
-2. **Biblioteca de motion design** reúne cenas profissionais testadas e assets com licença conferida. O motor associa cenas às palavras e as parametriza.
-3. **IA local ou gratuita** compara opções previamente filtradas para escolher gancho, narrativa e animação, sem executar código arbitrário.
+2. **Motor de motion design autoral** combina uma biblioteca curada com composição procedural 2D/3D, tipografia cinética, keyframes, máscaras, áudio e assets licenciados. O mesmo template não deve virar aparência padrão de todos os vídeos.
+3. **IA local ou gratuita como diretora criativa** interpreta prompt, presets e referências, define uma identidade visual (StyleDNA), planeja storyboard e composições por cena, e revisa resultados sob orçamento. Modelos não executam código arbitrário.
 4. **Validações independentes** checam comandos, significados, números, negações, sincronização e qualidade da exportação.
 5. **Fallback offline/local** mantém edição básica útil quando APIs gratuitas estiverem sem cota.
 
@@ -39,12 +41,14 @@ Em vez de pedir que um modelo de IA execute tudo:
 ## Documentação central
 
 - [Índice completo](docs/INDEX.md) e [visão do produto](docs/vision.md)
-- [Especificação de arquitetura Superpowers](docs/superpowers/specs/2026-10-18-motion4free-design.md)
+- [Especificação de arquitetura Superpowers](docs/superpowers/specs/2026-10-18-motion4free-design.md) e [adendo de personalização premium](docs/superpowers/specs/2026-10-18-premium-personalization-amendment.md)
 - [Requisitos e testes de aceitação](docs/requirements.md) · [Roadmap e gates](docs/roadmap.md)
 - [Arquitetura de componentes](docs/architecture.md) · [Fluxo Reels end-to-end](docs/product/user-flow.md)
 - [Motor de decisões por IA](docs/ai/decision-engine.md) · [Roteamento de cotas e custo zero](docs/ai/routing-and-costs.md) · [Benchmark de qualidade](docs/ai/evaluation.md)
 - [Processamento no navegador](docs/engine/browser-runtime.md) · [Pipeline audiovisual](docs/engine/media-pipeline.md)
-- [Motion design e proveniência dos assets](docs/motion/catalog-and-assets.md)
+- [Motion design e proveniência dos assets](docs/motion/catalog-and-assets.md) · [Composição procedural](docs/motion/procedural-composition.md)
+- [UX por prompt e presets](docs/product/creative-experience.md) · [Diretor criativo de IA](docs/ai/creative-director.md)
+- [Auditoria arquitetural premium](docs/reviews/2026-10-18-premium-creative-audit.md) · [Pesquisa de ferramentas criativas](docs/research/creative-toolkit.md)
 - [Repositórios e fontes técnicas](docs/research/repositories.md) · [Riscos](docs/risks.md)
 - Decisões (propostas): [browser-first](docs/decisions/0001-browser-first.md), [IA local-first](docs/decisions/0002-ai-local-first.md), [motion semântico](docs/decisions/0003-semantic-motion.md)
 
@@ -68,7 +72,7 @@ Veja a [lista completa](docs/research/repositories.md), incluindo ressalvas téc
 2. **Prova audiovisual:** importar vídeo, cortar, legendar, animar, renderizar e exportar MP4 no navegador.
 3. **Prova de decisões:** análise semântica local, seleção de ganchos, motion contextual e validação.
 4. **MVP de Reels:** interface editável, IA gratuita opcional, fallback e revisões conversacionais.
-5. **Qualidade beta:** testes com vídeos reais, licenças, privacidade, benchmarks cegos.
+5. **Qualidade beta:** testes com vídeos reais, provas de direção artística diferenciada, licenças, privacidade e benchmarks cegos.
 6. **Distribuição:** hosting estático, medições de uso/custo/banda e compatibilidade.
 
 O objetivo é trabalhar por **provas técnicas**. Não adicionar dezenas de APIs ou centenas de animações antes de validar o primeiro MP4 e sua qualidade.
