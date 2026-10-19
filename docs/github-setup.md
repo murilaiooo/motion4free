@@ -27,3 +27,6 @@ A conexão GitHub atual **não expõe ações de atualização de configuraçõe
 
 ## Custo e CI
 GitHub Actions em repositório privado pode consumir cotas conforme o plano; workflow é pequeno, mas acompanhar uso. Não ligar infraestrutura paga.
+
+## Issues canônicas
+Use as issues **#13–#24** (marcos M0–M5) como backlog oficial. A série anterior #1–#12 cobre os mesmos temas e deve permanecer encerrada como duplicada. Não desenvolver duas versões da mesma issue. Os títulos e os documentos permanecem rastreáveis no histórico.
