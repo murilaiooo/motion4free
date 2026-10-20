@@ -4,6 +4,7 @@ import type { StyleDNA } from '../core/style';
 /** Descrição curta de cada estilo para quem escolhe (sem termos técnicos). */
 const ABOUT: Record<string, string> = {
   pop: 'Energético: letras grandes, palavra falada em destaque amarelo, cortes com flash e muitas animações.',
+  neon: 'Limpo e atual: letras brancas grossas, poucas palavras por vez e a palavra falada acendendo em verde.',
   editorial: 'Elegante: letra de revista, legenda que acende palavra por palavra, movimento lento e poucas animações.',
   documental: 'Sóbrio: painéis escuros à esquerda, letra técnica, quase sem movimento.',
 };

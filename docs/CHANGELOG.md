@@ -2,6 +2,19 @@
 
 A versão aparece no rodapé do app (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.7.0 — 20/10/2026
+Testamos o app inteiro do começo ao fim e caprichamos no movimento para ficar com cara de editor profissional.
+- **Legenda mais viva**: as palavras entram uma depois da outra com um "pulinho"; a caixa amarela do Pop **desliza** de palavra em palavra junto com a fala; a palavra falada cresce e empurra as vizinhas (as letras não se encavalam mais); palavras importantes ganham um destaque extra; a legenda sai suavemente quando há uma pausa. O contorno das letras ficou mais limpo, com uma sombra suave.
+- **Legenda fora dos botões do Instagram**: na parte de baixo da tela, a legenda não passa mais por baixo dos botões de curtir/comentar. E uma legenda nunca termina com uma palavra sozinha.
+- **Câmera que respira**: em trechos longos sem corte, o vídeo aproxima devagar (para a imagem não ficar parada); no Pop, o zoom de destaque chega com um "soco" e um tremor curto. "Sem zoom" e "sem animação aqui" desligam isso.
+- **Nada em cima de nada**: o título de abertura não repete a mesma frase da legenda; se você pedir legenda em cima, o título desce; os emojis ficam logo acima da legenda e não caem mais em cima do título.
+- **Títulos mais bonitos**: no Pop, o gancho alterna amarelo e branco; no Editorial, o título aparece subindo de trás de uma linha invisível, com uma faixa escura suave atrás para ler em qualquer fundo; a barra de progresso ganhou uma ponta brilhante.
+- **Estilo novo: Neon** — legenda branca e limpa, poucas palavras por vez, a palavra falada acende em verde neon. Peça "estilo neon" ou toque no cartão.
+- **Problemas encontrados no teste e corrigidos**: o exemplo "legenda grande em cima, amarela com contorno preto" deixava o contorno amarelo (agora a legenda fica amarela e o contorno preto); "música de fundo" mostrava também "fundo" em "Ainda não sei fazer"; trocar de estilo dizia "Cores do estilo de volta" mesmo sem imagem e listava a mesma animação como tirada e posta; o nome do estilo vazava do cartão (principalmente no celular); o resumo dizia "1 trechos · 1 legendas".
+- **Avisos que antes não tinham código** (ou nem apareciam): vídeo sem som (**M4F-202**), vídeo sem fala (**M4F-306**) e navegador que não gera H.264 (**M4F-403**). Ver [erros.md](erros.md).
+- Projetos salvos nas versões anteriores abrem normalmente.
+- Roteiro de teste atualizado: [roteiro-de-teste.md](roteiro-de-teste.md).
+
 ## v0.6.0 — 20/10/2026
 O pedido por texto agora muda muito mais coisas, e a IA passa a ler o pedido inteiro.
 - **O seu pedido funciona**: *gancho diferenciado e criativo, legenda verde e amarela, emojis a cada 3 segundos* agora deixa a legenda verde com a palavra falada em amarelo, coloca emojis a cada uns 3 segundos e escolhe para abrir o vídeo uma frase sua diferente da mais óbvia. **Funciona sem IA.**

@@ -2,10 +2,11 @@ import type { StyleDNA } from '../core/style';
 import type { Caption } from '../core/types';
 import { normalizeToken } from '../editorial/detect';
 import type { Ctx2D } from './ctx';
-import { clamp01, easeOutBack, easeOutBounce, easeOutCubic, progress } from './easing';
+import { clamp01, easeOutBounce, easeOutCubic, progress } from './easing';
+import { easeInQuad, easeOutExpo, mix, springIn, stagger } from './motion';
 import type { Rect } from './layout';
 import { onBox } from '../core/color';
-import { alphaOf, applyCase, clearShadow, fillBox, setFont, setShadow, type Frame } from './kit';
+import { alphaOf, applyCase, captionFrac, clearShadow, fillBox, setFont, setShadow, type Frame } from './kit';
 
 /** Início de cada palavra: os tempos reais quando batem com o texto, senão proporcional ao tamanho das palavras. */
 export function wordTimings(caption: Pick<Caption, 'start' | 'end' | 'wordStarts'>, tokens: string[]): number[] {
@@ -101,10 +102,7 @@ export function captionTop(style: StyleDNA, safe: Rect, blockH: number): number 
 }
 
 /** Centro vertical aproximado da legenda, em fração da área segura (para os emojis ficarem longe dela). */
-export function captionCenterFrac(style: StyleDNA): number {
-  const C = style.captions;
-  return { bottom: 0.92, middle: 0.7, center: 0.5, top: 0.1, custom: C.y }[C.position];
-}
+export const captionCenterFrac = captionFrac;
 
 type Enter = 'none' | 'fade' | 'pop' | 'rise' | 'slide' | 'bounce' | 'typewriter';
 /** Entrada efetiva: 'auto' segue a entrada do estilo (pop cresce, rise sobe, wipe só aparece). */
@@ -114,11 +112,39 @@ export function captionEnter(style: StyleDNA): Enter {
   return style.motion.enter === 'pop' ? 'pop' : style.motion.enter === 'rise' ? 'rise' : 'none';
 }
 
+
+/** Lado esquerdo dos botões do Reels (curtir, comentar, compartilhar), na metade de baixo da tela. */
+export const REELS_BUTTONS_X = 0.87;
+
 /**
- * Legenda no estilo Reels: grande, em negrito, com a palavra falada em destaque (caixa, cor,
- * sublinhado ou "revelação") e palavras-chave na fonte/cor de ênfase.
+ * Largura máxima da legenda: na metade de baixo ela fica centralizada e sem passar por baixo dos
+ * botões da direita (v0.7); em cima, usa a área segura inteira.
  */
-export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, keywords: ReadonlySet<string>): void {
+export function captionMaxWidth(f: Pick<Frame, 'w' | 'h' | 'safe' | 'style'>): number {
+  const full = f.safe.w * 0.94;
+  if (captionCenterFrac(f.style) < 0.45) return full;
+  return Math.min(full, 2 * (f.w * REELS_BUTTONS_X - f.w / 2) - 12 * (f.w / 1080));
+}
+
+export interface CaptionOpts {
+  /** a legenda sai animando no fim (há uma pausa antes da próxima) */
+  exit?: boolean;
+}
+
+/** Entrada de cada palavra em sequência (pop/rise): atraso da palavra i. */
+export const WORD_STAGGER = 0.035;
+const WORD_STAGGER_MAX = 0.2;
+const EXIT_SEC = 0.12;
+const POP_SPRING = { freq: 1.35, zeta: 0.48 };
+const ACTIVE_SPRING = { freq: 1.6, zeta: 0.42 };
+
+/**
+ * Legenda no estilo Reels: grande, em negrito, com a palavra falada em destaque (caixa que desliza de
+ * palavra em palavra, cor, sublinhado que cresce ou "revelação") e palavras-chave na fonte/cor de ênfase.
+ * Entrada palavra a palavra com mola, saída curta quando há pausa, contorno nítido com sombra suave.
+ * Devolve o retângulo ocupado (para os emojis ficarem perto sem cobrir).
+ */
+export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, keywords: ReadonlySet<string>, opts: CaptionOpts = {}): Rect | null {
   const { style, u, safe } = f;
   const C = style.captions;
   const K = captionColors(style);
@@ -126,13 +152,13 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   const spec = style.type.text;
   const em = style.type.emphasis;
   const tokens = caption.text.split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return;
+  if (tokens.length === 0) return null;
   const shown = tokens.map((tk) => applyCase(spec, tk));
   const starts = wordTimings(caption, tokens);
   const active = activeWord(starts, t);
   const isKw = tokens.map((tk) => keywords.has(normalizeToken(tk)));
   const emScale = em.family !== spec.family ? 1.16 : 1;
-  const maxW = safe.w * 0.94;
+  const maxW = captionMaxWidth(f);
 
   let size = C.size * f.w;
   let widths: number[] = [];
@@ -160,21 +186,39 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   const top = captionTop(style, safe, blockH);
   const cx = f.w / 2;
 
+  // posição de cada palavra (centro x, linha)
+  const wordX: number[] = [];
+  const wordLine: number[] = [];
+  const lineWidths: number[] = [];
+  lines.forEach((line, li) => {
+    const lineW = line.reduce((acc, i) => acc + widths[i]!, 0) + space * (line.length - 1);
+    lineWidths.push(lineW);
+    let x = cx - lineW / 2;
+    for (const i of line) {
+      wordX[i] = x + widths[i]! / 2;
+      wordLine[i] = li;
+      x += widths[i]! + space;
+    }
+  });
+  const lineY = (li: number) => top + lineH * (li + 0.5);
+  const blockW = Math.max(...lineWidths);
+
   ctx.save();
-  // entrada do bloco: pop cresce, rise sobe, fade aparece, slide desliza, bounce cai quicando
-  const enter = progress(t, caption.start, enterKind === 'pop' || enterKind === 'rise' ? 0.16 : enterKind === 'bounce' ? 0.4 : 0.22);
-  if (enterKind === 'pop') {
-    const s = 0.82 + 0.18 * easeOutBack(enter);
-    ctx.translate(cx, top + blockH / 2);
+  // saída curta quando há uma pausa antes da próxima legenda
+  const out = opts.exit ? easeInQuad(progress(t, caption.end - EXIT_SEC, EXIT_SEC)) : 0;
+  if (out > 0) {
+    ctx.globalAlpha *= 1 - out;
+    const s = 1 - 0.06 * out;
+    ctx.translate(cx, top + blockH / 2 - 8 * u * out);
     ctx.scale(s, s);
     ctx.translate(-cx, -(top + blockH / 2));
-  } else if (enterKind === 'rise') {
-    ctx.translate(0, (1 - easeOutCubic(enter)) * 16 * u);
-    ctx.globalAlpha *= clamp01(enter * 1.5);
-  } else if (enterKind === 'fade') {
+  }
+  // entradas do bloco inteiro (as de palavra a palavra ficam por palavra, abaixo)
+  const enter = progress(t, caption.start, enterKind === 'bounce' ? 0.4 : 0.22);
+  if (enterKind === 'fade') {
     ctx.globalAlpha *= enter;
   } else if (enterKind === 'slide') {
-    ctx.translate(-(1 - easeOutCubic(enter)) * 70 * u, 0);
+    ctx.translate(-(1 - easeOutExpo(enter)) * 70 * u, 0);
     ctx.globalAlpha *= clamp01(enter * 2);
   } else if (enterKind === 'bounce') {
     ctx.translate(0, -(1 - easeOutBounce(enter)) * 70 * u);
@@ -183,70 +227,157 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
   ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
 
-  lines.forEach((line, li) => {
-    const y = top + lineH * (li + 0.5);
-    const lineW = line.reduce((acc, i) => acc + widths[i]!, 0) + space * (line.length - 1);
-    let x = cx - lineW / 2;
-    if (C.box === 'line') {
+  /** entrada da palavra i (pop: mola na escala; rise: sobe um pouco) */
+  const wordEnter = (i: number) => {
+    const ws = caption.start + stagger(i, WORD_STAGGER, WORD_STAGGER_MAX, tokens.length);
+    if (enterKind === 'pop') {
+      const k = progress(t, ws, 0.34);
+      return { scale: 0.55 + 0.45 * springIn(k, POP_SPRING), dy: 0, alpha: clamp01(k * 5) };
+    }
+    if (enterKind === 'rise') {
+      const k = progress(t, ws, 0.3);
+      return { scale: 1, dy: (1 - easeOutExpo(k)) * 26 * u, alpha: clamp01(k * 3) };
+    }
+    return { scale: 1, dy: 0, alpha: 1 };
+  };
+  /** a palavra falada cresce com mola; a anterior volta ao tamanho em 0,1 s */
+  // palavra-chave falada ganha um "soco" extra, proporcional à intensidade do estilo
+  const gainOf = (i: number) => C.activeScale - 1 + (isKw[i] ? 0.14 * style.motion.intensity : 0);
+  const activeScaleOf = (i: number) => {
+    const gain = gainOf(i);
+    if (gain <= 0) return 1;
+    if (i === active) return 1 + gain * springIn(progress(t, starts[i]!, 0.28), ACTIVE_SPRING);
+    if (i === active - 1) return 1 + gain * (1 - easeOutCubic(progress(t, starts[active]!, 0.1)));
+    return 1;
+  };
+  // a palavra que cresce empurra as vizinhas da mesma linha (a linha "respira" sem encavalar letras)
+  const growth = tokens.map((_, i) => Math.max(0, wordEnter(i).scale * activeScaleOf(i) - 1) * widths[i]!);
+  const xOf = (i: number) => {
+    let dx = 0;
+    for (const j of lines[wordLine[i]!]!) {
+      if (j < i) dx += growth[j]! / 2;
+      else if (j > i) dx -= growth[j]! / 2;
+    }
+    return wordX[i]! + dx;
+  };
+  const withWord = (i: number, draw: () => void) => {
+    const we = wordEnter(i);
+    if (we.alpha <= 0) return;
+    const y = lineY(wordLine[i]!) + we.dy;
+    const sc = we.scale * activeScaleOf(i);
+    ctx.save();
+    ctx.globalAlpha *= we.alpha;
+    if (sc !== 1) {
+      ctx.translate(xOf(i), y);
+      ctx.scale(sc, sc);
+      ctx.translate(-xOf(i), -y);
+    }
+    draw();
+    ctx.restore();
+  };
+
+  // 1) caixa atrás de cada linha
+  if (C.box === 'line') {
+    clearShadow(ctx);
+    lines.forEach((_, li) => {
       const padX = size * 0.34;
       const padY = size * 0.14;
       const boxH = lineH - 2 + padY;
-      clearShadow(ctx);
-      fillBox(ctx, { x: x - padX, y: y - boxH / 2, w: lineW + 2 * padX, h: boxH }, style.shape.radius * boxH, K.box);
-    }
-    for (const i of line) {
-      const w = widths[i]!;
-      const wx = x + w / 2;
-      x += w + space;
-      const isActive = i === active;
-      const spoken = i <= active;
-      const font = isKw[i] ? em : spec;
-      const fsize = isKw[i] ? size * emScale : size;
-      let color = isKw[i] ? K.keyword : K.text;
-      let alpha = 1;
-      if (C.highlight === 'reveal' && !spoken) alpha = C.upcomingAlpha;
-      // "como digitando": a palavra só aparece quando é falada
-      if (enterKind === 'typewriter' && !spoken) continue;
-      if (C.highlight === 'color' && isActive && !isKw[i]) color = K.highlight;
-      const pop = isActive ? easeOutBack(progress(t, starts[i]!, 0.14)) : 0;
-      const scale = isActive ? 1 + (C.activeScale - 1) * pop : 1;
+      const lw = lineWidths[li]!;
+      fillBox(ctx, { x: cx - lw / 2 - padX, y: lineY(li) - boxH / 2, w: lw + 2 * padX, h: boxH }, style.shape.radius * boxH, K.box);
+    });
+  }
 
-      ctx.save();
-      ctx.globalAlpha *= alpha;
-      if (scale !== 1) {
-        ctx.translate(wx, y);
-        ctx.scale(scale, scale);
-        ctx.translate(-wx, -y);
-      }
-      setFont(ctx, font, fsize);
-      const boxed = C.highlight === 'box' && isActive;
-      if (boxed) {
-        const padX = size * 0.12;
-        const h = size * 1.14;
-        setShadow(ctx, f, 'hard');
-        fillBox(ctx, { x: wx - w / 2 - padX, y: y - h / 2, w: w + 2 * padX, h }, style.shape.radius * h, isKw[i] ? K.keyword : K.highlight);
-        clearShadow(ctx);
-        color = onBox(isKw[i] ? K.keyword : K.highlight, style.palette.onPanel);
-      }
-      if (C.highlight === 'underline' && isActive) {
-        ctx.fillStyle = K.highlight;
-        ctx.fillRect(wx - w / 2, y + size * 0.52, w, Math.max(2, size * 0.08));
-      }
-      if (C.stroke > 0 && !boxed) {
+  // 2) caixa da palavra falada: desliza da palavra anterior (mesma linha) ou cresce com mola
+  // enquanto a caixa desliza, o texto escuro "de dentro da caixa" fica na palavra que ela cobre mais
+  const slideK = active >= 0 ? easeOutExpo(progress(t, starts[active]!, 0.16)) : 1;
+  const sliding = active > 0 && wordLine[active - 1] === wordLine[active] && slideK < 1;
+  const boxedIdx = sliding && slideK < 0.5 ? active - 1 : active;
+  const boxed = (i: number) => C.highlight === 'box' && i === boxedIdx;
+  if (C.highlight === 'box' && active >= 0) {
+    const i = active;
+    const we = wordEnter(i);
+    const padX = size * 0.12;
+    const h = size * 1.14;
+    const rectOf = (k: number) => ({ x: xOf(k) - widths[k]! / 2 - padX, w: widths[k]! + 2 * padX });
+    let r = rectOf(i);
+    let grow = 1;
+    const prev = i - 1;
+    const k = easeOutExpo(progress(t, starts[i]!, 0.16));
+    if (prev >= 0 && wordLine[prev] === wordLine[i] && k < 1) {
+      const a = rectOf(prev);
+      r = { x: mix(a.x, r.x, k), w: mix(a.w, r.w, k) };
+    } else {
+      grow = 0.6 + 0.4 * springIn(progress(t, starts[i]!, 0.3), ACTIVE_SPRING);
+    }
+    const y = lineY(wordLine[i]!) + we.dy;
+    const sc = grow * we.scale * activeScaleOf(i);
+    const bx = r.x + r.w / 2;
+    ctx.save();
+    ctx.globalAlpha *= we.alpha;
+    ctx.translate(bx, y);
+    ctx.scale(sc, sc);
+    ctx.translate(-bx, -y);
+    setShadow(ctx, f, 'hard');
+    fillBox(ctx, { x: r.x, y: y - h / 2, w: r.w, h }, style.shape.radius * h, isKw[boxedIdx] ? K.keyword : K.highlight);
+    clearShadow(ctx);
+    ctx.restore();
+  }
+
+  // 3) contorno (com sombra suave embaixo) e 4) preenchimento, em passadas separadas:
+  // o contorno de uma palavra nunca cobre o preenchimento da vizinha
+  const visible = (i: number) => !(enterKind === 'typewriter' && i > active);
+  const fontOf = (i: number) => (isKw[i] ? em : spec);
+  const sizeOf = (i: number) => (isKw[i] ? size * emScale : size);
+  const upcoming = (i: number) => {
+    if (C.highlight !== 'reveal') return 1;
+    if (i > active) return C.upcomingAlpha;
+    return mix(C.upcomingAlpha, 1, easeOutCubic(progress(t, starts[i]!, 0.12)));
+  };
+  if (C.stroke > 0) {
+    for (let i = 0; i < tokens.length; i++) {
+      if (!visible(i) || boxed(i)) continue;
+      withWord(i, () => {
+        ctx.globalAlpha *= upcoming(i);
+        setFont(ctx, fontOf(i), sizeOf(i));
         ctx.lineWidth = C.stroke * u;
         ctx.strokeStyle = K.stroke;
-        setShadow(ctx, f);
-        ctx.strokeText(shown[i]!, wx, y);
+        setTextShadow(ctx, f);
+        ctx.strokeText(shown[i]!, xOf(i), lineY(wordLine[i]!));
         clearShadow(ctx);
-      } else if (!boxed && C.box === 'none') {
-        setShadow(ctx, f, 'soft', 0.9);
-      }
-      ctx.fillStyle = color;
-      ctx.fillText(shown[i]!, wx, y);
-      ctx.restore();
+      });
     }
-  });
+  }
+  for (let i = 0; i < tokens.length; i++) {
+    if (!visible(i)) continue;
+    withWord(i, () => {
+      const y = lineY(wordLine[i]!);
+      ctx.globalAlpha *= upcoming(i);
+      setFont(ctx, fontOf(i), sizeOf(i));
+      let color = isKw[i] ? K.keyword : K.text;
+      if (C.highlight === 'color' && i === active && !isKw[i]) color = K.highlight;
+      if (boxed(i)) color = onBox(isKw[i] ? K.keyword : K.highlight, style.palette.onPanel);
+      if (C.highlight === 'underline' && i === active) {
+        const grow = easeOutExpo(progress(t, starts[i]!, 0.18));
+        ctx.fillStyle = K.highlight;
+        ctx.fillRect(xOf(i) - widths[i]! / 2, y + size * 0.52, widths[i]! * grow, Math.max(2, size * 0.08));
+      }
+      if (C.stroke === 0 && !boxed(i) && C.box === 'none') setShadow(ctx, f, 'soft', 0.9);
+      ctx.fillStyle = color;
+      ctx.fillText(shown[i]!, xOf(i), y);
+      clearShadow(ctx);
+    });
+  }
   ctx.restore();
+  return { x: cx - blockW / 2, y: top, w: blockW, h: blockH };
 }
 
+/** Sombra do contorno da legenda: suave e um pouco para baixo (descola do vídeo sem "borrar" a letra). */
+function setTextShadow(ctx: Ctx2D, f: Frame): void {
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+  ctx.shadowBlur = 14 * f.u;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 6 * f.u;
+}

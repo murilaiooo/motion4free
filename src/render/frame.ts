@@ -6,30 +6,97 @@ import { outputDuration } from '../engine/timeline';
 import { drawCaption } from './captions';
 import { drawEmoji } from './emoji';
 import type { Ctx2D } from './ctx';
-import { clamp01, easeInCubic, easeOutCubic, progress } from './easing';
-import { alphaOf, makeFrame, withAlpha, type Frame } from './kit';
+import { clamp01, progress } from './easing';
+import type { Rect } from './layout';
+import { easeInOutQuint, easeOutExpo, springIn, wiggle } from './motion';
+import { alphaOf, composition, makeFrame, withAlpha, type Frame } from './kit';
 import { drawOverlay, drawProgress } from './scenes';
 
 export function activeAt<T extends { start: number; end: number }>(items: T[], t: number): T[] {
   return items.filter((i) => t >= i.start && t < i.end);
 }
 
-/** Escala do vídeo de fundo em `t`: zoom de ênfase + "soco" de zoom logo depois de um corte. */
-export function sourceZoom(plan: EditPlan, t: number, S: StyleDNA = styleAt(plan, t)): number {
-  let z = 1;
+/** Câmera virtual sobre o vídeo de fundo em `t`: escala total e deslocamento (tremor). */
+export interface Camera {
+  zoom: number;
+  dx: number;
+  dy: number;
+}
+
+/** Início (tempo de saída) do trecho mantido que contém `t`, e quanto dele já passou. */
+export function segmentClock(plan: EditPlan, t: number): { start: number; elapsed: number; len: number } {
+  let acc = 0;
+  for (const s of plan.segments) {
+    const len = s.srcEnd - s.srcStart;
+    if (t < acc + len || s === plan.segments[plan.segments.length - 1]) return { start: acc, elapsed: Math.max(0, t - acc), len };
+    acc += len;
+  }
+  return { start: 0, elapsed: Math.max(0, t), len: 0 };
+}
+
+/** Ken Burns só em trechos longos (a imagem parada é o que cansa), depois do primeiro segundo e pouco. */
+export const KB_MIN_SEGMENT = 3;
+export const KB_DELAY = 1.2;
+
+/**
+ * "Ken Burns": aproximação lenta e contínua nos trechos mantidos longos (≥ 3 s), começando depois de
+ * 1,2 s sem corte (a imagem não fica parada), reiniciando em cada corte. Desligada sem zoom no estilo ("sem zoom"/"sem efeitos") e nos trechos
+ * pedidos "sem animação aqui". Velocidade e teto crescem com o zoom e a intensidade do estilo.
+ */
+export function kenBurns(plan: EditPlan, t: number, S: StyleDNA = styleAt(plan, t)): number {
+  const amount = S.zoomScale - 1;
+  if (amount <= 0.001 || S.motion.intensity <= 0.02) return 1;
+  for (const r of plan.ranges) if (r.quiet && t >= r.out.start && t < r.out.end) return 1;
+  const clock = segmentClock(plan, t);
+  if (clock.len < KB_MIN_SEGMENT || clock.elapsed <= KB_DELAY) return 1;
+  const elapsed = clock.elapsed - KB_DELAY;
+  const k = 0.35 + 0.65 * S.motion.intensity;
+  const rate = amount * 0.11 * k; // por segundo
+  const cap = amount * 0.55 * k;
+  // começa suave (sem tranco logo depois do corte) e cresce em linha reta até o teto
+  const ramp = Math.min(elapsed, 0.6);
+  const lin = elapsed <= 0.6 ? (ramp * ramp) / 1.2 : elapsed - 0.3;
+  return 1 + Math.min(cap, rate * lin);
+}
+
+/** Escala do vídeo de fundo em `t`: zoom de ênfase + "soco" de zoom logo depois de um corte + Ken Burns. */
+export function cameraAt(plan: EditPlan, t: number, S: StyleDNA = styleAt(plan, t)): Camera {
+  let z = kenBurns(plan, t, S);
+  let dx = 0;
+  let dy = 0;
   for (const s of activeAt(plan.scenes, t)) {
     if (s.kind === 'emphasis-zoom') {
-      const inDur = Math.min(S.motion.inSec * 1.2, (s.end - s.start) * 0.4);
-      const outDur = Math.min(0.35, (s.end - s.start) * 0.3);
-      const k = easeOutCubic(progress(t, s.start, inDur)) * (1 - easeInCubic(progress(t, s.end - outDur, outDur)));
-      z *= 1 + (s.scale - 1) * k;
+      const len = s.end - s.start;
+      const outDur = Math.min(0.35, len * 0.3);
+      const leave = easeInOutQuint(progress(t, s.end - outDur, outDur));
+      let k: number;
+      if (S.motion.ease === 'snappy') {
+        // soco: chega no zoom em ~0,15 s com mola e assenta
+        k = springIn(progress(t, s.start, Math.min(0.45, len * 0.4)), { freq: 1.5, zeta: 0.5 });
+        // tremor curto no impacto, só em estilos bem intensos
+        const d = 1 - progress(t, s.start, 0.32);
+        if (S.motion.intensity >= 0.6 && d > 0) {
+          const amp = 9 * (plan.output.width / 1080) * S.motion.intensity * d * d;
+          dx = wiggle(t - s.start, 13, 1) * amp;
+          dy = wiggle(t - s.start, 11, 2) * amp * 0.7;
+        }
+      } else {
+        const inDur = Math.min(S.motion.inSec * 1.6, len * 0.45);
+        k = easeOutExpo(progress(t, s.start, inDur));
+      }
+      z *= 1 + (s.scale - 1) * k * (1 - leave);
     }
     if (s.kind === 'cut-transition' && t >= s.at && (S.transition === 'zoom' || S.transition === 'flash')) {
-      const amount = S.transition === 'zoom' ? 0.05 : 0.09;
-      z *= 1 + amount * (1 - easeOutCubic(progress(t, s.at, Math.max(0.05, s.end - s.at))));
+      const amount = S.transition === 'zoom' ? 0.07 : 0.09;
+      z *= 1 + amount * (1 - easeOutExpo(progress(t, s.at, Math.max(0.12, (s.end - s.at) * 1.6))));
     }
   }
-  return z;
+  return { zoom: z, dx, dy };
+}
+
+/** Só a escala da câmera (compatível com a v0.6). */
+export function sourceZoom(plan: EditPlan, t: number, S: StyleDNA = styleAt(plan, t)): number {
+  return cameraAt(plan, t, S).zoom;
 }
 
 /** Opacidade do flash (branco) ou do mergulho (preto) da transição de corte em `t`. */
@@ -45,6 +112,17 @@ export function transitionVeil(plan: EditPlan, t: number, S: StyleDNA = styleAt(
     alpha = Math.max(alpha, (kind === 'flash' ? 0.85 : 0.75) * Math.pow(clamp01(d), kind === 'flash' ? 2 : 1));
   }
   return alpha > 0 ? { color: kind === 'flash' ? '#FFFFFF' : '#000000', alpha } : null;
+}
+
+const CENTRAL: ReadonlySet<SceneInstance['kind']> = new Set(['kinetic-title', 'big-number', 'list', 'quote', 'end-cta']);
+
+/** A frase do título é (quase) a mesma da legenda: mostrar as duas seria repetir. */
+export function sameWords(a: string, b: string): boolean {
+  const wa = a.split(/\s+/).map(normalizeToken).filter(Boolean);
+  const wb = new Set(b.split(/\s+/).map(normalizeToken).filter(Boolean));
+  if (wa.length === 0 || wb.size === 0) return false;
+  const common = wa.filter((w) => wb.has(w)).length;
+  return common / Math.min(wa.length, wb.size) >= 0.6;
 }
 
 const OVERLAY_ORDER: SceneInstance['kind'][] = ['lower-third', 'kinetic-title', 'big-number', 'list', 'quote', 'end-cta'];
@@ -66,14 +144,16 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, w, h);
   if (source) {
-    const z = sourceZoom(plan, t, style);
+    const cam = cameraAt(plan, t, style);
+    const z = cam.zoom;
     ctx.save();
-    if (z !== 1) {
-      // centro do zoom um pouco acima do meio, onde costuma estar o rosto
+    if (z !== 1 || cam.dx !== 0 || cam.dy !== 0) {
+      // centro do zoom um pouco acima do meio, onde costuma estar o rosto; o tremor nunca mostra borda
       const ox = w / 2;
       const oy = h * 0.42;
-      ctx.translate(ox, oy);
-      ctx.scale(z, z);
+      const zz = cam.dx !== 0 || cam.dy !== 0 ? Math.max(z, 1 + (2 * Math.max(Math.abs(cam.dx) / w, Math.abs(cam.dy) / h))) : z;
+      ctx.translate(ox + cam.dx, oy + cam.dy);
+      ctx.scale(zz, zz);
       ctx.translate(-ox, -oy);
     }
     ctx.drawImage(source, 0, 0, w, h);
@@ -86,18 +166,41 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
     ctx.fillRect(0, 0, w, h);
   }
   drawProgress(ctx, f, t, active.some((s) => s.kind === 'progress-bar') ? outputDuration(plan.segments) : 0);
+  // só tipografia (sem caixa): uma faixa escura suave atrás da cena central, para ler sobre qualquer fundo
+  if (composition(style) === 'type') for (const s of active) if (CENTRAL.has(s.kind)) drawBand(ctx, f, s.start, s.end, t);
 
   for (const kind of OVERLAY_ORDER) for (const s of active) if (s.kind === kind) drawOverlay(ctx, f, s, t);
 
-  // a citação já mostra a frase falada: a legenda some enquanto ela está na tela
+  // a citação já mostra a frase falada, e o título com a mesma frase também: a legenda some
   const caption = activeAt(plan.captions, t)[0];
-  if (caption && !active.some((s) => s.kind === 'quote')) {
+  let capRect: Rect | null = null;
+  if (caption && !active.some((s) => s.kind === 'quote' || (s.kind === 'kinetic-title' && sameWords(s.text, caption.text)))) {
     const keywords = new Set(active.filter((s) => s.kind === 'highlight-word').map((s) => normalizeToken((s as { text: string }).text)));
-    drawCaption(ctx, f, caption, t, keywords);
+    const next = plan.captions.find((c) => c.start >= caption.end - 1e-6 && c !== caption);
+    capRect = drawCaption(ctx, f, caption, t, keywords, { exit: !next || next.start - caption.end >= 0.2 });
   }
-  // emojis por cima de tudo, longe da legenda
-  for (const s of active) if (s.kind === 'emoji') drawEmoji(ctx, f, s, t);
+  // emojis por cima de tudo, perto da legenda sem cobrir nem ela nem as cenas
+  const busy = active.some((s) => CENTRAL.has(s.kind));
+  for (const s of active) if (s.kind === 'emoji') drawEmoji(ctx, f, s, t, { caption: capRect, busy });
   ctx.restore();
+}
+
+/** Faixa escura que aparece e some com a cena central (legibilidade do texto sem caixa). */
+export function bandAlpha(start: number, end: number, t: number): number {
+  return easeOutExpo(progress(t, start, 0.35)) * (1 - easeInOutQuint(progress(t, end - 0.35, 0.35)));
+}
+function drawBand(ctx: Ctx2D, f: Frame, start: number, end: number, t: number): void {
+  const k = bandAlpha(start, end, t);
+  const color = f.style.palette.scrim;
+  if (k <= 0 || alphaOf(color) === 0) return;
+  const cy = f.safe.y + f.safe.h * f.overlayY;
+  const half = f.h * 0.26;
+  const g = ctx.createLinearGradient(0, cy - half, 0, cy + half);
+  g.addColorStop(0, withAlpha(color, 0));
+  g.addColorStop(0.5, withAlpha(color, 0.55 * k));
+  g.addColorStop(1, withAlpha(color, 0));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, cy - half, f.w, 2 * half);
 }
 
 /** Gradiente escuro fixo na parte de baixo (legibilidade das legendas), se o estilo pedir. */

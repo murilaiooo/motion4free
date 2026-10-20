@@ -13,7 +13,7 @@ export const SUMMARY_MAX = 300;
 
 export const PROMPT_MAX = 500;
 
-export const PRESET_IDS = ['pop', 'editorial', 'documental'] as const;
+export const PRESET_IDS = ['pop', 'neon', 'editorial', 'documental'] as const;
 export type PresetId = (typeof PRESET_IDS)[number];
 
 export const GOALS = ['ensinar', 'vender', 'inspirar', 'entreter', 'informar'] as const;
@@ -45,7 +45,7 @@ export type BriefSource = (typeof BRIEF_SOURCES)[number];
 
 /** Nomes em português simples, para o resumo "o que entendi". */
 export const LABELS = {
-  preset: { pop: 'Pop', editorial: 'Editorial', documental: 'Documental' } satisfies Record<PresetId, string>,
+  preset: { pop: 'Pop', neon: 'Neon', editorial: 'Editorial', documental: 'Documental' } satisfies Record<PresetId, string>,
   goal: { ensinar: 'ensinar', vender: 'vender', inspirar: 'inspirar', entreter: 'entreter', informar: 'informar' } satisfies Record<Goal, string>,
   tone: { calmo: 'calmo', energetico: 'animado', elegante: 'elegante', serio: 'sério', divertido: 'divertido' } satisfies Record<Tone, string>,
   intensity: { baixa: 'pouco movimento', media: 'movimento médio', alta: 'muito movimento' } satisfies Record<Level, string>,

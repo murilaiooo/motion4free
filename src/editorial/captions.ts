@@ -40,15 +40,18 @@ export function buildCaptions(words: Word[], segments: Segment[], opts: CaptionO
     group = [];
   };
 
-  for (const w of placed) {
+  placed.forEach((w, k) => {
     const text = [...group, w].map((g) => g.text.trim()).join(' ');
-    const tooLong = text.length > opts.maxChars || group.length >= opts.maxWords;
+    // a última palavra da frase (ou da fala) não fica sozinha numa legenda: cabe uma a mais
+    const closes = /[.!?]$/.test(w.text.trim()) || k === placed.length - 1;
+    const orphanSaved = closes && group.length === opts.maxWords && text.length <= opts.maxChars + 8;
+    const tooLong = !orphanSaved && (text.length > opts.maxChars || group.length >= opts.maxWords);
     const tooSlow = group.length > 0 && w.end - group[0]!.start > opts.maxDurationSec;
     const gap = group.length > 0 && w.start - group[group.length - 1]!.end > 0.6;
     if (group.length > 0 && (tooLong || tooSlow || gap)) flush();
     group.push(w);
     if (/[.!?]$/.test(w.text.trim())) flush();
-  }
+  });
   flush();
   return captions;
 }

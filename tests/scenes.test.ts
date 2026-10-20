@@ -6,7 +6,7 @@ import type { Caption, EditPlan, SceneInstance } from '../src/core/types';
 import { activeWord, drawCaption, layoutLines, wordTimings } from '../src/render/captions';
 import { makeFrame } from '../src/render/kit';
 import { countUp, drawOverlay } from '../src/render/scenes';
-import { drawFrame } from '../src/render/frame';
+import { drawFrame, kenBurns } from '../src/render/frame';
 import { RecordingContext } from './helpers/recording-ctx';
 
 const W = 1080;
@@ -66,7 +66,7 @@ describe('cenas: funções puras do tempo, em todos os estilos', () => {
     for (const scene of SCENES) {
       const fonts = PRESETS.map((s) => new Set(draw(s, scene, mid(scene)).calls.filter((c) => c.op === 'fillText').map((c) => c.font.replace(/^.*?px /, ''))));
       const keys = fonts.map((f) => [...f].sort().join('|'));
-      expect(new Set(keys).size, scene.kind).toBe(3);
+      expect(new Set(keys).size, scene.kind).toBe(PRESETS.length);
       const xs = PRESETS.map((s) => {
         const c = draw(s, scene, mid(scene)).calls.find((c) => c.op === 'fillText')!;
         return `${c.textAlign}@${Math.round((c.m[0]! * (c.args[1] as number) + c.m[4]!) / 10)}`;
@@ -231,11 +231,13 @@ describe('drawFrame', () => {
     expect(rc.texts()).not.toContain('Você');
   });
 
-  it('zoom de ênfase amplia o vídeo de fundo', () => {
-    const rc = frame(plan(POP), 4);
+  it('zoom de ênfase amplia o vídeo de fundo (por cima da aproximação lenta do trecho)', () => {
+    const p = plan(POP);
+    const rc = frame(p, 4);
     const img = rc.calls.find((c) => c.op === 'drawImage')!;
-    expect(img.m[0]).toBeCloseTo(1.1, 2);
-    expect(frame(plan(POP), 1).calls.find((c) => c.op === 'drawImage')!.m[0]).toBe(1);
+    expect(img.m[0]).toBeCloseTo(1.1 * kenBurns(p, 4), 2);
+    expect(frame(p, 1).calls.find((c) => c.op === 'drawImage')!.m[0]).toBeCloseTo(kenBurns(p, 1), 6);
+    expect(kenBurns(p, 1)).toBe(1);
   });
 
   it('transição de corte: flash branco no Pop, mergulho escuro no Documental, nada no Editorial', () => {

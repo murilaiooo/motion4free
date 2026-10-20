@@ -46,7 +46,7 @@ function EditorApp() {
   const transcriber = useMemo(
     () =>
       import.meta.env.VITE_FAKE_ASR === '1'
-        ? new FakeTranscriber(FAKE_CHUNKS, new URLSearchParams(location.search).get('asr') === 'falha')
+        ? new FakeTranscriber(new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : FAKE_CHUNKS, new URLSearchParams(location.search).get('asr') === 'falha')
         : new WhisperTranscriber(),
     [],
   );
@@ -214,7 +214,7 @@ function EditorApp() {
     <main className="app">
       <h1>Motion4Free</h1>
       <p className="sub">
-        Versão de teste: tudo acontece no seu computador. Nenhum vídeo é enviado para a internet. <a href="?galeria">Ver os 3 estilos lado a lado</a>
+        Versão de teste: tudo acontece no seu computador. Nenhum vídeo é enviado para a internet. <a href="?galeria">Ver os estilos lado a lado</a>
       </p>
 
       {pending && (

@@ -61,7 +61,9 @@ export function diffPlans(before: EditPlan, after: EditPlan): PlanDiff {
 
   if (before.style.id !== after.style.id) changes.push({ kind: 'style', at: null, text: `Estilo: ${before.style.name} → ${after.style.name}` });
   else if (JSON.stringify({ ...before.style, palette: null }) !== JSON.stringify({ ...after.style, palette: null })) changes.push({ kind: 'style', at: null, text: 'Ajustes do estilo (movimento, ritmo ou o que aparece na tela)' });
-  if (JSON.stringify(before.reference) !== JSON.stringify(after.reference) || JSON.stringify(before.style.palette) !== JSON.stringify(after.style.palette)) {
+  // cores: só quando a imagem de referência mudou ou, no mesmo estilo, a paleta mudou (trocar de estilo já traz as cores dele)
+  const sameStyle = before.style.id === after.style.id;
+  if (JSON.stringify(before.reference) !== JSON.stringify(after.reference) || (sameStyle && JSON.stringify(before.style.palette) !== JSON.stringify(after.style.palette))) {
     changes.push({ kind: 'colors', at: null, text: after.reference ? 'Cores tiradas da sua imagem' : 'Cores do estilo de volta (sem imagem)' });
   }
 
@@ -104,6 +106,16 @@ export function diffPlans(before: EditPlan, after: EditPlan): PlanDiff {
       sceneChanges.push({ kind: 'removed', at: s.start, text: `− ${describeScene(s)} em ${fmt(s.start)}` });
       times.push(s.start, s.end);
     }
+  }
+  // a mesma cena no mesmo instante, só com parâmetros diferentes (ex.: escala do zoom do novo estilo): uma linha só
+  for (let i = 0; i < sceneChanges.length; i++) {
+    const r = sceneChanges[i]!;
+    if (r.kind !== 'removed') continue;
+    const j = sceneChanges.findIndex((a) => a.kind === 'added' && a.text.slice(2) === r.text.slice(2));
+    if (j < 0) continue;
+    sceneChanges[i] = { kind: 'added', at: r.at, text: `Ajustado: ${r.text.slice(2)}` };
+    sceneChanges.splice(j, 1);
+    if (j < i) i--;
   }
   sceneChanges.sort((a, b) => a.at! - b.at! || (a.kind === 'removed' ? -1 : 1));
 

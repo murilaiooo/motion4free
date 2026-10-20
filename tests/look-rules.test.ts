@@ -19,6 +19,8 @@ type Expect = {
   tone?: string | null;
   /** cada item precisa aparecer em "ainda não sei fazer" */
   unsupported?: string[];
+  /** "ainda não sei fazer" exatamente igual */
+  exactUnsupported?: string[];
   /** "ainda não sei fazer" vazio */
   allUnderstood?: boolean;
   /** entendeu algo que muda o vídeo (padrão: sim) */
@@ -94,8 +96,16 @@ const CASES: [string, Expect][] = [
   ['legenda verde, estilo pop, sem zoom', { preset: 'pop', forbid: ['zoom'], look: { captions: { text: VERDE } }, allUnderstood: true }],
   ['calmo e elegante com legenda dourada', { tone: 'calmo', look: { captions: { text: '#F5B700' } }, allUnderstood: true }],
   ['bem animado, legenda amarela em caixa alta, emojis a cada 2s', { tone: 'energetico', look: { captions: { text: AMARELO, case: 'upper' }, emoji: { everySec: 2 } }, allUnderstood: true }],
+  // v0.7 (teste ponta a ponta): o exemplo da tela, com vírgula entre a legenda e a cor
+  ['legenda grande em cima, amarela com contorno preto', { look: { captions: { scale: 1.25, position: 'top', text: AMARELO, stroke: '#000000' } }, allUnderstood: true }],
+  ['legenda em cima, verde com contorno branco', { look: { captions: { position: 'top', text: VERDE, stroke: '#FFFFFF' } }, allUnderstood: true }],
+  // v0.7: estilo Neon só pelo nome do estilo; "verde neon" continua sendo cor
+  ['estilo neon', { preset: 'neon', allUnderstood: true }],
+  ['legenda verde neon', { preset: null, look: { captions: { text: '#39FF14' } }, allUnderstood: true }],
   // o que o app ainda não faz
   ['quero musica de fundo e legenda amarela', { look: { captions: { text: AMARELO } }, unsupported: ['música ou efeitos sonoros'] }],
+  ['legenda verde e música de fundo', { look: { captions: { text: VERDE } }, unsupported: ['música ou efeitos sonoros'], exactUnsupported: ['música ou efeitos sonoros'] }],
+  ['quero musica de fundo', { understood: false, exactUnsupported: ['música ou efeitos sonoros'] }],
   ['legenda amarela e um dinossauro dançando', { look: { captions: { text: AMARELO } }, unsupported: ['dinossauro dançando'] }],
   ['efeito 3d e filtro preto e branco', { understood: false, unsupported: ['efeitos 3D', 'filtro de cor no vídeo'] }],
   ['quero que fique viral', { understood: false, unsupported: ['garantir que viralize (ninguém consegue prometer)'] }],
@@ -117,6 +127,7 @@ describe('regras do pedido: bateria de pedidos reais (look)', () => {
       if (exp.tone !== undefined) expect(brief.tone).toBe(exp.tone);
       for (const u of exp.unsupported ?? []) expect(brief.unsupported).toContain(u);
       if (exp.allUnderstood) expect(brief.unsupported).toEqual([]);
+      if (exp.exactUnsupported) expect(brief.unsupported).toEqual(exp.exactUnsupported);
     });
   }
 

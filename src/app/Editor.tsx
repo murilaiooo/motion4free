@@ -1,3 +1,4 @@
+import { planSummary } from '../core/text';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, TimeRange } from '../core/types';
@@ -39,6 +40,7 @@ interface Result {
   url: string;
   name: string;
   degraded: boolean;
+  codec: string;
   where: 'worker' | 'main';
   style: string;
   fontWarning: string;
@@ -253,7 +255,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       const out = await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
       if (result) URL.revokeObjectURL(result.url);
       const base = session.fileName.replace(/\.[^.]+$/, '');
-      setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, where: out.where, style: plan.style.name, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning });
+      setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, codec: out.codec, where: out.where, style: plan.style.name, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning });
     } catch (err) {
       setExportError(toAppError(err, 'EXPORTACAO_FALHOU'));
     } finally {
@@ -276,7 +278,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     <section className="editor">
       <section className="summary" data-testid="summary">
         <p>
-          Original: <b>{session.ctx.durationSec.toFixed(1)} s</b> · Editado: <b data-testid="out-duration">{total.toFixed(1)} s</b> · {plan.segments.length} trechos · {plan.captions.length} legendas · {session.ctx.words.length} palavras reconhecidas
+          Original: <b>{session.ctx.durationSec.toFixed(1)} s</b> · Editado: <b data-testid="out-duration">{total.toFixed(1)} s</b> · {planSummary(plan.segments.length, plan.captions.length, session.ctx.words.length)}
         </p>
       </section>
 
@@ -469,7 +471,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       {result && (
         <section className="result">
           <video src={result.url} controls playsInline data-testid="result-video" />
-          {result.degraded && <p className="warn">Seu navegador não gera H.264. O vídeo funciona aqui, mas o Instagram pode recusar. Para o arquivo final, use Chrome ou Edge no computador.</p>}
+          {result.degraded && <ErrorBox error={new AppError('SEM_H264', `formato do vídeo: ${result.codec}`)} kind="warning" />}
           {result.fontWarning && <ErrorBox error={new AppError('FONTE_FALHOU', result.fontWarning)} kind="warning" />}
           {result.emojiWarning && <ErrorBox error={new AppError('EMOJI_FALHOU', result.emojiWarning)} kind="warning" />}
           <a href={result.url} download={result.name} data-testid="download" data-export-where={result.where} data-style={result.style}>

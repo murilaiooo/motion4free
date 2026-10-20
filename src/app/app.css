@@ -55,11 +55,11 @@ h2 { font-size: 18px; margin: 24px 0 4px; }
 .caption-row .time { font-size: 13px; padding: 6px 8px; font-variant-numeric: tabular-nums; }
 .caption-row input { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid color-mix(in srgb, CanvasText 30%, transparent); background: transparent; color: inherit; min-width: 0; }
 .styles { display: grid; gap: 6px; }
-.style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
-.style-card { display: grid; gap: 8px; text-align: left; padding: 10px; border-radius: 12px; border: 2px solid color-mix(in srgb, CanvasText 20%, transparent); }
+.style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr)); gap: 10px; }
+.style-card { min-width: 0; display: grid; gap: 8px; text-align: left; padding: 10px; border-radius: 12px; border: 2px solid color-mix(in srgb, CanvasText 20%, transparent); }
 .style-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
-.swatch { display: grid; gap: 6px; justify-items: start; background: #1c2228; border-radius: 8px; padding: 12px 10px; color: #fff; }
-.swatch-title { font-size: 24px; line-height: 1.1; padding: 2px 8px; }
+.swatch { min-width: 0; overflow: hidden; display: grid; gap: 6px; justify-items: start; background: #1c2228; border-radius: 8px; padding: 12px 10px; color: #fff; }
+.swatch-title { max-width: 100%; overflow: hidden; text-overflow: clip; white-space: nowrap; font-size: 19px; line-height: 1.1; padding: 2px 6px; }
 .swatch-caption { font-size: 15px; }
 .style-about { font-size: 13px; opacity: 0.8; }
 .scene-summary { font-size: 14px; opacity: 0.85; margin: 0; }

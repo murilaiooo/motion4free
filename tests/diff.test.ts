@@ -27,6 +27,19 @@ describe('diffPlans', () => {
     expect(d.changes.some((c) => c.kind === 'caption')).toBe(false);
   });
 
+  it('troca de estilo sem imagem não diz "cores de volta" e não lista a mesma cena como tirada e posta (v0.7)', () => {
+    const restyled = applyStyle(base, ctx, 'neon');
+    const texts = diffPlans(base, restyled).changes.map((c) => c.text);
+    expect(texts.join(' | ')).not.toContain('Cores do estilo de volta');
+    const minus = texts.filter((t) => t.startsWith('− ')).map((t) => t.slice(2));
+    const plus = texts.filter((t) => t.startsWith('+ ')).map((t) => t.slice(2));
+    for (const m of minus) expect(plus, m).not.toContain(m);
+    // e tirar a imagem continua dizendo que as cores voltaram
+    const colored = applyReferencePalette(base, ctx, { colors: ['#C81E28'] });
+    const back = applyReferencePalette(colored, ctx, null);
+    expect(diffPlans(colored, back).changes.map((c) => c.text)).toContain('Cores do estilo de volta (sem imagem)');
+  });
+
   it('troca de estilo, legenda corrigida e cores aparecem', () => {
     const restyled = applyStyle(base, ctx, 'editorial');
     expect(diffPlans(base, restyled).changes[0]!.text).toBe('Estilo: Pop → Editorial');
