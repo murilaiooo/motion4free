@@ -14,6 +14,7 @@ test('vídeo com pausas vira MP4 editado, mais curto, com áudio', async ({ page
   await page.getByTestId('export').click();
   const download = page.getByTestId('download');
   await expect(download).toBeVisible({ timeout: 90_000 });
+  await expect(download).toHaveAttribute('data-export-where', 'worker');
   const [file] = await Promise.all([page.waitForEvent('download'), download.click()]);
   const path = info.outputPath('saida.mp4');
   await file.saveAs(path);

@@ -1,4 +1,4 @@
-import type { EditPlan, Word } from '../core/types';
+import type { EditPlan, TimeRange, Word } from '../core/types';
 import { AppError, toAppError } from '../core/errors';
 import { planAsrWindows } from '../analysis/asr-windows';
 import { findSilences } from '../analysis/silence';
@@ -11,25 +11,35 @@ export interface Analysis {
   media: OpenedMedia;
   audio: DecodedAudio | null;
   plan: EditPlan;
-  wordCount: number;
+  words: Word[];
+  silences: TimeRange[];
   /** Problemas que não impedem a edição (ex.: transcrição falhou → sem legendas). */
   warnings: AppError[];
 }
 
-/** Passo a passo da Fase 1: abrir -> áudio -> silêncios -> transcrição -> plano automático. */
-export async function analyze(file: File, transcriber: Transcriber, onStep: (label: string, fraction: number) => void): Promise<Analysis> {
+/** Abre o vídeo e decodifica o áudio (usado na primeira análise e ao reabrir um projeto). */
+export async function openWithAudio(file: Blob, onStep: (label: string, fraction: number) => void): Promise<{ media: OpenedMedia; audio: DecodedAudio | null }> {
   onStep('Abrindo o vídeo', 0);
   const media = await openMedia(file);
-  if (!media.audio) {
+  if (!media.audio) return { media, audio: null };
+  onStep('Lendo o áudio', 0);
+  try {
+    return { media, audio: await decodeAudio(media.audio, media.durationSec) };
+  } catch (err) {
+    throw toAppError(err, 'AUDIO_FALHOU');
+  }
+}
+
+/** Passo a passo da edição automática: abrir -> áudio -> silêncios -> transcrição -> plano. */
+export async function analyze(file: File, transcriber: Transcriber, onStep: (label: string, fraction: number) => void): Promise<Analysis> {
+  const { media, audio } = await openWithAudio(file, onStep);
+  if (!audio) {
     const plan = autoEdit(media.durationSec, [], []);
-    return { media, audio: null, plan, wordCount: 0, warnings: [] };
+    return { media, audio: null, plan, words: [], silences: [], warnings: [] };
   }
 
-  onStep('Lendo o áudio', 0);
-  let audio: DecodedAudio;
   let mono: Float32Array;
   try {
-    audio = await decodeAudio(media.audio, media.durationSec);
     mono = await toMono16k(audio);
   } catch (err) {
     throw toAppError(err, 'AUDIO_FALHOU');
@@ -48,5 +58,5 @@ export async function analyze(file: File, transcriber: Transcriber, onStep: (lab
   }
 
   const plan = autoEdit(media.durationSec, silences, words);
-  return { media, audio, plan, wordCount: words.length, warnings };
+  return { media, audio, plan, words, silences, warnings };
 }
