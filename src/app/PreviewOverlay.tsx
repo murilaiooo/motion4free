@@ -259,14 +259,53 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
         position: 'absolute',
         inset: 0,
         touchAction: 'none',
+        pointerEvents: 'none',
         cursor: drag ? 'grabbing' : 'pointer',
       }}
-      onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onDoubleClick={handleDoubleClick}
       data-testid="preview-overlay"
     >
+      {/* Hit areas for selectable elements (excluding scene so empty clicks play) */}
+      {boxes.filter(b => b.ref.type !== 'scene').map((b) => (
+        <div
+          key={`${b.ref.type}-${b.ref.id ?? ''}-${b.ref.subId ?? ''}`}
+          style={{
+            position: 'absolute',
+            left: `${(b.aabb.x / outputW) * 100}%`,
+            top: `${(b.aabb.y / outputH) * 100}%`,
+            width: `${(b.aabb.w / outputW) * 100}%`,
+            height: `${(b.aabb.h / outputH) * 100}%`,
+            pointerEvents: 'auto',
+            cursor: 'pointer',
+          }}
+          onPointerDown={(e) => {
+            // Delegate to main handler with synthetic hit
+            const hit = b.ref;
+            if (!sameRef(hit, selected)) onSelect(hit);
+            const placement = placementForRef(plan, hit);
+            const box = b;
+            if (placement) {
+              setDrag({
+                ref: hit,
+                startPlacement: placement,
+                startOffset: null,
+                pointerStart: toOutput(e.clientX, e.clientY),
+                box,
+              });
+              (e.target as Element).setPointerCapture(e.pointerId);
+              e.stopPropagation();
+            }
+          }}
+          onDoubleClick={(e) => {
+            if (b.ref.type === 'caption' || b.ref.type === 'text') {
+              onEditText?.(b.ref);
+              e.stopPropagation();
+            }
+          }}
+        />
+      ))}
       {/* Selection box */}
       {selectedBox && !drag && (
         <SelectionBox box={selectedBox} outputW={outputW} outputH={outputH} canvasRef={canvasRef} />
