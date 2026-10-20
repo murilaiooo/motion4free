@@ -48,6 +48,7 @@
 - [ADR-0003: biblioteca semântica](decisions/0003-semantic-motion.md)
 - [ADR-0005: stack v1 e forma de decidir](decisions/0005-stack-v1.md)
 - [ADR-0006: espelho do modelo de transcrição no próprio site](decisions/0006-espelho-do-modelo.md)
+- [ADR-0007: editor da Fase 2 (histórico, projeto no OPFS, player, exportação em Worker)](decisions/0007-editor-projeto-local.md)
 - [Contribuição](../CONTRIBUTING.md) · [Segurança](../SECURITY.md)
 
 ### Convenções

@@ -59,6 +59,8 @@ Basta responder no projeto, do jeito que for mais fácil. Ajuda muito dizer:
 
 **Gate:** as alterações sobrevivem ao reabrir; o player e o MP4 mostram exatamente a mesma coisa nos trechos que você conferir; nada trava durante a exportação.
 
+**Plano detalhado:** [Fase 2 — editor básico](2026-10-20-fase2-editor.md) (implementada na v0.2.0; por pedido do responsável, as Fases 2–5 são construídas em sequência e testadas juntas no fim).
+
 ## Fase 3 — Sistema de motion design (o coração criativo)
 **Você vai conseguir:** escolher entre 3 estilos bem diferentes para o mesmo vídeo e ver animações que acompanham o que é dito: números grandes quando você fala um número, listas quando enumera, destaque em palavras-chave, transições nos cortes, chamada final.
 
