@@ -8,7 +8,7 @@ No teste real (v0.1.1 e v0.1.2), o navegador do responsável abriu o site, mas n
 
 ## Decisão
 - O Worker da Cloudflare que já publica o site passa a ter um script (`worker/index.ts`) que atende só `/hf/*` e `/cdn/*` (`run_worker_first`). Ele busca o arquivo no Hugging Face ou no jsdelivr e devolve pelo mesmo endereço do app, com cache na borda da Cloudflare (30 dias).
-- Só o modelo usado pelo app (`onnx-community/whisper-base_timestamped`) e o pacote `onnxruntime-web` são permitidos (`src/core/mirror.ts`, com teste); qualquer outro caminho vai para os arquivos do site. Não é um proxy aberto.
+- Só o modelo usado pelo app (`onnx-community/whisper-base_timestamped`; desde a v0.8.0 também `whisper-large-v3-turbo_timestamped` e `whisper-small_timestamped`, ver [ADR-0013](0013-legenda-precisa.md)) e o pacote `onnxruntime-web` são permitidos (`src/core/mirror.ts`, com teste); qualquer outro caminho vai para os arquivos do site. Não é um proxy aberto.
 - O Worker de transcrição tenta primeiro o espelho (`[site]`) e, se houver falha de rede ou resposta 401/403/429/5xx, os servidores originais (`[direto]`). No `npm run dev` vai direto.
 - Nenhum dado do usuário passa pelo espelho: só downloads de arquivos públicos do modelo e do runtime.
 
