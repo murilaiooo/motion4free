@@ -125,13 +125,14 @@ interface EditorProps {
   /** modelo que fez a legenda (v0.8), quando o vídeo acabou de ser transcrito */
   asrModel?: string | null;
   onReplaceFile: (f: File) => void;
+  onAddClips: (files: File[]) => void;
   /** avisos do app (projeto, transcrição, sem áudio…) */
   notices: ReactNode;
   /** menu do projeto na barra do topo (v0.11: renomear, fechar, apagar, armazenamento) */
   projectMenu?: ReactNode;
 }
 
-export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, notices, projectMenu }: EditorProps) {
+export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, projectMenu }: EditorProps) {
   const plan = history.present;
   const [tab, setTab] = useState<TabId>('modelos');
   const [selection, setSelection] = useState<TimeRange | null>(null);
@@ -574,6 +575,21 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
       <aside className="inspector" ref={inspectorRef} aria-label="Detalhes">
         <h2 className="insp-title">Detalhes</h2>
+        <div className="card" style={{display:'grid',gap:10,marginBottom:12}} data-testid="clip-and-format">
+          <FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off || disabled} />
+          <ClipList
+            clips={plan.clips.map(c => ({ id:c.id, name:c.name || c.id, duration:c.duration, file: new File([], c.name) }))}
+            onReorder={(next) => {
+              const ordered = next.map(n => plan.clips.find(c => c.id === n.id)!).filter(Boolean);
+              apply(p => reorderClipPlan(p, ordered, session.clipWords ?? {}));
+            }}
+            onRemove={(id) => {
+              const remaining = plan.clips.filter(c => c.id !== id);
+              if (remaining.length > 0) apply(p => reorderClipPlan(p, remaining, session.clipWords ?? {}));
+            }}
+            onAdd={onAddClips}
+          />
+        </div>
         {selectedEl ? (
           <ElementInspector plan={plan} refEl={selectedEl} onChange={(next)=>apply(()=>next)} onClose={()=>setSelectedEl(null)} onEditText={(t)=>apply((p)=>setElementText(p, selectedEl!, t))} editing={editingEl} setEditing={setEditingEl} />
         ) : cut && selectedCut !== null ? (
@@ -642,27 +658,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           <div className="card empty-insp">
             <MousePointerClick size={18} aria-hidden />
             <p className="hint">Clique num corte (listrado) na linha do tempo para restaurar ou ajustar, ou arraste na faixa Trechos para mudar só um pedaço.</p>
-            <div style={{marginTop:12}}><FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off} /></div>
-            {session.clipSources && (
-              <div style={{marginTop:12}}>
-                <ClipList
-                  clips={plan.clips.map(c => ({ id: c.id, name: c.name || c.id, duration: c.duration, file: new File([], c.name) } as any))}
-                  onReorder={(next) => {
-                    const orderedClips = next.map(n => plan.clips.find(c=>c.id===n.id)!).filter(Boolean) as typeof plan.clips;
-                    apply((p) => reorderClipPlan(p, orderedClips, session.clipWords ?? {}));
-                  }}
-                  onRemove={(id) => {
-                    const nextClips = plan.clips.filter(c=>c.id!==id);
-                    if (nextClips.length === 0) return;
-                    apply((p) => reorderClipPlan(p, nextClips, session.clipWords ?? {}));
-                  }}
-                  onAdd={(files)=> {
-                    // TODO: add new clips via file picker and extend plan with new segments at end
-                    console.log('Adicionar clipes:', files);
-                  }}
-                />
-              </div>
-            )}
+
           </div>
         )}
         <ChangesPanel before={before} beforeLabel={beforeLabel} plan={plan} view={view} onView={setView} onSeek={seek} time={time} />
