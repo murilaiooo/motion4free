@@ -9,9 +9,9 @@ import { chooseCodecs } from './codecs';
 import { ensureEmojiFont, ensureFonts } from './fonts';
 import { planUsesEmoji } from '../core/emoji';
 import type { OpenedMedia } from './input';
-import { spliceAudio } from './splice';
+import { CLIP_CROSSFADE_SEC, spliceAudio } from './splice';
 import { ClipFrames, EXPORT_MAX_SIDE, type ClipSource } from './sources';
-import { outputToClip } from '../engine/clips';
+import { clipLayout, outputToClip } from '../engine/clips';
 
 export interface ExportOptions {
   maxDurationSec?: number;
@@ -151,7 +151,8 @@ async function exportPlanUnsafeMulti(
 
   if (audio && audioSource) {
     const trimmed = trimSegments(plan.segments, duration);
-    const spliced = spliceAudio(audio.channels, audio.sampleRate, trimmed);
+    const joins = { clips: clipLayout(plan.clips).map(c => ({ start: c.start, end: c.end })), crossfadeSec: CLIP_CROSSFADE_SEC };
+    const spliced = spliceAudio(audio.channels, audio.sampleRate, trimmed, 0.008, joins);
     const len = spliced[0]!.length;
     const planar = new Float32Array(len * spliced.length);
     spliced.forEach((ch, c) => planar.set(ch, c * len));
