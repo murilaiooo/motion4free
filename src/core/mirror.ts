@@ -1,3 +1,4 @@
+import { ASR_REPOS } from './asr-models';
 import { DEFAULT_LLM, LLM_MODELS, type LlmKey } from './llm-models';
 
 /**
@@ -7,7 +8,8 @@ import { DEFAULT_LLM, LLM_MODELS, type LlmKey } from './llm-models';
  * (firewall, antivírus, bloqueador) ainda consegue transcrever.
  * Só repassa o modelo e o runtime que o app usa, para não virar um proxy aberto.
  */
-export const MODEL_ID = 'onnx-community/whisper-base_timestamped';
+/** Modelos de transcrição (ADR-0013): large-v3-turbo, small e base, todos "_timestamped". */
+export const ASR_MODEL_REPOS: string[] = Object.values(ASR_REPOS);
 
 /**
  * Modelos de texto opcionais (ADR-0009, ADR-0011): Qwen2.5 0.5B / 1.5B / 3B (Apache-2.0) para WebLLM.
@@ -21,7 +23,7 @@ export const CDN_PREFIX = '/cdn/';
 export const GH_PREFIX = '/gh/';
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-const HF_REPOS = [MODEL_ID, ...MODELS.map((m) => m.repo)];
+const HF_REPOS = [...ASR_MODEL_REPOS, ...MODELS.map((m) => m.repo)];
 const HF_PATH = new RegExp(`^${HF_PREFIX}(${HF_REPOS.map(esc).join('|')})\\/resolve\\/[\\w.-]+\\/[\\w./-]+$`);
 const CDN_PATH = /^\/cdn\/npm\/onnxruntime-web@[\w.-]+\/dist\/[\w.-]+$/;
 const GH_PATH = new RegExp(`^${GH_PREFIX}(${MODELS.map((m) => esc(m.lib)).join('|')})$`);

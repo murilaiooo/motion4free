@@ -1,6 +1,8 @@
 import type { EditPlan, TimeRange, Word } from '../core/types';
 import { AppError, toAppError } from '../core/errors';
-import { planAsrWindows } from '../analysis/asr-windows';
+import { cleanTranscript, toWords } from '../analysis/asr-merge';
+import { planAsr } from '../analysis/asr-windows';
+import type { AsrMode } from '../core/asr-models';
 import { findSilences } from '../analysis/silence';
 import { autoEdit } from '../editorial/auto-edit';
 import { decodeAudio, toMono16k, type DecodedAudio } from '../media/audio';
@@ -15,6 +17,8 @@ export interface Analysis {
   silences: TimeRange[];
   /** Problemas que não impedem a edição (ex.: transcrição falhou → sem legendas). */
   warnings: AppError[];
+  /** Modelo que fez a legenda (ex.: "Whisper large-v3-turbo (placa de vídeo)"); null sem transcrição. */
+  asrModel: string | null;
 }
 
 /** Abre o vídeo e decodifica o áudio (usado na primeira análise e ao reabrir um projeto). */
@@ -31,11 +35,11 @@ export async function openWithAudio(file: Blob, onStep: (label: string, fraction
 }
 
 /** Passo a passo da edição automática: abrir -> áudio -> silêncios -> transcrição -> plano. */
-export async function analyze(file: File, transcriber: Transcriber, onStep: (label: string, fraction: number) => void): Promise<Analysis> {
+export async function analyze(file: File, transcriber: Transcriber, onStep: (label: string, fraction: number) => void, opts: { asrMode?: AsrMode } = {}): Promise<Analysis> {
   const { media, audio } = await openWithAudio(file, onStep);
   if (!audio) {
     const plan = autoEdit(media.durationSec, [], []);
-    return { media, audio: null, plan, words: [], silences: [], warnings: [new AppError('SEM_AUDIO', `${media.durationSec.toFixed(1)} s sem faixa de áudio`)] };
+    return { media, audio: null, plan, words: [], silences: [], warnings: [new AppError('SEM_AUDIO', `${media.durationSec.toFixed(1)} s sem faixa de áudio`)], asrModel: null };
   }
 
   let mono: Float32Array;
@@ -51,13 +55,18 @@ export async function analyze(file: File, transcriber: Transcriber, onStep: (lab
   // Sem transcrição o vídeo ainda pode ser cortado e exportado, só sem legendas e sem título.
   const warnings: AppError[] = [];
   let words: Word[] = [];
+  let asrModel: string | null = null;
   try {
-    words = await transcriber.transcribe(mono.slice(), media.durationSec, planAsrWindows(silences, media.durationSec), onStep);
+    // Janelas cortadas em silêncio com folga; depois da junção, limpa alucinações e acerta o tempo das palavras.
+    const r = await transcriber.transcribe(mono.slice(), media.durationSec, planAsr(silences, media.durationSec), onStep, opts.asrMode);
+    words = toWords(cleanTranscript(r.words, silences));
+    asrModel = r.model;
+    warnings.push(...r.notices);
   } catch (err) {
     warnings.push(toAppError(err, 'TRANSCRICAO_FALHOU'));
   }
-  if (warnings.length === 0 && words.length === 0) warnings.push(new AppError('SEM_FALA', `${silences.length} silêncios em ${media.durationSec.toFixed(1)} s`));
+  if (asrModel !== null && words.length === 0) warnings.push(new AppError('SEM_FALA', `${silences.length} silêncios em ${media.durationSec.toFixed(1)} s`));
 
   const plan = autoEdit(media.durationSec, silences, words);
-  return { media, audio, plan, words, silences, warnings };
+  return { media, audio, plan, words, silences, warnings, asrModel };
 }

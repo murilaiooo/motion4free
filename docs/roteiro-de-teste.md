@@ -1,15 +1,20 @@
-# Roteiro de teste — Motion4Free v0.7.0 (Fases 1 a 5 + pedido com IA + movimento profissional)
+# Roteiro de teste — Motion4Free v0.8.0 (Fases 1 a 5 + pedido com IA + movimento profissional + legenda precisa)
 
 Para quem vai testar. Não precisa instalar nada nem usar terminal. Leva uns 30 a 40 minutos.
 
 **Antes de começar**
 - Use o **Chrome ou o Edge do computador**, atualizados.
-- Abra o **link de prévia** que veio na mensagem do PR (ou o endereço do Motion4Free). Confira no rodapé da página se está escrito **Motion4Free v0.7.0**.
+- Abra o **link de prévia** que veio na mensagem do PR (ou o endereço do Motion4Free). Confira no rodapé da página se está escrito **Motion4Free v0.8.0**.
 - Separe **um vídeo seu falando**, de 30 a 90 segundos, com algumas pausas (pode ser gravado no celular). Se der, separe também uma **foto ou logo bem colorida**.
 - Nada do vídeo sai do seu computador: tudo acontece dentro do navegador.
 
 ## Passo a passo
 
+0. **Legenda precisa (novo na v0.8).** Embaixo da caixa tracejada há "Precisão da legenda". Deixe em **Precisa** e leia o que aparece ao lado (qual modelo, se usa a placa de vídeo e o tamanho do download, cerca de 1,4 GB). Use o **mesmo vídeo de 145 s** do teste anterior.
+   - Durante a barra de progresso deve aparecer "Baixando o modelo de legenda Whisper large-v3-turbo…" (só na primeira vez; pode levar vários minutos) e depois "Transcrevendo a fala … trecho 1 de 6". *Anote quanto tempo levou o download e quanto levou a transcrição.*
+   - No fim, embaixo de "Projeto salvo", aparece **"Legenda feita com …"**. Se aparecer o aviso **M4F-307**, o modelo grande não funcionou no seu computador e o app usou outro: copie o aviso (botão de copiar) e mande no feedback.
+   - Leia a legenda inteira e conte, mais ou menos, quantas palavras estão erradas (antes eram ~2 em cada 10). Confira se a legenda **aparece junto com a voz**, principalmente depois das pausas, e se **nenhuma frase foi inventada** ou repetida.
+   - (Opcional, 10 min) Para um número exato: abra o app com **`?avaliar`** no fim do endereço, escolha o vídeo, cole o texto exato da fala e clique em "Transcrever e medir". Mande o "Acerto" e os erros mais comuns. Depois troque para "Só Whisper base (processador)" e meça de novo para comparar com a versão antiga.
 1. **Abrir o vídeo.** Clique na caixa tracejada e escolha o seu vídeo. Espere a barra de progresso. Na primeira vez o site baixa o "modelo de transcrição" (pode levar alguns minutos). *Anote quanto tempo levou.*
 2. **Conferir o resumo.** Aparece "Original: X s · Editado: Y s". O editado deve ser mais curto (as pausas longas foram cortadas). Clique em **Assistir** e veja se o som e a imagem estão juntos e se nenhum corte comeu pedaço de palavra.
 3. **Legendas.** Role até "Legendas". Corrija uma palavra errada (clique no texto, corrija, aperte Enter). Assista de novo: a legenda corrigida aparece no vídeo.

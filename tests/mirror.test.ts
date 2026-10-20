@@ -1,9 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { MODEL_ID, llmModelRecord, mirrorCdnUrl, upstreamUrl } from '../src/core/mirror';
+import { ASR_MODEL_REPOS, llmModelRecord, mirrorCdnUrl, upstreamUrl } from '../src/core/mirror';
+import { ASR_CANDIDATES } from '../src/core/asr-models';
 import { DEFAULT_LLM, LLM_MODELS, localAiErrorKey } from '../src/core/llm-models';
 
 describe('espelho do modelo', () => {
+  const MODEL_ID = 'onnx-community/whisper-base_timestamped';
+
+  it('repassa os três modelos de transcrição (turbo, small, base) ao Hugging Face', () => {
+    expect(ASR_MODEL_REPOS).toEqual([
+      'onnx-community/whisper-large-v3-turbo_timestamped',
+      'onnx-community/whisper-small_timestamped',
+      'onnx-community/whisper-base_timestamped',
+    ]);
+    for (const repo of ASR_MODEL_REPOS) {
+      expect(upstreamUrl(`/hf/${repo}/resolve/main/config.json`)).toBe(`https://huggingface.co/${repo}/resolve/main/config.json`);
+      expect(upstreamUrl(`/hf/${repo}/resolve/main/generation_config.json`)).toBe(`https://huggingface.co/${repo}/resolve/main/generation_config.json`);
+    }
+  });
+
+  it('repassa cada arquivo ONNX que a escada de modelos pede (dtype -> sufixo do Transformers.js)', () => {
+    const suffix = { fp32: '', fp16: '_fp16', q8: '_quantized', q4: '_q4' } as const;
+    for (const c of Object.values(ASR_CANDIDATES)) {
+      const dt = typeof c.dtype === 'string' ? { encoder_model: c.dtype, decoder_model_merged: c.dtype } : c.dtype;
+      for (const [file, d] of Object.entries(dt)) {
+        const p = `/hf/${c.repo}/resolve/main/onnx/${file}${suffix[d]}.onnx`;
+        expect(upstreamUrl(p)).toBe(`https://huggingface.co${p.slice(3)}`);
+      }
+    }
+    // pesos grandes em arquivo separado (external data) também passam
+    expect(upstreamUrl(`/hf/${ASR_MODEL_REPOS[0]}/resolve/main/onnx/encoder_model_fp16.onnx_data`)).not.toBeNull();
+  });
+
   it('repassa arquivos do modelo usado pelo app ao Hugging Face', () => {
     expect(upstreamUrl(`/hf/${MODEL_ID}/resolve/main/config.json`)).toBe(`https://huggingface.co/${MODEL_ID}/resolve/main/config.json`);
     expect(upstreamUrl(`/hf/${MODEL_ID}/resolve/main/onnx/decoder_model_merged_quantized.onnx`)).toBe(
@@ -18,6 +46,8 @@ describe('espelho do modelo', () => {
 
   it('recusa outros modelos, pacotes e caminhos com ..', () => {
     expect(upstreamUrl('/hf/outro/modelo/resolve/main/config.json')).toBeNull();
+    expect(upstreamUrl('/hf/onnx-community/whisper-large-v3/resolve/main/config.json')).toBeNull();
+    expect(upstreamUrl('/hf/onnx-community/whisper-small/resolve/main/config.json')).toBeNull();
     expect(upstreamUrl('/cdn/npm/react@19/dist/x.js')).toBeNull();
     expect(upstreamUrl(`/hf/${MODEL_ID}/resolve/main/../../x`)).toBeNull();
     expect(upstreamUrl('/index.html')).toBeNull();
