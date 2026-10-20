@@ -136,7 +136,7 @@ function EditorApp() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [storageOpen, setStorageOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
-  const [spaceWarn, setSpaceWarn] = useState<{ file: File; error: AppError } | null>(null);
+  const [spaceWarn, setSpaceWarn] = useState<{ files: File[]; error: AppError } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const saveFailed = useRef(false);
   /** gravações no OPFS em fila: salvar, copiar vídeo, renomear e apagar nunca se atropelam */
@@ -367,17 +367,18 @@ function EditorApp() {
   }
 
   /** Cabe o vídeo (e o modelo de legenda, se ainda não foi baixado)? Senão, aviso M4F-606 antes de começar. */
-  async function checkSpace(f: File): Promise<AppError | null> {
+  async function checkSpace(files: File[]): Promise<AppError | null> {
     const est = (await storage.quota?.estimate().catch(() => null)) ?? null;
     if (!est) return null;
     const cand = ASR_CANDIDATES[asrLadder(precision.mode, precision.capability)[0]!];
     const cached = await cachedRepos(storage.caches).catch(() => new Set<string>());
     const model = cached.has(cand.repo) ? 0 : cand.downloadMB * MB;
-    const check = spaceCheck(est, f.size + model);
+    const fileBytes = files.reduce((sum, file) => sum + file.size, 0);
+    const check = spaceCheck(est, fileBytes + model);
     if (check.ok) return null;
     return new AppError(
       'ESPACO_INSUFICIENTE',
-      `livre para o app: ${formatBytes(check.free ?? 0)}; precisa de cerca de ${formatBytes(check.needed)} (cópia do vídeo ${formatBytes(f.size)}${model ? ` + modelo de legenda ${cand.label} ${formatBytes(model)}` : ''})`,
+      `livre para o app: ${formatBytes(check.free ?? 0)}; precisa de cerca de ${formatBytes(check.needed)} (cópia dos vídeos ${formatBytes(fileBytes)}${model ? ` + modelo de legenda ${cand.label} ${formatBytes(model)}` : ''})`,
     );
   }
 
@@ -414,13 +415,10 @@ function EditorApp() {
       return;
     }
     if (!force) {
-      // check space for all files combined
-      for (const file of files) {
-        const warn = await checkSpace(file);
-        if (warn) {
-          setSpaceWarn({ file, error: warn });
-          return;
-        }
+      const warn = await checkSpace(files);
+      if (warn) {
+        setSpaceWarn({ files, error: warn });
+        return;
       }
     }
     setSpaceWarn(null);
@@ -514,6 +512,8 @@ function EditorApp() {
       return;
     }
     try {
+      const space = await checkSpace(files);
+      if (space) throw space;
       const existingClips = initialHistory.present.clips;
       const currentIds = [...existingClips.map(c => c.id), ...Array.from(session.clipSources?.keys() ?? [])];
       const firstNumber = 1 + Math.max(0, ...currentIds.map(id => Number(id.slice(1)) || 0));
@@ -713,7 +713,7 @@ function EditorApp() {
         <div className="space-warn" data-testid="space-warning" style={{ display: 'grid', gap: 'var(--s-2)' }}>
           <ErrorBox error={spaceWarn.error} kind="warning" />
           <div className="notice-row">
-            <button className="sm primary" onClick={() => void onFile(spaceWarn.file, true)} data-testid="space-continue">
+            <button className="sm primary" onClick={() => void onFile(spaceWarn.files, true)} data-testid="space-continue">
               Continuar mesmo assim
             </button>
             <button className="sm" onClick={() => setStorageOpen(true)} data-testid="space-storage">
