@@ -13,13 +13,15 @@ import { interpretPrompt } from '../src/editorial/interpret';
 import { applyBrief, applyRange, type EditContext } from '../src/editorial/ops';
 import { interpretRangePrompt } from '../src/editorial/range-interpret';
 import { styleAt } from '../src/editorial/ranges';
-import { proposeEmojis } from '../src/editorial/selector';
+import { proposeEmojis as proposeAny } from '../src/editorial/selector';
 import { captionCenterFrac, captionColors, captionEnter, captionTop, drawCaption, layoutLines } from '../src/render/captions';
 import { drawEmoji, emojiPose } from '../src/render/emoji';
 import { makeFrame } from '../src/render/kit';
 import { RecordingContext } from './helpers/recording-ctx';
 import { SAMPLE_TEXT, wordsFrom } from './helpers/words';
 
+type EmojiDraft = { kind: 'emoji'; emoji: string; start: number; end: number };
+const proposeEmojis = (...a: Parameters<typeof proposeAny>) => proposeAny(...a) as EmojiDraft[];
 const VERDE = '#22C55E';
 const AMARELO = '#FFD400';
 const look = (l: Look, base: StyleDNA = POP, forbid: string[] = []) => applyLook(base, l, forbid as never);
@@ -155,7 +157,7 @@ describe('applyLook: cada campo do look chega ao estilo', () => {
     expect(look({ scenes: { barra: true } }, base, ['barra']).progress).toBe('none');
   });
   it('o estilo resultante continua válido para todos os estilos', () => {
-    const big: Look = { captions: { text: VERDE, highlight: AMARELO, stroke: '#000000', box: '#000000', scale: 2.2, y: 0.9, case: 'upper', font: 'Montserrat', animation: 'bounce', wordsPerLine: 3, wordsAtOnce: 8, highlightMode: 'box', strokeWidth: 24 }, emoji: { mode: 'keywords', scale: 2, position: 'left', animation: 'spin' }, accent: '#FF2E93', transition: 'whip', motion: 1, scenes: { barra: true, zoom: true } };
+    const big: Look = { captions: { text: VERDE, highlight: AMARELO, stroke: '#000000', box: '#000000', scale: 2.2, y: 0.9, case: 'upper', font: 'Montserrat', animation: 'bounce', wordsPerLine: 3, wordsAtOnce: 8, highlightMode: 'box', strokeWidth: 24 }, emoji: { mode: 'keywords', scale: 2, position: 'left', animation: 'spin' }, accent: '#FF2E93', transition: 'flash', motion: 1, scenes: { barra: true, zoom: true } };
     for (const p of PRESETS) {
       const plan = { ...autoEdit(10, [], wordsFrom('um dois tres quatro')), style: look(big, p) };
       expect(() => parseEditPlan(plan)).not.toThrow();
