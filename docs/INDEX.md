@@ -7,6 +7,7 @@
 - [Plano mestre](superpowers/plans/2026-10-20-plano-mestre.md): 6 fases, roteiro de teste e gate de cada uma.
 - [Plano detalhado da Fase 1 — primeiro MP4](superpowers/plans/2026-10-20-fase1-primeiro-mp4.md): tarefas com código e testes.
 - [ADR-0005: stack v1 e forma de decidir](decisions/0005-stack-v1.md).
+- [Plano detalhado da Fase 3 — sistema de motion design](superpowers/plans/2026-10-20-fase3-motion.md) e [ADR-0008](decisions/0008-styledna-e-cenas.md).
 
 ## Contexto e histórico
 - [Visão do produto](vision.md): público, problema, proposta de valor e princípios.
@@ -49,6 +50,8 @@
 - [ADR-0005: stack v1 e forma de decidir](decisions/0005-stack-v1.md)
 - [ADR-0006: espelho do modelo de transcrição no próprio site](decisions/0006-espelho-do-modelo.md)
 - [ADR-0007: editor da Fase 2 (histórico, projeto no OPFS, player, exportação em Worker)](decisions/0007-editor-projeto-local.md)
+- [ADR-0008: StyleDNA paramétrico, cenas puras e seletor por regras (Fase 3)](decisions/0008-styledna-e-cenas.md)
+- [Licenças de recursos de terceiros incluídos no app (fontes)](licencas.md)
 - [Contribuição](../CONTRIBUTING.md) · [Segurança](../SECURITY.md)
 
 ### Convenções

@@ -2,6 +2,21 @@
 
 A versão aparece no rodapé do app (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.3.0 — 20/10/2026
+Fase 3: estilos e animações.
+- **3 estilos bem diferentes para o mesmo vídeo**, escolhidos com um clique logo abaixo da prévia:
+  - **Pop**: energético. Letras grandes em maiúsculas, a palavra que está sendo falada aparece numa caixa amarela, flash nos cortes, muitas animações.
+  - **Editorial**: elegante, como revista. Letra serifada nos títulos, legenda que "acende" palavra por palavra, movimento lento e poucas animações.
+  - **Documental**: sóbrio. Painéis escuros à esquerda, letra técnica, quase sem movimento.
+  Trocar de estilo muda letras, cores, animações e ritmo, e dá para desfazer. O vídeo final sai no estilo escolhido, e o estilo fica salvo com o projeto.
+- **Legendas maiores e mais fortes**, com destaque na palavra falada e nas palavras-chave (ex.: "segredo", "nunca", "erro").
+- **Animações que acompanham a fala**, escolhidas automaticamente pelo que é dito: número grande quando você fala um número ("noventa por cento" vira **90%**), lista quando enumera ("primeiro…, segundo…"), pergunta em destaque, seu nome na tela quando você se apresenta ("meu nome é…"), zoom em frases fortes, transição nos cortes, barra de progresso e chamada final ("Siga para mais"). Cada estilo tem um limite de animações por trecho para não poluir, e a mesma animação não se repete em seguida.
+- A lista "Animações neste estilo" mostra o que foi colocado no vídeo.
+- **Galeria de estilos**: o link "Ver os 3 estilos lado a lado" mostra as mesmas animações em cada estilo. Imagens de exemplo: [Pop](assets/fase3/pop.png), [Editorial](assets/fase3/editorial.png), [Documental](assets/fase3/documental.png).
+- Fontes gratuitas de licença livre, guardadas no próprio site ([licenças](licencas.md)).
+- Projetos salvos na versão anterior abrem normalmente (no estilo Pop); para ver as animações novas neles, escolha um estilo.
+- Novos códigos: M4F-801 (fontes não carregaram) e M4F-802 (estilo inexistente). Ver [erros.md](erros.md).
+
 ## v0.2.0 — 20/10/2026
 Fase 2: editor básico.
 - **Assistir antes de gerar:** o vídeo editado toca na própria página, com som, legendas e título, desenhado pela mesma função que gera o arquivo final (a prévia usa meia resolução para ficar leve). Substitui a antiga "prévia de 10 s".

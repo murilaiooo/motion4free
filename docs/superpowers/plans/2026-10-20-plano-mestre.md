@@ -62,6 +62,8 @@ Basta responder no projeto, do jeito que for mais fácil. Ajuda muito dizer:
 **Plano detalhado:** [Fase 2 — editor básico](2026-10-20-fase2-editor.md) (implementada na v0.2.0; por pedido do responsável, as Fases 2–5 são construídas em sequência e testadas juntas no fim).
 
 ## Fase 3 — Sistema de motion design (o coração criativo)
+> Plano detalhado: [2026-10-20-fase3-motion.md](2026-10-20-fase3-motion.md) · decisão: [ADR-0008](../../decisions/0008-styledna-e-cenas.md) · implementado na v0.3.0, aguardando o gate criativo.
+
 **Você vai conseguir:** escolher entre 3 estilos bem diferentes para o mesmo vídeo e ver animações que acompanham o que é dito: números grandes quando você fala um número, listas quando enumera, destaque em palavras-chave, transições nos cortes, chamada final.
 
 **Entregas técnicas:**
