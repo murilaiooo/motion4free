@@ -28,7 +28,7 @@ export interface LookRulesResult {
 type Target = 'caption' | 'highlight' | 'stroke' | 'box' | 'emoji' | 'accent' | 'transition';
 
 const TARGETS: [string, Target][] = [
-  ...'legenda|legendas|letra|letras|letreiro|fonte|fontes|caption|captions|texto|textos|texto da legenda|textos da legenda|palavras da legenda'.split('|').map((p) => [p, 'caption'] as [string, Target]),
+  ...'legenda|legendas|legeda|legendinha|lengenda|ledenda|letra|letras|letreiro|fonte|fontes|caption|captions|texto|textos|texto da legenda|textos da legenda|palavras da legenda'.split('|').map((p) => [p, 'caption'] as [string, Target]),
   ...'destaque|destaques|palavra falada|palavra destacada|palavras destacadas|palavra em destaque|palavra atual|realce|marcacao|marca texto|palavra que esta sendo falada'.split('|').map((p) => [p, 'highlight'] as [string, Target]),
   ...'contorno|contornos|borda|bordas|outline|stroke'.split('|').map((p) => [p, 'stroke'] as [string, Target]),
   ...'fundo|fundo da legenda|caixa|caixinha|tarja|faixa|box'.split('|').map((p) => [p, 'box'] as [string, Target]),
@@ -232,7 +232,7 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
   // 4) "N palavras por linha", "uma palavra por vez", "palavra por palavra"
   for (let i = 0; i < toks.length; i++) {
     if (!free(i)) continue;
-    if (phraseAt(toks, i, 'palavra por palavra')) {
+    if (phraseAt(toks, i, 'palavra por palavra') && toks[i - 1]?.norm !== 'aparecendo') {
       captions.wordsAtOnce = 1;
       mark(i, 3);
       continue;
@@ -278,6 +278,8 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
       if (used[i]) continue;
       const p = longestAt(toks, i, TARGET_PHRASES);
       if (!p) continue;
+      // "caixa alta/baixa" é maiúscula/minúscula, não a caixa atrás da legenda
+      if (p === 'caixa' && ['alta', 'baixa'].includes(toks[i + 1]?.norm ?? '')) continue;
       const n = p.split(' ').length;
       if (i + n > b) continue;
       targets.push({ i, n, t: TARGET_OF.get(p)!, neg: negatedBefore(i) });
@@ -315,8 +317,9 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
     const words = toks.map((t) => t.norm);
     for (let i = a; i < b; i++) {
       if (used[i]) continue;
-      if (phraseAt(toks, i, 'cor da bandeira') || phraseAt(toks, i, 'cores da bandeira') || phraseAt(toks, i, 'cores do brasil') || phraseAt(toks, i, 'cor do brasil') || phraseAt(toks, i, 'verde amarelo')) {
-        const n = phraseAt(toks, i, 'verde amarelo') ? 2 : 3;
+      const flag = longestAt(toks, i, ['cor da bandeira', 'cores da bandeira', 'cor da bandeira do brasil', 'cores da bandeira do brasil', 'cores do brasil', 'cor do brasil', 'verde amarelo', 'verde amarela', 'cores brasileiras', 'bem brasileira']);
+      if (flag) {
+        const n = flag.split(' ').length;
         const owner = ownerOf(i);
         colors.push({ hex: '#22C55E', owner, i }, { hex: '#FFD400', owner, i });
         claim(i, n, owner);
@@ -365,7 +368,7 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
       const p = longestAt(toks, i, SIZE_PHRASES);
       if (!p) continue;
       const owner = ownerOf(i);
-      if (!owner || owner.neg || !['caption', 'highlight', 'emoji'].includes(owner.t)) continue;
+      if (!owner || owner.neg || !['caption', 'emoji'].includes(owner.t)) continue;
       const v = SIZE_OF.get(p)!;
       if (owner.t === 'emoji') emoji.scale = v;
       else captions.scale = v;
@@ -447,17 +450,19 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
       }
     }
 
-    // contorno/fundo sem cor: "com contorno", "contorno grosso", "com fundo"
+    // espessura do contorno: "contorno grosso", "contorno preto fino"
+    for (let i = a; i < b; i++) {
+      if (used[i]) continue;
+      const w = toks[i]!.norm;
+      const owner = ownerOf(i);
+      if (owner?.t !== 'stroke' || owner.neg || !['grosso', 'grossa', 'fino', 'fina', 'forte', 'grossinho'].includes(w)) continue;
+      captions.strokeWidth = w.startsWith('fin') ? 5 : 16;
+      claim(i, 1, owner);
+    }
+    // contorno/fundo sem cor: "com contorno", "com fundo"
     for (const t of live) {
       if (t.t === 'stroke' && !captions.stroke && captions.strokeWidth === undefined) {
-        const next = toks[t.i + t.n]?.norm;
-        if (next === 'grosso' || next === 'grossa') {
-          captions.strokeWidth = 16;
-          claim(t.i + t.n, 1, t);
-        } else if (next === 'fino' || next === 'fina') {
-          captions.strokeWidth = 5;
-          claim(t.i + t.n, 1, t);
-        } else if (toks[t.i - 1]?.norm === 'com') {
+        if (toks[t.i - 1]?.norm === 'com') {
           captions.strokeWidth = 10;
           claim(t.i - 1, 1, t);
         }

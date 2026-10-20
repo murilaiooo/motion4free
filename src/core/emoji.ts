@@ -28,3 +28,8 @@ export function normalizeEmoji(s: unknown): Emoji | null {
   const bare = t.replace(/️/g, '');
   return EMOJI_SET.find((e) => e.replace(/️/g, '') === bare) ?? null;
 }
+
+/** O plano desenha algum emoji? (decide se a fonte dos emojis precisa ser baixada) */
+export function planUsesEmoji(plan: { scenes: readonly { kind: string }[] }): boolean {
+  return plan.scenes.some((s) => s.kind === 'emoji');
+}

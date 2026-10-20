@@ -6,7 +6,8 @@ import { outputDuration, outputToSource } from '../engine/timeline';
 import { drawFrame } from '../render/frame';
 import type { DecodedAudio } from './audio';
 import { chooseCodecs } from './codecs';
-import { ensureFonts } from './fonts';
+import { ensureEmojiFont, ensureFonts } from './fonts';
+import { planUsesEmoji } from '../core/emoji';
 import type { OpenedMedia } from './input';
 import { spliceAudio } from './splice';
 
@@ -24,6 +25,8 @@ export interface ExportResult {
   codec: string;
   /** vazio = fontes do estilo carregadas; senão, detalhe do aviso M4F-801 (vídeo saiu com fonte reserva) */
   fontWarning: string;
+  /** a fonte dos emojis não carregou (M4F-805) */
+  emojiWarning: string;
 }
 
 export async function exportPlan(media: OpenedMedia, audio: DecodedAudio | null, plan: EditPlan, opts: ExportOptions = {}): Promise<ExportResult> {
@@ -44,6 +47,7 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   const codecs = await chooseCodecs(width, height);
   // as fontes precisam estar carregadas antes do primeiro quadro (também dentro do Worker)
   const fonts = await ensureFonts(stylesOf(plan));
+  const emoji = planUsesEmoji(plan) ? await ensureEmojiFont() : { ok: true, detail: '' };
 
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d')!;
@@ -84,7 +88,7 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   await output.finalize();
   opts.onProgress?.(1);
   const data = (output.target as BufferTarget).buffer!;
-  return { blob: new Blob([data], { type: 'video/mp4' }), degraded: codecs.degraded, codec: codecs.video, fontWarning: fonts.ok ? '' : fonts.detail };
+  return { blob: new Blob([data], { type: 'video/mp4' }), degraded: codecs.degraded, codec: codecs.video, fontWarning: fonts.ok ? '' : fonts.detail, emojiWarning: emoji.ok ? '' : emoji.detail };
 }
 
 function even(n: number): number {

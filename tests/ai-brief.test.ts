@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { briefSchema } from '../src/core/brief';
 import { AppError } from '../src/core/errors';
 import {
+  AI_EXAMPLES,
   SYSTEM_PROMPT,
+  askAi,
+  chatTurns,
+  extractJsonObject,
+  systemPrompt,
   buildAiMessages,
   escapeData,
   geminiErrorKey,
@@ -63,7 +68,7 @@ describe('parseAiReply: só IDs permitidos', () => {
 });
 
 describe('mergeAiProposal: a IA só completa', () => {
-  const base = { forbid: [], emphasize: [], wantsHook: false, dropped: [] };
+  const base = { forbid: [], emphasize: [], wantsHook: false, dropped: [], look: {}, unsupported: [], summary: '', valid: 1 };
 
   it('não troca o que as regras entenderam e não remove proibições', () => {
     const rules = interpretPrompt('estilo documental, sem números').brief;
@@ -78,7 +83,7 @@ describe('mergeAiProposal: a IA só completa', () => {
     const { brief, added } = mergeAiProposal(rules, { ...base, tone: 'calmo', intensity: 'baixa', forbid: ['efeitos'] }, hooks, 'ia-local');
     expect(brief).toMatchObject({ tone: 'calmo', intensity: 'baixa', forbid: ['efeitos'], source: 'ia-local' });
     expect(added).toContain('tom');
-    expect(brief.notes.conflicts.at(-1)).toContain('A IA no navegador completou');
+    expect(brief.unsupported).toEqual([]);
     expect(briefSchema.safeParse(brief).success).toBe(true);
   });
 
@@ -157,10 +162,32 @@ describe('interpretLayered: qualquer falha cai para as regras', () => {
     expect(r.brief).toEqual(rules);
   });
 
-  it('resposta fora do formato → regras + M4F-1007', async () => {
-    const r = await interpretLayered('calmo, sem emojis', words, { complete: async () => 'Olá! Posso ajudar?', source: 'ia-chave' });
+  it('resposta fora do formato duas vezes (mesmo com correção) → regras + M4F-1012', async () => {
+    const calls: AiMessages[] = [];
+    const r = await interpretLayered('calmo, sem emojis', words, {
+      complete: async (m) => {
+        calls.push(m);
+        return 'Olá! Posso ajudar?';
+      },
+      source: 'ia-chave',
+    });
     expect(r.brief).toEqual(rules);
-    expect(r.warning?.code).toBe('M4F-1007');
+    expect(r.warning?.code).toBe('M4F-1012');
+    expect(calls).toHaveLength(2);
+    expect(calls[1]!.repair?.reply).toBe('Olá! Posso ajudar?');
+    expect(chatTurns(calls[1]!).at(-1)!.content).toContain('SOMENTE com um objeto JSON');
+  });
+
+  it('resposta quebrada e depois boa: a correção salva o pedido', async () => {
+    let n = 0;
+    const r = await interpretLayered('algo bem diferente', words, {
+      complete: async () => (++n === 1 ? '{"captions": {"text": "#22C55E",' : '{"captions":{"text":"#22C55E"},"summary":"Legenda verde."}'),
+      source: 'ia-local',
+    });
+    expect(n).toBe(2);
+    expect(r.warning).toBeNull();
+    expect(r.brief.look.captions?.text).toBe('#22C55E');
+    expect(r.brief.summary).toBe('Legenda verde.');
   });
 
   it('resposta boa completa o brief e passa no esquema', async () => {
@@ -178,9 +205,11 @@ describe('Gemini (chave própria): requisição e resposta', () => {
     const m = buildAiMessages('calmo', words, hooks);
     const body = geminiRequest(m) as { systemInstruction: { parts: { text: string }[] }; contents: { role: string; parts: { text: string }[] }[]; generationConfig: { responseMimeType: string } };
     expect(body.systemInstruction.parts[0]!.text).toBe(m.system);
-    expect(body.contents).toHaveLength(1);
-    expect(body.contents[0]!.role).toBe('user');
-    expect(body.contents[0]!.parts[0]!.text).toBe(m.user);
+    // exemplos (pedido → JSON) e depois o pedido de verdade, sempre por último
+    expect(body.contents).toHaveLength(1 + 2 * AI_EXAMPLES.length);
+    expect(body.contents.at(-1)!.role).toBe('user');
+    expect(body.contents.at(-1)!.parts[0]!.text).toBe(m.user);
+    expect(body.contents[1]!.role).toBe('model');
     expect(body.generationConfig.responseMimeType).toBe('application/json');
     expect(JSON.stringify(body)).not.toMatch(/blob:|data:video|\.mp4|\.webm/);
   });
@@ -196,5 +225,99 @@ describe('Gemini (chave própria): requisição e resposta', () => {
     expect(geminiErrorKey(429, '')).toBe('IA_CHAVE_RECUSADA');
     expect(geminiErrorKey(400, 'API_KEY_INVALID')).toBe('IA_CHAVE_RECUSADA');
     expect(geminiErrorKey(500, '')).toBe('IA_CHAVE_FALHOU');
+  });
+});
+
+describe('IA como intérprete principal: espaço de parâmetros inteiro (v0.6)', () => {
+  const EXAMPLE = 'gancho diferenciado e criativo, legenda verde e amarela, emojis a cada 3 segundos';
+
+  it('os exemplos do prompt são respostas válidas pelo mesmo leitor (sem campo descartado)', () => {
+    for (const e of AI_EXAMPLES) {
+      const r = parseAiReply(e.assistant, 2);
+      expect(r.ok, e.assistant).toBe(true);
+      if (r.ok) expect(r.proposal.dropped, e.assistant).toEqual([]);
+    }
+  });
+
+  it('o prompt lista o esquema: cores, legenda, emojis, cortes, unsupported e summary', () => {
+    for (const k of ['"captions"', '"emoji"', '"cuts"', '"unsupported"', '"summary"', '"hookStyle"', '#22C55E', '🔥']) expect(SYSTEM_PROMPT).toContain(k);
+    expect(systemPrompt('trecho')).toContain('SÓ para um trecho');
+    expect(SYSTEM_PROMPT).not.toContain('SÓ para um trecho');
+  });
+
+  it('lê o look completo e descarta só as partes inválidas (não a resposta inteira)', () => {
+    const raw = JSON.stringify({
+      captions: { text: 'verde', highlight: '#ffd400', scale: 9, position: 'topo', font: 'Comic Sans', animation: 'bounce' },
+      emoji: { mode: 'interval', everySec: 3, prefer: ['🔥', '🦄', 'x'], animation: 'dance' },
+      cuts: 'agressivo',
+      transition: 'wipe',
+      scenes: { barra: false, hack: true },
+      unsupported: ['música de fundo', '<b>x</b>'],
+      summary: 'Legenda verde e amarela.',
+      eval: 'alert(1)',
+    });
+    const r = parseAiReply(raw, 0);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const p = r.proposal;
+    expect(p.look.captions).toEqual({ text: '#22C55E', highlight: '#FFD400', position: 'top', animation: 'bounce' });
+    expect(p.look.emoji).toEqual({ mode: 'interval', everySec: 3, prefer: ['🔥'] });
+    expect(p.look.cuts).toBe('agressivo');
+    expect(p.look.transition).toBeUndefined();
+    expect(p.look.scenes).toEqual({ barra: false });
+    expect(p.unsupported).toEqual(['música de fundo', 'b x /b']);
+    expect(p.summary).toBe('Legenda verde e amarela.');
+    expect(p.dropped).toEqual(expect.arrayContaining(['eval', 'captions.scale=9', 'captions.font=Comic Sans', 'transition=wipe', 'scenes.hack', 'emoji.animation=dance']));
+  });
+
+  it('acha o objeto mesmo com texto e cercas em volta, e recusa objeto incompleto', () => {
+    expect(extractJsonObject('Aqui está:\n```json\n{"a":{"b":"}"}}\n```\nPronto.')).toEqual({ ok: true, value: { a: { b: '}' } } });
+    expect(extractJsonObject('{"a":1').ok).toBe(false);
+  });
+
+  it('pedido do responsável com IA simulada: aplica tudo e mostra o que não sabe', async () => {
+    const reply = '{"wantsHook":true,"hookStyle":"criativo","hookIndex":1,"captions":{"text":"#22C55E","highlight":"#FFD400"},"emoji":{"mode":"interval","everySec":3},"unsupported":["música animada"],"summary":"Gancho criativo, legenda verde e amarela, emojis a cada 3 s."}';
+    const r = await interpretLayered(EXAMPLE, words, { complete: async () => reply, source: 'ia-local' });
+    expect(r.warning).toBeNull();
+    expect(r.brief).toMatchObject({ hookStyle: 'criativo', wantsHook: true, source: 'ia-local', look: { captions: { text: '#22C55E', highlight: '#FFD400' }, emoji: { mode: 'interval', everySec: 3 } } });
+    expect(r.brief.hook?.text).toBe(hooks[1]!.text);
+    expect(r.brief.unsupported).toEqual(['música animada']);
+    expect(briefSchema.safeParse(r.brief).success).toBe(true);
+  });
+
+  it('IA preenche o que as regras não sabem ler ("vibe Brasil") e as regras valem no mesmo campo', async () => {
+    const reply = '{"captions":{"text":"#FF0000","font":"Anton"},"accent":"#009C3B","summary":"..."}';
+    const r = await interpretLayered('legenda verde, com a vibe da copa', words, { complete: async () => reply, source: 'ia-chave' });
+    expect(r.brief.look.captions?.text).toBe('#22C55E');
+    expect(r.brief.look.captions?.font).toBe('Anton');
+    expect(r.brief.look.accent).toBe('#009C3B');
+    expect(r.brief.notes.conflicts.join(' ')).toContain('ficou o que as regras leram');
+  });
+
+  it('IA não religa o que foi proibido (emojis, barra, transição)', async () => {
+    const reply = '{"emoji":{"mode":"interval","everySec":2},"scenes":{"barra":true},"transition":"flash"}';
+    const r = await interpretLayered('sem emojis, sem barra, sem efeitos, legenda azul', words, { complete: async () => reply, source: 'ia-local' });
+    expect(r.brief.forbid).toEqual(expect.arrayContaining(['emojis', 'barra', 'efeitos']));
+    expect(r.brief.look.emoji).toBeUndefined();
+    expect(r.brief.look.scenes).toBeUndefined();
+    expect(r.brief.look.transition).toBeUndefined();
+    expect(r.brief.notes.conflicts.join(' ')).toContain('a proibição vale mais');
+  });
+
+  it('resposta só com campos inválidos conta como inválida e pede correção', async () => {
+    let n = 0;
+    const r = await askAi({ complete: async () => (++n === 1 ? '{"captions":{"scale":99},"preset":"neon"}' : '{"tone":"calmo"}'), source: 'ia-local' }, buildAiMessages('x', words, hooks), hooks.length);
+    expect(n).toBe(2);
+    expect(r.ok && r.repaired).toBe(true);
+  });
+
+  it('pedido de trecho: campos do vídeo inteiro são descartados', () => {
+    const r = parseAiReply('{"preset":"pop","cuts":"agressivo","captions":{"text":"#FFFFFF","wordsAtOnce":2},"tone":"calmo","wantsHook":true}', 2, 'trecho');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.proposal.preset).toBeUndefined();
+    expect(r.proposal.wantsHook).toBe(false);
+    expect(r.proposal.look).toEqual({ captions: { text: '#FFFFFF' } });
+    expect(r.proposal.tone).toBe('calmo');
   });
 });

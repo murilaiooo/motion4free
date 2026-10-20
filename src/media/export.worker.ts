@@ -13,7 +13,7 @@ self.onmessage = async (e: MessageEvent<ToExportWorker>) => {
     const media = await openMedia(file);
     const out = await exportPlan(media, audio, plan, { onProgress: (fraction) => post({ type: 'progress', fraction }) });
     const buffer = await out.blob.arrayBuffer();
-    post({ type: 'done', buffer, degraded: out.degraded, codec: out.codec, fontWarning: out.fontWarning }, [buffer]);
+    post({ type: 'done', buffer, degraded: out.degraded, codec: out.codec, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning }, [buffer]);
   } catch (err) {
     const app = toAppError(err, 'EXPORTACAO_FALHOU');
     post({ type: 'error', key: app.key, detail: app.detail });

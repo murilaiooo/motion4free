@@ -7,10 +7,14 @@ import type { RangeRequest } from '../editorial/range-interpret';
 import { stylesOf } from '../editorial/ranges';
 import { addVersion, removeVersion, type PlanVersion } from '../core/versions';
 import { canRedo, canUndo, pushHistory, redo, undo, type History } from '../engine/history';
-import { outputDuration } from '../engine/timeline';
+import { outputDuration, outputToSource } from '../engine/timeline';
 import type { DecodedAudio } from '../media/audio';
 import { exportInBackground } from '../media/export-client';
-import { ensureFonts } from '../media/fonts';
+import { ensureEmojiFont, ensureFonts } from '../media/fonts';
+import { planUsesEmoji } from '../core/emoji';
+import { DEFAULT_LLM } from '../core/llm-models';
+import { loadKey } from '../ai/own-key';
+import type { AiSettings } from './AiOptions';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
 import { ErrorBox } from './ErrorBox';
@@ -38,6 +42,7 @@ interface Result {
   where: 'worker' | 'main';
   style: string;
   fontWarning: string;
+  emojiWarning: string;
 }
 
 const SCENE_NAMES: Partial<Record<EditPlan['scenes'][number]['kind'], [string, string]>> = {
@@ -50,6 +55,7 @@ const SCENE_NAMES: Partial<Record<EditPlan['scenes'][number]['kind'], [string, s
   'emphasis-zoom': ['zoom', 'zooms'],
   'cut-transition': ['transição', 'transições'],
   'end-cta': ['chamada final', 'chamadas finais'],
+  emoji: ['emoji', 'emojis'],
 };
 
 /** "1 número grande, 3 palavras-chave e 2 transições" */
@@ -95,6 +101,9 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const [exportError, setExportError] = useState<AppError | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [fontError, setFontError] = useState<AppError | null>(null);
+  const [emojiError, setEmojiError] = useState<AppError | null>(null);
+  // escolha de IA: vale para o pedido geral e para o pedido de trecho
+  const [ai, setAi] = useState<AiSettings>(() => ({ mode: 'regras', model: DEFAULT_LLM, key: loadKey() }));
   const shownRef = useRef(shown);
   shownRef.current = shown;
 
@@ -144,6 +153,20 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   useEffect(() => {
     for (const p of PRESETS) void ensureFonts(p);
   }, []);
+  // fonte dos emojis só quando o vídeo tem emoji
+  const usesEmoji = planUsesEmoji(shown);
+  useEffect(() => {
+    if (!usesEmoji) return;
+    let alive = true;
+    void ensureEmojiFont().then((r) => {
+      if (!alive) return;
+      setEmojiError(r.ok ? null : new AppError('EMOJI_FALHOU', r.detail));
+      playerRef.current?.redraw();
+    });
+    return () => {
+      alive = false;
+    };
+  }, [usesEmoji]);
 
   useEffect(() => {
     playerRef.current?.setPlan(shown);
@@ -151,6 +174,13 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   }, [shown]);
 
   const cuts = listCuts(plan.segments, session.ctx.durationSec);
+  // palavras faladas no trecho selecionado (vão para a IA, se escolhida, junto com o pedido do trecho)
+  const rangeWords = (() => {
+    if (!activeSelection) return [];
+    const a = outputToSource(plan.segments, activeSelection.start) ?? 0;
+    const b = outputToSource(plan.segments, Math.max(activeSelection.start, activeSelection.end - 0.001)) ?? a;
+    return session.ctx.words.filter((w) => w.end > a && w.start < b);
+  })();
   const total = outputDuration(plan.segments);
 
   const apply = useCallback(
@@ -223,7 +253,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       const out = await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
       if (result) URL.revokeObjectURL(result.url);
       const base = session.fileName.replace(/\.[^.]+$/, '');
-      setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, where: out.where, style: plan.style.name, fontWarning: out.fontWarning });
+      setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, where: out.where, style: plan.style.name, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning });
     } catch (err) {
       setExportError(toAppError(err, 'EXPORTACAO_FALHOU'));
     } finally {
@@ -263,8 +293,9 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       </div>
       {playerError && <ErrorBox error={playerError} kind="warning" />}
       {fontError && <ErrorBox error={fontError} kind="warning" />}
+      {emojiError && <ErrorBox error={emojiError} kind="warning" />}
 
-      <BriefPanel plan={plan} words={session.ctx.words} onBrief={(b) => apply((p) => applyBrief(p, session.ctx, b))} onHook={(h) => apply((p) => applyHook(p, session.ctx, h))} disabled={exporting !== null} />
+      <BriefPanel plan={plan} words={session.ctx.words} onBrief={(b) => apply((p) => applyBrief(p, session.ctx, b))} onHook={(h) => apply((p) => applyHook(p, session.ctx, h))} disabled={exporting !== null} ai={ai} onAi={setAi} />
 
       <StylePicker current={plan.style.id} onPick={(id) => apply((p) => applyStyle(p, session.ctx, id))} disabled={exporting !== null} />
       <ReferencePicker reference={plan.reference} onReference={(r) => apply((p) => applyReferencePalette(p, session.ctx, r))} disabled={exporting !== null} />
@@ -320,6 +351,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             setSelection(out);
           }}
           onRequest={requestRange}
+          ai={ai}
+          words={rangeWords}
           onClose={() => {
             setSelection(null);
             setSelectedRange(null);
@@ -438,6 +471,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           <video src={result.url} controls playsInline data-testid="result-video" />
           {result.degraded && <p className="warn">Seu navegador não gera H.264. O vídeo funciona aqui, mas o Instagram pode recusar. Para o arquivo final, use Chrome ou Edge no computador.</p>}
           {result.fontWarning && <ErrorBox error={new AppError('FONTE_FALHOU', result.fontWarning)} kind="warning" />}
+          {result.emojiWarning && <ErrorBox error={new AppError('EMOJI_FALHOU', result.emojiWarning)} kind="warning" />}
           <a href={result.url} download={result.name} data-testid="download" data-export-where={result.where} data-style={result.style}>
             Baixar vídeo ({result.name})
           </a>

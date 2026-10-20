@@ -40,6 +40,8 @@ export interface Interpretation {
   brief: CreativeBrief;
   /** entendeu pelo menos um pedido */
   understood: boolean;
+  /** pedidos conhecidos que o app ainda não faz (sem as palavras soltas que sobraram) */
+  knownUnsupported: string[];
 }
 
 
@@ -426,7 +428,7 @@ export function interpretPrompt(text: string): Interpretation {
     summary: '',
   };
   const understood = !!(goal || audience || tone || brief.intensity || brief.pace || brief.preset || forbid.length || emphasize.length || wantsHook || mentionedCaptionsOff || !lookIsEmpty(look) || lookRules.hookStyle);
-  return { brief, understood };
+  return { brief, understood, knownUnsupported: lookRules.unsupported.slice(0, UNSUPPORTED_MAX) };
 }
 
 const meaningful = (t: Token) => t.norm.length >= 3 && !/^[,.;!?]$/.test(t.norm) && !STOP_NORM.has(t.norm) && !FILLER.has(t.norm);

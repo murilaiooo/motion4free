@@ -1,3 +1,5 @@
+import { DEFAULT_LLM, LLM_MODELS, type LlmKey } from './llm-models';
+
 /**
  * Espelho do modelo e do runtime de transcrição no próprio site.
  * O navegador baixa tudo de `/hf/...` e `/cdn/...` no mesmo endereço do app; o Worker da
@@ -8,25 +10,21 @@
 export const MODEL_ID = 'onnx-community/whisper-base_timestamped';
 
 /**
- * Modelo de texto opcional (Fase 4, ADR-0009): Qwen2.5 0.5B (Apache-2.0) compilado para WebLLM.
- * Pesos no Hugging Face; a biblioteca WebGPU do modelo no GitHub (raw.githubusercontent.com).
- * Versão da biblioteca = a que o @mlc-ai/web-llm instalado usa na sua lista de modelos.
+ * Modelos de texto opcionais (ADR-0009, ADR-0011): Qwen2.5 0.5B / 1.5B / 3B (Apache-2.0) para WebLLM.
+ * Pesos no Hugging Face; a biblioteca WebGPU de cada modelo no GitHub (raw.githubusercontent.com).
+ * A lista fica em `llm-models.ts`; o espelho só repassa esses arquivos.
  */
-export const LLM_REPO = 'mlc-ai/Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
-export const LLM_MODEL_ID = 'Qwen2.5-0.5B-Instruct-q4f16_1-MLC';
-export const LLM_LIB_PATH = 'mlc-ai/binary-mlc-llm-libs/main/web-llm-models/v0_2_84/base/Qwen2-0.5B-Instruct-q4f16_1_cs1k-webgpu.wasm';
-/** memória de vídeo que o WebLLM informa para este modelo */
-export const LLM_VRAM_MB = 945;
+const MODELS = Object.values(LLM_MODELS);
 
 export const HF_PREFIX = '/hf/';
 export const CDN_PREFIX = '/cdn/';
 export const GH_PREFIX = '/gh/';
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-const HF_REPOS = [MODEL_ID, LLM_REPO];
+const HF_REPOS = [MODEL_ID, ...MODELS.map((m) => m.repo)];
 const HF_PATH = new RegExp(`^${HF_PREFIX}(${HF_REPOS.map(esc).join('|')})\\/resolve\\/[\\w.-]+\\/[\\w./-]+$`);
 const CDN_PATH = /^\/cdn\/npm\/onnxruntime-web@[\w.-]+\/dist\/[\w.-]+$/;
-const GH_PATH = new RegExp(`^${GH_PREFIX}${esc(LLM_LIB_PATH)}$`);
+const GH_PATH = new RegExp(`^${GH_PREFIX}(${MODELS.map((m) => esc(m.lib)).join('|')})$`);
 
 /** URL de origem para um caminho do espelho, ou null se o caminho não for permitido. */
 export function upstreamUrl(pathname: string): string | null {
@@ -41,12 +39,13 @@ export function upstreamUrl(pathname: string): string | null {
  * Registro do modelo para o WebLLM. `origin` = endereço do site (usa o espelho);
  * null = servidores originais (desenvolvimento local).
  */
-export function llmModelRecord(origin: string | null): { model: string; model_id: string; model_lib: string; vram_required_MB: number; low_resource_required: boolean; overrides: { context_window_size: number } } {
+export function llmModelRecord(origin: string | null, key: LlmKey = DEFAULT_LLM): { model: string; model_id: string; model_lib: string; vram_required_MB: number; low_resource_required: boolean; overrides: { context_window_size: number } } {
+  const m = LLM_MODELS[key];
   return {
-    model: origin ? `${origin}${HF_PREFIX}${LLM_REPO}` : `https://huggingface.co/${LLM_REPO}`,
-    model_id: LLM_MODEL_ID,
-    model_lib: origin ? `${origin}${GH_PREFIX}${LLM_LIB_PATH}` : `https://raw.githubusercontent.com/${LLM_LIB_PATH}`,
-    vram_required_MB: LLM_VRAM_MB,
+    model: origin ? `${origin}${HF_PREFIX}${m.repo}` : `https://huggingface.co/${m.repo}`,
+    model_id: m.id,
+    model_lib: origin ? `${origin}${GH_PREFIX}${m.lib}` : `https://raw.githubusercontent.com/${m.lib}`,
+    vram_required_MB: m.vramMB,
     low_resource_required: true,
     overrides: { context_window_size: 4096 },
   };

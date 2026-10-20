@@ -5,5 +5,5 @@ import type { DecodedAudio } from './audio';
 export type ToExportWorker = { type: 'export'; file: Blob; plan: EditPlan; audio: DecodedAudio | null };
 export type FromExportWorker =
   | { type: 'progress'; fraction: number }
-  | { type: 'done'; buffer: ArrayBuffer; degraded: boolean; codec: string; fontWarning: string }
+  | { type: 'done'; buffer: ArrayBuffer; degraded: boolean; codec: string; fontWarning: string; emojiWarning: string }
   | { type: 'error'; key: ErrorKey; detail: string };

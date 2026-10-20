@@ -5,7 +5,7 @@ import type { StyleDNA } from '../core/style';
 import type { Caption, EditPlan, RangeEdit, SceneInstance, SceneKind, TimeRange, Word } from '../core/types';
 import { outputDuration, outputToSource, outputToSourceEnd, rangeOut, sourceToOutput } from '../engine/timeline';
 import { applyLook, effectiveForbid, sceneOptionsFor, styleForBrief } from './brief-apply';
-import { lookIsEmpty, mergeLook } from '../core/look';
+import { lookIsEmpty, mergeLook, type Look } from '../core/look';
 import { buildCaptions, captionOptionsFor } from './captions';
 import { keywordScore } from './detect';
 import type { RangeRequest } from './range-interpret';
@@ -352,11 +352,18 @@ const insideKey = (plan: EditPlan, out: TimeRange) =>
  * Aplica um pedido de trecho já entendido. `rebuild` refaz o vídeo inteiro (usado ao tirar uma trava
  * ou voltar o trecho ao normal, para ele seguir de novo o resto do vídeo).
  */
+/** Look do trecho: o novo pedido vale mais campo a campo; "sem animação" tira os emojis do trecho. */
+function mergedRangeLook(prev: Look | null, add: Look, quiet: boolean): Look | null {
+  const merged = mergeLook(prev ?? {}, add);
+  if (quiet && merged.emoji) delete merged.emoji;
+  return lookIsEmpty(merged) ? null : merged;
+}
+
 export function applyRangeRequest(plan: EditPlan, words: Word[], target: RangeTarget, req: RangeRequest, rebuild: (p: EditPlan) => EditPlan): { plan: EditPlan; rangeId: string | null } {
   const existing = 'id' in target ? plan.ranges.find((r) => r.id === target.id) : undefined;
   if ('id' in target && !existing) return { plan, rangeId: null };
   let r = existing ?? newRange(plan, target as TimeRange);
-  const changes = req.reset || req.swap || req.accent || req.quiet || !!req.tone || !!req.intensity || !!req.pace || req.forbid.length > 0 || req.emphasize.length > 0;
+  const changes = req.reset || req.swap || req.accent || req.quiet || !!req.tone || !!req.intensity || !!req.pace || req.forbid.length > 0 || req.emphasize.length > 0 || !lookIsEmpty(req.look);
 
   if (r.locked) {
     if (req.lock !== false) {
@@ -383,6 +390,7 @@ export function applyRangeRequest(plan: EditPlan, words: Word[], target: RangeTa
     quiet: req.quiet ? true : req.accent || req.swap || req.emphasize.length > 0 ? false : r.quiet,
     accent: req.quiet ? false : req.accent || r.accent,
     variant: req.quiet ? 0 : req.swap ? Math.min(999, r.variant + 1) : r.variant,
+    look: mergedRangeLook(r.look, req.look, req.quiet),
   };
 
   const ranges = [...plan.ranges.filter((x) => x.id !== r.id), r].sort((a, b) => a.srcStart - b.srcStart);

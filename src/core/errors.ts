@@ -34,6 +34,7 @@ export const ERRORS = {
   ESTILO_DESCONHECIDO: { code: 'M4F-802', title: 'Este estilo não existe nesta versão do app.' },
   IMAGEM_FALHOU: { code: 'M4F-803', title: 'Não foi possível ler esta imagem. Use uma foto JPG, PNG ou WebP.' },
   IMAGEM_SEM_CORES: { code: 'M4F-804', title: 'A imagem é quase toda preta, branca ou cinza; as cores do estilo foram mantidas.' },
+  EMOJI_FALHOU: { code: 'M4F-805', title: 'Os emojis não carregaram; o vídeo sai sem a fonte de emojis do app.' },
   PEDIDO_VAZIO: { code: 'M4F-1001', title: 'Escreva o que você quer antes de aplicar.' },
   PEDIDO_LONGO: { code: 'M4F-1002', title: 'O pedido pode ter no máximo 500 caracteres.' },
   PEDIDO_NAO_ENTENDIDO: { code: 'M4F-1003', title: 'Não entendi nenhum pedido neste texto; nada mudou. Veja os exemplos.' },
@@ -44,6 +45,8 @@ export const ERRORS = {
   IA_CHAVE_FALHOU: { code: 'M4F-1008', title: 'O serviço da sua chave não respondeu; usei as regras.' },
   TRECHO_NAO_ENTENDIDO: { code: 'M4F-1010', title: 'Não entendi o pedido para este trecho; nada mudou. Veja os exemplos.' },
   TRECHO_SEM_ALTERNATIVA: { code: 'M4F-1011', title: 'Não há outra animação possível neste trecho (falta fala ou as animações foram proibidas).' },
+  IA_RESPOSTA_INVALIDA_REPARO: { code: 'M4F-1012', title: 'A IA respondeu fora do formato duas vezes (mesmo depois de pedir correção); usei as regras.' },
+  IA_MODELO_GRANDE: { code: 'M4F-1013', title: 'Este aparelho não tem memória de vídeo suficiente para o modelo de IA escolhido; usei as regras. Tente o modelo leve.' },
   IA_CHAVE_RECUSADA: { code: 'M4F-1009', title: 'O serviço recusou a sua chave (confira se ela está certa ou se o limite gratuito acabou); usei as regras.' },
   DESCONHECIDO: { code: 'M4F-999', title: 'Erro inesperado.' },
 } as const;

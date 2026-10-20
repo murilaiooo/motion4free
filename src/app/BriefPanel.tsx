@@ -2,31 +2,31 @@ import { useEffect, useMemo, useState } from 'react';
 import { PROMPT_MAX, summarizeBrief, type CreativeBrief, type Hook } from '../core/brief';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, Word } from '../core/types';
-import { LOCAL_AI_ENABLED, loadLocalAi, webGpuAvailable } from '../ai/local-ai';
-import { geminiCompleter, loadKey, saveKey } from '../ai/own-key';
 import { interpretLayered } from '../editorial/ai-brief';
 import { findHooks } from '../editorial/hooks';
-import { LLM_VRAM_MB } from '../core/mirror';
+import { AiOptions, prepareAi, type AiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
 
-const EXAMPLES = ['Gancho forte, estilo calmo, sem emojis, destaque os números', 'Bem animado, mas sem efeitos', 'Minimalista e elegante, sem zoom', 'Sério, tipo documentário, para iniciantes'];
-
-type Mode = 'regras' | 'local' | 'chave';
+const EXAMPLES = [
+  'gancho diferenciado e criativo, legenda verde e amarela, emojis a cada 3 segundos',
+  'Gancho forte, estilo calmo, sem emojis, destaque os números',
+  'legenda grande em cima, amarela com contorno preto',
+  'cortes rápidos, transição flash, emojis nas palavras importantes',
+  'Minimalista e elegante, sem zoom, legenda em minúsculas',
+];
 
 const hookKey = (h: Pick<Hook, 'wordIds'> | null) => (h ? h.wordIds.join('|') : '');
 
 /**
- * "O que você quer?": pedido por texto, resumo do que foi entendido e escolha do gancho.
- * Tudo vira operação no plano (entra no desfazer). Sem IA por padrão; IA é opcional e avançada.
+ * "O que você quer?": pedido por texto, o que foi aplicado, o que o app ainda não sabe fazer e a
+ * escolha do gancho. Tudo vira operação no plano (entra no desfazer). Sem IA por padrão; a IA é opcional.
  */
-export function BriefPanel({ plan, words, onBrief, onHook, disabled }: { plan: EditPlan; words: Word[]; onBrief: (b: CreativeBrief) => void; onHook: (h: Hook | null) => void; disabled: boolean }) {
+export function BriefPanel({ plan, words, onBrief, onHook, disabled, ai, onAi }: { plan: EditPlan; words: Word[]; onBrief: (b: CreativeBrief) => void; onHook: (h: Hook | null) => void; disabled: boolean; ai: AiSettings; onAi: (s: AiSettings) => void }) {
   const [text, setText] = useState(plan.brief.prompt);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<AppError | null>(null);
   const [warning, setWarning] = useState<AppError | null>(null);
-  const [mode, setMode] = useState<Mode>('regras');
-  const [key, setKey] = useState(loadKey);
-  const gpu = useMemo(webGpuAvailable, []);
+  const [notDone, setNotDone] = useState<string[]>([]);
   const hooks = useMemo(() => findHooks(words), [words]);
   const summary = summarizeBrief(plan.brief);
   const hasBrief = plan.brief.prompt !== '';
@@ -36,26 +36,15 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled }: { plan: E
   async function apply() {
     setError(null);
     setWarning(null);
+    setNotDone([]);
     setBusy('Entendendo o pedido…');
     try {
-      let ai: Parameters<typeof interpretLayered>[2] = null;
-      let aiWarning: AppError | null = null;
-      if (mode === 'local') {
-        try {
-          const local = await loadLocalAi((f, t) => setBusy(`Preparando a IA no navegador (só na primeira vez): ${Math.round(f * 100)}% ${t.slice(0, 60)}`));
-          ai = { complete: local.complete, source: 'ia-local' };
-          setBusy('A IA no navegador está lendo o pedido…');
-        } catch (err) {
-          aiWarning = toAppError(err, 'IA_LOCAL_FALHOU');
-        }
-      } else if (mode === 'chave' && key.trim()) {
-        ai = { complete: geminiCompleter(key.trim()), source: 'ia-chave' };
-        setBusy('Consultando o serviço da sua chave (só texto)…');
-      }
-      const r = await interpretLayered(text, words, ai);
+      const { ai: choice, warning: aiWarning } = await prepareAi(ai, setBusy);
+      const r = await interpretLayered(text, words, choice);
       setWarning(r.warning ?? aiWarning);
       if (!r.understood) {
-        setWarning(new AppError('PEDIDO_NAO_ENTENDIDO', r.brief.notes.ignored.join(', ')));
+        setWarning(new AppError('PEDIDO_NAO_ENTENDIDO', [...r.brief.unsupported, ...r.brief.notes.ignored].slice(0, 8).join(', ')));
+        setNotDone(r.brief.unsupported);
         return;
       }
       onBrief(r.brief);
@@ -82,7 +71,7 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled }: { plan: E
         onChange={(e) => setText(e.target.value)}
         maxLength={PROMPT_MAX}
         rows={3}
-        placeholder="Ex.: calmo e elegante, sem emojis, destaque os números"
+        placeholder="Ex.: legenda verde e amarela, emojis a cada 3 segundos, gancho criativo"
         aria-label="O que você quer?"
         data-testid="brief-input"
         disabled={disabled || busy !== null}
@@ -101,13 +90,24 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled }: { plan: E
       {error && <ErrorBox error={error} kind="error" />}
       {warning && <ErrorBox error={warning} kind="warning" />}
 
+      {!hasBrief && notDone.length > 0 && (
+        <p className="hint" data-testid="brief-unsupported">
+          <b>Ainda não sei fazer:</b> {notDone.join('; ')}
+        </p>
+      )}
+
       {hasBrief && (
         <div className="brief-summary" data-testid="brief-summary">
           <p>
-            <b>Entendi</b>
+            <b>Apliquei</b>
             {plan.brief.source !== 'regras' ? (plan.brief.source === 'ia-local' ? ' (com a IA no navegador)' : ' (com a IA da sua chave)') : ''}:
           </p>
-          <ul>
+          {plan.brief.summary && (
+            <p className="hint" data-testid="brief-ai-summary">
+              {plan.brief.summary}
+            </p>
+          )}
+          <ul data-testid="brief-applied">
             {summary.understood.map((u) => (
               <li key={u}>{u}</li>
             ))}
@@ -120,11 +120,18 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled }: { plan: E
               ))}
             </ul>
           )}
-          {summary.ignored.length > 0 && (
-            <p className="hint" data-testid="brief-ignored">
-              Palavras que não usei: {summary.ignored.join(', ')}
-            </p>
-          )}
+          <div data-testid="brief-unsupported">
+            <b>Ainda não sei fazer:</b>{' '}
+            {summary.unsupported.length > 0 ? (
+              <ul>
+                {summary.unsupported.map((u) => (
+                  <li key={u}>{u}</li>
+                ))}
+              </ul>
+            ) : (
+              <span className="hint">nada deste pedido — entendi tudo.</span>
+            )}
+          </div>
         </div>
       )}
 
@@ -156,49 +163,7 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled }: { plan: E
         )}
       </div>
 
-      <details className="ai-options">
-        <summary>IA opcional (avançado)</summary>
-        <p className="hint">Sem IA o pedido é entendido por regras, que funcionam sempre e sem internet. A IA ajuda com frases que as regras não conhecem; ela nunca tira uma proibição sua.</p>
-        <label className="hook">
-          <input type="radio" name="ai" checked={mode === 'regras'} onChange={() => setMode('regras')} data-testid="ai-rules" />
-          <span>Só regras (recomendado)</span>
-        </label>
-        {LOCAL_AI_ENABLED && (
-          <label className="hook">
-            <input type="radio" name="ai" checked={mode === 'local'} onChange={() => setMode('local')} disabled={!gpu} data-testid="ai-local" />
-            <span>
-              IA no navegador (experimental). Baixa cerca de 300 MB na primeira vez e precisa de uma placa de vídeo com ~{LLM_VRAM_MB} MB livres. Nada sai do aparelho.
-              {!gpu && <small className="hint"> Indisponível: este navegador não tem WebGPU.</small>}
-            </span>
-          </label>
-        )}
-        <label className="hook">
-          <input type="radio" name="ai" checked={mode === 'chave'} onChange={() => setMode('chave')} data-testid="ai-key" />
-          <span>Minha chave do Google Gemini (gratuita)</span>
-        </label>
-        {mode === 'chave' && (
-          <div className="key-box">
-            <p className="hint" data-testid="key-notice">
-              Só texto é enviado ao Google: o seu pedido e um trecho da transcrição da fala. <b>O vídeo nunca sai do seu aparelho.</b> A chave fica guardada só neste navegador.
-            </p>
-            <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="Cole sua chave aqui" aria-label="Chave do Google Gemini" autoComplete="off" data-testid="key-input" />
-            <div className="actions">
-              <button type="button" onClick={() => saveKey(key)}>
-                Guardar neste navegador
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setKey('');
-                  saveKey('');
-                }}
-              >
-                Apagar chave
-              </button>
-            </div>
-          </div>
-        )}
-      </details>
+      <AiOptions settings={ai} onChange={onAi} />
     </section>
   );
 }
