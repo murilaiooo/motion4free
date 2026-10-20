@@ -1,5 +1,7 @@
 import type { EditPlan, SceneInstance } from '../core/types';
 import { normalizeToken } from '../editorial/detect';
+import { styleAt } from '../editorial/ranges';
+import type { StyleDNA } from '../core/style';
 import { outputDuration } from '../engine/timeline';
 import { drawCaption } from './captions';
 import type { Ctx2D } from './ctx';
@@ -12,8 +14,7 @@ export function activeAt<T extends { start: number; end: number }>(items: T[], t
 }
 
 /** Escala do vídeo de fundo em `t`: zoom de ênfase + "soco" de zoom logo depois de um corte. */
-export function sourceZoom(plan: EditPlan, t: number): number {
-  const S = plan.style;
+export function sourceZoom(plan: EditPlan, t: number, S: StyleDNA = styleAt(plan, t)): number {
   let z = 1;
   for (const s of activeAt(plan.scenes, t)) {
     if (s.kind === 'emphasis-zoom') {
@@ -31,8 +32,8 @@ export function sourceZoom(plan: EditPlan, t: number): number {
 }
 
 /** Opacidade do flash (branco) ou do mergulho (preto) da transição de corte em `t`. */
-export function transitionVeil(plan: EditPlan, t: number): { color: string; alpha: number } | null {
-  const kind = plan.style.transition;
+export function transitionVeil(plan: EditPlan, t: number, S: StyleDNA = styleAt(plan, t)): { color: string; alpha: number } | null {
+  const kind = S.transition;
   if (kind !== 'flash' && kind !== 'dip') return null;
   let alpha = 0;
   for (const s of activeAt(plan.scenes, t)) {
@@ -55,14 +56,16 @@ const OVERLAY_ORDER: SceneInstance['kind'][] = ['lower-third', 'kinetic-title', 
  */
 export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasImageSource | null): void {
   const { width: w, height: h } = plan.output;
-  const f = makeFrame(w, h, plan.style);
+  // trecho com estilo próprio (pedido do trecho ou trava) desenha com o estilo dele
+  const style = styleAt(plan, t);
+  const f = makeFrame(w, h, style);
   const active = activeAt(plan.scenes, t);
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, w, h);
   if (source) {
-    const z = sourceZoom(plan, t);
+    const z = sourceZoom(plan, t, style);
     ctx.save();
     if (z !== 1) {
       // centro do zoom um pouco acima do meio, onde costuma estar o rosto
@@ -76,7 +79,7 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
     ctx.restore();
   }
   drawScrim(ctx, f);
-  const veil = transitionVeil(plan, t);
+  const veil = transitionVeil(plan, t, style);
   if (veil) {
     ctx.fillStyle = withAlpha(veil.color, veil.alpha);
     ctx.fillRect(0, 0, w, h);

@@ -182,7 +182,9 @@ describe('legendas estilo Reels', () => {
 
 describe('drawFrame', () => {
   const plan = (style: StyleDNA, scenes: SceneInstance[] = SCENES): EditPlan => ({
-    version: 3,
+    version: 4,
+    ranges: [],
+    reference: null,
     brief: EMPTY_BRIEF,
     output: { width: W, height: H, fps: 30 },
     style,
@@ -210,6 +212,17 @@ describe('drawFrame', () => {
       expect(rc.globalAlpha).toBe(1);
       expect(rc.letterSpacing).toBe('0px');
     }
+  });
+
+  it('trecho com estilo próprio desenha com o estilo dele só dentro do trecho', () => {
+    const range = { id: 'r1', srcStart: 2, srcEnd: 6, out: { start: 2, end: 6 }, prompt: '', tone: null, intensity: null, pace: null, forbid: [], emphasize: [], quiet: false, accent: false, variant: 0, style: DOCUMENTAL, locked: null };
+    const p = { ...plan(POP), ranges: [range] };
+    const fonts = (t: number) => frame(p, t).calls.filter((c) => c.op === 'fillText').map((c) => c.font).join(' ');
+    expect(fonts(3.5)).toContain('IBM Plex');
+    expect(fonts(3.5)).not.toContain('Montserrat');
+    expect(frame(p, 1).calls.filter((c) => c.op === 'fillText').map((c) => c.font).join(' ')).not.toContain('IBM Plex');
+    // fora do trecho, o quadro é exatamente o do plano sem trecho
+    for (const t of [0.5, 1.9, 6, 9.5, 12]) expect(frame(p, t).snapshot()).toBe(frame(plan(POP), t).snapshot());
   });
 
   it('a legenda some enquanto a citação está na tela', () => {

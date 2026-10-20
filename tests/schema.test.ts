@@ -12,7 +12,7 @@ const v1 = {
 };
 
 const valid = {
-  version: 3,
+  version: 4,
   output: { width: 1080, height: 1920, fps: 30 },
   style: DEFAULT_STYLE,
   brief: EMPTY_BRIEF,
@@ -25,10 +25,15 @@ const valid = {
     { id: 's4', kind: 'cut-transition', at: 1.2, start: 1.1, end: 1.3 },
     { id: 's5', kind: 'progress-bar', start: 0, end: 2.5 },
   ],
+  ranges: [],
+  reference: null,
 };
 
+const { ranges: _r, reference: _ref, ...v3body } = valid;
+const v3 = { ...v3body, version: 3 };
+
 describe('parseEditPlan', () => {
-  it('aceita um plano v3 válido', () => {
+  it('aceita um plano v4 válido', () => {
     expect(parseEditPlan(valid)).toEqual({ ok: true, plan: valid });
   });
 
@@ -54,12 +59,14 @@ describe('parseEditPlan', () => {
   });
 });
 
-describe('migração v1 → v2 → v3', () => {
-  it('plano da Fase 2 abre como v3 com estilo padrão, pedido vazio e o mesmo conteúdo', () => {
+describe('migração v1 → v2 → v3 → v4', () => {
+  it('plano da Fase 2 abre como v4 com estilo padrão, pedido vazio e o mesmo conteúdo', () => {
     const r = parseEditPlan(v1);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.plan.version).toBe(3);
+    expect(r.plan.version).toBe(4);
+    expect(r.plan.ranges).toEqual([]);
+    expect(r.plan.reference).toBeNull();
     expect(r.plan.brief).toEqual(EMPTY_BRIEF);
     expect(r.plan.style.id).toBe(DEFAULT_STYLE.id);
     expect(r.plan.segments).toEqual(v1.segments);
@@ -71,8 +78,23 @@ describe('migração v1 → v2 → v3', () => {
     expect(parseEditPlan({ ...v1, segments: [] }).ok).toBe(false);
   });
 
-  it('plano da Fase 3 (v2) abre como v3 com pedido vazio, estilo e cenas iguais', () => {
-    const { brief: _b, ...rest } = valid;
+  it('plano da Fase 4 (v3) abre como v4 sem trechos, sem cores de referência e com o mesmo conteúdo', () => {
+    const r = parseEditPlan(v3);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.plan).toEqual(valid);
+  });
+
+  it('rejeita trecho com fim antes do início e trecho com estilo inválido', () => {
+    const range = { id: 'r1', srcStart: 1, srcEnd: 2, out: { start: 1, end: 2 }, prompt: '', tone: null, intensity: null, pace: null, forbid: [], emphasize: [], quiet: false, accent: false, variant: 0, style: null, locked: null };
+    expect(parseEditPlan({ ...valid, ranges: [range] }).ok).toBe(true);
+    expect(parseEditPlan({ ...valid, ranges: [{ ...range, srcEnd: 0.5 }] }).ok).toBe(false);
+    expect(parseEditPlan({ ...valid, ranges: [{ ...range, style: { id: 'x' } }] }).ok).toBe(false);
+    expect(parseEditPlan({ ...valid, reference: { colors: ['red'] } }).ok).toBe(false);
+  });
+
+  it('plano da Fase 3 (v2) abre como v4 com pedido vazio, estilo e cenas iguais', () => {
+    const { brief: _b, ...rest } = v3;
     const v2 = { ...rest, version: 2 };
     const r = parseEditPlan(v2);
     expect(r.ok).toBe(true);
@@ -81,11 +103,11 @@ describe('migração v1 → v2 → v3', () => {
   });
 
   it('v2 inválido continua inválido', () => {
-    const { brief: _b, ...rest } = valid;
+    const { brief: _b, ...rest } = v3;
     expect(parseEditPlan({ ...rest, version: 2, segments: [] }).ok).toBe(false);
   });
 
-  it('não mexe em plano que já é v3', () => {
+  it('não mexe em plano que já é v4', () => {
     expect(migratePlan(valid)).toBe(valid);
   });
 

@@ -1,6 +1,6 @@
-import { useEffect, useRef, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
 import type { EditPlan, TimeRange } from '../core/types';
-import { outputToSource, sourceToOutput } from '../engine/timeline';
+import { outputToSource, outputToSourceEnd, sourceToOutput, sourceToOutputClamped } from '../engine/timeline';
 
 interface Props {
   durationSec: number;
@@ -12,14 +12,20 @@ interface Props {
   selectedCut: number | null;
   onSeek: (outTime: number) => void;
   onSelectCut: (index: number) => void;
+  /** pedaço selecionado para ajuste (tempo do vídeo editado) */
+  selection: TimeRange | null;
+  selectedRange: string | null;
+  onSelection: (out: TimeRange) => void;
+  onPickRange: (id: string) => void;
 }
 
 /**
  * Linha do tempo no tempo do vídeo original: trechos mantidos, cortes (clicáveis),
  * waveform do áudio e legendas. Clicar num trecho mantido leva o player até ali.
  */
-export function Timeline({ durationSec, plan, cuts, peaks, time, selectedCut, onSeek, onSelectCut }: Props) {
+export function Timeline({ durationSec, plan, cuts, peaks, time, selectedCut, onSeek, onSelectCut, selection, selectedRange, onSelection, onPickRange }: Props) {
   const waveRef = useRef<HTMLCanvasElement>(null);
+  const [drag, setDrag] = useState<{ from: number; to: number; x0: number } | null>(null);
   const pct = (src: number) => `${(100 * src) / durationSec}%`;
   const width = (r: TimeRange) => `${(100 * (r.end - r.start)) / durationSec}%`;
 
@@ -47,6 +53,35 @@ export function Timeline({ durationSec, plan, cuts, peaks, time, selectedCut, on
   }
 
   const playheadSrc = outputToSource(plan.segments, time) ?? plan.segments.at(-1)?.srcEnd ?? 0;
+
+  // faixa "Trechos": arrastar seleciona um pedaço (convertido para o tempo do vídeo editado)
+  const srcAt = (e: PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return Math.min(durationSec, Math.max(0, ((e.clientX - rect.left) / rect.width) * durationSec));
+  };
+  function onLaneDown(e: PointerEvent<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest('button')) return;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const src = srcAt(e);
+    setDrag({ from: src, to: src, x0: e.clientX });
+  }
+  function onLaneMove(e: PointerEvent<HTMLDivElement>) {
+    if (drag) setDrag({ ...drag, to: srcAt(e) });
+  }
+  function onLaneUp(e: PointerEvent<HTMLDivElement>) {
+    if (!drag) return;
+    const d = { ...drag, to: srcAt(e) };
+    setDrag(null);
+    if (Math.abs(e.clientX - d.x0) < 4) return;
+    const a = sourceToOutputClamped(plan.segments, Math.min(d.from, d.to));
+    const b = sourceToOutputClamped(plan.segments, Math.max(d.from, d.to));
+    onSelection({ start: Math.round(a * 100) / 100, end: Math.round(b * 100) / 100 });
+  }
+  const selSrc = drag
+    ? { start: Math.min(drag.from, drag.to), end: Math.max(drag.from, drag.to) }
+    : selection && !selectedRange
+      ? { start: outputToSource(plan.segments, selection.start) ?? 0, end: outputToSourceEnd(plan.segments, selection.end) ?? durationSec }
+      : null;
 
   return (
     <div className="timeline" data-testid="timeline">
@@ -83,8 +118,25 @@ export function Timeline({ durationSec, plan, cuts, peaks, time, selectedCut, on
           );
         })}
       </div>
+      <div className="range-lane" onPointerDown={onLaneDown} onPointerMove={onLaneMove} onPointerUp={onLaneUp} title="Arraste aqui para selecionar um trecho e pedir uma mudança só nele" data-testid="range-lane">
+        <span className="range-lane-label">Trechos: arraste para selecionar</span>
+        {plan.ranges.map((r) => (
+          <button
+            key={r.id}
+            className={`range-chip ${r.locked ? 'locked' : ''} ${selectedRange === r.id ? 'selected' : ''}`}
+            style={{ left: pct(r.srcStart), width: width({ start: r.srcStart, end: r.srcEnd }) }}
+            onClick={() => onPickRange(r.id)}
+            title={`${r.locked ? 'Travado' : 'Ajustado'}: ${r.prompt || 'sem pedido'}`}
+            aria-label={`Trecho ${r.locked ? 'travado' : 'ajustado'} de ${r.out.start.toFixed(1)} a ${r.out.end.toFixed(1)} segundos`}
+            data-testid={`range-${r.id}`}
+          >
+            {r.locked ? 'travado' : 'ajustado'}
+          </button>
+        ))}
+        {selSrc && <div className="range-sel" style={{ left: pct(selSrc.start), width: width(selSrc) }} data-testid="range-selection" />}
+      </div>
       <div className="legend">
-        <span className="sw sw-kept" /> mantido <span className="sw sw-cut" /> cortado
+        <span className="sw sw-kept" /> mantido <span className="sw sw-cut" /> cortado <span className="sw sw-range" /> trecho ajustado <span className="sw sw-locked" /> trecho travado
       </div>
     </div>
   );

@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, TimeRange } from '../core/types';
 import { PRESETS } from '../core/presets';
-import { adjustCut, applyBrief, applyHook, applyStyle, editCaptionText, listCuts, restoreCut, type EditContext } from '../editorial/ops';
+import { adjustCut, applyBrief, applyHook, applyRange, applyReferencePalette, applyStyle, editCaptionText, listCuts, restoreCut, type EditContext } from '../editorial/ops';
+import type { RangeRequest } from '../editorial/range-interpret';
+import { stylesOf } from '../editorial/ranges';
+import { addVersion, removeVersion, type PlanVersion } from '../core/versions';
 import { canRedo, canUndo, pushHistory, redo, undo, type History } from '../engine/history';
 import { outputDuration } from '../engine/timeline';
 import type { DecodedAudio } from '../media/audio';
@@ -14,6 +17,8 @@ import { ErrorBox } from './ErrorBox';
 import { BriefPanel } from './BriefPanel';
 import { StylePicker } from './StylePicker';
 import { Timeline } from './Timeline';
+import { RangePanel } from './RangePanel';
+import { ChangesPanel, ReferencePicker, VersionsPanel, type CompareView } from './Panels';
 
 export interface Session {
   file: Blob;
@@ -58,8 +63,27 @@ export function describeScenes(scenes: EditPlan['scenes']): string {
 
 const fmt = (s: number) => `${s.toFixed(2).replace('.', ',')} s`;
 
-export function Editor({ session, history, onHistory, disabled }: { session: Session; history: History<EditPlan>; onHistory: (h: History<EditPlan>) => void; disabled: boolean }) {
+interface EditorProps {
+  session: Session;
+  history: History<EditPlan>;
+  onHistory: (h: History<EditPlan>) => void;
+  versions: PlanVersion[];
+  onVersions: (v: PlanVersion[]) => void;
+  disabled: boolean;
+}
+
+export function Editor({ session, history, onHistory, versions, onVersions, disabled }: EditorProps) {
   const plan = history.present;
+  const [selection, setSelection] = useState<TimeRange | null>(null);
+  const [selectedRange, setSelectedRange] = useState<string | null>(null);
+  const [compareWith, setCompareWith] = useState<string | null>(null);
+  const [view, setView] = useState<CompareView>('depois');
+  const comparedVersion = versions.find((v) => v.id === compareWith) ?? null;
+  const before = comparedVersion?.plan ?? history.past.at(-1) ?? null;
+  const beforeLabel = comparedVersion ? `a versão “${comparedVersion.name}”` : 'antes da última mudança';
+  const shown = view === 'antes' && before ? before : plan;
+  const range = selectedRange ? (plan.ranges.find((r) => r.id === selectedRange) ?? null) : null;
+  const activeSelection = range ? range.out : selection;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerRef = useRef<PlanPlayer | null>(null);
   const [time, setTime] = useState(0);
@@ -71,12 +95,28 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
   const [exportError, setExportError] = useState<AppError | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [fontError, setFontError] = useState<AppError | null>(null);
-  const planRef = useRef(plan);
-  planRef.current = plan;
+  const shownRef = useRef(shown);
+  shownRef.current = shown;
+
+  // gancho para os testes automáticos (só no build de teste)
+  useEffect(() => {
+    if (import.meta.env.VITE_FAKE_ASR === '1') (window as unknown as { __m4f: unknown }).__m4f = { plan, history, versions };
+  }, [plan, history, versions]);
+
+  // trecho desfeito (desfazer) ou removido: fecha o painel do trecho
+  useEffect(() => {
+    if (selectedRange && !plan.ranges.some((r) => r.id === selectedRange)) {
+      setSelectedRange(null);
+      setSelection(null);
+    }
+  }, [plan.ranges, selectedRange]);
+  useEffect(() => {
+    if (compareWith && !comparedVersion) setCompareWith(null);
+  }, [compareWith, comparedVersion]);
 
   // Um player por vídeo aberto; o plano é trocado sem recriar.
   useEffect(() => {
-    const player = new PlanPlayer(session.media, session.audio, canvasRef.current!, planRef.current);
+    const player = new PlanPlayer(session.media, session.audio, canvasRef.current!, shownRef.current);
     player.onTime = (t, p) => {
       setTime(t);
       setPlaying(p);
@@ -92,7 +132,7 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
   // fontes do estilo atual antes de desenhar; as dos outros estilos ficam prontas para a troca ser instantânea
   useEffect(() => {
     let alive = true;
-    void ensureFonts(plan.style).then((r) => {
+    void ensureFonts(stylesOf(shown)).then((r) => {
       if (!alive) return;
       setFontError(r.ok ? null : new AppError('FONTE_FALHOU', r.detail));
       playerRef.current?.redraw();
@@ -100,15 +140,15 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
     return () => {
       alive = false;
     };
-  }, [plan.style]);
+  }, [shown]);
   useEffect(() => {
     for (const p of PRESETS) void ensureFonts(p);
   }, []);
 
   useEffect(() => {
-    playerRef.current?.setPlan(plan);
-    setTime((t) => Math.min(t, outputDuration(plan.segments)));
-  }, [plan]);
+    playerRef.current?.setPlan(shown);
+    setTime((t) => Math.min(t, outputDuration(shown.segments)));
+  }, [shown]);
 
   const cuts = listCuts(plan.segments, session.ctx.durationSec);
   const total = outputDuration(plan.segments);
@@ -125,6 +165,34 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
     },
     [history, onHistory],
   );
+
+  /** Pedido de trecho: devolve o erro para o painel do trecho mostrar. */
+  const requestRange = (req: RangeRequest): AppError | null => {
+    if (!activeSelection) return null;
+    try {
+      const target = selectedRange ? { id: selectedRange } : activeSelection;
+      const r = applyRange(history.present, session.ctx, target, req);
+      onHistory(pushHistory(history, r.plan));
+      setView('depois');
+      if (r.rangeId) setSelectedRange(r.rangeId);
+      else {
+        setSelectedRange(null);
+        setSelection(null);
+      }
+      return null;
+    } catch (err) {
+      return toAppError(err);
+    }
+  };
+
+  const saveVersion = (name: string): AppError | null => {
+    try {
+      onVersions(addVersion(versions, name, plan, new Date()));
+      return null;
+    } catch (err) {
+      return toAppError(err);
+    }
+  };
 
   const doUndo = useCallback(() => onHistory(undo(history)), [history, onHistory]);
   const doRedo = useCallback(() => onHistory(redo(history)), [history, onHistory]);
@@ -199,6 +267,7 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
       <BriefPanel plan={plan} words={session.ctx.words} onBrief={(b) => apply((p) => applyBrief(p, session.ctx, b))} onHook={(h) => apply((p) => applyHook(p, session.ctx, h))} disabled={exporting !== null} />
 
       <StylePicker current={plan.style.id} onPick={(id) => apply((p) => applyStyle(p, session.ctx, id))} disabled={exporting !== null} />
+      <ReferencePicker reference={plan.reference} onReference={(r) => apply((p) => applyReferencePalette(p, session.ctx, r))} disabled={exporting !== null} />
       <p className="scene-summary" data-testid="scene-summary">
         Animações neste estilo: {describeScenes(plan.scenes)}.
       </p>
@@ -221,6 +290,61 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
         selectedCut={selectedCut}
         onSeek={(t) => playerRef.current?.seek(t)}
         onSelectCut={setSelectedCut}
+        selection={activeSelection}
+        selectedRange={selectedRange}
+        onSelection={(out) => {
+          setSelectedRange(null);
+          setSelection(out);
+        }}
+        onPickRange={(id) => {
+          setSelectedRange(id);
+          setSelection(null);
+        }}
+      />
+      {!activeSelection && (
+        <p className="hint">
+          Para mudar só um pedaço: arraste na faixa “Trechos” acima ou{' '}
+          <button type="button" onClick={() => setSelection({ start: Math.min(time, Math.max(0, total - 0.5)), end: Math.min(total, Math.max(time, 0) + 3) })} data-testid="range-new">
+            selecione a partir de agora ({fmt(time)})
+          </button>
+          .
+        </p>
+      )}
+      {activeSelection && (
+        <RangePanel
+          selection={activeSelection}
+          range={range}
+          total={total}
+          onSelection={(out) => {
+            setSelectedRange(null);
+            setSelection(out);
+          }}
+          onRequest={requestRange}
+          onClose={() => {
+            setSelection(null);
+            setSelectedRange(null);
+          }}
+          onSeek={(t) => playerRef.current?.seek(t)}
+          disabled={exporting !== null}
+        />
+      )}
+
+      <ChangesPanel before={before} beforeLabel={beforeLabel} plan={plan} view={view} onView={setView} onSeek={(t) => playerRef.current?.seek(t)} time={time} />
+      <VersionsPanel
+        versions={versions}
+        onSave={saveVersion}
+        onRestore={(v) => {
+          setCompareWith(null);
+          setView('depois');
+          apply(() => v.plan);
+        }}
+        onCompare={(v) => {
+          setCompareWith(v ? v.id : null);
+          setView(v ? 'antes' : 'depois');
+        }}
+        onDelete={(v) => onVersions(removeVersion(versions, v.id))}
+        comparing={compareWith}
+        disabled={exporting !== null}
       />
 
       {cut && selectedCut !== null && (

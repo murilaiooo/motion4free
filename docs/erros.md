@@ -1,7 +1,7 @@
 # Catálogo de erros
 
 Cada problema mostra na tela um código `M4F-xxx`. O código-fonte do catálogo é `src/core/errors.ts`.
-Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição, 6xx projeto salvo, 7xx player, 8xx estilo e animações, 9xx desconhecido, 10xx pedido por texto e IA.
+Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos, 6xx projeto salvo e versões, 7xx player, 8xx estilo, animações e imagem de referência, 9xx desconhecido, 10xx pedido por texto (geral e por trecho) e IA.
 
 | Código | Mensagem | O que costuma significar |
 |---|---|---|
@@ -21,13 +21,19 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-501 | A legenda não pode ficar vazia. | Ao editar, o texto da legenda ficou em branco. O texto anterior é mantido. |
 | M4F-502 | A legenda pode ter no máximo 120 caracteres. | Texto longo demais para caber na tela. Divida em frases menores. |
 | M4F-503 | Não dá para cortar o vídeo inteiro. | O ajuste de corte removeria todos os trechos. |
+| M4F-504 | Este trecho está travado. Destrave para mudar. | Você pediu uma mudança (pedido do trecho, corte, restaurar corte ou corrigir legenda) dentro de um trecho travado. Nada muda. Use "Destravar" no painel do trecho. |
+| M4F-505 | O trecho precisa ter pelo menos meio segundo dentro do vídeo editado. | O pedaço selecionado é curto demais ou está fora do vídeo editado. Arraste um pedaço maior ou corrija os campos de início e fim. |
+| M4F-506 | Este pedaço encosta num trecho já ajustado. Clique no trecho existente ou escolha outro pedaço. | Trechos ajustados não podem se sobrepor. Clique no trecho que já existe (faixa "Trechos") para mudar o pedido dele. |
 | M4F-601 | Não foi possível salvar o projeto neste navegador. As edições se perdem ao fechar a aba. | O navegador não oferece armazenamento local (OPFS), está em janela anônima ou sem espaço. A edição e a exportação continuam funcionando. |
 | M4F-602 | O projeto salvo não pôde ser aberto e foi descartado. | O arquivo do projeto no navegador está incompleto ou é de uma versão incompatível. Escolha o vídeo de novo. |
 | M4F-603 | Este não é o mesmo vídeo do projeto salvo. | Ao reabrir, o vídeo escolhido tem tamanho ou duração diferente do original do projeto. Escolha o arquivo certo ou comece outro vídeo. |
 | M4F-604 | Para continuar o projeto salvo, escolha de novo o vídeo original. | O navegador apagou (ou não conseguiu guardar) a cópia local do vídeo. O projeto e as edições continuam salvos; basta escolher o mesmo arquivo. |
+| M4F-605 | Limite de 20 versões guardadas. Apague uma para guardar outra. | Já existem 20 versões no projeto. Apague uma antiga na lista "Versões". |
 | M4F-701 | Não foi possível tocar a prévia. | Falha ao decodificar quadros ou iniciar o som da prévia; a exportação pode funcionar mesmo assim. Ver detalhe. |
 | M4F-801 | As fontes do estilo não carregaram; o vídeo usa uma fonte reserva. | Os arquivos de fonte do app não baixaram (rede instável, bloqueio do navegador) na página ou durante a geração do vídeo. Tudo continua funcionando, mas as letras ficam com a fonte padrão do sistema. Recarregue a página; o detalhe lista quais fontes falharam. |
 | M4F-802 | Este estilo não existe nesta versão do app. | Pedido de troca para um estilo que esta versão não tem. Nada é alterado. |
+| M4F-803 | Não foi possível ler esta imagem. Use uma foto JPG, PNG ou WebP. | O navegador não conseguiu abrir o arquivo escolhido como imagem (formato não suportado, como HEIC, ou arquivo corrompido). Nada muda. |
+| M4F-804 | A imagem é quase toda preta, branca ou cinza; as cores do estilo foram mantidas. | A imagem de referência não tem cores vivas para usar como destaque. Escolha uma imagem mais colorida. |
 | M4F-1001 | Escreva o que você quer antes de aplicar. | O campo "O que você quer?" estava vazio ao apertar Aplicar. Nada muda. |
 | M4F-1002 | O pedido pode ter no máximo 500 caracteres. | Pedido longo demais. Resuma em frases curtas. |
 | M4F-1003 | Não entendi nenhum pedido neste texto; nada mudou. Veja os exemplos. | Nenhuma palavra do pedido é conhecida pelas regras (o detalhe lista as palavras). Use palavras como "calmo", "animado", "elegante", "sem zoom", "destaque os números". |
@@ -37,6 +43,8 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-1007 | A IA respondeu fora do formato esperado; usei as regras. | A resposta da IA não era um objeto JSON. Nada do que ela disse foi usado. |
 | M4F-1008 | O serviço da sua chave não respondeu; usei as regras. | Falha de rede, tempo esgotado (30 s) ou erro do Google (5xx). A chave nunca aparece no detalhe. |
 | M4F-1009 | O serviço recusou a sua chave (confira se ela está certa ou se o limite gratuito acabou); usei as regras. | Resposta 400 de chave inválida, 401, 403 ou 429 (limite gratuito). |
+| M4F-1010 | Não entendi o pedido para este trecho; nada mudou. Veja os exemplos. | Nenhuma palavra do pedido do trecho é conhecida (o detalhe lista as palavras). Use "mais calmo aqui", "sem animação aqui", "troca essa animação", "destaque isso" ou "trava esse pedaço". |
+| M4F-1011 | Não há outra animação possível neste trecho (falta fala ou as animações foram proibidas). | "Troca essa animação" num trecho sem palavras reconhecidas ou com as animações proibidas pelo pedido. Nada muda. |
 | M4F-999 | Erro inesperado. | Erro não previsto; ver detalhe. |
 
 Erros 3xx são avisos: o vídeo continua sendo editado e exportado sem legendas e sem título.

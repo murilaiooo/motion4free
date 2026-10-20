@@ -2,6 +2,19 @@
 
 A versão aparece no rodapé do app (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.5.0 — 20/10/2026
+Fase 5: ajuste por trecho.
+- **Mudar só um pedaço do vídeo**: na linha do tempo há uma faixa nova, "Trechos". Arraste nela para selecionar um pedaço (ou use o botão "selecione a partir de agora" e corrija início e fim). Abre um painel onde você escreve o que quer só ali: "mais calmo aqui", "sem animação aqui", "troca essa animação", "destaque isso" (palavra-chave e zoom com a sua própria fala), "sem zoom aqui", "destaque os números aqui"… **O resto do vídeo não muda**: cortes, legendas e animações fora do pedaço ficam exatamente iguais, e a legenda continua junto com a voz.
+- **Travar um pedaço**: "trava esse pedaço" (ou o botão "Travar este trecho") congela aquele pedaço do jeito que está. Depois disso você pode trocar o estilo, fazer outro pedido geral, usar cores de uma imagem ou mexer em cortes em outros lugares, e o pedaço travado continua igual. Mudanças dentro dele são recusadas com o aviso M4F-504; para mudar, toque em "Destravar".
+- Os pedaços ajustados aparecem na faixa "Trechos" (azul = ajustado, roxo = travado); clique num deles para ver o que foi pedido, pedir mais coisas ou "Voltar ao normal".
+- **O que mudou**: um quadro lista cada mudança (animação que entrou ou saiu e em que segundo, legenda corrigida, estilo, cores, cortes, trechos). Clique numa linha para levar a prévia até ali e use **Antes / Depois** para ver como era no mesmo instante.
+- **Versões**: dê um nome e guarde como o vídeo está ("versão calma", "versão pop"). Dá para restaurar (e desfazer a restauração), comparar com a atual ou apagar. As versões ficam salvas com o projeto neste navegador (até 20).
+- **Cores de uma imagem sua (opcional)**: escolha uma foto ou logo e as cores de destaque do vídeo passam a ser as dela, sempre com contraste suficiente para a legenda continuar legível. A imagem é lida só no seu aparelho e não é guardada nem enviada; só as cores ficam no projeto. "Voltar às cores do estilo" desfaz.
+- Ainda não: mover a frase do gancho para o começo do vídeo (o gancho continua aparecendo como título de abertura).
+- Projetos salvos nas versões anteriores abrem normalmente.
+- Novos códigos: M4F-504 a 506 (trechos), M4F-605 (limite de versões), M4F-803 e 804 (imagem de referência), M4F-1010 e 1011 (pedido do trecho). Ver [erros.md](erros.md).
+- Roteiro de teste de tudo o que existe até agora: [roteiro-de-teste.md](roteiro-de-teste.md).
+
 ## v0.4.1 — 20/10/2026
 - IA no navegador: corrigido o erro M4F-1006 ("GrammarMatcherInitError") que aparecia logo depois de baixar o modelo. A resposta da IA continua sendo conferida e, se vier errada, o app usa as regras.
 
