@@ -454,11 +454,15 @@ function EditorApp() {
       const id = newProjectId(Date.now());
       const h = createHistory(a.plan);
       setProjectId(id);
-      setProjectName(nameFromFile(primary.name));
       setSavedFor(null);
       setVersions([]);
       setVersionsSaved([]);
       const multi = (a as any).__multi as { clips: import('../media/multi').OpenedClip[]; refs: import('../core/types').ClipRef[]; wordsByClip: Record<string, import('../core/types').Word[]>; silencesByClip: Record<string, import('../core/types').TimeRange[]> } | undefined;
+      // O arquivo inicialmente escolhido pode ser inválido; o projeto pertence ao primeiro válido.
+      const canonicalBlob = multi?.clips[0]?.file ?? primary;
+      const canonicalName = multi?.clips[0]?.name ?? primary.name;
+      setFileName(canonicalName);
+      setProjectName(nameFromFile(canonicalName));
       // Build clipSources map for player/export from opened clips
       let clipSources: Map<string, import('../media/sources').ClipSource> | null = null;
       if (multi) {
@@ -468,8 +472,8 @@ function EditorApp() {
         }
       }
       setSession({
-        file: primary,
-        fileName: primary.name,
+        file: canonicalBlob,
+        fileName: canonicalName,
         media: a.media,
         audio: a.audio,
         ctx: { durationSec: (a.plan as any)?.clips ? (a.plan as any).clips.reduce((s:number,c:any)=>s+c.duration,0) : a.media.durationSec, words: a.words },
@@ -481,7 +485,7 @@ function EditorApp() {
         clipWords: multi?.wordsByClip,
         clipSilences: multi?.silencesByClip,
         clipAudios: multi ? new Map(multi.clips.filter((c) => c.audio !== null).map((c): [string, import('../media/audio').DecodedAudio] => [c.id, c.audio!])) : null,
-        originalVideo: { name: primary.name, size: primary.size, durationSec: a.media.durationSec },
+        originalVideo: { name: canonicalName, size: canonicalBlob.size, durationSec: a.media.durationSec },
       } as any);
       setHistory(h);
       setStatus({ kind: 'ready' });
@@ -490,7 +494,7 @@ function EditorApp() {
         if (multi && multi.clips.length > 1) {
           storeMultiCopies(id, multi.clips);
         } else {
-          void storeCopy(id, primary);
+          void storeCopy(id, canonicalBlob);
         }
         void storeThumb(id, a.media, a.plan);
       } else {
