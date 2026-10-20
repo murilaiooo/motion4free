@@ -6,10 +6,12 @@ import { makeProject, restoreHistory, sameVideo, type SavedProject } from '../co
 import type { EditPlan } from '../core/types';
 import { createHistory, type History } from '../engine/history';
 import type { PlanVersion } from '../core/versions';
-import { APP_BUILT_AT, APP_VERSION, VERSION_LABEL } from '../version';
+import { APP_VERSION, VERSION_LABEL } from '../version';
 import { Editor, type Session } from './Editor';
 import { ErrorBox } from './ErrorBox';
 import { Gallery } from './Gallery';
+import { Landing, Processing } from './Landing';
+import { Logo, type SaveState } from './TopBar';
 import { analyze, openWithAudio } from './pipeline';
 import { clearProject, loadProject, saveProject, saveVideoCopy, storageAvailable } from './project-store';
 
@@ -27,16 +29,24 @@ const GALLERY = typeof location !== 'undefined' && new URLSearchParams(location.
 export function App() {
   if (GALLERY) {
     return (
-      <main className="app">
-        <h1>Motion4Free · estilos</h1>
-        <p className="sub">
-          <a href="./">Voltar ao editor</a>
-        </p>
-        <Gallery />
-        <footer className="version" data-testid="version">
-          Motion4Free {VERSION_LABEL}
+      <div className="gallery-page">
+        <header className="land-nav">
+          <a className="brand" href="./" aria-label="Motion4Free">
+            <Logo />
+            <span className="brand-name">Motion4Free</span>
+          </a>
+          <nav className="land-links">
+            <a href="./">Voltar ao editor</a>
+          </nav>
+        </header>
+        <main className="gallery-main">
+          <h1>Modelos, cena por cena</h1>
+          <Gallery />
+        </main>
+        <footer className="land-foot">
+          <span data-testid="version">Motion4Free {VERSION_LABEL}</span>
         </footer>
-      </main>
+      </div>
     );
   }
   return <EditorApp />;
@@ -59,6 +69,7 @@ function EditorApp() {
   const [versions, setVersions] = useState<PlanVersion[]>([]);
   const [versionsSaved, setVersionsSaved] = useState<PlanVersion[]>([]);
   const [copy, setCopy] = useState<CopyState>('pending');
+  const [fileName, setFileName] = useState<string | null>(null);
   const saveFailed = useRef(false);
 
   const step = (label: string, fraction: number) => setStatus({ kind: 'working', label, fraction });
@@ -92,6 +103,7 @@ function EditorApp() {
   }, []);
 
   async function resume(project: SavedProject, file: Blob, copyExists: boolean) {
+    setFileName(project.video.name);
     step('Abrindo o projeto salvo', 0);
     const { media, audio } = await openWithAudio(file, step);
     if (!sameVideo(project.video, { size: file.size, durationSec: media.durationSec })) {
@@ -131,6 +143,7 @@ function EditorApp() {
 
   async function onFile(f: File) {
     setStatus({ kind: 'idle' });
+    setFileName(f.name);
     if (pending) {
       try {
         await resume(pending, f, false);
@@ -209,54 +222,65 @@ function EditorApp() {
 
   const busy = status.kind === 'working';
   const saved = !!history && savedFor === history && versionsSaved === versions && copy !== 'pending';
+  const saveState: SaveState = saved ? 'saved' : storageAvailable() ? 'saving' : 'off';
 
-  return (
-    <main className="app">
-      <h1>Motion4Free</h1>
-      <p className="sub">
-        Versão de teste: tudo acontece no seu computador. Nenhum vídeo é enviado para a internet. <a href="?galeria">Ver os estilos lado a lado</a>
+  const pendingNotice = pending && (
+    <div className="notice warning" role="status" data-testid="warning-M4F-604">
+      <p>
+        <b className="code">Aviso M4F-604</b>: Para continuar o projeto salvo, escolha de novo o vídeo original (<b>{pending.video.name}</b>). Suas edições estão guardadas.
       </p>
-
-      {pending && (
-        <div className="notice warning" role="status" data-testid="warning-M4F-604">
-          <p>
-            <b>Aviso M4F-604</b>: Para continuar o projeto salvo, escolha de novo o vídeo original (<b>{pending.video.name}</b>). Suas edições estão guardadas.
-          </p>
-          <button onClick={startOver} data-testid="start-over">
-            Começar outro vídeo
-          </button>
-        </div>
-      )}
-
-      <label className={`drop ${busy ? 'disabled' : ''}`}>
-        <input type="file" accept="video/*" disabled={busy} data-testid="file-input" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
-        {pending ? `Escolher o vídeo original (${pending.video.name})` : session ? `Vídeo: ${session.fileName} · clique para trocar (o projeto atual será substituído)` : 'Clique para escolher um vídeo seu falando (até 3 minutos)'}
-      </label>
-
-      {status.kind === 'working' && (
-        <div className="status" role="status">
-          <span>{status.label}…</span>
-          <progress value={status.fraction} max={1} />
-        </div>
-      )}
+      <div className="notice-row">
+        <button className="sm" onClick={startOver} data-testid="start-over">
+          Começar outro vídeo
+        </button>
+      </div>
+    </div>
+  );
+  const appNotices = (
+    <>
       {status.kind === 'error' && <ErrorBox error={status.error} kind="error" />}
       {notices.map((n) => (
         <ErrorBox key={n.code} error={n} kind="warning" />
       ))}
-      {session?.warnings.map((w) => <ErrorBox key={w.code} error={w} kind="warning" />)}
+    </>
+  );
 
-      {session && history && (
-        <>
-          <p className="saved" data-testid={saved ? 'saved' : 'saving'}>
-            {saved ? 'Projeto salvo neste navegador.' : storageAvailable() ? 'Salvando o projeto…' : ''}
-          </p>
-          <Editor session={session} history={history} onHistory={setHistory} versions={versions} onVersions={setVersions} disabled={busy} />
-        </>
-      )}
-
-      <footer className="version" data-testid="version" title={`Gerado em ${APP_BUILT_AT}`}>
-        Motion4Free {VERSION_LABEL}
-      </footer>
-    </main>
+  if (session && history) {
+    return (
+      <Editor
+        session={session}
+        history={history}
+        onHistory={setHistory}
+        versions={versions}
+        onVersions={setVersions}
+        disabled={busy}
+        saveState={saveState}
+        onReplaceFile={(f) => void onFile(f)}
+        notices={
+          <>
+            {appNotices}
+            {session.warnings.map((w) => (
+              <ErrorBox key={w.code} error={w} kind="warning" />
+            ))}
+          </>
+        }
+      />
+    );
+  }
+  if (status.kind === 'working') return <Processing label={status.label} fraction={status.fraction} fileName={fileName} />;
+  return (
+    <Landing
+      onFile={(f) => void onFile(f)}
+      busy={busy}
+      pendingName={pending?.video.name ?? null}
+      notices={
+        (pendingNotice || status.kind === 'error' || notices.length > 0) && (
+          <div className="land-notices">
+            {pendingNotice}
+            {appNotices}
+          </div>
+        )
+      }
+    />
   );
 }

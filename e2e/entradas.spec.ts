@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
+import { tab } from './ui';
 
 /** Entradas estranhas (v0.7): vídeo sem som, vídeo sem fala, vídeo de 1 segundo. */
 
@@ -37,6 +38,7 @@ test('vídeo de 1 segundo: resumo no singular, pedido e exportação funcionam',
   await open(page, 'e2e/fixtures/curto.webm');
   await expect(page.getByTestId('summary')).toContainText('1 trecho ·');
   await expect(page.getByTestId('summary')).toContainText('1 legenda ·');
+  await tab(page, 'Pedido');
   await page.getByTestId('brief-input').fill('gancho diferenciado e criativo, legenda verde e amarela, emojis a cada 3 segundos');
   await page.getByTestId('brief-apply').click();
   await expect(page.getByTestId('brief-summary')).toContainText('Apliquei');
@@ -50,12 +52,12 @@ for (const width of [1280, 390]) {
   test(`cartões dos estilos cabem na tela (${width} px), sem rolagem para o lado`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await open(page, 'e2e/fixtures/curto.webm');
-    const grid = await page.locator('.style-grid').boundingBox();
+    const grid = await page.locator('.template-grid').boundingBox();
     for (const id of ['pop', 'neon', 'editorial', 'documental']) {
       const card = await page.getByTestId(`style-${id}`).boundingBox();
       expect(card!.x + card!.width, id).toBeLessThanOrEqual(grid!.x + grid!.width + 1);
-      // a amostra (nome do estilo e legenda de exemplo) fica dentro do cartão
-      const swatch = await page.getByTestId(`style-${id}`).locator('.swatch').boundingBox();
+      // a miniatura (quadro desenhado do modelo) fica dentro do cartão
+      const swatch = await page.getByTestId(`style-${id}`).locator('.tpl-thumb').boundingBox();
       expect(swatch!.x + swatch!.width, `${id} amostra`).toBeLessThanOrEqual(card!.x + card!.width + 1);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

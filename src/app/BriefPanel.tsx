@@ -4,6 +4,7 @@ import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, Word } from '../core/types';
 import { interpretLayered } from '../editorial/ai-brief';
 import { findHooks } from '../editorial/hooks';
+import { Check, Sparkles } from 'lucide-react';
 import { AiOptions, prepareAi, type AiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
 
@@ -21,13 +22,12 @@ const hookKey = (h: Pick<Hook, 'wordIds'> | null) => (h ? h.wordIds.join('|') : 
  * "O que você quer?": pedido por texto, o que foi aplicado, o que o app ainda não sabe fazer e a
  * escolha do gancho. Tudo vira operação no plano (entra no desfazer). Sem IA por padrão; a IA é opcional.
  */
-export function BriefPanel({ plan, words, onBrief, onHook, disabled, ai, onAi }: { plan: EditPlan; words: Word[]; onBrief: (b: CreativeBrief) => void; onHook: (h: Hook | null) => void; disabled: boolean; ai: AiSettings; onAi: (s: AiSettings) => void }) {
+export function BriefPanel({ plan, words, onBrief, disabled, ai, onAi }: { plan: EditPlan; words: Word[]; onBrief: (b: CreativeBrief) => void; disabled: boolean; ai: AiSettings; onAi: (s: AiSettings) => void }) {
   const [text, setText] = useState(plan.brief.prompt);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<AppError | null>(null);
   const [warning, setWarning] = useState<AppError | null>(null);
   const [notDone, setNotDone] = useState<string[]>([]);
-  const hooks = useMemo(() => findHooks(words), [words]);
   const summary = summarizeBrief(plan.brief);
   const hasBrief = plan.brief.prompt !== '';
   // desfazer/refazer traz de volta o texto do pedido daquele momento
@@ -56,35 +56,43 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled, ai, onAi }:
   }
 
   return (
-    <section className="brief" aria-label="Pedido por texto" data-testid="brief-panel">
-      <h2>O que você quer?</h2>
-      <p className="hint">Escreva com suas palavras. Exemplos (toque para usar):</p>
-      <div className="examples">
+    <section className="brief stack" aria-label="Pedido por texto" data-testid="brief-panel">
+      <div className="field">
+        <label className="field-label" htmlFor="brief-input">
+          O que você quer?
+        </label>
+        <p className="hint">Escreva com suas palavras. O app aplica e mostra o que entendeu.</p>
+      </div>
+      <textarea
+        id="brief-input"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        maxLength={PROMPT_MAX}
+        rows={4}
+        placeholder="Ex.: legenda verde e amarela, emojis a cada 3 segundos, gancho criativo"
+        aria-label="O que você quer?"
+        data-testid="brief-input"
+        disabled={disabled || busy !== null}
+      />
+      <div className="row-between">
+        <span className="hint tnum">
+          {text.length}/{PROMPT_MAX}
+        </span>
+        <button className="primary" onClick={apply} disabled={disabled || busy !== null} data-testid="brief-apply">
+          <Sparkles size={15} aria-hidden /> Aplicar
+        </button>
+      </div>
+      <div className="examples" aria-label="Exemplos de pedido">
+        <span className="eyebrow">Exemplos — toque para usar</span>
         {EXAMPLES.map((e) => (
           <button key={e} type="button" className="example" onClick={() => setText(e)} disabled={disabled || busy !== null}>
             {e}
           </button>
         ))}
       </div>
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        maxLength={PROMPT_MAX}
-        rows={3}
-        placeholder="Ex.: legenda verde e amarela, emojis a cada 3 segundos, gancho criativo"
-        aria-label="O que você quer?"
-        data-testid="brief-input"
-        disabled={disabled || busy !== null}
-      />
-      <div className="actions">
-        <button className="primary" onClick={apply} disabled={disabled || busy !== null} data-testid="brief-apply">
-          Aplicar
-        </button>
-        <span className="hint">{text.length}/{PROMPT_MAX}</span>
-      </div>
       {busy && (
-        <p className="status" role="status">
-          {busy}
+        <p className="busy" role="status">
+          <span className="spinner" aria-hidden /> {busy}
         </p>
       )}
       {error && <ErrorBox error={error} kind="error" />}
@@ -97,9 +105,9 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled, ai, onAi }:
       )}
 
       {hasBrief && (
-        <div className="brief-summary" data-testid="brief-summary">
-          <p>
-            <b>Apliquei</b>
+        <div className="brief-summary card" data-testid="brief-summary">
+          <p className="card-title">
+            <Check size={15} aria-hidden /> <b>Apliquei</b>
             {plan.brief.source !== 'regras' ? (plan.brief.source === 'ia-local' ? ' (com a IA no navegador)' : ' (com a IA da sua chave)') : ''}:
           </p>
           {plan.brief.summary && (
@@ -120,7 +128,7 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled, ai, onAi }:
               ))}
             </ul>
           )}
-          <div data-testid="brief-unsupported">
+          <div className="not-yet" data-testid="brief-unsupported">
             <b>Ainda não sei fazer:</b>{' '}
             {summary.unsupported.length > 0 ? (
               <ul>
@@ -135,9 +143,18 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled, ai, onAi }:
         </div>
       )}
 
+      <AiOptions settings={ai} onChange={onAi} />
+    </section>
+  );
+}
+
+/** Gancho: frases da própria fala para abrir o vídeo (nunca inventadas). Entra no desfazer. */
+export function HookPanel({ plan, words, onHook, disabled }: { plan: EditPlan; words: Word[]; onHook: (h: Hook | null) => void; disabled: boolean }) {
+  const hooks = useMemo(() => findHooks(words), [words]);
+  return (
+    <section className="stack" aria-label="Gancho">
       <div className="hooks" data-testid="hooks">
-        <h3>Gancho (a frase que abre o vídeo)</h3>
-        <p className="hint" data-testid="opening-title">
+        <p className="opening card" data-testid="opening-title">
           {(() => {
             const t = plan.scenes.find((s) => s.kind === 'kinetic-title' && s.start === 0);
             return t && t.kind === 'kinetic-title' ? `Abre com: “${t.text}”` : 'Sem título de abertura.';
@@ -162,8 +179,6 @@ export function BriefPanel({ plan, words, onBrief, onHook, disabled, ai, onAi }:
           </>
         )}
       </div>
-
-      <AiOptions settings={ai} onChange={onAi} />
     </section>
   );
 }

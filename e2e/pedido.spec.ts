@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
+import { tab } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
@@ -10,6 +11,7 @@ async function openVideo(page: Page) {
 }
 
 async function ask(page: Page, text: string) {
+  await tab(page, 'Pedido');
   await page.getByTestId('brief-input').fill(text);
   await page.getByTestId('brief-apply').click();
 }
@@ -54,6 +56,7 @@ test('pedido por texto muda estilo e cenas, mostra o que entendeu e entra no des
 test('escolhe um gancho da própria fala e exporta um MP4 válido', async ({ page }, info) => {
   await openVideo(page);
   // a fala de teste tem duas frases: as duas viram candidatas
+  await tab(page, 'Gancho');
   await expect(page.getByTestId('hook-0')).toBeVisible();
   await expect(page.getByTestId('hook-1')).toBeVisible();
   await expect(page.getByTestId('hook-2')).toHaveCount(0);
@@ -66,6 +69,7 @@ test('escolhe um gancho da própria fala e exporta um MP4 válido', async ({ pag
   await expect(page.getByTestId('opening-title')).toHaveText('Abre com: “Três dicas rápidas.”');
 
   // a pessoa troca o gancho; o texto é exatamente o falado
+  await tab(page, 'Gancho');
   await expect(page.getByTestId('hook-1').locator('xpath=..')).toContainText('“Primeira dica.”');
   await page.getByTestId('hook-1').check();
   await expect(page.getByTestId('hook-1')).toBeChecked();
@@ -102,6 +106,7 @@ test('pedido e gancho voltam depois de recarregar; a chave própria avisa que s�
   await expect(page.getByTestId('brief-input')).toHaveValue('calmo, sem zoom, gancho forte');
   await expect(page.getByTestId('hook-0')).toBeChecked();
 
+  await tab(page, 'Pedido');
   await page.getByText('IA opcional (avançado)').click();
   await page.getByTestId('ai-key').check();
   await expect(page.getByTestId('key-notice')).toContainText('O vídeo nunca sai do seu aparelho');

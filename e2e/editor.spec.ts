@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
+import { editCaption, tab } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
@@ -13,23 +14,27 @@ const seconds = async (page: Page) => Number((await page.getByTestId('out-durati
 
 test('edita legenda, desfaz e refaz', async ({ page }) => {
   await openVideo(page);
-  const input = page.getByTestId('caption-input-c2');
-  await expect(input).toHaveValue('Primeira dica.');
-  await input.fill('Primeira dica de ouro!');
-  await input.press('Enter');
-  await expect(page.getByTestId('caption-input-c2')).toHaveValue('Primeira dica de ouro!');
+  await tab(page, 'Legendas');
+  await expect(page.getByTestId('caption-c2')).toHaveText('Primeira dica.');
+  await editCaption(page, 'c2', 'Primeira dica de ouro!');
+  await expect(page.getByTestId('caption-c2')).toHaveText('Primeira dica de ouro!');
   await expect(page.getByTestId('caption-chip-c2')).toHaveText('Primeira dica de ouro!');
 
   await page.getByTestId('undo').click();
-  await expect(page.getByTestId('caption-input-c2')).toHaveValue('Primeira dica.');
+  await expect(page.getByTestId('caption-c2')).toHaveText('Primeira dica.');
   await page.getByTestId('redo').click();
-  await expect(page.getByTestId('caption-input-c2')).toHaveValue('Primeira dica de ouro!');
+  await expect(page.getByTestId('caption-c2')).toHaveText('Primeira dica de ouro!');
 
   // legenda vazia é recusada com código próprio e nada muda
-  await page.getByTestId('caption-input-c2').fill('   ');
-  await page.getByTestId('caption-input-c2').press('Enter');
+  await editCaption(page, 'c2', '   ');
   await expect(page.getByTestId('error-M4F-501')).toBeVisible();
-  await expect(page.getByTestId('caption-input-c2')).toHaveValue('Primeira dica de ouro!');
+  await expect(page.getByTestId('caption-c2')).toHaveText('Primeira dica de ouro!');
+
+  // Esc cancela sem mudar
+  await page.getByTestId('caption-c2').click();
+  await page.getByTestId('caption-input-c2').fill('outra coisa');
+  await page.getByTestId('caption-input-c2').press('Escape');
+  await expect(page.getByTestId('caption-c2')).toHaveText('Primeira dica de ouro!');
 });
 
 test('restaura e ajusta um corte, com desfazer', async ({ page }) => {
@@ -74,15 +79,14 @@ test('player toca a edição e o tempo avança', async ({ page }) => {
 
 test('projeto volta depois de recarregar a página', async ({ page }) => {
   await openVideo(page);
-  await page.getByTestId('caption-input-c1').fill('Três dicas salvas.');
-  await page.getByTestId('caption-input-c1').press('Enter');
+  await editCaption(page, 'c1', 'Três dicas salvas.');
   await page.getByTestId('cut-1').click();
   await page.getByTestId('restore-cut').click();
   const edited = await seconds(page);
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 30_000 });
 
   await page.reload();
-  await expect(page.getByTestId('caption-input-c1')).toHaveValue('Três dicas salvas.', { timeout: 60_000 });
+  await expect(page.getByTestId('caption-c1')).toHaveText('Três dicas salvas.', { timeout: 60_000 });
   expect(await seconds(page)).toBeCloseTo(edited, 1);
   // o histórico também volta: desfazer recupera o corte
   await page.getByTestId('undo').click();
@@ -91,8 +95,7 @@ test('projeto volta depois de recarregar a página', async ({ page }) => {
 
 test('sem a cópia do vídeo, pede o arquivo de novo (M4F-604) e continua o projeto', async ({ page }) => {
   await openVideo(page);
-  await page.getByTestId('caption-input-c2').fill('Dica reaberta.');
-  await page.getByTestId('caption-input-c2').press('Enter');
+  await editCaption(page, 'c2', 'Dica reaberta.');
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 30_000 });
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory();
@@ -107,7 +110,7 @@ test('sem a cópia do vídeo, pede o arquivo de novo (M4F-604) e continua o proj
   await expect(page.getByTestId('error-M4F-101')).toBeVisible({ timeout: 30_000 });
 
   await page.getByTestId('file-input').setInputFiles(FIXTURE);
-  await expect(page.getByTestId('caption-input-c2')).toHaveValue('Dica reaberta.', { timeout: 60_000 });
+  await expect(page.getByTestId('caption-c2')).toHaveText('Dica reaberta.', { timeout: 60_000 });
   await expect(page.getByTestId('warning-M4F-604')).toHaveCount(0);
 });
 

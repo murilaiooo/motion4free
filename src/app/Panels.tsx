@@ -4,6 +4,7 @@ import type { EditPlan, ReferencePalette } from '../core/types';
 import type { PlanVersion } from '../core/versions';
 import { diffPlans } from '../editorial/diff';
 import { referenceFromPixels } from '../editorial/reference';
+import { History, ImageUp, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { ErrorBox } from './ErrorBox';
 
 const fmt = (s: number) => `${s.toFixed(1).replace('.', ',')} s`;
@@ -36,8 +37,10 @@ export function ChangesPanel({
   if (!before || !diff) {
     return (
       <section className="changes" data-testid="changes">
-        <h2>O que mudou</h2>
-        <p className="hint">Nenhuma mudança ainda.</p>
+        <h2 className="section-title">
+          <History size={15} aria-hidden /> O que mudou
+        </h2>
+        <p className="hint">Nenhuma mudança ainda. Cada mudança aparece aqui, com Antes e Depois.</p>
       </section>
     );
   }
@@ -47,7 +50,9 @@ export function ChangesPanel({
   };
   return (
     <section className="changes" aria-label="O que mudou" data-testid="changes">
-      <h2>O que mudou</h2>
+      <h2 className="section-title">
+        <History size={15} aria-hidden /> O que mudou
+      </h2>
       <p className="hint">Comparando com: {beforeLabel}.</p>
       {diff.changes.length === 0 ? (
         <p data-testid="changes-none">Nada mudou no vídeo.</p>
@@ -66,21 +71,23 @@ export function ChangesPanel({
           ))}
         </ul>
       )}
-      <div className="actions">
-        <span>Prévia mostrando:</span>
-        <button aria-pressed={view === 'antes'} className={view === 'antes' ? 'primary' : ''} onClick={() => onView('antes')} data-testid="view-before">
-          Antes
-        </button>
-        <button aria-pressed={view === 'depois'} className={view === 'depois' ? 'primary' : ''} onClick={() => onView('depois')} data-testid="view-after">
-          Depois
-        </button>
-        {diff.span && (
-          <button onClick={() => go(at ?? diff.span!.start)} data-testid="view-span">
-            Ir para a mudança ({fmt(at ?? diff.span.start)})
+      <div className="ab-row">
+        <span className="hint">Prévia:</span>
+        <div className="segmented" role="group" aria-label="Prévia mostrando">
+          <button aria-pressed={view === 'antes'} onClick={() => onView('antes')} data-testid="view-before">
+            Antes
           </button>
-        )}
-        <span className="hint">agora em {fmt(time)}</span>
+          <button aria-pressed={view === 'depois'} onClick={() => onView('depois')} data-testid="view-after">
+            Depois
+          </button>
+        </div>
+        <span className="hint tnum">agora em {fmt(time)}</span>
       </div>
+      {diff.span && (
+        <button className="sm" onClick={() => go(at ?? diff.span!.start)} data-testid="view-span">
+          Ir para a mudança ({fmt(at ?? diff.span.start)})
+        </button>
+      )}
     </section>
   );
 }
@@ -106,10 +113,9 @@ export function VersionsPanel({
   const [name, setName] = useState('');
   const [error, setError] = useState<AppError | null>(null);
   return (
-    <section className="versions" aria-label="Versões" data-testid="versions">
-      <h2>Versões</h2>
+    <section className="versions stack" aria-label="Versões" data-testid="versions">
       <p className="hint">Guarde como o vídeo está agora para voltar depois. Fica salvo neste navegador junto com o projeto.</p>
-      <div className="actions">
+      <div className="inline-form">
         <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Nome (ex.: versão calma)" aria-label="Nome da versão" data-testid="version-name" />
         <button
           onClick={() => {
@@ -120,25 +126,29 @@ export function VersionsPanel({
           disabled={disabled}
           data-testid="version-save"
         >
-          Guardar versão
+          <Save size={15} aria-hidden /> Guardar
         </button>
       </div>
       {error && <ErrorBox error={error} kind="error" />}
       {versions.length > 0 && (
-        <ul data-testid="version-list">
+        <ul className="version-list" data-testid="version-list">
           {versions.map((v) => (
-            <li key={v.id} data-testid={`version-${v.id}`}>
-              <b>{v.name}</b>
-              <small className="hint">{new Date(v.savedAt).toLocaleString('pt-BR')}</small>
-              <button onClick={() => onRestore(v)} disabled={disabled} data-testid={`version-restore-${v.id}`}>
-                Restaurar
-              </button>
-              <button aria-pressed={comparing === v.id} onClick={() => onCompare(comparing === v.id ? null : v)} data-testid={`version-compare-${v.id}`}>
-                {comparing === v.id ? 'Parar de comparar' : 'Comparar'}
-              </button>
-              <button onClick={() => onDelete(v)} disabled={disabled} data-testid={`version-delete-${v.id}`}>
-                Apagar
-              </button>
+            <li key={v.id} className={`card version ${comparing === v.id ? 'comparing' : ''}`} data-testid={`version-${v.id}`}>
+              <div className="version-head">
+                <b>{v.name}</b>
+                <small className="hint">{new Date(v.savedAt).toLocaleString('pt-BR')}</small>
+              </div>
+              <div className="version-actions">
+                <button className="sm" onClick={() => onRestore(v)} disabled={disabled} data-testid={`version-restore-${v.id}`}>
+                  <RotateCcw size={13} aria-hidden /> Restaurar
+                </button>
+                <button className="sm" aria-pressed={comparing === v.id} onClick={() => onCompare(comparing === v.id ? null : v)} data-testid={`version-compare-${v.id}`}>
+                  {comparing === v.id ? 'Parar de comparar' : 'Comparar'}
+                </button>
+                <button className="sm ghost danger" onClick={() => onDelete(v)} disabled={disabled} data-testid={`version-delete-${v.id}`} aria-label={`Apagar a versão ${v.name}`}>
+                  <Trash2 size={13} aria-hidden /> Apagar
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -182,15 +192,16 @@ export function ReferencePicker({ reference, onReference, disabled }: { referenc
     }
   }
   return (
-    <section className="reference" aria-label="Cores de uma imagem" data-testid="reference">
-      <h3>Cores de uma imagem sua (opcional)</h3>
+    <section className="reference stack" aria-label="Cores de uma imagem" data-testid="reference">
+      <h3 className="section-title">Cores de uma imagem sua (opcional)</h3>
       <p className="hint">Escolha uma foto ou logo: as cores de destaque do vídeo passam a ser as dela, sempre com contraste para a legenda continuar legível. A imagem fica só no seu aparelho.</p>
-      <div className="actions">
-        <label className="button-like">
-          <input type="file" accept="image/*" disabled={disabled || busy} data-testid="reference-input" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
+      <div className="inline-form">
+        <label className={`btn ${disabled || busy ? 'disabled' : ''}`}>
+          <ImageUp size={15} aria-hidden /> {busy ? 'Lendo a imagem…' : 'Escolher imagem'}
+          <input className="sr-only" type="file" accept="image/*" disabled={disabled || busy} data-testid="reference-input" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
         </label>
         {reference && (
-          <button onClick={() => onReference(null)} disabled={disabled} data-testid="reference-clear">
+          <button className="ghost" onClick={() => onReference(null)} disabled={disabled} data-testid="reference-clear">
             Voltar às cores do estilo
           </button>
         )}
