@@ -47,7 +47,7 @@ export class PlanPlayer {
 
   constructor(
     media: OpenedMedia | null,
-    private readonly audio: DecodedAudio | null,
+    private audio: DecodedAudio | null,
     canvas: HTMLCanvasElement,
     private plan: EditPlan,
     scale = 0.5,
@@ -63,7 +63,7 @@ export class PlanPlayer {
     this.ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
     // Determine mode: multi if plan has >1 clip and we have sources
-    const multi = clipSources && clipSources.size > 0 && plan.clips.length > 1;
+    const multi = clipSources && clipSources.size > 0;
     if (multi) {
       this.sources = clipSources!;
       this.clipFrames = new ClipFrames(clipSources!, { maxSide: PREVIEW_MAX_SIDE, poolSize: 2 });
@@ -103,13 +103,20 @@ export class PlanPlayer {
     return Math.min(this.duration, this.startT + (this.clock() - this.startClock));
   }
 
-  setPlan(plan: EditPlan): void {
-    if (plan === this.plan) return;
-    const sameAudio = plan.segments === this.plan.segments;
+  setPlan(plan: EditPlan, audio: DecodedAudio | null = this.audio): void {
+    if (plan === this.plan && audio === this.audio) return;
+    const sameAudio = plan.segments === this.plan.segments && plan.clips === this.plan.clips && audio === this.audio;
+    const outputChanged = plan.output.width !== this.plan.output.width || plan.output.height !== this.plan.output.height;
     this.plan = plan;
+    this.audio = audio;
     if (!sameAudio) this.audioBuffer = null;
-    // Rebuild layouts if multi
-    if (this.clipFrames && plan.clips.length > 1) {
+    if (outputChanged) {
+      this.canvas.width = even(plan.output.width * this.scale);
+      this.canvas.height = even(plan.output.height * this.scale);
+      this.ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    }
+    // Mesmo com apenas c2, a origem continua sendo ClipFrames, não o c1.
+    if (this.clipFrames) {
       this.clipLayouts?.clear();
       let acc = 0;
       for (const c of plan.clips) {
@@ -118,10 +125,10 @@ export class PlanPlayer {
       }
     }
     const t = Math.min(this.currentTime, this.duration);
-    if (this.playing && !sameAudio) this.restart(t);
+    if (this.playing && (!sameAudio || outputChanged)) this.restart(t);
     else if (!this.playing) {
       this.pausedAt = t;
-      if (sameAudio) this.draw(t);
+      if (sameAudio && !outputChanged) this.draw(t);
       else void this.renderStill(t);
     }
   }
