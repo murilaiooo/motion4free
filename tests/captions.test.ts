@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DOCUMENTAL, POP } from '../src/core/presets';
+import { DOCUMENTAL, NEON, POP } from '../src/core/presets';
 import { buildCaptions, captionOptionsFor } from '../src/editorial/captions';
 
 const w = (id: string, text: string, start: number, end: number) => ({ id, text, start, end });
@@ -39,5 +39,10 @@ describe('legendas por estilo e tempo de cada palavra', () => {
     expect(caps.map((c) => c.text)).toEqual(['Isso muda tudo', 'na sua vida']);
     const long = buildCaptions(words, [{ srcStart: 0, srcEnd: 2 }], captionOptionsFor(DOCUMENTAL));
     expect(long.map((c) => c.text)).toEqual(['Isso muda tudo na sua vida']);
+  });
+  it('não deixa uma palavra sozinha no fim da frase (v0.7)', () => {
+    const ws = [w('1', 'Três', 0, 0.3), w('2', 'dicas', 0.3, 0.6), w('3', 'rápidas.', 0.6, 1.0), w('4', 'Primeira', 1.2, 1.5), w('5', 'dica', 1.5, 1.8), w('6', 'aqui', 1.8, 2.0), w('7', 'agora', 2.0, 2.2), w('8', 'mesmo', 2.2, 2.4)];
+    const caps = buildCaptions(ws, [{ srcStart: 0, srcEnd: 3 }], captionOptionsFor(NEON));
+    expect(caps.map((c) => c.text)).toEqual(['Três dicas rápidas.', 'Primeira dica', 'aqui agora mesmo']);
   });
 });

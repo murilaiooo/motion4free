@@ -45,3 +45,19 @@ test('vídeo de 1 segundo: resumo no singular, pedido e exportação funcionam',
   expect(d).toBeGreaterThan(0.8);
   expect(d).toBeLessThan(1.2);
 });
+
+for (const width of [1280, 390]) {
+  test(`cartões dos estilos cabem na tela (${width} px), sem rolagem para o lado`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await open(page, 'e2e/fixtures/curto.webm');
+    const grid = await page.locator('.style-grid').boundingBox();
+    for (const id of ['pop', 'neon', 'editorial', 'documental']) {
+      const card = await page.getByTestId(`style-${id}`).boundingBox();
+      expect(card!.x + card!.width, id).toBeLessThanOrEqual(grid!.x + grid!.width + 1);
+      // a amostra (nome do estilo e legenda de exemplo) fica dentro do cartão
+      const swatch = await page.getByTestId(`style-${id}`).locator('.swatch').boundingBox();
+      expect(swatch!.x + swatch!.width, `${id} amostra`).toBeLessThanOrEqual(card!.x + card!.width + 1);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}
