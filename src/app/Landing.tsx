@@ -53,7 +53,7 @@ function Footer() {
 /** Três modelos bem diferentes entre si para a vitrine da primeira tela. */
 const SHOWCASE = ['pop', 'podcast', 'cinema'];
 
-export function Landing({ onFile, busy, pendingName, notices, options, projects, onStorage }: { onFile: (files: File[]) => void; busy: boolean; pendingName: string | null; notices: ReactNode; options?: ReactNode; projects?: ReactNode; onStorage?: () => void }) {
+export function Landing({ onFile, busy, pendingName, pendingClipCount, notices, options, projects, onStorage }: { onFile: (files: File[]) => void; busy: boolean; pendingName: string | null; pendingClipCount?: number; notices: ReactNode; options?: ReactNode; projects?: ReactNode; onStorage?: () => void }) {
   const [over, setOver] = useState(false);
   const all = listTemplates();
   const examples = SHOWCASE.map((id) => all.find((t) => t.id === id)).filter((t) => t !== undefined);
@@ -89,7 +89,7 @@ export function Landing({ onFile, busy, pendingName, notices, options, projects,
             <span className="drop-icon" aria-hidden>
               {pendingName ? <FileVideo size={26} /> : <Upload size={26} />}
             </span>
-            <span className="drop-title">{pendingName ? `Escolha de novo o vídeo original (${pendingName})` : 'Arraste seu vídeo aqui'}</span>
+            <span className="drop-title">{pendingName ? (pendingClipCount ? (pendingClipCount === 1 ? 'Selecione novamente o vídeo original deste projeto' : `Selecione novamente os ${pendingClipCount} vídeos originais`) : `Escolha de novo o vídeo original (${pendingName})`) : 'Arraste seu vídeo aqui'}</span>
             <span className="drop-sub">
               ou <u>clique para escolher</u> · até 30 clipes, cada um até 3 minutos (MP4, MOV ou WebM)
             </span>
