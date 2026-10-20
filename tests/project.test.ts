@@ -50,3 +50,34 @@ describe('projeto salvo', () => {
     expect(sameVideo(video, { size: 1234, durationSec: 5 })).toBe(false);
   });
 });
+
+describe('projeto salvo na Fase 2 (plano v1)', () => {
+  it('abre com os planos migrados para v2, histórico inteiro', () => {
+    const v1 = {
+      version: 1,
+      output: { width: 1080, height: 1920, fps: 30 },
+      segments: [{ srcStart: 0, srcEnd: 3 }],
+      captions: [{ id: 'c1', text: 'Oi!', start: 0, end: 0.4, wordIds: ['w1'] }],
+      scenes: [{ id: 's1', kind: 'kinetic-title', text: 'Olá', start: 0, end: 2.2 }],
+    };
+    const saved = {
+      format: 1,
+      savedAt: '2026-10-20T10:00:00Z',
+      appVersion: '0.2.0',
+      video,
+      words,
+      silences: [],
+      warnings: [],
+      history: { past: [{ ...v1, captions: [{ ...v1.captions[0], text: 'Olá.' }] }], present: v1, future: [] },
+    };
+    const r = parseProject(roundTrip(saved));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const h = restoreHistory(r.project);
+    expect(h.present.version).toBe(2);
+    expect(h.present.style.id).toBe('pop');
+    expect(h.present.captions[0]!.text).toBe('Oi!');
+    expect(h.past[0]!.version).toBe(2);
+    expect(h.past[0]!.captions[0]!.text).toBe('Olá.');
+  });
+});

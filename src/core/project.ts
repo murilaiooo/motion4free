@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ERRORS, type ErrorKey } from './errors';
-import { editPlanSchema } from './schema';
+import { anyPlanSchema } from './schema';
 import type { EditPlan, TimeRange, Word } from './types';
 import { createHistory, type History } from '../engine/history';
 
@@ -44,7 +44,8 @@ const projectSchema = z.object({
   words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
   silences: z.array(z.object({ start: time, end: time })),
   warnings: z.array(z.object({ key: errorKey, detail: z.string() })),
-  history: z.object({ past: z.array(editPlanSchema), present: editPlanSchema, future: z.array(editPlanSchema) }),
+  // planos v1 (Fase 2) são migrados para v2 ao abrir
+  history: z.object({ past: z.array(anyPlanSchema), present: anyPlanSchema, future: z.array(anyPlanSchema) }),
 });
 
 export type ProjectParse = { ok: true; project: SavedProject } | { ok: false; errors: string[] };
