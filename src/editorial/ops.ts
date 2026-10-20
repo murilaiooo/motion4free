@@ -12,6 +12,7 @@ import { proposeScenes } from './selector';
 import type { RangeRequest } from './range-interpret';
 import { applyRangeRequest, assertCaptionEditable, assertSegmentsKeepLocks, reapplyRanges, type RangeTarget } from './ranges';
 import { applyReference } from './reference';
+import { withRecipe } from './recipe-apply';
 import type { ReferencePalette } from '../core/types';
 
 /**
@@ -128,7 +129,10 @@ export function applyStyle(plan: EditPlan, ctx: EditContext, styleId: string): E
  * legendas no tamanho do estilo e cenas propostas de novo com proibições e destaques.
  * Gancho: mantém o que a pessoa escolheu antes; se o pedido quer gancho e não há escolha, usa o melhor candidato.
  */
-export function applyBrief(plan: EditPlan, ctx: EditContext, incoming: CreativeBrief): EditPlan {
+export function applyBrief(plan: EditPlan, ctx: EditContext, raw: CreativeBrief): EditPlan {
+  // tipo de conteúdo: o do pedido (ou null = "nenhum"); sem menção, continua o escolhido antes (v0.12)
+  const niche = raw.niche === undefined ? (plan.brief.niche ?? null) : raw.niche;
+  const incoming = withRecipe({ ...raw, niche });
   const presetId = incoming.preset ?? plan.style.id;
   const preset = presetById(presetId);
   if (!preset) throw new AppError('ESTILO_DESCONHECIDO', presetId);

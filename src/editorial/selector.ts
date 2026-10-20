@@ -117,6 +117,8 @@ export interface SceneOptions {
   title: string | null;
   /** emojis preferidos quando a fala não sugere nenhum (do pedido ou da IA) */
   emojiPrefer?: readonly Emoji[];
+  /** chamada final pedida: entra a partir de 3 s de vídeo (sem pedido, só a partir de 8 s) */
+  cta?: boolean;
 }
 
 export const NO_SCENE_OPTIONS: SceneOptions = { forbid: new Set(), emphasize: new Set(), title: null, emojiPrefer: [] };
@@ -282,7 +284,7 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   }
 
   // chamada final
-  if (total >= 8) candidates.push({ scene: { kind: 'end-cta', text: style.cta, ...dur(total - Math.min(2.4, R.sceneSec + 0.4), 10) }, priority: 95 });
+  if (total >= (opts.cta ? 3 : 8)) candidates.push({ scene: { kind: 'end-cta', text: style.cta, ...dur(total - Math.min(2.4, R.sceneSec + 0.4), 10) }, priority: 95 });
 
   const accepted = placeOverlays(
     candidates.filter((c) => !opts.forbid.has(c.scene.kind)),

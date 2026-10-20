@@ -23,9 +23,11 @@ export interface LookRulesResult {
   notes: string[];
   /** o que foi reconhecido como pedido que o app ainda não faz */
   unsupported: string[];
+  /** destaques pedidos junto com uma cor ("palavras-chave em amarelo" = destacar palavras-chave) */
+  emphasize: 'palavras'[];
 }
 
-type Target = 'caption' | 'highlight' | 'stroke' | 'box' | 'emoji' | 'accent' | 'transition';
+type Target = 'caption' | 'highlight' | 'stroke' | 'box' | 'emoji' | 'accent' | 'transition' | 'keyword' | 'brand';
 
 const TARGETS: [string, Target][] = [
   ...'legenda|legendas|legeda|legendinha|lengenda|ledenda|letra|letras|letreiro|fonte|fontes|caption|captions|texto|textos|texto da legenda|textos da legenda|palavras da legenda'.split('|').map((p) => [p, 'caption'] as [string, Target]),
@@ -35,6 +37,10 @@ const TARGETS: [string, Target][] = [
   ...'emoji|emojis|emojinho|emojinhos|emoticon|emoticons|figurinha|figurinhas|sticker|stickers|emotes'.split('|').map((p) => [p, 'emoji'] as [string, Target]),
   ...'cor do video|cores do video|cor principal|cores principais|tema|animacoes|titulos|detalhes|cor de destaque|cor das animacoes|cores das animacoes'.split('|').map((p) => [p, 'accent'] as [string, Target]),
   ...'transicao|transicoes'.split('|').map((p) => [p, 'transition'] as [string, Target]),
+  // v0.12: cor das palavras-chave e cores da marca
+  ...'palavra chave|palavras chave|palavras importantes|palavra importante|palavras fortes|palavras principais'.split('|').map((p) => [p, 'keyword'] as [string, Target]),
+  ...'cor da marca|cores da marca|cor da minha marca|cores da minha marca|minha marca|identidade visual|cor da empresa|cores da empresa|paleta da marca|cor da loja|cores da loja|minhas cores'.split('|').map((p) => [p, 'brand'] as [string, Target]),
+  ...'brilho|brilhos|brilhinho|brilhinhos'.split('|').map((p) => [p, 'emoji'] as [string, Target]),
 ];
 const TARGET_PHRASES = TARGETS.map(([p]) => p);
 const TARGET_OF = new Map(TARGETS);
@@ -104,6 +110,8 @@ const CUTS: [string, CutLevel][] = [
   ['tira as pausas', 'agressivo'], ['tire as pausas', 'agressivo'], ['tirar as pausas', 'agressivo'], ['tira os silencios', 'agressivo'], ['tire os silencios', 'agressivo'], ['sem pausas', 'agressivo'], ['sem pausa', 'agressivo'], ['sem silencio', 'agressivo'], ['sem silencios', 'agressivo'],
   ['jump cut', 'agressivo'], ['jump cuts', 'agressivo'], ['edicao rapida', 'agressivo'], ['corta tudo', 'agressivo'], ['corta mais', 'agressivo'], ['cortes dinamicos', 'agressivo'], ['pausas curtas tambem', 'agressivo'],
   ['cortes suaves', 'suave'], ['corte suave', 'suave'], ['menos cortes', 'suave'], ['corta menos', 'suave'], ['corte menos', 'suave'], ['mantem as pausas', 'suave'], ['mantenha as pausas', 'suave'], ['deixa as pausas', 'suave'], ['deixe as pausas', 'suave'],
+  ['sem enrolacao', 'agressivo'], ['corta a enrolacao', 'agressivo'], ['direto ao ponto', 'agressivo'], ['corta tudo que for pausa', 'agressivo'], ['ritmo de tiktok', 'agressivo'], ['sem respiro', 'agressivo'],
+  ['sem cortes bruscos', 'suave'], ['sem corte brusco', 'suave'], ['sem cortar muito', 'suave'], ['nao corta demais', 'suave'], ['respeita as pausas', 'suave'],
   ['com pausas', 'suave'], ['nao corta muito', 'suave'], ['nao corte muito', 'suave'], ['respira mais', 'suave'], ['mais respiro', 'suave'], ['cortes normais', 'normal'],
 ];
 const CUT_PHRASES = CUTS.map(([p]) => p);
@@ -121,6 +129,10 @@ const TOGGLES: [string, SceneToggle][] = [
   ['perguntas em destaque', 'perguntas'],
 ];
 const TOGGLE_PHRASES = TOGGLES.map(([p]) => p);
+/** Valem sozinhas, em qualquer lugar (sem "com"/"coloca"): nome de quem fala na tela. */
+const BARE_TOGGLES: [string, SceneToggle][] = [
+  ['meu nome na tela', 'nome'], ['nome do convidado', 'nome'], ['nome do convidado na tela', 'nome'], ['nome de quem fala', 'nome'], ['nome do entrevistado', 'nome'], ['nome de quem esta falando', 'nome'],
+];
 const TOGGLE_OF = new Map(TOGGLES);
 
 const HOOK_WORDS: [string, HookStyle][] = [
@@ -136,15 +148,42 @@ const HOOK_NOUNS = ['gancho', 'hook', 'abertura', 'comeco', 'inicio', 'primeira 
 
 /** Pedidos conhecidos que o app ainda não faz (frase amigável para "Ainda não sei fazer"). */
 const UNSUPPORTED: [string[], string][] = [
-  [['musica', 'musicas', 'musica de fundo', 'musicas de fundo', 'musiquinha de fundo', 'trilha de fundo', 'som ambiente', 'trilha', 'trilha sonora', 'som de fundo', 'efeito sonoro', 'efeitos sonoros', 'sonoplastia', 'barulho', 'barulhos', 'audio de fundo'], 'música ou efeitos sonoros'],
+  [['melhora o audio', 'melhorar o audio', 'melhore o audio', 'audio melhor', 'limpa o audio', 'limpar o audio', 'tirar o ruido', 'tira o ruido', 'ruido', 'barulho de fundo', 'tira o barulho', 'tirar o barulho', 'eco', 'chiado no audio', 'aumenta o volume', 'volume da voz', 'voz mais alta'], 'melhorar o áudio (tirar ruído, eco, volume)'],
+  [['contador regressivo', 'contagem regressiva', 'contador de tempo', 'contador na tela', 'cronometro', 'timer'], 'contador ou cronômetro na tela'],
+  [['seta', 'setas', 'setinha', 'setinhas', 'flecha', 'apontando'], 'setas e marcações apontando coisas no vídeo'],
+  [['loop', 'em looping'], 'vídeo em loop'],
+  [['preco riscado', 'frete gratis', 'endereco', 'localizacao', 'crm', 'oab', 'numero da oab', 'registro profissional', 'telefone', 'texto escrito', 'escrever na tela', 'texto na tela', 'cupom', 'codigo de desconto'], 'texto na tela que você não falou (endereço, localização, preço, cupom, CRM, OAB)'],
+  [['lado a lado', 'tela dividida', 'split screen', 'dividir a tela', 'tela dividida em duas'], 'tela dividida (lado a lado)'],
+  [['quiz', 'enquete', 'caixinha de pergunta', 'caixinha de perguntas'], 'quiz ou enquete'],
+  [['grafico', 'graficos', 'grafico subindo'], 'gráficos animados'],
+  [['mapa', 'trajeto', 'mapa do trajeto'], 'mapa ou trajeto'],
+  [['planta baixa'], 'planta do imóvel'],
+  [['drone', 'imagem aerea', 'imagens aereas'], 'imagens de drone'],
+  [['luz', 'luzes', 'luz celestial', 'efeito de luz', 'raio de luz', 'brilho no fundo'], 'efeitos de luz no vídeo'],
+  [['tremer', 'tremer a tela', 'tela tremendo', 'tremida', 'shake'], 'tremer a tela'],
+  [['print', 'prints', 'captura de tela', 'screenshot'], 'print ou imagem na tela'],
+  [['spotify', 'deezer', 'youtube music', 'apple music'], 'link de música (Spotify e outros)'],
+  [['divide em varios', 'dividir em varios', 'divide em varios cortes', 'varios cortes', 'varios videos', 'separar em cortes', 'separa em cortes', 'fazer varios cortes'], 'dividir em vários vídeos (cortes)'],
+  [['legenda de cada um', 'cor por pessoa', 'cada pessoa com uma cor', 'duas pessoas falando'], 'uma cor de legenda para cada pessoa'],
+  [['formato quadrado', 'pra quadrado', 'para quadrado', 'quadrado', 'horizontal', 'deitado', 'formato paisagem', 'modo paisagem', 'formato do youtube', '16 por 9', '1 por 1', '4 por 5', 'formato feed'], 'outro formato (o app faz só vertical 9:16)'],
+  [['hashtag', 'hashtags', 'legenda do post', 'descricao do post', 'texto do post', 'copy do post', 'legenda pro post'], 'texto do post e hashtags'],
+  [['tira o fundo do video', 'tirar o fundo do video', 'remover o fundo', 'remove o fundo', 'fundo desfocado', 'desfoca o fundo', 'desfocar o fundo', 'desfoque no fundo', 'chroma', 'chroma key', 'fundo verde', 'trocar o fundo', 'troca o fundo', 'mudar o fundo do video'], 'mudar o fundo do vídeo (desfocar ou trocar)'],
+  [['agenda pra postar', 'agendar postagem', 'agendar a postagem', 'agenda a postagem', 'postar automatico', 'postar direto', 'publicar direto', 'posta pra mim', 'posta direto', 'programar a postagem', 'pra postar amanha'], 'agendar ou postar direto na rede'],
+  [['vicios de linguagem', 'vicio de linguagem', 'vicios', 'gaguejada', 'gaguejadas', 'gagueira', 'repeticoes', 'erros de fala', 'tira os erros', 'tirar os erros'], 'tirar vícios de fala (é, hã, né) e gaguejadas'],
+  [['corrige', 'corrigir', 'corrija', 'erros de portugues', 'ortografia', 'erro de portugues'], 'corrigir o português da legenda sozinho (corrija à mão na aba Legendas)'],
+  [['transicao de roupa', 'troca de roupa', 'troca de look', 'transicao de look'], 'transição de roupa (troca de look)'],
+  [['enquadra', 'enquadrar', 'enquadre', 'seguir quem fala', 'acompanhar o rosto'], 'reenquadrar seguindo o rosto'],
+  [['cores mais vivas', 'mais vivas', 'mais vivo', 'mais saturado', 'saturar', 'cores vivas', 'filtro de pele', 'pele lisa'], 'filtro de cor no vídeo'],
+  [['som de', 'barulhinho', 'barulhinhos'], 'música ou efeitos sonoros'],
+  [['musica', 'musicas', 'musica de fundo', 'musicas de fundo', 'musiquinha de fundo', 'trilha de fundo', 'som ambiente', 'trilha', 'trilha sonora', 'som de fundo', 'efeito sonoro', 'efeitos sonoros', 'sonoplastia', 'barulho', 'barulhos', 'audio de fundo', 'audio em alta', 'audio do momento', 'trend'], 'música ou efeitos sonoros'],
   [['narracao', 'locucao', 'dublagem', 'voz de ia', 'voz robotica', 'mudar a voz'], 'voz ou narração'],
-  [['filtro', 'filtros', 'preto e branco', 'saturacao', 'brilho do video', 'contraste do video', 'vintage', 'cor do video mais', 'color grading', 'colorizacao'], 'filtro de cor no vídeo'],
+  [['filtro', 'filtros', 'filtro de cor', 'preto e branco', 'saturacao', 'brilho do video', 'contraste do video', 'vintage', 'cor do video mais', 'color grading', 'colorizacao'], 'filtro de cor no vídeo'],
   [['logo', 'logotipo', 'marca dagua', 'marca d agua', 'watermark'], 'logo ou marca-d’água'],
   [['gif', 'gifs', 'meme', 'memes'], 'GIFs e memes'],
   [['em ingles', 'em espanhol', 'traducao', 'traduzir', 'traduzida', 'bilingue', 'outro idioma'], 'legenda em outro idioma'],
   [['imagens', 'fotos', 'foto', 'b roll', 'broll', 'cenas extras', 'imagens de apoio', 'video de fundo'], 'imagens de apoio (b-roll)'],
   [['3d', 'tridimensional'], 'efeitos 3D'],
-  [['rosto', 'seguir o rosto', 'reenquadrar', 'enquadramento', 'tracking'], 'reenquadrar seguindo o rosto'],
+  [['seguir o rosto', 'reenquadrar', 'enquadramento', 'tracking', 'zoom no rosto'], 'reenquadrar seguindo o rosto'],
   [['camera lenta', 'slow motion', 'acelerar o video', 'velocidade', 'mais rapido o video', 'timelapse'], 'mudar a velocidade do vídeo'],
   [['degrade', 'gradiente', 'gradient'], 'degradê na legenda'],
   [['thumbnail', 'capa', 'miniatura'], 'capa do vídeo'],
@@ -152,6 +191,13 @@ const UNSUPPORTED: [string[], string][] = [
   [['legenda dupla', 'duas legendas', 'karaoke duplo'], 'duas legendas ao mesmo tempo'],
   [['cor dos emojis', 'emoji colorido de outra cor'], 'mudar a cor dos emojis'],
 ];
+
+const MOOD: [string, string][] = [
+  ['cores quentes', '#FF8C1A'], ['cor quente', '#FF8C1A'], ['tons quentes', '#FF8C1A'], ['cores frias', '#3B82F6'], ['tons frios', '#3B82F6'], ['cor fria', '#3B82F6'],
+  ['tons pastel', '#FBCFE8'], ['cores pastel', '#FBCFE8'], ['tom pastel', '#FBCFE8'], ['cores neutras', '#E5E5E5'], ['tons neutros', '#E5E5E5'], ['tons terrosos', '#B45309'], ['cores terrosas', '#B45309'],
+];
+const MOOD_PHRASES = MOOD.map(([p]) => p);
+const MOOD_OF = new Map(MOOD);
 
 const SECONDS = new Set(['segundo', 'segundos', 'seg', 'segs', 's']);
 const COLOR_GLUE = new Set(['cor', 'cores', 'tom', 'tons', 'na', 'no', 'em', 'de', 'da', 'do', 'com', 'e', 'a', 'o', 'as', 'os', 'bem', 'mais', 'tipo', 'estilo']);
@@ -172,6 +218,7 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
   let wantsHook = false;
   let hookStyle: HookStyle | null = null;
   const prefer: Emoji[] = [];
+  const emphasize: 'palavras'[] = [];
 
   // 0) emojis digitados no pedido viram preferidos (só os que o app tem)
   for (const m of prompt.matchAll(/\p{Extended_Pictographic}️?/gu)) {
@@ -323,6 +370,21 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
     const emojiTarget = live.find((t) => t.t === 'emoji');
     const anyNeg = targets.some((t) => t.neg && t.t === 'emoji');
 
+    // cores pelo clima ("cores quentes", "tons pastel"): só a cor das animações, se a parte não disser outra
+    let mood: string | null = null;
+    for (let i = a; i < b; i++) {
+      if (used[i]) continue;
+      const m = longestAt(toks, i, MOOD_PHRASES);
+      if (!m) continue;
+      mood = MOOD_OF.get(m)!;
+      mark(i, m.split(' ').length);
+    }
+    // "marca-texto" como alvo já diz o jeito do destaque
+    for (const t of targets) if (!t.neg && t.t === 'highlight' && phraseAt(toks, t.i, 'marca texto')) {
+      captions.highlightMode = 'marker';
+      usedTargets.add(t.i);
+    }
+
     // cores
     const colors: { hex: string; owner: (typeof targets)[number] | null; i: number }[] = [];
     const words = toks.map((t) => t.norm);
@@ -347,7 +409,13 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
       i += c.used - 1;
     }
     if (colors.length) {
-      for (let i = a; i < b; i++) if (!used[i] && (toks[i]!.norm === 'cor' || toks[i]!.norm === 'cores' || toks[i]!.norm === 'tom')) mark(i, 1);
+      for (let i = a; i < b; i++) if (!used[i] && ['cor', 'cores', 'tom', 'tons', 'tonalidade'].includes(toks[i]!.norm)) mark(i, 1);
+      // cores da marca: a primeira vira a cor das animações e do destaque; a segunda, a do destaque
+      const brand = colors.filter((c) => c.owner?.t === 'brand');
+      if (brand.length) {
+        look.accent = brand[0]!.hex;
+        captions.highlight ??= (brand[1] ?? brand[0])!.hex;
+      }
       const loose = colors.filter((c) => !c.owner || c.owner.t === 'caption');
       for (const c of colors) {
         const t = c.owner?.t;
@@ -355,6 +423,10 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
         else if (t === 'stroke') captions.stroke = c.hex;
         else if (t === 'box') captions.box = c.hex;
         else if (t === 'accent' || t === 'transition') look.accent = c.hex;
+        else if (t === 'keyword') {
+          captions.keyword = c.hex;
+          if (!emphasize.includes('palavras')) emphasize.push('palavras');
+        }
         else if (t === 'emoji') {
           if (!unsupported.includes('mudar a cor dos emojis')) unsupported.push('mudar a cor dos emojis');
         }
@@ -372,6 +444,8 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
         }
       }
     }
+
+    if (mood && colors.length === 0) look.accent ??= mood;
 
     // tamanho
     for (let i = a; i < b; i++) {
@@ -613,6 +687,22 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
     mark(i, k - i + p.split(' ').length);
   }
 
+  // cena pedida sozinha numa parte ("barra de progresso", "meu nome na tela") ou "zoom no produto"
+  for (let i = 0; i < toks.length; i++) {
+    if (!free(i)) continue;
+    const startOfClause = i === 0 || isBoundary(toks[i - 1]);
+    const p = longestAt(toks, i, [...TOGGLE_PHRASES, ...BARE_TOGGLES.map(([w]) => w)]);
+    if (!p || !free(i, p.split(' ').length)) continue;
+    const n = p.split(' ').length;
+    const zoomOn = (p === 'zoom' || p === 'zooms') && ['no', 'na', 'nos', 'nas', 'em'].includes(toks[i + 1]?.norm ?? '');
+    const alone = startOfClause && (i + n === toks.length || isBoundary(toks[i + n]));
+    const bare = BARE_TOGGLES.find(([w]) => w === p);
+    if (!zoomOn && !alone && !bare) continue;
+    const key = bare ? bare[1] : TOGGLE_OF.get(p)!;
+    look.scenes = { ...look.scenes, [key]: true };
+    mark(i, zoomOn ? n + 1 : n);
+  }
+
   if (prefer.length) {
     emoji.prefer = prefer.slice(0, 8);
     if (!emoji.mode) {
@@ -622,12 +712,14 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
   }
   if (Object.keys(captions).length) look.captions = captions;
   if (Object.keys(emoji).length) look.emoji = emoji;
-  return { look, wantsHook, hookStyle, notes, unsupported };
+  return { look, wantsHook, hookStyle, notes, unsupported, emphasize };
 }
 
 /** Nomes de emoji comuns ("emoji de fogo"). */
 const NAMED_EMOJI: Record<string, Emoji> = {
   fogo: '🔥', foguinho: '🔥', coracao: '❤️', coracoes: '❤️', foguete: '🚀', dinheiro: '💰', risada: '😂', risadas: '😂', rindo: '😂', estrela: '⭐', estrelas: '⭐',
   brilho: '✨', brilhos: '✨', lampada: '💡', trofeu: '🏆', alvo: '🎯', raio: '⚡', check: '✅', certinho: '✅', joinha: '👍', palmas: '👏', olhos: '👀', olhinho: '👀',
+  sacola: '🛒', sacolinha: '🛒', carrinho: '🛒', compras: '🛒', presente: '🎁', presentes: '🎁', musculo: '💪', biceps: '💪', forca: '💪', livro: '📚', livros: '📚', celular: '📱', computador: '💻',
+  oracao: '🙏', maos: '🙏', amem: '🙏', susto: '😱', choque: '😱', duvida: '🤔', pensando: '🤔', apaixonado: '😍', apaixonada: '😍', oculos: '😎', relogio: '⏰', grafico: '📈', megafone: '📣', sino: '🔔', cem: '💯', chave: '🔑',
   explosao: '💥', cerebro: '🧠', medalha: '🥇', diamante: '💎', festa: '🎉', sol: '☀️', lua: '🌙', planta: '🌱', cafe: '☕', pizza: '🍕', casa: '🏠', aviao: '✈️',
 };

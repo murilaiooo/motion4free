@@ -38,6 +38,7 @@ export const COLOR_NAMES: Record<string, string> = {
   laranja: '#FF8C1A',
   rosa: '#F472B6',
   'rosa claro': '#FBCFE8',
+  'rosa bebe': '#FBCFE8',
   'rosa choque': '#FF2E93',
   pink: '#FF2E93',
   magenta: '#E879F9',

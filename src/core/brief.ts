@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { HOOK_STYLES, lookIsEmpty, lookSchema, type HookStyle, type Look } from './look';
 import { TEMPLATE_IDS, TEMPLATE_NAMES, type TemplateId } from './templates';
+import { NICHE_IDS, NICHE_NAMES, type NicheId } from './niches';
 
 /**
  * CreativeBrief: o que a pessoa pediu, já entendido e em campos fechados.
@@ -21,7 +22,8 @@ export type PresetId = TemplateId;
 export const GOALS = ['ensinar', 'vender', 'inspirar', 'entreter', 'informar'] as const;
 export type Goal = (typeof GOALS)[number];
 
-export const TONES = ['calmo', 'energetico', 'elegante', 'serio', 'divertido'] as const;
+/** 'inspirador' e 'acolhedor' entraram na v0.12 (enum só cresce: pedidos antigos continuam válidos). */
+export const TONES = ['calmo', 'energetico', 'elegante', 'serio', 'divertido', 'inspirador', 'acolhedor'] as const;
 export type Tone = (typeof TONES)[number];
 
 export const LEVELS = ['baixa', 'media', 'alta'] as const;
@@ -42,6 +44,10 @@ export type Prohibition = (typeof PROHIBITIONS)[number];
 export const EMPHASES = ['numeros', 'palavras', 'perguntas', 'listas', 'nome'] as const;
 export type Emphasis = (typeof EMPHASES)[number];
 
+/** Registro da linguagem dos textos fixos do app (chamada final): "Siga para mais" × "Me segue pra mais". */
+export const REGISTERS = ['formal', 'informal'] as const;
+export type Register = (typeof REGISTERS)[number];
+
 export const BRIEF_SOURCES = ['regras', 'ia-local', 'ia-chave'] as const;
 export type BriefSource = (typeof BRIEF_SOURCES)[number];
 
@@ -49,7 +55,9 @@ export type BriefSource = (typeof BRIEF_SOURCES)[number];
 export const LABELS = {
   preset: TEMPLATE_NAMES satisfies Record<PresetId, string>,
   goal: { ensinar: 'ensinar', vender: 'vender', inspirar: 'inspirar', entreter: 'entreter', informar: 'informar' } satisfies Record<Goal, string>,
-  tone: { calmo: 'calmo', energetico: 'animado', elegante: 'elegante', serio: 'sério', divertido: 'divertido' } satisfies Record<Tone, string>,
+  tone: { calmo: 'calmo', energetico: 'animado', elegante: 'elegante', serio: 'sério', divertido: 'divertido', inspirador: 'inspirador', acolhedor: 'acolhedor' } satisfies Record<Tone, string>,
+  niche: NICHE_NAMES satisfies Record<NicheId, string>,
+  register: { formal: 'linguagem formal', informal: 'linguagem informal' } satisfies Record<Register, string>,
   intensity: { baixa: 'pouco movimento', media: 'movimento médio', alta: 'muito movimento' } satisfies Record<Level, string>,
   pace: { lento: 'ritmo lento', normal: 'ritmo normal', rapido: 'ritmo rápido' } satisfies Record<Pace, string>,
   prohibition: {
@@ -119,6 +127,10 @@ export const briefSchema = z.object({
   unsupported: z.array(short(60)).max(UNSUPPORTED_MAX),
   /** resumo em português escrito pela IA (só para mostrar; vazio sem IA) */
   summary: short(SUMMARY_MAX),
+  /** tipo de conteúdo (v0.12, ADR-0017): escolhe a receita; ausente nos pedidos antigos = nenhum */
+  niche: z.enum(NICHE_IDS).nullable().optional(),
+  /** linguagem dos textos fixos (v0.12); ausente = a da receita ou informal */
+  register: z.enum(REGISTERS).nullable().optional(),
 });
 
 export type CreativeBrief = z.infer<typeof briefSchema>;
@@ -153,7 +165,7 @@ export const EMPTY_BRIEF: CreativeBrief = {
 
 /** O pedido mudou alguma coisa além do gancho? */
 export function briefIsEmpty(b: CreativeBrief): boolean {
-  return !b.goal && !b.audience && !b.tone && !b.intensity && !b.pace && !b.preset && b.forbid.length === 0 && b.emphasize.length === 0 && !b.wantsHook && !b.hookStyle && lookIsEmpty(b.look);
+  return !b.niche && !b.register && !b.goal && !b.audience && !b.tone && !b.intensity && !b.pace && !b.preset && b.forbid.length === 0 && b.emphasize.length === 0 && !b.wantsHook && !b.hookStyle && lookIsEmpty(b.look);
 }
 
 const join = (xs: string[]) => (xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} e ${xs.at(-1)}`);
@@ -171,6 +183,7 @@ export interface BriefSummary {
 /** Resumo em frases curtas do que foi entendido (para a tela). */
 export function summarizeBrief(b: CreativeBrief): BriefSummary {
   const understood: string[] = [];
+  if (b.niche) understood.push(`Receita para ${LABELS.niche[b.niche]}`);
   if (b.preset) understood.push(`Estilo ${LABELS.preset[b.preset]}`);
   if (b.tone) understood.push(`Tom ${LABELS.tone[b.tone]}`);
   if (b.intensity) understood.push(LABELS.intensity[b.intensity][0]!.toUpperCase() + LABELS.intensity[b.intensity].slice(1));
@@ -179,6 +192,7 @@ export function summarizeBrief(b: CreativeBrief): BriefSummary {
   if (b.audience) understood.push(`Público: ${b.audience}`);
   if (b.emphasize.length) understood.push(`Destacar ${join(b.emphasize.map((e) => LABELS.emphasis[e]))}`);
   if (b.wantsHook) understood.push(b.hookStyle && b.hookStyle !== 'auto' ? `Começar com um gancho ${HOOK_LABEL[b.hookStyle]}` : 'Começar com um gancho forte');
+  if (b.register) understood.push(`Textos em ${LABELS.register[b.register]}`);
   understood.push(...describeLook(b.look));
   return {
     understood,
@@ -231,7 +245,13 @@ export function describeLook(l: Look): string[] {
     if (e.animation) out.push(`Emojis ${EMOJI_ANIM[e.animation]}`);
     if (e.prefer?.length) out.push(`Emojis preferidos: ${e.prefer.join(' ')}`);
   }
+  if (c.avoidFace === true) out.push('Legenda e título longe do rosto');
+  if (c.avoidFace === false) out.push('Legenda na posição do estilo (sem olhar o rosto)');
+  if (c.keyword) out.push(`Palavras-chave da legenda em ${c.keyword}`);
   if (l.accent) out.push(`Cor das animações: ${l.accent}`);
+  if (l.title) out.push(`Título de abertura: “${l.title}”`);
+  if (l.cta) out.push(`Chamada final: “${l.cta}”`);
+  if (l.handle) out.push(`Seu ${l.handle} no canto do vídeo`);
   if (l.cuts === 'agressivo') out.push('Cortes mais rápidos (pausas curtas também saem)');
   if (l.cuts === 'suave') out.push('Cortes mais suaves (pausas curtas voltam)');
   if (l.transition) out.push(l.transition === 'none' ? 'Sem transições' : `Transição: ${{ zoom: 'zoom', flash: 'flash', dip: 'escurecer' }[l.transition]}`);
