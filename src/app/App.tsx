@@ -179,6 +179,7 @@ function EditorApp() {
     setSession(null);
     setHistory(null);
     setSavedFor(null);
+    setCopy('pending');
     setVersions([]);
     setVersionsSaved([]);
     setAsrModel(null);
@@ -344,6 +345,7 @@ function EditorApp() {
         // sem a cópia o projeto continua salvo; ao reabrir o app pede o vídeo de novo (M4F-604)
         console.warn('Cópia do vídeo não foi salva', err);
         setCopy('failed');
+        notify(new AppError('SALVAR_FALHOU', `Cópia do vídeo original: ${describeError(err)}`));
       });
   }
 
@@ -586,8 +588,8 @@ function EditorApp() {
   }
 
   const busy = status.kind === 'working';
-  const saved = !!history && savedFor === history && versionsSaved === versions && copy !== 'pending';
-  const saveState: SaveState = saved ? 'saved' : storageAvailable() ? 'saving' : 'off';
+  const saved = !!history && savedFor === history && versionsSaved === versions && copy === 'done';
+  const saveState: SaveState = saved ? 'saved' : storageAvailable() && copy !== 'failed' ? 'saving' : 'off';
 
   const pendingClips = pending?.project.history.present.clips ?? [];
   const pendingMulti = pendingClips.length > 1 || (pendingClips.length === 1 && pendingClips[0]!.id !== 'c1');
