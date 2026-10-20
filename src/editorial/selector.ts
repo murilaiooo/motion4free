@@ -117,6 +117,8 @@ export interface SceneOptions {
   title: string | null;
   /** emojis preferidos quando a fala não sugere nenhum (do pedido ou da IA) */
   emojiPrefer?: readonly Emoji[];
+  /** emendas entre clipes (vídeo editado, v0.14): sempre ganham a transição do modelo */
+  joins?: readonly number[];
 }
 
 export const NO_SCENE_OPTIONS: SceneOptions = { forbid: new Set(), emphasize: new Set(), title: null, emojiPrefer: [] };
@@ -335,10 +337,12 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     const window = { zoom: [0, 0.5], flash: [0.08, 0.22], dip: [0.15, 0.15] }[style.transition];
     let offset = 0;
     let lastAt = -Infinity;
+    const joins = new Set((opts.joins ?? []).map(r3));
     for (const s of segments.slice(0, -1)) {
       offset += s.srcEnd - s.srcStart;
       const at = r3(offset);
-      if (at - lastAt < 1 || at <= 0 || at >= total) continue;
+      // troca de clipe sempre tem transição; corte dentro do clipe, no máximo uma por segundo
+      if ((!joins.has(at) && at - lastAt < 1) || at <= 0 || at >= total) continue;
       transitions.push({ kind: 'cut-transition', at, start: r3(Math.max(0, at - window[0]!)), end: r3(Math.min(total, at + window[1]!)) });
       lastAt = at;
     }

@@ -96,7 +96,10 @@ export class RecordingContext {
   fillRect(...a: unknown[]) {
     this.rec('fillRect', a);
   }
+  /** imagem de cada drawImage, na ordem (os argumentos gravados não incluem a imagem) */
+  images: unknown[] = [];
   drawImage(...a: unknown[]) {
+    this.images.push(a[0]);
     this.rec('drawImage', a.slice(1));
   }
   beginPath() {}

@@ -5,7 +5,7 @@ import type { Ctx2D } from './ctx';
 import { clamp01, easeOutBounce, easeOutCubic, progress } from './easing';
 import { easeInQuad, easeOutExpo, mix, springIn, stagger, wiggle } from './motion';
 import { chromaBehind } from './decor';
-import type { Rect } from './layout';
+import { isTall, unitFor, type Rect } from './layout';
 import { onBox } from '../core/color';
 import { alphaOf, applyCase, captionFrac, clearShadow, fillBox, setFont, setShadow, type Frame } from './kit';
 
@@ -134,6 +134,8 @@ export const REELS_BUTTONS_X = 0.87;
  * botões da direita (v0.7); em cima, usa a área segura inteira.
  */
 export function captionMaxWidth(f: Pick<Frame, 'w' | 'h' | 'safe' | 'style'>): number {
+  // fora do 9:16 (v0.14): legenda compacta no meio, do tamanho de uma legenda de Reels, mesmo com a tela larga
+  if (!isTall(f.w, f.h)) return Math.min(f.safe.w * 0.94, 1000 * unitFor(f.w, f.h));
   const full = f.safe.w * 0.94;
   if (captionCenterFrac(f.style) < 0.45) return full;
   return Math.min(full, 2 * (f.w * REELS_BUTTONS_X - f.w / 2) - 12 * (f.w / 1080));
@@ -173,7 +175,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   const emScale = em.family !== spec.family ? 1.16 : 1;
   const maxW = captionMaxWidth(f);
 
-  let size = C.size * f.w;
+  let size = C.size * 1080 * u;
   let widths: number[] = [];
   let lines: number[][] = [];
   let space = 0;

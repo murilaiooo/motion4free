@@ -11,6 +11,7 @@ import type { Rect } from './layout';
 import { easeInOutQuint, easeOutExpo, springIn, wiggle } from './motion';
 import { alphaOf, composition, makeFrame, withAlpha, type Frame } from './kit';
 import { drawOverlay, drawProgress } from './scenes';
+import { framingFor, placeSource, type Focus } from './framing';
 import { drawLetterbox, drawScanlines, drawTag, drawTicker, drawTint, drawVignette, tickerText } from './decor';
 
 export function activeAt<T extends { start: number; end: number }>(items: T[], t: number): T[] {
@@ -77,7 +78,7 @@ export function cameraAt(plan: EditPlan, t: number, S: StyleDNA = styleAt(plan, 
         // tremor curto no impacto, só em estilos bem intensos
         const d = 1 - progress(t, s.start, 0.32);
         if (S.motion.intensity >= 0.6 && d > 0) {
-          const amp = 9 * (plan.output.width / 1080) * S.motion.intensity * d * d;
+          const amp = 9 * (Math.min(plan.output.width, plan.output.height) / 1080) * S.motion.intensity * d * d;
           dx = wiggle(t - s.start, 13, 1) * amp;
           dy = wiggle(t - s.start, 11, 2) * amp * 0.7;
         }
@@ -126,15 +127,61 @@ export function sameWords(a: string, b: string): boolean {
   return common / Math.min(wa.length, wb.size) >= 0.6;
 }
 
+/**
+ * Quadro de um clipe no tamanho de origem (v0.14), com o que o enquadramento precisa: proporção real,
+ * de qual clipe ele é (enquadramento próprio), o foco do rosto naquele instante e uma cópia minúscula
+ * para o fundo desfocado do modo "ajustar". Quem decodifica (player/exportação) monta isto; o desenho é puro.
+ */
+export interface SourceFrame {
+  kind: 'clip';
+  image: CanvasImageSource;
+  width: number;
+  height: number;
+  clipId: string;
+  focus: Focus | null;
+  /** cópia bem pequena do mesmo quadro: esticada, vira o fundo desfocado */
+  backdrop: CanvasImageSource | null;
+}
+
+export function isSourceFrame(x: unknown): x is SourceFrame {
+  return !!x && typeof x === 'object' && (x as { kind?: unknown }).kind === 'clip';
+}
+
+/** Desenha o vídeo de fundo: legado (já no tamanho da saída) ou clipe com enquadramento. */
+function drawSource(ctx: Ctx2D, plan: EditPlan, source: CanvasImageSource | SourceFrame, w: number, h: number, style: StyleDNA): void {
+  if (!isSourceFrame(source)) {
+    ctx.drawImage(source, 0, 0, w, h);
+    return;
+  }
+  const framing = framingFor(plan, source.clipId);
+  const p = placeSource(source.width, source.height, w, h, framing, source.focus);
+  if (p.needsBackdrop) {
+    if (framing.fill === 'blur' && source.backdrop) {
+      // fundo: o mesmo quadro esticado (cobrindo a tela) a partir de uma cópia minúscula = desfoque barato
+      const cover = placeSource(source.width, source.height, w, h, { mode: 'fill', fill: 'blur', zoom: 1.08, x: 0, y: 0 }, null);
+      const k = 1 / source.width;
+      const bw = (source.backdrop as { width?: number }).width ?? 1;
+      const bh = (source.backdrop as { height?: number }).height ?? 1;
+      ctx.drawImage(source.backdrop, cover.src.x * k * bw, (cover.src.y / source.height) * bh, cover.src.w * k * bw, (cover.src.h / source.height) * bh, 0, 0, w, h);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.fillRect(0, 0, w, h);
+    } else {
+      ctx.fillStyle = style.palette.panel.slice(0, 7);
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+  ctx.drawImage(source.image, p.src.x, p.src.y, p.src.w, p.src.h, p.dst.x, p.dst.y, p.dst.w, p.dst.h);
+}
+
 const OVERLAY_ORDER: SceneInstance['kind'][] = ['lower-third', 'kinetic-title', 'big-number', 'list', 'quote', 'end-cta'];
 
 /**
  * Desenha um quadro do vídeo final no instante `t` (tempo de saída).
- * `source` já vem recortado/escalado para o tamanho de saída.
+ * `source`: quadro já no tamanho da saída (galeria, testes) ou `SourceFrame` de um clipe (enquadrado aqui).
  * A mesma função serve para a prévia e para a exportação: é isso que garante prévia = MP4.
  * Depende só de (plano, t, quadro de origem): desenhar em qualquer ordem dá o mesmo resultado.
  */
-export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasImageSource | null): void {
+export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasImageSource | SourceFrame | null): void {
   const { width: w, height: h } = plan.output;
   // trecho com estilo próprio (pedido do trecho ou trava) desenha com o estilo dele
   const style = styleAt(plan, t);
@@ -157,7 +204,7 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
       ctx.scale(zz, zz);
       ctx.translate(-ox, -oy);
     }
-    ctx.drawImage(source, 0, 0, w, h);
+    drawSource(ctx, plan, source, w, h, style);
     ctx.restore();
   }
   // acabamento do modelo (v0.9): véu de cor e vinheta sobre o vídeo, antes de qualquer texto

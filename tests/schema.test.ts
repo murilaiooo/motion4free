@@ -21,7 +21,7 @@ const v1 = {
   scenes: [{ id: 's1', kind: 'kinetic-title', text: 'Olá', start: 0, end: 1.5 }],
 };
 
-const valid = {
+const valid5 = {
   version: 5,
   output: { width: 1080, height: 1920, fps: 30 },
   style: DEFAULT_STYLE,
@@ -39,12 +39,15 @@ const valid = {
   reference: null,
 };
 
-const v4 = { ...valid, version: 4, style: styleV1(DEFAULT_STYLE), brief: BRIEF_V1 };
+/** Plano atual (v6): o v5 com um clipe e o recorte "preencher" pelo centro (o que as versões antigas faziam). */
+const valid = { ...valid5, version: 6, clips: [{ id: 'c1', name: '', duration: 2.5, framing: null }], framing: { mode: 'fill', fill: 'blur', zoom: 1, x: 0, y: 0 } };
+
+const v4 = { ...valid5, version: 4, style: styleV1(DEFAULT_STYLE), brief: BRIEF_V1 };
 const { ranges: _r, reference: _ref, ...v3body } = v4;
 const v3 = { ...v3body, version: 3 };
 
 describe('parseEditPlan', () => {
-  it('aceita um plano v5 válido', () => {
+  it('aceita um plano v6 válido', () => {
     expect(parseEditPlan(valid)).toEqual({ ok: true, plan: valid });
   });
 
@@ -70,12 +73,12 @@ describe('parseEditPlan', () => {
   });
 });
 
-describe('migração v1 → v2 → v3 → v4 → v5', () => {
+describe('migração v1 → v2 → v3 → v4 → v5 → v6', () => {
   it('plano da Fase 2 abre como v5 com estilo padrão, pedido vazio e o mesmo conteúdo', () => {
     const r = parseEditPlan(v1);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.plan.version).toBe(5);
+    expect(r.plan.version).toBe(6);
     expect(r.plan.ranges).toEqual([]);
     expect(r.plan.reference).toBeNull();
     expect(r.plan.brief).toEqual(EMPTY_BRIEF);
@@ -123,7 +126,7 @@ describe('migração v1 → v2 → v3 → v4 → v5', () => {
     const r = parseEditPlan({ ...v4, ranges: [range] });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.plan.version).toBe(5);
+    expect(r.plan.version).toBe(6);
     expect(r.plan.style).toEqual(DEFAULT_STYLE);
     expect(r.plan.style.emoji.mode).toBe('off');
     expect(r.plan.style.captions.colors).toEqual({ text: null, highlight: null, stroke: null, box: null });
@@ -140,8 +143,31 @@ describe('migração v1 → v2 → v3 → v4 → v5', () => {
     expect(parseEditPlan({ ...valid, scenes: [{ id: 'e', kind: 'emoji', emoji: '🦄', start: 0, end: 1 }] }).ok).toBe(false);
   });
 
-  it('não mexe em plano que já é v5', () => {
+  it('não mexe em plano que já é v6', () => {
     expect(migratePlan(valid)).toBe(valid);
+  });
+
+  it('plano v5 (um vídeo, v0.6 a v0.13) abre como v6 com um clipe e o recorte antigo', () => {
+    const r = parseEditPlan(valid5);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.plan).toEqual(valid);
+  });
+
+  it('v6: clipes com o mesmo id, sem clipes ou trecho depois do fim dos clipes são recusados', () => {
+    expect(parseEditPlan({ ...valid, clips: [] }).ok).toBe(false);
+    expect(parseEditPlan({ ...valid, clips: [valid.clips[0], valid.clips[0]] }).ok).toBe(false);
+    expect(parseEditPlan({ ...valid, clips: [{ ...valid.clips[0], duration: 1 }] }).ok).toBe(false);
+    expect(parseEditPlan({ ...valid, framing: { ...valid.framing, zoom: 5 } }).ok).toBe(false);
+    expect(parseEditPlan({ ...valid, framing: { ...valid.framing, mode: 'stretch' } }).ok).toBe(false);
+  });
+
+  it('v6 com vários clipes e enquadramento por clipe é aceito', () => {
+    const clips = [
+      { id: 'c1', name: 'a.mp4', duration: 2, framing: null },
+      { id: 'c2', name: 'b.mp4', duration: 3, framing: { mode: 'fit', fill: 'color', zoom: 1.2, x: 0.5, y: -0.2 } },
+    ];
+    expect(parseEditPlan({ ...valid, clips, segments: [{ srcStart: 0, srcEnd: 2 }, { srcStart: 2, srcEnd: 4.5 }] }).ok).toBe(true);
   });
 
   it('rejeita pedido com proibição desconhecida (só IDs permitidos)', () => {

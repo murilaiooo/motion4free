@@ -1,6 +1,7 @@
 import { AppError } from '../core/errors';
 import type { Caption, EditPlan, Segment, TimeRange, Word } from '../core/types';
 import { outputDuration } from '../engine/timeline';
+import { clipJoins, splitAtClips } from '../engine/clips';
 import { presetById } from '../core/presets';
 import type { StyleDNA } from '../core/style';
 import type { CreativeBrief, Hook } from '../core/brief';
@@ -71,7 +72,7 @@ function rebuildCaptions(plan: EditPlan, ctx: EditContext, segments: Segment[], 
  * Sem palavras (transcrição falhou ou projeto antigo sem cenas novas), mantém as cenas que existem, recortadas.
  */
 function rebuildScenes(plan: EditPlan, ctx: EditContext, segments: Segment[], style: StyleDNA, brief: CreativeBrief = plan.brief): EditPlan['scenes'] {
-  if (ctx.words.length > 0) return proposeScenes(ctx.words, segments, style, sceneOptionsFor(brief));
+  if (ctx.words.length > 0) return proposeScenes(ctx.words, segments, style, { ...sceneOptionsFor(brief), joins: clipJoins(segments, plan.clips) });
   const total = outputDuration(segments);
   return plan.scenes.map((s) => ({ ...s, end: Math.min(s.end, total) })).filter((s) => s.end > s.start);
 }
@@ -80,7 +81,9 @@ function rebuildScenes(plan: EditPlan, ctx: EditContext, segments: Segment[], st
  * Troca os trechos mantidos e reconstrói legendas e cenas pelas palavras.
  * Legenda cujo grupo de palavras não mudou mantém o texto editado.
  */
-export function withSegments(plan: EditPlan, ctx: EditContext, segments: Segment[]): EditPlan {
+export function withSegments(plan: EditPlan, ctx: EditContext, input: Segment[]): EditPlan {
+  // um trecho nunca atravessa dois clipes (v0.14): a emenda entre arquivos é sempre uma emenda do plano
+  const segments = splitAtClips(input, plan.clips);
   if (segments.length === 0) throw new AppError('CORTE_TOTAL');
   assertSegmentsKeepLocks(plan, segments);
   return reapplyRanges({ ...plan, segments, captions: rebuildCaptions(plan, ctx, segments, plan.style), scenes: rebuildScenes(plan, ctx, segments, plan.style) }, ctx.words);
@@ -146,7 +149,7 @@ export function applyBrief(plan: EditPlan, ctx: EditContext, incoming: CreativeB
   const level = incoming.look.cuts;
   if (level && level !== (plan.brief.look.cuts ?? 'normal') && ctx.words.length > 0) {
     const locked = plan.ranges.filter((r) => r.locked).map((r) => ({ start: r.srcStart, end: r.srcEnd }));
-    segments = retimeCuts(plan.segments, ctx.words, ctx.durationSec, level, locked);
+    segments = splitAtClips(retimeCuts(plan.segments, ctx.words, ctx.durationSec, level, locked), plan.clips);
   }
   return reapplyRanges({ ...plan, segments, style, brief, captions: rebuildCaptions(plan, ctx, segments, style), scenes: rebuildScenes(plan, ctx, segments, style, brief) }, ctx.words);
 }
