@@ -390,7 +390,7 @@ function EditorApp() {
           if (!assignments) {
             throw new AppError('CLIPES_AUSENTES', 'Selecione novamente todos os clipes originais. Os nomes e durações precisam corresponder ao projeto salvo.');
           }
-          const map = new Map(savedClips.map((c) => [c.id, files[assignments.get(c.id)!]!] as const));
+          const map = new Map<string, Blob>(savedClips.map((c): [string, Blob] => [c.id, files[assignments.get(c.id)!]!]));
           const reopened = await resumeMulti(pending.id, pending.project, map, false);
           storeMultiCopies(pending.id, reopened);
         } else {
