@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASR_CANDIDATES, NO_CAPABILITY, asrLadder, canRunTurbo, defaultAsrMode, describeMode, estimateMinutes, formatMB } from '../src/core/asr-models';
+import { ASR_CANDIDATES, NO_CAPABILITY, asrLadder, canRunTurbo, defaultAsrMode, describeMode, estimateMinutes, formatMB, whisperOptions } from '../src/core/asr-models';
 
 const GPU = { webgpu: true, f16: true, memoryGB: 8 };
 
@@ -46,6 +46,11 @@ describe('escada de modelos de transcrição', () => {
     expect(describeMode('precisa', NO_CAPABILITY)).toContain('Whisper small, usa o processador; baixa cerca de 250 MB');
     expect(describeMode('precisa', NO_CAPABILITY)).toContain('demora alguns minutos');
     expect(describeMode('rapida', NO_CAPABILITY)).toBe('Whisper base, usa o processador; baixa cerca de 80 MB na primeira vez.');
+  });
+
+  it('idioma português e tarefa transcrever sempre fixos; segunda tentativa proíbe repetição', () => {
+    expect(whisperOptions()).toEqual({ language: 'portuguese', task: 'transcribe', return_timestamps: 'word' });
+    expect(whisperOptions(true)).toEqual({ language: 'portuguese', task: 'transcribe', return_timestamps: 'word', no_repeat_ngram_size: 6 });
   });
 
   it('estima o tempo de transcrição', () => {

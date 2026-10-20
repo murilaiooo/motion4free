@@ -116,6 +116,16 @@ export function estimateMinutes(id: AsrCandidateId, durationSec: number): number
   return Math.max(1, Math.ceil((ASR_CANDIDATES[id].secPerMinute * durationSec) / 60 / 60));
 }
 
+/**
+ * Opções de cada chamada ao Whisper. Idioma e tarefa fixos: sem detecção automática, o Whisper às vezes
+ * "decide" que um trecho é espanhol ou traduz para inglês. Decodificação gulosa (o Transformers.js 4.3.1
+ * não tem beam search de verdade nem a troca de temperatura do Whisper original). Na segunda tentativa de
+ * uma janela com cara de laço, proíbe repetir sequências de 6 tokens.
+ */
+export function whisperOptions(retry = false): { language: 'portuguese'; task: 'transcribe'; return_timestamps: 'word'; no_repeat_ngram_size?: number } {
+  return { language: 'portuguese', task: 'transcribe', return_timestamps: 'word', ...(retry ? { no_repeat_ngram_size: 6 } : {}) };
+}
+
 /** Texto curto para a opção "Precisão da legenda": qual modelo, onde roda e o download da primeira vez. */
 export function describeMode(mode: AsrMode, c: AsrCapability): string {
   const first = ASR_CANDIDATES[asrLadder(mode, c)[0]!];
