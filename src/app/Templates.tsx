@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { presetById } from '../core/presets';
-import { filterTemplates, listTemplates, templateTags, type TemplateInfo } from '../core/templates';
+import { filterTemplates, listTemplates, templateTags, type TemplateInfo } from '../core/template-gallery';
 import { ensureFonts } from '../media/fonts';
 import { paintBackdrop, renderShot } from './Gallery';
 

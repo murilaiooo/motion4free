@@ -1,7 +1,7 @@
 import { useState, type DragEvent, type ReactNode } from 'react';
 import { Captions, Check, Cpu, FileVideo, Scissors, ShieldCheck, Sparkles, Upload, WandSparkles } from 'lucide-react';
 import { PROCESSING_STEPS, processingStep } from '../core/steps';
-import { listTemplates } from '../core/templates';
+import { listTemplates } from '../core/template-gallery';
 import { APP_BUILT_AT, VERSION_LABEL } from '../version';
 import { TemplateThumb } from './Templates';
 import { Logo, ThemeToggle } from './TopBar';

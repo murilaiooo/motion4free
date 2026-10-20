@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PROCESSING_STEPS, processingStep } from '../src/core/steps';
-import { filterTemplates, listTemplates, templateTags } from '../src/core/templates';
+import { filterTemplates, listTemplates, templateTags } from '../src/core/template-gallery';
 import { PRESETS } from '../src/core/presets';
 
 describe('passos do processamento', () => {
