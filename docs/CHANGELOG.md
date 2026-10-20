@@ -2,6 +2,16 @@
 
 A versão aparece no rodapé do app (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.9.0 — 20/10/2026
+Muito mais estilos: agora são **15 modelos** prontos, cada um com letra, cores, animações e jeito de legenda próprios.
+- **11 modelos novos**: **Impacto** (vendas: cada palavra num bloco, a falada em vermelho), **Minimal** (tudo em minúsculas, discreto), **Podcast** (selo de podcast no canto, legenda em pílulas, nome de quem fala em destaque), **Tutorial** (passos numerados em círculos, palavra falada sublinhada), **Cinema** (faixas pretas, cor quente, letra clássica), **Jornal** (selo "ao vivo", faixa de manchetes correndo embaixo, tarja com o nome), **Retrô 90** (letra de computador antigo, linhas de TV, "REC" com o tempo), **Turbo** (games: títulos que caem quicando, palavra em degradê), **Datilografia** (a legenda vai sendo digitada numa tira de papel, com cursor), **Marca-texto** (escrito à mão, palavra falada riscada de amarelo) e **Luxo** (preto e dourado, título numa moldura fina).
+- **Pedir pelo nome**: escreva "estilo podcast", "template tutorial", "quero algo cinematográfico", "estilo de jornal", "retrô anos 90", "estilo gamer", "escrito à mão" ou "luxuoso" no pedido e o modelo é escolhido. Com a IA ligada, ela também conhece todos os modelos.
+- **Tudo o que você já pedia continua valendo em qualquer modelo**: cores da legenda, tamanho, posição, emojis, pedidos por trecho, travas e versões.
+- Novas letras para pedir na legenda: "letra pixelada", "letra manuscrita", "letra de máquina de escrever", "de jornal"… e o destaque "com marca-texto".
+- Todas as letras novas são gratuitas e livres (licença OFL), vêm junto com o app e só são baixadas quando o modelo é usado. Ver [licencas.md](licencas.md).
+- Projetos salvos nas versões anteriores abrem iguais.
+- Imagens dos modelos para comparar: pasta `motion4free/templates-v0.9` (uma imagem por modelo: abertura e legenda). Decisão técnica: [ADR-0014](decisions/0014-registro-de-modelos.md).
+
 ## v0.8.0 — 20/10/2026
 Legenda muito mais certa, principalmente em vídeos longos e gravados no celular.
 - **Modelo de legenda maior**: no modo **Precisa** (o padrão), o app usa o *Whisper large-v3-turbo*, um modelo bem maior que o anterior, na placa de vídeo do computador. Ele baixa **cerca de 1,4 GB na primeira vez** (depois fica guardado no navegador). Sem placa de vídeo compatível, usa o *Whisper small* no processador (cerca de 250 MB; demora alguns minutos num vídeo de 2–3 min).
