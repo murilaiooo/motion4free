@@ -58,6 +58,7 @@ export async function analyze(file: File, transcriber: Transcriber, onStep: (lab
   }
   if (warnings.length === 0 && words.length === 0) warnings.push(new AppError('SEM_FALA', `${silences.length} silêncios em ${media.durationSec.toFixed(1)} s`));
 
+  onStep('Montando a edição', 0);
   const plan = autoEdit(media.durationSec, silences, words);
   return { media, audio, plan, words, silences, warnings };
 }
