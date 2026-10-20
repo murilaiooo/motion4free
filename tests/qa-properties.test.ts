@@ -4,7 +4,7 @@ import { reorderClipPlan } from '../src/editorial/clip-ops';
 import { clipLayout, clipSpans, placeWords, totalDuration, unplaceWords, unplaceRanges, placeRanges } from '../src/engine/clips';
 import { outputDuration } from '../src/engine/timeline';
 import { editPlanSchema } from '../src/core/schema';
-import { combineAudios } from '../src/media/multi';
+import { combineAudios, openClips } from '../src/media/multi';
 import type { ClipRef, TimeRange, Word } from '../src/core/types';
 
 const rnd = (seed: number) => () => {
@@ -69,6 +69,15 @@ describe('QA de propriedades, 100 timelines com fontes diferentes', () => {
     expect(unplaceWords(clips, placeWords(clips, words))).toEqual(words);
     expect(unplaceRanges(clips, placeRanges(clips, ranges))).toEqual(ranges);
     expect(unplaceWords([...clips].reverse(), placeWords([...clips].reverse(), words))).toEqual(words);
+  });
+
+  it('limites de importação têm erro claro, sem tentar decodificar 31 arquivos', async () => {
+    const tooMany = Array.from({ length: 31 }, (_, i) =>
+      new File(['invalid'], `a${i}.mp4`, { type: 'video/mp4' }));
+    await expect(openClips(tooMany)).rejects.toMatchObject({ key: 'CLIPES_DEMAIS' });
+    await expect(openClips([])).rejects.toMatchObject({ key: 'SEM_VIDEO' });
+    await expect(openClips([new File(['bad'], 'corrompido.mp4', { type: 'video/mp4' })]))
+      .rejects.toMatchObject({ key: 'NENHUM_CLIPE' });
   });
 
   it('áudio sem faixa em um clipe não desloca o som dos arquivos seguintes', () => {
