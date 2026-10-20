@@ -46,6 +46,8 @@ export function describeScene(s: SceneInstance): string {
       return 'barra de progresso';
     case 'end-cta':
       return `chamada final ${quote(s.text)}`;
+    case 'emoji':
+      return `emoji ${s.emoji}`;
   }
 }
 

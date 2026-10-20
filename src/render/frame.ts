@@ -4,6 +4,7 @@ import { styleAt } from '../editorial/ranges';
 import type { StyleDNA } from '../core/style';
 import { outputDuration } from '../engine/timeline';
 import { drawCaption } from './captions';
+import { drawEmoji } from './emoji';
 import type { Ctx2D } from './ctx';
 import { clamp01, easeInCubic, easeOutCubic, progress } from './easing';
 import { alphaOf, makeFrame, withAlpha, type Frame } from './kit';
@@ -94,6 +95,8 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
     const keywords = new Set(active.filter((s) => s.kind === 'highlight-word').map((s) => normalizeToken((s as { text: string }).text)));
     drawCaption(ctx, f, caption, t, keywords);
   }
+  // emojis por cima de tudo, longe da legenda
+  for (const s of active) if (s.kind === 'emoji') drawEmoji(ctx, f, s, t);
   ctx.restore();
 }
 

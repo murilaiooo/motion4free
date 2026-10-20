@@ -1,6 +1,8 @@
 import type { CreativeBrief, Prohibition } from '../core/brief';
-import type { StyleDNA } from '../core/style';
+import { EMOJI_OFF, nearestWeight, type StyleDNA } from '../core/style';
+import type { Look } from '../core/look';
 import type { SceneKind } from '../core/types';
+import { onBox } from '../core/color';
 import type { SceneOptions } from './selector';
 
 /**
@@ -15,7 +17,7 @@ const r3 = (x: number) => Math.round(x * 1000) / 1000;
 /** Tipos de cena que cada proibição remove. */
 export const FORBIDDEN_KINDS: Record<Prohibition, SceneKind[]> = {
   efeitos: ['emphasis-zoom', 'cut-transition'],
-  emojis: [],
+  emojis: ['emoji'],
   numeros: ['big-number'],
   zoom: ['emphasis-zoom'],
   transicoes: ['cut-transition'],
@@ -29,8 +31,16 @@ export const FORBIDDEN_KINDS: Record<Prohibition, SceneKind[]> = {
   textos: ['kinetic-title', 'big-number', 'list', 'quote', 'lower-third', 'highlight-word', 'end-cta'],
 };
 
-export function forbiddenKinds(brief: CreativeBrief): Set<SceneKind> {
-  return new Set(brief.forbid.flatMap((p) => FORBIDDEN_KINDS[p]));
+/** Proibições do pedido + cenas desligadas pelo look ("sem barra" = proibição de barra). */
+export function effectiveForbid(brief: Pick<CreativeBrief, 'forbid' | 'look'>): Prohibition[] {
+  const off = Object.entries(brief.look.scenes ?? {})
+    .filter(([, on]) => on === false)
+    .map(([k]) => k as Prohibition);
+  return [...new Set([...brief.forbid, ...off])];
+}
+
+export function forbiddenKinds(brief: Pick<CreativeBrief, 'forbid' | 'look'>): Set<SceneKind> {
+  return new Set(effectiveForbid(brief).flatMap((p) => FORBIDDEN_KINDS[p]));
 }
 
 /** Texto da chamada final por objetivo (frases fixas do app, não da IA). */
@@ -79,7 +89,7 @@ export function styleForBrief(preset: StyleDNA, brief: CreativeBrief): StyleDNA 
   if (brief.emphasize.includes('palavras')) R.keywordEverySec = r3(clamp(R.keywordEverySec * 0.5, 0.5, 60));
 
   // proibições por último: sempre vencem os ajustes acima
-  const forbid = new Set(brief.forbid);
+  const forbid = new Set(effectiveForbid(brief));
   if (forbid.has('efeitos')) {
     M.intensity = r3(Math.min(M.intensity, 0.15));
     if (M.enter === 'pop') M.enter = 'rise';
@@ -103,5 +113,89 @@ export function sceneOptionsFor(brief: CreativeBrief): SceneOptions {
     forbid,
     emphasize: new Set(brief.emphasize),
     title: brief.hook && !forbid.has('kinetic-title') ? brief.hook.text : null,
+    emojiPrefer: brief.look.emoji?.prefer ?? [],
   };
+}
+
+/**
+ * Aplica o look (cores, legenda, emojis, transição, intensidade, cenas ligadas) por cima do estilo já
+ * ajustado pelo pedido e pelas cores da imagem. Proibições continuam vencendo: "sem emojis" desliga os
+ * emojis mesmo que o look peça, "sem efeitos" segura a intensidade e tira a transição.
+ * Cada valor fica dentro dos limites do esquema do StyleDNA.
+ */
+export function applyLook(base: StyleDNA, look: Look, forbidList: readonly Prohibition[]): StyleDNA {
+  const s: StyleDNA = structuredClone(base);
+  const forbid = new Set(forbidList);
+  const C = s.captions;
+  const c = look.captions ?? {};
+  if (c.text) C.colors.text = c.text;
+  if (c.highlight) C.colors.highlight = c.highlight;
+  if (c.stroke) {
+    C.colors.stroke = c.stroke;
+    if (C.stroke === 0) C.stroke = 8;
+  }
+  if (c.strokeWidth !== undefined) C.stroke = clamp(c.strokeWidth, 0, 24);
+  if (c.box === 'none') C.box = 'none';
+  else if (c.box) {
+    C.box = 'line';
+    C.colors.box = c.box;
+  }
+  if (c.scale !== undefined) C.size = r3(clamp(C.size * c.scale, 0.03, 0.16));
+  if (c.position) C.position = c.position;
+  if (c.y !== undefined) {
+    C.position = 'custom';
+    C.y = r3(clamp(c.y, 0, 1));
+  }
+  if (c.case) {
+    s.type.text.case = c.case;
+    s.type.emphasis.case = c.case;
+  }
+  if (c.font) {
+    const old = s.type.text.family;
+    s.type.text = { ...s.type.text, family: c.font, ...nearestWeight(c.font, s.type.text.weight, 'normal') };
+    // palavra-chave na mesma família da legenda acompanha a troca
+    if (s.type.emphasis.family === old) s.type.emphasis = { ...s.type.emphasis, family: c.font, ...nearestWeight(c.font, s.type.emphasis.weight, s.type.emphasis.style) };
+  }
+  if (c.animation) C.enter = c.animation;
+  if (c.wordsPerLine !== undefined) C.wordsPerLine = c.wordsPerLine;
+  if (c.wordsAtOnce !== undefined) {
+    C.maxWords = c.wordsAtOnce;
+    C.maxChars = Math.round(clamp(Math.max(C.maxChars, c.wordsAtOnce * 8), 8, 60));
+  }
+  if (c.highlightMode) C.highlight = c.highlightMode;
+  if (C.highlight === 'box' && C.colors.highlight) {
+    // texto sobre a caixa da palavra falada continua legível com a cor pedida
+    s.palette.onPanel = onBox(C.colors.highlight, s.palette.onPanel);
+  }
+
+  const e = look.emoji ?? {};
+  const E = s.emoji;
+  if (e.mode) E.mode = e.mode;
+  else if (E.mode === 'off' && (e.everySec !== undefined || e.position || e.scale !== undefined || e.animation || e.prefer?.length)) E.mode = e.everySec !== undefined ? 'interval' : 'keywords';
+  if (e.everySec !== undefined) E.everySec = r3(clamp(e.everySec, 1, 30));
+  if (e.position) E.position = e.position;
+  if (e.scale !== undefined) E.size = r3(clamp(EMOJI_OFF.size * e.scale, 0.06, 0.3));
+  if (e.animation) E.animation = e.animation;
+  if (forbid.has('emojis')) E.mode = 'off';
+
+  if (look.accent) {
+    s.palette.accent = look.accent;
+    s.palette.accent2 = look.accent;
+    const solid = s.palette.panel.length === 7 || s.palette.panel.toUpperCase().endsWith('FF');
+    if (solid) {
+      s.palette.panel = look.accent;
+      s.palette.onPanel = onBox(look.accent, s.palette.onPanel);
+    }
+  }
+
+  const noEffects = forbid.has('efeitos');
+  if (look.transition && !noEffects && !forbid.has('transicoes')) s.transition = look.transition === 'zoom' && forbid.has('zoom') ? 'dip' : look.transition;
+  if (look.motion !== undefined) s.motion.intensity = r3(noEffects ? Math.min(look.motion, 0.15) : clamp(look.motion, 0, 1));
+
+  const on = look.scenes ?? {};
+  if (on.barra && !forbid.has('barra') && !forbid.has('textos') && s.progress === 'none') s.progress = 'bar';
+  if (on.transicoes && !noEffects && !forbid.has('transicoes') && s.transition === 'none') s.transition = forbid.has('zoom') ? 'dip' : 'zoom';
+  if (on.zoom && !noEffects && !forbid.has('zoom')) s.zoomScale = r3(Math.max(s.zoomScale, 1.08));
+  if (on.destaques && !forbid.has('destaques') && !forbid.has('textos')) s.rhythm.keywordEverySec = r3(Math.min(s.rhythm.keywordEverySec, 4));
+  return s;
 }

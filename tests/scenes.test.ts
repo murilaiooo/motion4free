@@ -182,7 +182,7 @@ describe('legendas estilo Reels', () => {
 
 describe('drawFrame', () => {
   const plan = (style: StyleDNA, scenes: SceneInstance[] = SCENES): EditPlan => ({
-    version: 4,
+    version: 5,
     ranges: [],
     reference: null,
     brief: EMPTY_BRIEF,
@@ -215,7 +215,7 @@ describe('drawFrame', () => {
   });
 
   it('trecho com estilo próprio desenha com o estilo dele só dentro do trecho', () => {
-    const range = { id: 'r1', srcStart: 2, srcEnd: 6, out: { start: 2, end: 6 }, prompt: '', tone: null, intensity: null, pace: null, forbid: [], emphasize: [], quiet: false, accent: false, variant: 0, style: DOCUMENTAL, locked: null };
+    const range = { id: 'r1', srcStart: 2, srcEnd: 6, out: { start: 2, end: 6 }, prompt: '', tone: null, intensity: null, pace: null, forbid: [], emphasize: [], quiet: false, accent: false, variant: 0, look: null, style: DOCUMENTAL, locked: null };
     const p = { ...plan(POP), ranges: [range] };
     const fonts = (t: number) => frame(p, t).calls.filter((c) => c.op === 'fillText').map((c) => c.font).join(' ');
     expect(fonts(3.5)).toContain('IBM Plex');

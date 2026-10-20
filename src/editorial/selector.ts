@@ -3,6 +3,8 @@ import type { Emphasis } from '../core/brief';
 import type { SceneInstance, SceneKind, Segment, Word } from '../core/types';
 import { outputDuration, sourceToOutput } from '../engine/timeline';
 import { findName, isQuestion, keywordScore, normalizeToken, ordinalOf, parseNumberAt, splitSentences } from './detect';
+import type { Emoji } from '../core/emoji';
+import { FALLBACK_EMOJIS, emojiForWords } from './emoji-pick';
 
 /**
  * Seletor de cenas por regras. Lê as palavras (já no tempo do vídeo editado) e propõe cenas:
@@ -41,6 +43,8 @@ export function sceneKey(s: Draft | SceneInstance): string {
       return `${s.kind}|${s.at}`;
     case 'progress-bar':
       return s.kind;
+    case 'emoji':
+      return `${s.kind}|${s.emoji}`;
   }
 }
 
@@ -111,9 +115,65 @@ export interface SceneOptions {
   emphasize: ReadonlySet<Emphasis>;
   /** frase do gancho escolhido: vira o título de abertura (texto falado, nunca inventado) */
   title: string | null;
+  /** emojis preferidos quando a fala não sugere nenhum (do pedido ou da IA) */
+  emojiPrefer?: readonly Emoji[];
 }
 
-export const NO_SCENE_OPTIONS: SceneOptions = { forbid: new Set(), emphasize: new Set(), title: null };
+export const NO_SCENE_OPTIONS: SceneOptions = { forbid: new Set(), emphasize: new Set(), title: null, emojiPrefer: [] };
+
+/**
+ * Emojis perto da fala (v0.6). "interval": um a cada N segundos, puxado para a palavra que sugere o emoji
+ * se ela estiver perto; "keywords": só nas palavras da tabela. Nunca se sobrepõem; emoji igual seguido é evitado.
+ */
+export function proposeEmojis(ws: { raw: string; start: number; end: number }[], total: number, style: StyleDNA, prefer: readonly Emoji[] = []): Draft[] {
+  const E = style.emoji;
+  if (E.mode === 'off' || total < 1) return [];
+  const out: Draft[] = [];
+  const fallback = prefer.length ? prefer : FALLBACK_EMOJIS;
+  let fb = 0;
+  let prevEnd = -Infinity;
+  let prevEmoji: Emoji | null = null;
+  const nextFallback = (): Emoji => {
+    for (let k = 0; k < fallback.length; k++) {
+      const e = fallback[(fb + k) % fallback.length]!;
+      if (e !== prevEmoji || fallback.length === 1) {
+        fb = (fb + k + 1) % fallback.length;
+        return e;
+      }
+    }
+    return fallback[0]!;
+  };
+  const push = (emoji: Emoji, start: number, len: number) => {
+    const a = r3(Math.max(start, prevEnd + 0.05, 0));
+    const b = r3(Math.min(total, a + len));
+    if (b - a < 0.4) return;
+    out.push({ kind: 'emoji', emoji, start: a, end: b });
+    prevEnd = b;
+    prevEmoji = emoji;
+  };
+  if (E.mode === 'interval') {
+    const every = E.everySec;
+    const len = Math.min(2, Math.max(0.6, every * 0.8));
+    for (let t = Math.min(0.5, total / 4); t < total - 0.4; t += every) {
+      // palavras perto deste instante (um pouco antes e depois)
+      const near = ws.filter((w) => w.start >= t - every * 0.4 && w.start < t + every * 0.6);
+      const hit = emojiForWords(near.map((w) => w.raw));
+      const pick = hit && hit.emoji === prevEmoji ? null : hit;
+      const at = pick ? near[pick.index]!.start : t;
+      push(pick ? pick.emoji : nextFallback(), at, len);
+    }
+  } else {
+    let last = -Infinity;
+    for (let i = 0; i < ws.length; i++) {
+      const w = ws[i]!;
+      const hit = emojiForWords([w.raw, ws[i + 1]?.raw ?? ''].filter(Boolean));
+      if (!hit || hit.index !== 0 || w.start - last < 1.5 || hit.emoji === prevEmoji) continue;
+      push(hit.emoji, w.start, 1.4);
+      last = w.start;
+    }
+  }
+  return out;
+}
 
 const EMPHASIS_KIND: Record<Emphasis, SceneKind | null> = { numeros: 'big-number', perguntas: 'quote', listas: 'list', nome: 'lower-third', palavras: 'highlight-word' };
 
@@ -285,8 +345,9 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   }
 
   const progress: Draft[] = style.progress !== 'none' && total >= 3 ? [{ kind: 'progress-bar', start: 0, end: r3(total) }] : [];
+  const emojis = opts.forbid.has('emoji') ? [] : proposeEmojis(ws, total, style, opts.emojiPrefer);
 
-  return [...progress, ...transitions, ...zooms, ...accepted, ...highlights]
+  return [...progress, ...transitions, ...zooms, ...accepted, ...highlights, ...emojis]
     .filter((s) => s.end - s.start > 0.05 && !opts.forbid.has(s.kind))
     .sort((a, b) => a.start - b.start || a.kind.localeCompare(b.kind))
     .map((s, i) => ({ ...s, id: `s${i + 1}` }) as SceneInstance);

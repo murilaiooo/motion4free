@@ -99,3 +99,10 @@ export function medianCut(pixels: ArrayLike<number>, max = 6): PaletteColor[] {
     .map(([hex, n]) => ({ hex, share: n / all.length }))
     .sort((a, b) => b.share - a.share || a.hex.localeCompare(b.hex));
 }
+
+/** Texto sobre uma caixa colorida: `preferred` se contrastar (≥ 3:1), senão preto ou branco, o que contrastar mais. */
+export function onBox(boxColor: string, preferred: string): string {
+  const bg = hexToRgb(boxColor);
+  if (contrast(bg, hexToRgb(preferred)) >= 3) return preferred;
+  return contrast(bg, [11, 11, 11]) >= contrast(bg, [255, 255, 255]) ? '#0B0B0B' : '#FFFFFF';
+}

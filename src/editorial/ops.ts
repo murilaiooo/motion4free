@@ -4,9 +4,10 @@ import { outputDuration } from '../engine/timeline';
 import { presetById } from '../core/presets';
 import type { StyleDNA } from '../core/style';
 import type { CreativeBrief, Hook } from '../core/brief';
-import { sceneOptionsFor, styleForBrief } from './brief-apply';
+import { applyLook, effectiveForbid, sceneOptionsFor, styleForBrief } from './brief-apply';
+import { retimeCuts } from './cuts';
 import { buildCaptions, captionOptionsFor } from './captions';
-import { findHooks } from './hooks';
+import { findHooks, pickHook } from './hooks';
 import { proposeScenes } from './selector';
 import type { RangeRequest } from './range-interpret';
 import { applyRangeRequest, assertCaptionEditable, assertSegmentsKeepLocks, reapplyRanges, type RangeTarget } from './ranges';
@@ -85,9 +86,9 @@ export function withSegments(plan: EditPlan, ctx: EditContext, segments: Segment
   return reapplyRanges({ ...plan, segments, captions: rebuildCaptions(plan, ctx, segments, plan.style), scenes: rebuildScenes(plan, ctx, segments, plan.style) }, ctx.words);
 }
 
-/** Estilo do vídeo: preset ajustado pelo pedido e pelas cores da imagem de referência. */
+/** Estilo do vídeo: preset ajustado pelo pedido, pelas cores da imagem de referência e pelo look (que vale mais). */
 export function planStyle(preset: StyleDNA, brief: CreativeBrief, reference: ReferencePalette | null): StyleDNA {
-  return applyReference(styleForBrief(preset, brief), reference);
+  return applyLook(applyReference(styleForBrief(preset, brief), reference), brief.look, effectiveForbid(brief));
 }
 
 /** Refaz legendas e cenas do vídeo inteiro com o estilo e o pedido atuais (trechos reaplicados por cima). */
@@ -131,14 +132,23 @@ export function applyBrief(plan: EditPlan, ctx: EditContext, incoming: CreativeB
   const presetId = incoming.preset ?? plan.style.id;
   const preset = presetById(presetId);
   if (!preset) throw new AppError('ESTILO_DESCONHECIDO', presetId);
-  let hook: Hook | null = incoming.hook ?? plan.brief.hook;
+  // estilo de gancho novo ("gancho criativo") escolhe de novo; senão mantém a escolha anterior
+  const restyled = !!incoming.hookStyle && incoming.hookStyle !== plan.brief.hookStyle;
+  let hook: Hook | null = incoming.hook ?? (restyled ? null : plan.brief.hook);
   if (!hook && incoming.wantsHook) {
-    const best = findHooks(ctx.words, 1)[0];
+    const best = pickHook(findHooks(ctx.words), incoming.hookStyle);
     hook = best ? { text: best.text, wordIds: best.wordIds } : null;
   }
   const brief: CreativeBrief = { ...incoming, hook, locked: plan.brief.locked };
   const style = planStyle(preset, brief, plan.reference);
-  return reapplyRanges({ ...plan, style, brief, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style, brief) }, ctx.words);
+  // ritmo dos cortes: só quando o pedido muda o nível (respeita cortes feitos à mão depois)
+  let segments = plan.segments;
+  const level = incoming.look.cuts;
+  if (level && level !== (plan.brief.look.cuts ?? 'normal') && ctx.words.length > 0) {
+    const locked = plan.ranges.filter((r) => r.locked).map((r) => ({ start: r.srcStart, end: r.srcEnd }));
+    segments = retimeCuts(plan.segments, ctx.words, ctx.durationSec, level, locked);
+  }
+  return reapplyRanges({ ...plan, segments, style, brief, captions: rebuildCaptions(plan, ctx, segments, style), scenes: rebuildScenes(plan, ctx, segments, style, brief) }, ctx.words);
 }
 
 /** Escolhe (ou tira, com null) o gancho de abertura. Mesmo gancho = mesmo objeto. */

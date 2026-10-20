@@ -9,3 +9,13 @@ export const easeOutBack = (x: number) => {
 };
 /** Progresso 0..1 de `t` dentro de [start, start+dur]. */
 export const progress = (t: number, start: number, dur: number) => (dur <= 0 ? 1 : clamp01((t - start) / dur));
+/** Queda com quiques no fim (0..1). */
+export const easeOutBounce = (x: number) => {
+  const t = clamp01(x);
+  const n = 7.5625;
+  const d = 2.75;
+  if (t < 1 / d) return n * t * t;
+  if (t < 2 / d) return n * (t - 1.5 / d) * (t - 1.5 / d) + 0.75;
+  if (t < 2.5 / d) return n * (t - 2.25 / d) * (t - 2.25 / d) + 0.9375;
+  return n * (t - 2.625 / d) * (t - 2.625 / d) + 0.984375;
+};

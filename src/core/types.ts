@@ -1,5 +1,7 @@
 import type { CreativeBrief, Emphasis, Level, Pace, Prohibition, Tone } from './brief';
 import type { StyleDNA } from './style';
+import type { Emoji } from './emoji';
+import type { Look } from './look';
 
 /** Tempo sempre em segundos (number). "src" = tempo no vídeo original; "out" = tempo no vídeo editado. */
 
@@ -52,7 +54,9 @@ export type SceneInstance =
   | (SceneBase & { kind: 'emphasis-zoom'; scale: number })
   | (SceneBase & { kind: 'cut-transition'; at: number })
   | (SceneBase & { kind: 'progress-bar' })
-  | (SceneBase & { kind: 'end-cta'; text: string });
+  | (SceneBase & { kind: 'end-cta'; text: string })
+  /** emoji perto da fala (v0.6): só da lista do app, escolhido pelas palavras próximas */
+  | (SceneBase & { kind: 'emoji'; emoji: Emoji });
 
 export type SceneKind = SceneInstance['kind'];
 
@@ -100,6 +104,8 @@ export interface RangeEdit {
   accent: boolean;
   /** "troca essa animação": quantas trocas */
   variant: number;
+  /** cores, legenda, emojis e animações só deste trecho (v5); null = nada além do pedido geral */
+  look: Look | null;
   /** estilo usado dentro do trecho; null = o do vídeo */
   style: StyleDNA | null;
   locked: RangeLock | null;
@@ -111,7 +117,7 @@ export interface ReferencePalette {
 }
 
 export interface EditPlan {
-  version: 4;
+  version: 5;
   output: OutputProfile;
   style: StyleDNA;
   /** o pedido por texto já entendido (vazio = nenhum pedido) */
