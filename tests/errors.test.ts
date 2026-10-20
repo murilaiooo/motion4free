@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AppError, ERRORS, formatReport, networkErrorFromUrl, toAppError } from '../src/core/errors';
+import { AppError, ERRORS, formatReport, httpErrorFromUrl, networkErrorFromUrl, toAppError } from '../src/core/errors';
 
 describe('códigos de erro', () => {
   it('todos os códigos são únicos', () => {
@@ -31,6 +31,13 @@ describe('códigos de erro', () => {
     expect(e.code).toBe('M4F-301');
     expect(e.detail).toContain('huggingface.co');
     expect(e.detail).toContain('Failed to fetch');
+  });
+
+  it('resposta de erro do servidor vira M4F-305 com status e servidor', () => {
+    const e = httpErrorFromUrl('https://motion4free.dev/hf/onnx-community/x/resolve/main/config.json', 502);
+    expect(e.code).toBe('M4F-305');
+    expect(e.detail).toContain('motion4free.dev');
+    expect(e.detail).toContain('HTTP 502');
   });
 
   it('relatório inclui código, versão e detalhe', () => {
