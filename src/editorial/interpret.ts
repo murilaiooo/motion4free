@@ -14,6 +14,7 @@ import {
   type Tone,
 } from '../core/brief';
 import { STOPWORDS } from './detect';
+import { TEMPLATES } from '../core/templates';
 import { lookIsEmpty } from '../core/look';
 import { parseLookRules } from './look-rules';
 import { stripAccents, tokenize, type Token } from './tokens';
@@ -83,10 +84,12 @@ const LEXICON: Entry[] = [
   ...entry('documental|estilo documental|documentario', [{ f: 'preset', v: 'documental', strong: true }, { f: 'tone', v: 'serio' }]),
   ...entry('animado|animada|energetico|energetica|energia|agitado|agitada|vibrante|empolgante|eletrico|eletrica|impactante|chamativo|chamativa|intenso|intensa|explosivo', TONE_ENERGETIC, 'up'),
   ...entry('calmo|calma|tranquilo|tranquila|suave|sereno|serena|relaxante|zen|leve|sem pressa|sossegado', TONE_CALM, 'down'),
-  ...entry('minimalista|minimalismo|minimo|elegante|sofisticado|sofisticada|clean|limpo|limpa|discreto|discreta|chique|refinado|refinada|delicado', [
+  ...entry('elegante|sofisticado|sofisticada|discreto|discreta|chique|refinado|refinada|delicado', [
     { f: 'tone', v: 'elegante' },
     { f: 'preset', v: 'editorial', strong: false },
   ]),
+  // minimalista: tom elegante; o modelo Minimal entra pelas dicas do registro (v0.9)
+  ...entry('minimalista|minimalismo|minimo|clean|limpo|limpa', [{ f: 'tone', v: 'elegante' }]),
   ...entry('serio|seria|jornalistico|jornalistica|sobrio|sobria|formal|profissional|corporativo|corporativa|institucional|neutro|neutra', [
     { f: 'tone', v: 'serio' },
     { f: 'preset', v: 'documental', strong: false },
@@ -108,6 +111,70 @@ const LEXICON: Entry[] = [
   ...entry('informar|informativo|informativa|noticia|noticias|informacao', [{ f: 'goal', v: 'informar' }]),
   ...entry('gancho|gancho forte|comeco forte|abertura forte|inicio forte|prender a atencao|prenda a atencao|chamar atencao|chame atencao|prender atencao', [{ f: 'hook' }]),
 ];
+
+/**
+ * Dicas fracas dos modelos (registro, v0.9): "tutorial" sugere o modelo Tutorial, "minimalista" o Minimal...
+ * Se a frase já existe no léxico (ex.: "tutorial" = objetivo ensinar), o modelo entra como efeito a mais;
+ * se a frase já sugere outro estilo, fica o que estava (a primeira sugestão vale).
+ */
+for (const tp of TEMPLATES) {
+  for (const hint of tp.match.hints) {
+    const phrase = words(hint);
+    const same = LEXICON.filter((e) => e.phrase.join(' ') === hint);
+    const effect: Effect = { f: 'preset', v: tp.id, strong: false };
+    if (same.length === 0) LEXICON.push({ phrase, effects: [effect] });
+    for (const e of same) if (!e.effects.some((x) => x.f === 'preset')) e.effects.push(effect);
+  }
+}
+
+/** Palavras que pedem um modelo pelo nome: "estilo podcast", "template tutorial", "modelo de jornal". */
+const TEMPLATE_PREFIXES = 'estilo|template|modelo|tema|preset|visual|formato|pegada|jeito de|cara de|estetica'.split('|').map(words);
+const TEMPLATE_GLUE = new Set(['de', 'do', 'da', 'tipo', 'o', 'a', 'um', 'uma', 'mais', 'bem', 'meio']);
+/** Nome (sem acentos), id e apelidos de cada modelo, depois de um prefixo; e as palavras que sozinhas já escolhem. */
+const TEMPLATE_NAMES_NORM = TEMPLATES.map((tp) => ({
+  id: tp.id,
+  named: [...new Set([tp.id.replace(/-/g, ' '), stripAccents(tp.name.toLowerCase()).replace(/-/g, ' '), ...tp.match.aliases])].map(words),
+  alone: tp.match.words.map(words),
+}));
+
+/**
+ * Passo dos modelos (antes do look): "estilo X"/"template X" e as palavras inequívocas de cada modelo
+ * ("podcast", "cinematográfico", "telejornal") escolhem o modelo com peso forte. Vem antes do look para
+ * "estilo máquina de escrever" virar o modelo e não só a animação da legenda. Negado ("nada de luxo") não conta.
+ */
+function templatePass(toks: Token[], used: boolean[]): { id: PresetId; word: string; at: number }[] {
+  const picks: { id: PresetId; word: string; at: number }[] = [];
+  const longest = (i: number, phrases: string[][]) => {
+    let best = 0;
+    for (const p of phrases) if (p.length > best && p.every((w, k) => toks[i + k]?.norm === w && !used[i + k])) best = p.length;
+    return best;
+  };
+  for (let i = 0; i < toks.length; i++) {
+    if (used[i]) continue;
+    if (NEGATIONS.has(toks[i - 1]?.norm ?? '') || (toks[i - 1]?.norm === 'de' && NEGATIONS.has(toks[i - 2]?.norm ?? ''))) continue;
+    const pre = triggerAt(toks, i, TEMPLATE_PREFIXES);
+    let hit: { id: PresetId; from: number; to: number } | null = null;
+    if (pre) {
+      let k = i + pre;
+      while (toks[k] && TEMPLATE_GLUE.has(toks[k]!.norm)) k++;
+      for (const tn of TEMPLATE_NAMES_NORM) {
+        const n = longest(k, tn.named);
+        if (n && (!hit || k + n > hit.to)) hit = { id: tn.id, from: i, to: k + n };
+      }
+    }
+    if (!hit) {
+      for (const tn of TEMPLATE_NAMES_NORM) {
+        const n = longest(i, tn.alone);
+        if (n && (!hit || i + n > hit.to)) hit = { id: tn.id, from: i, to: i + n };
+      }
+    }
+    if (!hit) continue;
+    for (let k = hit.from; k < hit.to; k++) used[k] = true;
+    picks.push({ id: hit.id, at: hit.from, word: toks.slice(hit.from, hit.to).map((t) => t.raw).join(' ') });
+    i = hit.to - 1;
+  }
+  return picks;
+}
 
 const AUDIENCES: Record<string, string> = {
   iniciantes: 'iniciantes', jovens: 'jovens', adolescentes: 'adolescentes', criancas: 'crianças', empresarios: 'empresários', empreendedores: 'empreendedores',
@@ -160,6 +227,7 @@ const FILLER = new Set(
     'quero queria gostaria preciso desejo vídeo video videos edição edicao editar edite edita estilo bem muito mais menos tom ritmo deixe deixa deixar faça faca faz fazer coloque coloca colocar ' +
       'favor fique ficar seja algo coisa porém porem apenas pouco quase bastante super mega reels instagram tiktok shorts youtube clima vibe jeito forma cara pegada ' +
       'quero tudo use usar uso mostre mostrar mas por isso esse essa com sem nada que para pra pro sobre meu minha nosso nossa favor obrigado obrigada oi olá ola ' +
+      'template templates modelo modelos tema preset visual formato ' +
       'legenda legendas só so final começo comeco inicio início fim parte trecho trechos frase frases fala falas tela movimento animação animacao intensidade',
   ).split(' '),
 );
@@ -206,6 +274,7 @@ export function interpretPrompt(text: string): Interpretation {
 
   // 0) look (cores, legenda, emojis, cortes, gancho criativo...): antes das proibições, porque
   //    "legenda sem animação" e "sem fundo" são da legenda; "sem emojis" fica para as proibições
+  const templatePicks = templatePass(toks, used);
   const lookRules = parseLookRules(prompt, toks, used);
   conflicts.push(...lookRules.notes);
 
@@ -321,6 +390,11 @@ export function interpretPrompt(text: string): Interpretation {
     return cur;
   };
 
+  for (const p of templatePicks) {
+    preset = setPick<PresetId>(preset, p.id, true, p.word, (x) => `o estilo ${LABELS.preset[x]}`, 'Estilo');
+    // o Documental também diz o tom (como "estilo documental" já fazia)
+    if (p.id === 'documental') tone ??= 'serio';
+  }
   for (let i = 0; i < toks.length; i++) {
     if (used[i]) continue;
     const e = matchAt(toks, i, LEXICON);

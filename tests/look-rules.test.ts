@@ -60,7 +60,11 @@ const CASES: [string, Expect][] = [
   ['tudo em letra minúscula', { look: { captions: { case: 'lower' } }, allUnderstood: true }],
   ['fonte anton', { look: { captions: { font: 'Anton' } }, allUnderstood: true }],
   ['quero a fonte serifada', { look: { captions: { font: 'Instrument Serif' } }, allUnderstood: true }],
-  ['letra de maquina de escrever', { look: { captions: { font: 'IBM Plex Mono' } }, allUnderstood: true }],
+  ['letra de maquina de escrever', { look: { captions: { font: 'Courier Prime' } }, allUnderstood: true }],
+  // v0.9: fontes e destaque dos modelos novos
+  ['letra pixelada', { look: { captions: { font: 'VT323' } }, allUnderstood: true }],
+  ['legenda com letra manuscrita', { look: { captions: { font: 'Kalam' } }, allUnderstood: true }],
+  ['palavra falada com marca texto', { look: { captions: { highlightMode: 'marker' } }, allUnderstood: true }],
   // entrada e palavras
   ['legenda pulando', { look: { captions: { animation: 'bounce' } }, allUnderstood: true }],
   ['legenda aparecendo palavra por palavra', { look: { captions: { animation: 'typewriter' } }, allUnderstood: true }],

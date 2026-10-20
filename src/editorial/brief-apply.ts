@@ -137,7 +137,8 @@ export function applyLook(base: StyleDNA, look: Look, forbidList: readonly Prohi
   if (c.strokeWidth !== undefined) C.stroke = clamp(c.strokeWidth, 0, 24);
   if (c.box === 'none') C.box = 'none';
   else if (c.box) {
-    C.box = 'line';
+    // caixa em cada palavra (Impacto) continua por palavra, só muda de cor
+    if (C.box !== 'word') C.box = 'line';
     C.colors.box = c.box;
   }
   if (c.scale !== undefined) C.size = r3(clamp(C.size * c.scale, 0.03, 0.16));

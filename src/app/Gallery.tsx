@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { PRESETS, presetById } from '../core/presets';
+import { presetById } from '../core/presets';
+import type { StyleDNA } from '../core/style';
+import { TEMPLATES } from '../core/templates';
 import { GALLERY_SHOTS, galleryPlan } from '../editorial/sample';
 import { ensureFonts } from '../media/fonts';
 import { drawFrame } from '../render/frame';
@@ -71,7 +73,7 @@ export function renderShot(canvas: HTMLCanvasElement, styleId: string, t: number
 
 declare global {
   interface Window {
-    m4fGallery?: { render: (styleId: string, t: number, width?: number) => string; strip: (styleId: string) => string; styles: () => string[]; bench: (styleId: string, n?: number) => number };
+    m4fGallery?: { render: (styleId: string, t: number, width?: number) => string; strip: (styleId: string) => string; styles: () => string[]; bench: (styleId: string, n?: number, decor?: Partial<StyleDNA['decor']>) => number };
   }
 }
 
@@ -82,10 +84,10 @@ export function Gallery() {
 
   useEffect(() => {
     let alive = true;
-    void Promise.all(PRESETS.map(ensureFonts)).then(() => {
+    void Promise.all(TEMPLATES.map((tp) => ensureFonts(tp.style))).then(() => {
       if (!alive) return;
       backdrop.current = paintBackdrop(1080, 1920);
-      for (const style of PRESETS) {
+      for (const { style } of TEMPLATES) {
         for (const shot of GALLERY_SHOTS) {
           const c = refs.current.get(`${style.id}-${shot.id}`);
           if (c) renderShot(c, style.id, shot.t, backdrop.current);
@@ -99,14 +101,16 @@ export function Gallery() {
           renderShot(c, styleId, t, backdrop.current!);
           return c.toDataURL('image/png');
         },
-        styles: () => PRESETS.map((p) => p.id),
+        styles: () => TEMPLATES.map((tp) => tp.id),
         // tempo médio (ms) para desenhar um quadro 1080×1920 ao longo do vídeo de demonstração
-        bench(styleId, n = 240) {
+        // `decor` troca partes do acabamento do modelo (para medir o custo de cada efeito)
+        bench(styleId, n = 240, decor) {
           const c = document.createElement('canvas');
           c.width = 1080;
           c.height = 1920;
           const ctx = c.getContext('2d')!;
-          const plan = galleryPlan(presetById(styleId)!);
+          const base = presetById(styleId)!;
+          const plan = galleryPlan(decor ? { ...base, decor: { ...base.decor, ...decor } } : base);
           const t0 = performance.now();
           for (let i = 0; i < n; i++) drawFrame(ctx, plan, (i / n) * 28, backdrop.current);
           ctx.getImageData(0, 0, 1, 1); // espera a GPU terminar
@@ -141,9 +145,10 @@ export function Gallery() {
   return (
     <section className="gallery" data-testid="gallery" data-ready={ready ? '1' : '0'}>
       <p className="hint">As mesmas animações em cada estilo, sobre um fundo de exemplo. No editor, o estilo vale para o vídeo inteiro.</p>
-      {PRESETS.map((style) => (
-        <div key={style.id}>
+      {TEMPLATES.map(({ style, description }) => (
+        <div key={style.id} data-testid={`gal-${style.id}`}>
           <h2>{style.name}</h2>
+          <p className="hint">{description}</p>
           <div className="gallery-row">
             {GALLERY_SHOTS.map((shot) => (
               <canvas

@@ -11,6 +11,7 @@ import type { Rect } from './layout';
 import { easeInOutQuint, easeOutExpo, springIn, wiggle } from './motion';
 import { alphaOf, composition, makeFrame, withAlpha, type Frame } from './kit';
 import { drawOverlay, drawProgress } from './scenes';
+import { drawLetterbox, drawScanlines, drawTag, drawTicker, drawTint, drawVignette, tickerText } from './decor';
 
 export function activeAt<T extends { start: number; end: number }>(items: T[], t: number): T[] {
   return items.filter((i) => t >= i.start && t < i.end);
@@ -159,17 +160,23 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
     ctx.drawImage(source, 0, 0, w, h);
     ctx.restore();
   }
+  // acabamento do modelo (v0.9): véu de cor e vinheta sobre o vídeo, antes de qualquer texto
+  drawTint(ctx, f);
+  drawVignette(ctx, f);
   drawScrim(ctx, f);
   const veil = transitionVeil(plan, t, style);
   if (veil) {
     ctx.fillStyle = withAlpha(veil.color, veil.alpha);
     ctx.fillRect(0, 0, w, h);
   }
+  drawLetterbox(ctx, f);
   drawProgress(ctx, f, t, active.some((s) => s.kind === 'progress-bar') ? outputDuration(plan.segments) : 0);
   // só tipografia (sem caixa): uma faixa escura suave atrás da cena central, para ler sobre qualquer fundo
   if (composition(style) === 'type') for (const s of active) if (CENTRAL.has(s.kind)) drawBand(ctx, f, s.start, s.end, t);
 
   for (const kind of OVERLAY_ORDER) for (const s of active) if (s.kind === kind) drawOverlay(ctx, f, s, t);
+  if (style.decor.ticker) drawTicker(ctx, f, t, tickerText(plan));
+  drawTag(ctx, f, t);
 
   // a citação já mostra a frase falada, e o título com a mesma frase também: a legenda some
   const caption = activeAt(plan.captions, t)[0];
@@ -182,6 +189,8 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
   // emojis por cima de tudo, perto da legenda sem cobrir nem ela nem as cenas
   const busy = active.some((s) => CENTRAL.has(s.kind));
   for (const s of active) if (s.kind === 'emoji') drawEmoji(ctx, f, s, t, { caption: capRect, busy });
+  // linhas de TV por cima de tudo (fita antiga)
+  drawScanlines(ctx, f, t);
   ctx.restore();
 }
 

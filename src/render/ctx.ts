@@ -25,6 +25,7 @@ export type Ctx2D = Pick<
   | 'stroke'
   | 'clip'
   | 'createLinearGradient'
+  | 'createRadialGradient'
   | 'font'
   | 'fillStyle'
   | 'strokeStyle'
