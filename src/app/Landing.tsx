@@ -53,15 +53,15 @@ function Footer() {
 /** Três modelos bem diferentes entre si para a vitrine da primeira tela. */
 const SHOWCASE = ['pop', 'podcast', 'cinema'];
 
-export function Landing({ onFile, busy, pendingName, notices, options, projects, onStorage }: { onFile: (f: File) => void; busy: boolean; pendingName: string | null; notices: ReactNode; options?: ReactNode; projects?: ReactNode; onStorage?: () => void }) {
+export function Landing({ onFile, busy, pendingName, notices, options, projects, onStorage }: { onFile: (files: File[]) => void; busy: boolean; pendingName: string | null; notices: ReactNode; options?: ReactNode; projects?: ReactNode; onStorage?: () => void }) {
   const [over, setOver] = useState(false);
   const all = listTemplates();
   const examples = SHOWCASE.map((id) => all.find((t) => t.id === id)).filter((t) => t !== undefined);
   const drop = (e: DragEvent) => {
     e.preventDefault();
     setOver(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f && !busy) onFile(f);
+    const files = e.dataTransfer.files ? Array.from(e.dataTransfer.files).filter(f=> f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|webm)$/i)) : [];
+    if (files.length && !busy) onFile(files);
   };
   return (
     <div className="land">
@@ -85,13 +85,13 @@ export function Landing({ onFile, busy, pendingName, notices, options, projects,
             onDragLeave={() => setOver(false)}
             onDrop={drop}
           >
-            <input className="sr-only" type="file" accept="video/*" disabled={busy} data-testid="file-input" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
+            <input className="sr-only" type="file" accept="video/*" multiple disabled={busy} data-testid="file-input" onChange={(e) => { const files = e.target.files ? Array.from(e.target.files) : []; if (files.length) onFile(files); e.currentTarget.value=""; }} />
             <span className="drop-icon" aria-hidden>
               {pendingName ? <FileVideo size={26} /> : <Upload size={26} />}
             </span>
             <span className="drop-title">{pendingName ? `Escolha de novo o vídeo original (${pendingName})` : 'Arraste seu vídeo aqui'}</span>
             <span className="drop-sub">
-              ou <u>clique para escolher</u> · vídeo seu falando, até 3 minutos (MP4, MOV ou WebM)
+              ou <u>clique para escolher</u> · até 30 clipes, cada um até 3 minutos (MP4, MOV ou WebM)
             </span>
           </label>
 

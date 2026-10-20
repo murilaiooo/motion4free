@@ -99,7 +99,7 @@ const LEXICON: Entry[] = [
     { f: 'tone', v: 'divertido' },
     { f: 'preset', v: 'pop', strong: false },
   ]),
-  ...entry('inspirador|inspiradora|inspiradores|inspiradoras|inspirar|motivacional|motivacionais|motivar|motivacao|emocionante|emocionar|encorajador|edificante', [{ f: 'tone', v: 'inspirador' }]),
+  ...entry('inspirador|inspiradora|inspiradores|inspiradoras|inspirar|motivacional|motivacionais|motivar|motivacao|emocionante|emocionar|encorajador|edificante', [{ f: 'tone', v: 'inspirador' }, { f: 'goal', v: 'inspirar' }]),
   ...entry('acolhedor|acolhedora|acolhedores|acolhedoras|acolhimento|acolher|fofo|fofa|fofinho|fofinha|carinhoso|carinhosa|suavidade|delicado e fofo|fofo e delicado', [{ f: 'tone', v: 'acolhedor' }]),
   ...entry('muito movimento|mais movimento|bastante movimento|mais animacao|muita animacao|bem dinamico|intensidade alta', [{ f: 'intensity', v: 'alta', strong: true }], 'up'),
   ...entry('pouco movimento|menos movimento|quase parado|sutil|sutis|pouca animacao|menos animacao|intensidade baixa|parado', [{ f: 'intensity', v: 'baixa', strong: true }], 'down'),

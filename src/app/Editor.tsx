@@ -20,6 +20,10 @@ import { loadKey } from '../ai/own-key';
 import type { AiSettings } from './AiOptions';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
+import { PreviewOverlay } from './PreviewOverlay';
+import { setElementPlacement, deleteElement, duplicateElement, setElementText } from '../editorial/manual';
+import type { ElementRef } from '../editorial/elements';
+import { elementName, resolvePlan, sceneText, sameRef as sameEl } from '../editorial/elements';
 import { ErrorBox } from './ErrorBox';
 import { BriefPanel, HookPanel } from './BriefPanel';
 import { TemplateGallery } from './Templates';
@@ -29,6 +33,7 @@ import { ChangesPanel, ReferencePicker, VersionsPanel, type CompareView } from '
 import { Transcript } from './Transcript';
 import { TopBar, type SaveState } from './TopBar';
 import { VERSION_LABEL, APP_BUILT_AT } from '../version';
+import { FormatSelector } from './FormatSelector';
 
 export interface Session {
   file: Blob;
@@ -136,6 +141,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const [playing, setPlaying] = useState(false);
   const [safeZone, setSafeZone] = useState(false);
   const [selectedCut, setSelectedCut] = useState<number | null>(null);
+  const [selectedEl, setSelectedEl] = useState<ElementRef | null>(null);
+  const [editingEl, setEditingEl] = useState<ElementRef | null>(null);
   const [editError, setEditError] = useState<AppError | null>(null);
   const [playerError, setPlayerError] = useState<AppError | null>(null);
   const [exporting, setExporting] = useState<number | null>(null);
@@ -512,6 +519,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <div className="viewer">
           <div className="canvas-box">
             <canvas ref={canvasRef} data-testid="player-canvas" onClick={togglePlay} />
+            <PreviewOverlay plan={plan} time={time} selected={selectedEl} onSelect={setSelectedEl} onChange={(next)=>apply(()=>next)} canvasRef={canvasRef} onEditText={setEditingEl} disabled={off} />
             {safeZone && (
               <div className="safe-zone" style={{ top: `${SAFE.top}%`, left: `${SAFE.left}%`, right: `${SAFE.right}%`, bottom: `${SAFE.bottom}%` }} aria-hidden>
                 <span>Área segura do Reels</span>
@@ -542,7 +550,9 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
       <aside className="inspector" ref={inspectorRef} aria-label="Detalhes">
         <h2 className="insp-title">Detalhes</h2>
-        {cut && selectedCut !== null ? (
+        {selectedEl ? (
+          <ElementInspector plan={plan} refEl={selectedEl} onChange={(next)=>apply(()=>next)} onClose={()=>setSelectedEl(null)} onEditText={(t)=>apply((p)=>setElementText(p, selectedEl!, t))} editing={editingEl} setEditing={setEditingEl} />
+        ) : cut && selectedCut !== null ? (
           <div className="cut-panel card" data-testid="cut-panel">
             <div className="card-head">
               <h3 className="section-title">
@@ -608,6 +618,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           <div className="card empty-insp">
             <MousePointerClick size={18} aria-hidden />
             <p className="hint">Clique num corte (listrado) na linha do tempo para restaurar ou ajustar, ou arraste na faixa Trechos para mudar só um pedaço.</p>
+            <div style={{marginTop:12}}><FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off} /></div>
           </div>
         )}
         <ChangesPanel before={before} beforeLabel={beforeLabel} plan={plan} view={view} onView={setView} onSeek={seek} time={time} />
@@ -693,3 +704,56 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   );
 }
 
+
+
+function ElementInspector({ plan, refEl, onChange, onClose, onEditText, editing, setEditing }: { plan: import('../core/types').EditPlan; refEl: ElementRef; onChange: (n: import('../core/types').EditPlan)=>void; onClose: ()=>void; onEditText: (t:string)=>void; editing: ElementRef|null; setEditing: (r:ElementRef|null)=>void }) {
+  const name = (() => { try { return elementName(plan, refEl); } catch { return 'Elemento'; } })();
+  const [draft, setDraft] = useState('');
+  const isEditing = editing && sameEl(editing, refEl);
+  useEffect(() => {
+    if (isEditing) {
+      try {
+        const { resolvePlan, sceneText } = require('../editorial/elements');
+        const R = resolvePlan(plan);
+        if (refEl.type === 'added') {
+          const a = R.added.find((x:any)=> x.el.id===refEl.id);
+          setDraft(a?.el.text ?? '');
+        } else if (refEl.type === 'scene') {
+          const s = R.scenes.find((x:any)=> x.key===refEl.key);
+          setDraft(s ? (sceneText(s.scene) ?? '') : '');
+        } else {
+          const c = R.captions.find((x:any)=> x.key===refEl.key);
+          setDraft(c?.caption.text ?? c?.base.text ?? '');
+        }
+      } catch { setDraft(''); }
+    }
+  }, [isEditing, plan, refEl]);
+  return (
+    <div className="card" data-testid="element-panel">
+      <div className="card-head">
+        <h3 className="section-title">{name}</h3>
+        <button className="icon sm ghost" onClick={onClose} aria-label="Fechar"><X size={15} /></button>
+      </div>
+      <p className="hint">Arraste direto no vídeo para mover. Duplo clique para editar texto. Segure Shift para travar eixo.</p>
+      {isEditing ? (
+        <div className="edit-text">
+          <textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={3} data-testid="element-text-input" />
+          <div className="row">
+            <button className="primary sm" onClick={()=>{ onEditText(draft); setEditing(null); }}>Salvar</button>
+            <button className="sm" onClick={()=>setEditing(null)}>Cancelar</button>
+          </div>
+        </div>
+      ) : (
+        <button className="sm" onClick={()=>setEditing(refEl)} data-testid="edit-text-btn">Editar texto</button>
+      )}
+      <div className="row" style={{marginTop:8}}>
+        <button className="sm" onClick={()=>{
+          try { const r = duplicateElement(plan, refEl); if (r) onChange(r.plan); } catch {}
+        }} data-testid="duplicate-el">Duplicar</button>
+        <button className="sm danger" onClick={()=>{
+          try { onChange(deleteElement(plan, refEl)); onClose(); } catch {}
+        }} data-testid="delete-el">Apagar</button>
+      </div>
+    </div>
+  );
+}

@@ -284,23 +284,28 @@ function EditorApp() {
     );
   }
 
-  async function onFile(f: File, force = false) {
+  async function onFile(f: File | File[], force = false) {
     setStatus({ kind: 'idle' });
     setFlash(null);
+    const files = Array.isArray(f) ? f : [f];
+    const primary = files[0]!;
     if (pending) {
-      setFileName(f.name);
+      setFileName(primary.name);
       try {
-        await resume(pending.id, pending.project, f, false);
+        await resume(pending.id, pending.project, primary, false);
       } catch (err) {
         fail(err);
       }
       return;
     }
     if (!force) {
-      const warn = await checkSpace(f);
-      if (warn) {
-        setSpaceWarn({ file: f, error: warn });
-        return;
+      // check space for all files combined
+      for (const file of files) {
+        const warn = await checkSpace(file);
+        if (warn) {
+          setSpaceWarn({ file, error: warn });
+          return;
+        }
       }
     }
     setSpaceWarn(null);
@@ -309,37 +314,59 @@ function EditorApp() {
       await saveNow();
       void storeThumb(projectId, session.media, history.present);
     }
-    setFileName(f.name);
+    setFileName(primary.name);
     setSession(null);
     setAsrModel(null);
     setHistory(null);
     setNotices([]);
     setProjectId(null);
     try {
-      const a = await analyze(f, transcriber, step, { asrMode: precision.mode });
+      let a: Awaited<ReturnType<typeof analyze>>;
+      if (files.length === 1) {
+        a = await analyze(primary, transcriber, step, { asrMode: precision.mode });
+      } else {
+        // Multi-clip: analyze each file sequentially and assemble virtual timeline
+        const { openClips, buildClipRefs, assembledWords, assembledSilences } = await import('../media/multi');
+        const { clips, wordsByClip, silencesByClip } = await openClips(files);
+        const refs = buildClipRefs(clips);
+        const allWords = assembledWords(refs, wordsByClip);
+        const allSilences = assembledSilences(refs, silencesByClip);
+        const { autoEdit } = await import('../editorial/auto-edit');
+        const { DEFAULT_STYLE } = await import('../core/presets');
+        const total = refs.reduce((s, c) => s + c.duration, 0);
+        const plan = autoEdit(total, allSilences, allWords, DEFAULT_STYLE, { clips: refs });
+        // Use first media as representative for thumbnail/preview (will be replaced by ClipFrames in player)
+        a = { media: clips[0]!.media, audio: null, words: allWords, silences: allSilences, warnings: [], asrModel: null, plan } as any;
+        // Store extra multi info in session for later player/export use
+        (a as any).__multi = { clips, refs };
+      }
       setAsrModel(a.asrModel);
       const id = newProjectId(Date.now());
       const h = createHistory(a.plan);
       setProjectId(id);
-      setProjectName(nameFromFile(f.name));
+      setProjectName(nameFromFile(primary.name));
       setSavedFor(null);
       setVersions([]);
       setVersionsSaved([]);
+      const multi = (a as any).__multi as { clips: import('../media/multi').OpenedClip[]; refs: import('../core/types').ClipRef[] } | undefined;
       setSession({
-        file: f,
-        fileName: f.name,
+        file: primary,
+        fileName: primary.name,
         media: a.media,
         audio: a.audio,
-        ctx: { durationSec: a.media.durationSec, words: a.words },
+        ctx: { durationSec: a.plan ? (a as any).plan.clips?.reduce?.((s:number,c:any)=>s+c.duration,0) ?? a.media.durationSec : a.media.durationSec, words: a.words },
         silences: a.silences,
         warnings: a.warnings,
         peaks: peaksOf(a.audio),
-      });
+        // @ts-ignore multi
+        openedClips: multi?.clips ?? null,
+        clipRefs: multi?.refs ?? null,
+      } as any);
       setHistory(h);
       setStatus({ kind: 'ready' });
       if (storageAvailable() && fs) {
         void enqueue(() => setCurrent(fs, id)).catch(() => undefined);
-        storeCopy(id, f);
+        void storeCopy(id, primary);
         void storeThumb(id, a.media, a.plan);
       } else {
         setCopy('failed');
@@ -515,14 +542,14 @@ function EditorApp() {
           disabled={busy}
           saveState={saveState}
           asrModel={asrModel}
-          onReplaceFile={(f) => void onFile(f)}
+          onReplaceFile={(f: File|File[]) => void onFile(f as any)}
           projectMenu={
             <ProjectMenu
               name={projectName || nameFromFile(session.fileName)}
               busy={busy}
               canSave={!!fs && !!projectId}
               onRename={(n) => projectId && void rename(projectId, n)}
-              onReplaceFile={(f) => void onFile(f)}
+              onReplaceFile={(f) => void onFile(Array.isArray(f) ? f : [f] as any)}
               onClose={() => void closeProject()}
               onDelete={() => projectId && void askDelete({ id: projectId, name: projectName || nameFromFile(session.fileName), videoName: session.fileName, sizeBytes: null })}
               onStorage={() => setStorageOpen(true)}
