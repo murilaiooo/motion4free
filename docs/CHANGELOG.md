@@ -2,6 +2,18 @@
 
 A versão aparece no rodapé do app (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.4.0 — 20/10/2026
+Fase 4: pedido por texto.
+- **"O que você quer?"**: logo abaixo da prévia há uma caixa para escrever o pedido com suas palavras, por exemplo "gancho forte, estilo calmo, sem emojis, destaque os números". Há exemplos prontos para tocar e usar. Ao apertar **Aplicar**, o vídeo muda: estilo, quantidade de movimento, ritmo das animações e o que aparece ou não na tela.
+- **O site mostra o que entendeu**: uma lista "Entendi" (estilo, tom, movimento, ritmo, objetivo, público, destaques), o que ficou proibido ("Sem: zoom, números grandes…"), como resolveu pedidos que se contradizem e as palavras que não usou.
+- **Proibição sempre vale mais**: "bem animado mas sem efeitos" deixa as animações no ritmo animado, mas sem zoom, sem transições e sem movimento exagerado. Pedir "sem números", "sem zoom", "sem título", "sem barra de progresso", "sem chamada final", "sem texto na tela" etc. tira essas animações, mesmo se você trocar de estilo ou mexer nos cortes depois.
+- **Gancho**: o site sugere frases da sua própria fala (nunca inventa) para abrir o vídeo, dando preferência a perguntas, números e palavras fortes. A frase escolhida aparece como título no começo. Escrever "gancho forte" escolhe a melhor sozinho; dá para trocar ou tirar.
+- Tudo entra no **Desfazer/Refazer** e fica salvo com o projeto.
+- **Funciona sem IA e sem internet** (depois que o site carregou): o pedido é entendido por regras em português.
+- **IA opcional (avançado, ainda não testada de verdade)**: dá para ligar uma IA que roda no próprio navegador (precisa de placa de vídeo compatível; baixa cerca de 300 MB na primeira vez, pelo próprio endereço do Motion4Free) ou usar a sua chave gratuita do Google Gemini (só o texto do pedido e um trecho da fala são enviados; o vídeo nunca sai do aparelho; a chave fica só no seu navegador). A IA só completa o que as regras não entenderam e nunca tira uma proibição sua; se falhar, o site usa as regras e avisa.
+- Projetos salvos nas versões anteriores abrem normalmente, sem pedido.
+- Novos códigos: M4F-1001 a M4F-1009 (pedido e IA). Ver [erros.md](erros.md).
+
 ## v0.3.0 — 20/10/2026
 Fase 3: estilos e animações.
 - **3 estilos bem diferentes para o mesmo vídeo**, escolhidos com um clique logo abaixo da prévia:

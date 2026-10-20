@@ -1,7 +1,7 @@
 # Catálogo de erros
 
 Cada problema mostra na tela um código `M4F-xxx`. O código-fonte do catálogo é `src/core/errors.ts`.
-Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição, 6xx projeto salvo, 7xx player, 8xx estilo e animações, 9xx desconhecido.
+Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição, 6xx projeto salvo, 7xx player, 8xx estilo e animações, 9xx desconhecido, 10xx pedido por texto e IA.
 
 | Código | Mensagem | O que costuma significar |
 |---|---|---|
@@ -28,6 +28,15 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-701 | Não foi possível tocar a prévia. | Falha ao decodificar quadros ou iniciar o som da prévia; a exportação pode funcionar mesmo assim. Ver detalhe. |
 | M4F-801 | As fontes do estilo não carregaram; o vídeo usa uma fonte reserva. | Os arquivos de fonte do app não baixaram (rede instável, bloqueio do navegador) na página ou durante a geração do vídeo. Tudo continua funcionando, mas as letras ficam com a fonte padrão do sistema. Recarregue a página; o detalhe lista quais fontes falharam. |
 | M4F-802 | Este estilo não existe nesta versão do app. | Pedido de troca para um estilo que esta versão não tem. Nada é alterado. |
+| M4F-1001 | Escreva o que você quer antes de aplicar. | O campo "O que você quer?" estava vazio ao apertar Aplicar. Nada muda. |
+| M4F-1002 | O pedido pode ter no máximo 500 caracteres. | Pedido longo demais. Resuma em frases curtas. |
+| M4F-1003 | Não entendi nenhum pedido neste texto; nada mudou. Veja os exemplos. | Nenhuma palavra do pedido é conhecida pelas regras (o detalhe lista as palavras). Use palavras como "calmo", "animado", "elegante", "sem zoom", "destaque os números". |
+| M4F-1004 | A fala não tem frases completas e curtas para sugerir um gancho. | A transcrição não tem frase de 2 a 14 palavras e até 60 caracteres. O vídeo segue com o título automático. |
+| M4F-1005 | A IA no navegador não funciona neste aparelho (precisa de WebGPU); usei as regras. | Navegador sem WebGPU. O pedido foi entendido só pelas regras. |
+| M4F-1006 | A IA no navegador não carregou ou parou; usei as regras. | Falha ao baixar o modelo (~300 MB), memória de vídeo insuficiente ou sem resposta em 60 s. Ver detalhe. |
+| M4F-1007 | A IA respondeu fora do formato esperado; usei as regras. | A resposta da IA não era um objeto JSON. Nada do que ela disse foi usado. |
+| M4F-1008 | O serviço da sua chave não respondeu; usei as regras. | Falha de rede, tempo esgotado (30 s) ou erro do Google (5xx). A chave nunca aparece no detalhe. |
+| M4F-1009 | O serviço recusou a sua chave (confira se ela está certa ou se o limite gratuito acabou); usei as regras. | Resposta 400 de chave inválida, 401, 403 ou 429 (limite gratuito). |
 | M4F-999 | Erro inesperado. | Erro não previsto; ver detalhe. |
 
 Erros 3xx são avisos: o vídeo continua sendo editado e exportado sem legendas e sem título.
