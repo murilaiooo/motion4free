@@ -6,7 +6,7 @@ import { drawFrame, type SourceFrame } from '../render/frame';
 import type { DecodedAudio } from './audio';
 import type { OpenedMedia } from './input';
 import { CLIP_CROSSFADE_SEC, spliceAudio } from './splice';
-import { ClipFrames, EXPORT_MAX_SIDE, PREVIEW_MAX_SIDE, type ClipSource } from './sources';
+import { ClipFrames, PREVIEW_MAX_SIDE, decodeSize, type ClipSource } from './sources';
 import { clipLayout, outputToClip } from '../engine/clips';
 
 interface TimedFrame {
@@ -72,7 +72,8 @@ export class PlanPlayer {
     } else if (media) {
       this.sources = null;
       this.clipFrames = null;
-      this.sinkSingle = new CanvasSink(media.video, { width: w, height: h, fit: 'cover', poolSize: 4 });
+      const srcSize = decodeSize(media.width, media.height, PREVIEW_MAX_SIDE);
+      this.sinkSingle = new CanvasSink(media.video, { ...srcSize, fit: 'fill', poolSize: 4 });
       this.clipLayouts = null;
     } else {
       throw new Error('PlanPlayer: need media or clipSources');
