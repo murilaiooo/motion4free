@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { AppError, ERRORS, formatReport, httpErrorFromUrl, networkErrorFromUrl, toAppError } from '../src/core/errors';
 
@@ -5,6 +6,11 @@ describe('códigos de erro', () => {
   it('todos os códigos são únicos', () => {
     const codes = Object.values(ERRORS).map((e) => e.code);
     expect(new Set(codes).size).toBe(codes.length);
+  });
+
+  it('todos os códigos estão documentados em docs/erros.md com a mesma mensagem', () => {
+    const doc = readFileSync('docs/erros.md', 'utf8');
+    for (const e of Object.values(ERRORS)) expect(doc, e.code).toContain(`| ${e.code} | ${e.title} |`);
   });
 
   it('AppError mantém código, título e detalhe', () => {

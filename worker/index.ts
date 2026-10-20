@@ -1,5 +1,6 @@
-// Worker da Cloudflare: serve o site (arquivos estáticos) e o espelho do modelo de transcrição.
-// Só /hf/* e /cdn/* passam por aqui (run_worker_first no wrangler.jsonc); o resto vai direto aos arquivos.
+// Worker da Cloudflare: serve o site (arquivos estáticos) e o espelho dos modelos (transcrição e IA opcional).
+// Só /hf/*, /cdn/* e /gh/* passam por aqui (run_worker_first no wrangler.jsonc); o resto vai direto aos arquivos.
+// A lista do que pode passar fica em src/core/mirror.ts (upstreamUrl), com teste.
 import { upstreamUrl } from '../src/core/mirror';
 
 interface Env {

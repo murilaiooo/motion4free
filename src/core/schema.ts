@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EMPTY_BRIEF, briefSchema } from './brief';
 import { DEFAULT_STYLE } from './presets';
 import { styleSchema } from './style';
 import type { EditPlan } from './types';
@@ -42,13 +43,17 @@ const scene = z.discriminatedUnion('kind', [
 ]);
 
 export const editPlanSchema = z.object({
-  version: z.literal(2),
+  version: z.literal(3),
   output,
   style: styleSchema,
+  brief: briefSchema,
   segments: z.array(segment).min(1),
   captions: z.array(caption),
   scenes: z.array(scene),
 });
+
+/** Formato da Fase 3 (estilo, sem pedido por texto). Mantido para abrir projetos antigos. */
+export const editPlanV2Schema = editPlanSchema.omit({ brief: true }).extend({ version: z.literal(2) });
 
 /** Formato da Fase 1/2 (só título cinético, sem estilo). Mantido para abrir projetos antigos. */
 export const editPlanV1Schema = z.object({
@@ -60,25 +65,32 @@ export const editPlanV1Schema = z.object({
 });
 
 /**
- * v1 → v2: ganha o estilo padrão; legendas sem tempos por palavra (o desenho distribui
- * proporcionalmente); o título cinético continua igual. Entrada que não é v1 válida passa intacta
- * (o esquema v2 decide).
+ * Migração em degraus até a versão atual. Entrada que não é de uma versão antiga válida passa intacta
+ * (o esquema atual decide).
+ * - v1 → v2: ganha o estilo padrão; legendas sem tempos por palavra (o desenho distribui
+ *   proporcionalmente); o título cinético continua igual.
+ * - v2 → v3: ganha um pedido vazio (nada muda no vídeo).
  */
 export function migratePlan(input: unknown): unknown {
-  const v1 = editPlanV1Schema.safeParse(input);
-  if (!v1.success) return input;
-  const p = v1.data;
-  return {
-    version: 2,
-    output: p.output,
-    style: DEFAULT_STYLE,
-    segments: p.segments,
-    captions: p.captions.map((c) => ({ ...c, wordStarts: [] })),
-    scenes: p.scenes,
-  };
+  let current = input;
+  const v1 = editPlanV1Schema.safeParse(current);
+  if (v1.success) {
+    const p = v1.data;
+    current = {
+      version: 2,
+      output: p.output,
+      style: DEFAULT_STYLE,
+      segments: p.segments,
+      captions: p.captions.map((c) => ({ ...c, wordStarts: [] })),
+      scenes: p.scenes,
+    };
+  }
+  const v2 = editPlanV2Schema.safeParse(current);
+  if (v2.success) current = { ...v2.data, version: 3, brief: EMPTY_BRIEF };
+  return current;
 }
 
-/** Aceita plano v1 ou v2 e entrega sempre v2 validado (usado no projeto salvo). */
+/** Aceita plano v1, v2 ou v3 e entrega sempre v3 validado (usado no projeto salvo). */
 export const anyPlanSchema = z.preprocess(migratePlan, editPlanSchema);
 
 export type ParseResult = { ok: true; plan: EditPlan } | { ok: false; errors: string[] };

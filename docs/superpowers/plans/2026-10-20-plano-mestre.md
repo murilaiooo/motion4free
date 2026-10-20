@@ -79,6 +79,8 @@ Basta responder no projeto, do jeito que for mais fácil. Ajuda muito dizer:
 **Gate criativo:** você e as duas pessoas percebem que são 3 estilos realmente diferentes (não só cor), nenhuma animação aparece sem motivo, e você usaria pelo menos um deles num post de verdade. Se não passar, a fase continua até passar; nada de IA entra antes disso.
 
 ## Fase 4 — Pedido por texto + IA
+> Plano detalhado: [2026-10-20-fase4-pedido.md](2026-10-20-fase4-pedido.md) · decisão: [ADR-0009](../../decisions/0009-pedido-e-ia.md) · implementado na v0.4.0 (caminho de regras testado; IA no navegador e chave própria ainda sem teste real).
+
 **Você vai conseguir:** escrever o que quer ("gancho forte, estilo calmo, sem emojis, destaque os números") e o site entende, sugere 3 opções de gancho para você escolher e monta a edição no estilo pedido.
 
 **Entregas técnicas:**

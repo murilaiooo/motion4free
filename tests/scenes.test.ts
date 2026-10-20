@@ -1,3 +1,4 @@
+import { EMPTY_BRIEF } from '../src/core/brief';
 import { describe, expect, it } from 'vitest';
 import { DOCUMENTAL, EDITORIAL, POP, PRESETS } from '../src/core/presets';
 import type { StyleDNA } from '../src/core/style';
@@ -181,7 +182,8 @@ describe('legendas estilo Reels', () => {
 
 describe('drawFrame', () => {
   const plan = (style: StyleDNA, scenes: SceneInstance[] = SCENES): EditPlan => ({
-    version: 2,
+    version: 3,
+    brief: EMPTY_BRIEF,
     output: { width: W, height: H, fps: 30 },
     style,
     segments: [{ srcStart: 0, srcEnd: 20 }],

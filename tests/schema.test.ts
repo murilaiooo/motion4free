@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { EMPTY_BRIEF } from '../src/core/brief';
 import { DEFAULT_STYLE } from '../src/core/presets';
 import { migratePlan, parseEditPlan } from '../src/core/schema';
 
@@ -11,9 +12,10 @@ const v1 = {
 };
 
 const valid = {
-  version: 2,
+  version: 3,
   output: { width: 1080, height: 1920, fps: 30 },
   style: DEFAULT_STYLE,
+  brief: EMPTY_BRIEF,
   segments: [{ srcStart: 0, srcEnd: 2.5 }],
   captions: [{ id: 'c1', text: 'Olá', start: 0, end: 1, wordIds: ['w1'], wordStarts: [0] }],
   scenes: [
@@ -26,7 +28,7 @@ const valid = {
 };
 
 describe('parseEditPlan', () => {
-  it('aceita um plano v2 válido', () => {
+  it('aceita um plano v3 válido', () => {
     expect(parseEditPlan(valid)).toEqual({ ok: true, plan: valid });
   });
 
@@ -52,12 +54,13 @@ describe('parseEditPlan', () => {
   });
 });
 
-describe('migração v1 → v2', () => {
-  it('plano da Fase 2 abre como v2 com estilo padrão e o mesmo conteúdo', () => {
+describe('migração v1 → v2 → v3', () => {
+  it('plano da Fase 2 abre como v3 com estilo padrão, pedido vazio e o mesmo conteúdo', () => {
     const r = parseEditPlan(v1);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.plan.version).toBe(2);
+    expect(r.plan.version).toBe(3);
+    expect(r.plan.brief).toEqual(EMPTY_BRIEF);
     expect(r.plan.style.id).toBe(DEFAULT_STYLE.id);
     expect(r.plan.segments).toEqual(v1.segments);
     expect(r.plan.captions[0]).toEqual({ ...v1.captions[0], wordStarts: [] });
@@ -68,8 +71,26 @@ describe('migração v1 → v2', () => {
     expect(parseEditPlan({ ...v1, segments: [] }).ok).toBe(false);
   });
 
-  it('não mexe em plano que já é v2', () => {
+  it('plano da Fase 3 (v2) abre como v3 com pedido vazio, estilo e cenas iguais', () => {
+    const { brief: _b, ...rest } = valid;
+    const v2 = { ...rest, version: 2 };
+    const r = parseEditPlan(v2);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.plan).toEqual(valid);
+  });
+
+  it('v2 inválido continua inválido', () => {
+    const { brief: _b, ...rest } = valid;
+    expect(parseEditPlan({ ...rest, version: 2, segments: [] }).ok).toBe(false);
+  });
+
+  it('não mexe em plano que já é v3', () => {
     expect(migratePlan(valid)).toBe(valid);
+  });
+
+  it('rejeita pedido com proibição desconhecida (só IDs permitidos)', () => {
+    expect(parseEditPlan({ ...valid, brief: { ...EMPTY_BRIEF, forbid: ['tudo'] } }).ok).toBe(false);
   });
 });
 

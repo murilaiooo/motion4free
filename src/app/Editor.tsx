@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, TimeRange } from '../core/types';
 import { PRESETS } from '../core/presets';
-import { adjustCut, applyStyle, editCaptionText, listCuts, restoreCut, type EditContext } from '../editorial/ops';
+import { adjustCut, applyBrief, applyHook, applyStyle, editCaptionText, listCuts, restoreCut, type EditContext } from '../editorial/ops';
 import { canRedo, canUndo, pushHistory, redo, undo, type History } from '../engine/history';
 import { outputDuration } from '../engine/timeline';
 import type { DecodedAudio } from '../media/audio';
@@ -11,6 +11,7 @@ import { ensureFonts } from '../media/fonts';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
 import { ErrorBox } from './ErrorBox';
+import { BriefPanel } from './BriefPanel';
 import { StylePicker } from './StylePicker';
 import { Timeline } from './Timeline';
 
@@ -131,7 +132,7 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
   // Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y fora dos campos de texto.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || (e.target as HTMLElement)?.tagName === 'INPUT') return;
+      if (!(e.ctrlKey || e.metaKey) || ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
       const k = e.key.toLowerCase();
       if (k === 'z' && !e.shiftKey) doUndo();
       else if ((k === 'z' && e.shiftKey) || k === 'y') doRedo();
@@ -194,6 +195,8 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
       </div>
       {playerError && <ErrorBox error={playerError} kind="warning" />}
       {fontError && <ErrorBox error={fontError} kind="warning" />}
+
+      <BriefPanel plan={plan} words={session.ctx.words} onBrief={(b) => apply((p) => applyBrief(p, session.ctx, b))} onHook={(h) => apply((p) => applyHook(p, session.ctx, h))} disabled={exporting !== null} />
 
       <StylePicker current={plan.style.id} onPick={(id) => apply((p) => applyStyle(p, session.ctx, id))} disabled={exporting !== null} />
       <p className="scene-summary" data-testid="scene-summary">

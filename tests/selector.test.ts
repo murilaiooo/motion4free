@@ -1,3 +1,4 @@
+import { EMPTY_BRIEF } from '../src/core/brief';
 import { describe, expect, it } from 'vitest';
 import { DOCUMENTAL, EDITORIAL, POP, PRESETS } from '../src/core/presets';
 import { parseEditPlan } from '../src/core/schema';
@@ -131,7 +132,7 @@ describe('proposeScenes', () => {
 
   it('o plano resultante passa na validação, em todos os estilos', () => {
     for (const style of PRESETS) {
-      const plan = { version: 2, output: { width: 1080, height: 1920, fps: 30 }, style, segments: all, captions: buildCaptions(words, all, captionOptionsFor(style)), scenes: proposeScenes(words, all, style) };
+      const plan = { version: 3 as const, output: { width: 1080, height: 1920, fps: 30 }, style, brief: EMPTY_BRIEF, segments: all, captions: buildCaptions(words, all, captionOptionsFor(style)), scenes: proposeScenes(words, all, style) };
       const r = parseEditPlan(plan);
       expect(r.ok ? 'ok' : r.errors.join('\n'), style.id).toBe('ok');
     }
