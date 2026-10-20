@@ -172,8 +172,8 @@ export async function loadProject(fs: Fs, id: string): Promise<LoadResult> {
   if (!parsed.ok) return { kind: 'corrupt', detail: parsed.errors.join('; ') };
   // multi-clip: if plan has >1 clip, verify each clip file; else single
   const clips = (parsed.project.history.present as any)?.clips as { id: string; duration: number }[] | undefined;
-  if (clips && clips.length > 1) {
-    // For multi, we return video as null (caller will load per-clip via loadClipVideo)
+  if (clips && (clips.length > 1 || (clips.length === 1 && clips[0]!.id !== 'c1'))) {
+    // Um único clipe restante (ex.: c2 após remover c1) também precisa do seu próprio blob.
     // But we still check existence for hasVideo flag in listProjects
     return { kind: 'ok', project: parsed.project, video: null };
   }
@@ -184,7 +184,7 @@ export async function loadProject(fs: Fs, id: string): Promise<LoadResult> {
 
 export async function loadProjectVideos(fs: Fs, id: string, project: SavedProject): Promise<Map<string, Blob> | null> {
   const clips = (project.history.present as any)?.clips as { id: string }[] | undefined;
-  if (!clips || clips.length <= 1) return null;
+  if (!clips || clips.length === 0 || (clips.length === 1 && clips[0]!.id === 'c1')) return null;
   const map = new Map<string, Blob>();
   const primary = await fs.readFile([...dir(id), VIDEO]);
   for (const c of clips) {
@@ -214,7 +214,8 @@ export async function listProjects(fs: Fs): Promise<ProjectSummary[]> {
     try {
       const json = projBlob ? JSON.parse(await projBlob.text()) : null;
       const clips = json?.history?.present?.clips;
-      if (Array.isArray(clips) && clips.length > 1 &&
+      if (Array.isArray(clips) && clips.length > 0 &&
+          (clips.length > 1 || clips[0]?.id !== 'c1') &&
           clips.every((c: unknown) => typeof c === 'object' && c !== null && 'id' in c && typeof c.id === 'string')) {
         expectedClips = clips as { id: string }[];
       }
