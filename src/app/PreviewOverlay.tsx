@@ -270,7 +270,7 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
       {/* Hit areas for selectable elements (excluding scene so empty clicks play) */}
       {boxes.filter(b => b.ref.type !== 'scene').map((b) => (
         <div
-          key={`${b.ref.type}-${b.ref.id ?? ''}-${b.ref.subId ?? ''}`}
+          key={`${b.ref.type}-${JSON.stringify(b.ref)}`}
           style={{
             position: 'absolute',
             left: `${(b.aabb.x / outputW) * 100}%`,
@@ -299,7 +299,7 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
             }
           }}
           onDoubleClick={(e) => {
-            if (b.ref.type === 'caption' || b.ref.type === 'text') {
+            if ((b.ref as any).type === 'caption' || (b.ref as any).type === 'text') {
               onEditText?.(b.ref);
               e.stopPropagation();
             }
