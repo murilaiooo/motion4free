@@ -1,10 +1,15 @@
 import type { EditPlan, SceneInstance } from '../core/types';
+import type { Framing } from '../core/edits';
+import { resolvePlan, type Resolved, type ResolvedScene } from '../editorial/elements';
+import type { ElementMarks } from './bounds';
+import { drawAdded } from './added';
+import { captionStyle, sceneStyle } from './look';
 import { normalizeToken } from '../editorial/detect';
 import { styleAt } from '../editorial/ranges';
 import type { StyleDNA } from '../core/style';
-import { outputDuration } from '../engine/timeline';
+import { outputDuration, outputToSource } from '../engine/timeline';
 import { drawCaption } from './captions';
-import { drawEmoji } from './emoji';
+import { drawEmoji, emojiPose } from './emoji';
 import type { Ctx2D } from './ctx';
 import { clamp01, progress } from './easing';
 import type { Rect } from './layout';
@@ -130,23 +135,27 @@ const OVERLAY_ORDER: SceneInstance['kind'][] = ['lower-third', 'kinetic-title', 
 
 /**
  * Desenha um quadro do vídeo final no instante `t` (tempo de saída).
- * `source` já vem recortado/escalado para o tamanho de saída.
+ * `source` é o quadro do vídeo original (qualquer tamanho; enquadrado aqui conforme as edições).
  * A mesma função serve para a prévia e para a exportação: é isso que garante prévia = MP4.
  * Depende só de (plano, t, quadro de origem): desenhar em qualquer ordem dá o mesmo resultado.
+ * `marks` (opcional) recebe o começo e o fim de cada elemento selecionável (caixas da edição manual).
  */
-export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasImageSource | null): void {
+export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasImageSource | null, marks?: ElementMarks): void {
   const { width: w, height: h } = plan.output;
+  const R = resolvePlan(plan);
+  const rp = drawnPlan(plan, R);
   // trecho com estilo próprio (pedido do trecho ou trava) desenha com o estilo dele
   const style = styleAt(plan, t);
   const f = makeFrame(w, h, style);
-  const active = activeAt(plan.scenes, t);
+  const activeR = R.scenes.filter((s) => t >= s.scene.start && t < s.scene.end);
+  const active = activeR.map((s) => s.scene);
   ctx.save();
   ctx.globalAlpha = 1;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, w, h);
   if (source) {
-    const cam = cameraAt(plan, t, style);
-    const z = cam.zoom;
+    const cam = cameraAt(rp, t, style);
+    const z = cam.zoom * zoomAt(plan, t);
     ctx.save();
     if (z !== 1 || cam.dx !== 0 || cam.dy !== 0) {
       // centro do zoom um pouco acima do meio, onde costuma estar o rosto; o tremor nunca mostra borda
@@ -157,41 +166,163 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
       ctx.scale(zz, zz);
       ctx.translate(-ox, -oy);
     }
-    ctx.drawImage(source, 0, 0, w, h);
+    drawVideo(ctx, source, w, h, plan.edits.video);
     ctx.restore();
   }
   // acabamento do modelo (v0.9): véu de cor e vinheta sobre o vídeo, antes de qualquer texto
   drawTint(ctx, f);
   drawVignette(ctx, f);
   drawScrim(ctx, f);
-  const veil = transitionVeil(plan, t, style);
+  const veil = transitionVeil(rp, t, style);
   if (veil) {
     ctx.fillStyle = withAlpha(veil.color, veil.alpha);
     ctx.fillRect(0, 0, w, h);
   }
   drawLetterbox(ctx, f);
-  drawProgress(ctx, f, t, active.some((s) => s.kind === 'progress-bar') ? outputDuration(plan.segments) : 0);
+  const bar = activeR.find((s) => s.scene.kind === 'progress-bar');
+  if (bar) {
+    const total = outputDuration(plan.segments);
+    withScene(ctx, f, bar, t, marks, null, (ff) => drawProgress(ctx, ff, t, total));
+  } else drawProgress(ctx, f, t, 0);
   // só tipografia (sem caixa): uma faixa escura suave atrás da cena central, para ler sobre qualquer fundo
   if (composition(style) === 'type') for (const s of active) if (CENTRAL.has(s.kind)) drawBand(ctx, f, s.start, s.end, t);
 
-  for (const kind of OVERLAY_ORDER) for (const s of active) if (s.kind === kind) drawOverlay(ctx, f, s, t);
+  for (const kind of OVERLAY_ORDER) for (const s of activeR) if (s.scene.kind === kind) withScene(ctx, f, s, t, marks, null, (ff) => drawOverlay(ctx, ff, s.scene, t));
   if (style.decor.ticker) drawTicker(ctx, f, t, tickerText(plan));
   drawTag(ctx, f, t);
   drawHandle(ctx, f);
 
   // a citação já mostra a frase falada, e o título com a mesma frase também: a legenda some
-  const caption = activeAt(plan.captions, t)[0];
+  const ci = R.captions.findIndex((c) => t >= c.caption.start && t < c.caption.end);
+  const rc = ci >= 0 ? R.captions[ci]! : null;
   let capRect: Rect | null = null;
-  if (caption && !active.some((s) => s.kind === 'quote' || (s.kind === 'kinetic-title' && sameWords(s.text, caption.text)))) {
+  if (rc && !active.some((s) => s.kind === 'quote' || (s.kind === 'kinetic-title' && sameWords(s.text, rc.caption.text)))) {
+    const caption = rc.caption;
     const keywords = new Set(active.filter((s) => s.kind === 'highlight-word').map((s) => normalizeToken((s as { text: string }).text)));
-    const next = plan.captions.find((c) => c.start >= caption.end - 1e-6 && c !== caption);
-    capRect = drawCaption(ctx, f, caption, t, keywords, { exit: !next || next.start - caption.end >= 0.2 });
+    const next = R.captions.slice(ci + 1).find((c) => c.caption.start >= caption.end - 1e-6);
+    const L = rc.look;
+    const cs = captionStyle(style, L);
+    const ff = cs === style ? f : makeFrame(w, h, cs);
+    const exit = L.exit === 'none' ? false : L.exit === 'fade' || L.exit === 'shrink' ? true : !next || next.caption.start - caption.end >= 0.2;
+    let begun = false;
+    capRect = drawCaption(ctx, ff, caption, t, keywords, {
+      exit,
+      place: rc.placement,
+      align: L.align,
+      maxW: L.maxWidth !== undefined ? L.maxWidth * w : undefined,
+      shadow: L.shadow,
+      onBegin: marks
+        ? () => {
+            begun = true;
+            marks.begin({ type: 'caption', key: rc.key });
+          }
+        : undefined,
+    });
+    if (begun) marks!.end();
   }
   // emojis por cima de tudo, perto da legenda sem cobrir nem ela nem as cenas
   const busy = active.some((s) => CENTRAL.has(s.kind));
-  for (const s of active) if (s.kind === 'emoji') drawEmoji(ctx, f, s, t, { caption: capRect, busy });
+  for (const s of activeR) if (s.scene.kind === 'emoji') withScene(ctx, f, s, t, marks, capRect, (ff) => drawEmoji(ctx, ff, s.scene as Extract<SceneInstance, { kind: 'emoji' }>, t, { caption: capRect, busy }));
+  // elementos adicionados à mão (v0.13), na ordem das camadas
+  for (const a of R.added) {
+    if (t < a.start || t >= a.end) continue;
+    const ref = { type: 'added' as const, id: a.el.id };
+    drawAdded(ctx, f, a.el, a.start, a.end, t, marks ? { begin: () => marks.begin(ref), end: () => marks.end() } : undefined);
+  }
   // linhas de TV por cima de tudo (fita antiga)
   drawScanlines(ctx, f, t);
+  ctx.restore();
+}
+
+/** Plano com as cenas como são desenhadas (escondidas fora, texto e tempo editados), para câmera e transições. */
+const drawn = new WeakMap<EditPlan, EditPlan>();
+function drawnPlan(plan: EditPlan, R: Resolved): EditPlan {
+  if (R.hiddenKeys.size === 0 && R.scenes.every((s, i) => s.scene === plan.scenes[i])) return plan;
+  let p = drawn.get(plan);
+  if (!p) drawn.set(plan, (p = { ...plan, scenes: R.scenes.map((s) => s.scene) }));
+  return p;
+}
+
+/** Aproximação (zoom) pedida no pedaço que contém `t` (v0.13). */
+export function zoomAt(plan: EditPlan, t: number): number {
+  if (plan.edits.zooms.length === 0) return 1;
+  const src = outputToSource(plan.segments, t);
+  if (src === null) return 1;
+  for (const z of plan.edits.zooms) if (src >= z.srcStart && src < z.srcEnd) return z.scale;
+  return 1;
+}
+
+/** Retângulo onde o quadro do vídeo original é desenhado no 9:16 (preencher, caber, tamanho e posição). */
+export function videoRect(srcW: number, srcH: number, w: number, h: number, v: Framing): Rect {
+  const base = v.fit === 'fill' ? Math.max(w / srcW, h / srcH) : Math.min(w / srcW, h / srcH);
+  const k = base * v.scale;
+  const dw = srcW * k;
+  const dh = srcH * k;
+  return { x: (w - dw) / 2 + v.x * w, y: (h - dh) / 2 + v.y * h, w: dw, h: dh };
+}
+
+function drawVideo(ctx: Ctx2D, source: CanvasImageSource, w: number, h: number, v: Framing): void {
+  const sw = Number((source as { width?: number }).width);
+  const sh = Number((source as { height?: number }).height);
+  const plain = v.fit === 'fill' && v.scale === 1 && v.x === 0 && v.y === 0;
+  if (!(sw > 0 && sh > 0) || (plain && Math.abs(sw / sh - w / h) < 0.01)) {
+    ctx.drawImage(source, 0, 0, w, h);
+    return;
+  }
+  if (v.fit === 'fit') {
+    // atrás do vídeo inteiro, o próprio vídeo ampliado e escurecido (em vez de faixas pretas)
+    const back = videoRect(sw, sh, w, h, { fit: 'fill', scale: 1.08, x: 0, y: 0 });
+    ctx.save();
+    ctx.globalAlpha *= 0.4;
+    ctx.drawImage(source, back.x, back.y, back.w, back.h);
+    ctx.restore();
+  }
+  const r = videoRect(sw, sh, w, h, v);
+  ctx.drawImage(source, r.x, r.y, r.w, r.h);
+}
+
+/** Ponto de giro/escala de uma cena (perto do centro do que o modelo desenha). */
+export function scenePivot(f: Frame, s: SceneInstance, t: number, cap: Rect | null): { x: number; y: number } {
+  switch (s.kind) {
+    case 'progress-bar':
+      return { x: f.w / 2, y: f.h * 0.07 };
+    case 'lower-third':
+      return { x: f.safe.x + f.safe.w * 0.35, y: f.safe.y + f.safe.h * (f.style.captions.position === 'bottom' ? 0.64 : 0.9) };
+    case 'emoji': {
+      const p = emojiPose(f, s, Math.min(s.end - 0.01, Math.max(t, s.start + 0.6)), { caption: cap });
+      return { x: p.x, y: p.y };
+    }
+    default:
+      return { x: f.style.layout.align === 'left' ? f.safe.x + f.safe.w * 0.45 : f.w / 2, y: f.safe.y + f.safe.h * f.overlayY };
+  }
+}
+
+const easeInQuint = (x: number) => x * x * x * x * x;
+
+/** Desenha uma cena com a edição dela (aparência, deslocamento, tamanho, giro, saída) e marca a caixa. */
+function withScene(ctx: Ctx2D, f: Frame, rs: ResolvedScene, t: number, marks: ElementMarks | undefined, cap: Rect | null, draw: (f: Frame) => void): void {
+  const e = rs.edit;
+  const look = e?.look;
+  const style = look ? sceneStyle(f.style, look) : f.style;
+  const ff = style === f.style ? f : makeFrame(f.w, f.h, style);
+  const off = e?.offset ?? null;
+  const exit = look?.exit === 'fade' || look?.exit === 'shrink' ? look.exit : null;
+  if (!off && !exit && !marks) return draw(ff);
+  ctx.save();
+  if (off) ctx.translate(off.dx * f.w, off.dy * f.h);
+  if ((off && (off.scale !== 1 || off.rotate !== 0)) || exit === 'shrink') {
+    const p = scenePivot(ff, rs.scene, t, cap);
+    const k = exit === 'shrink' ? 1 - 0.5 * easeInQuint(progress(t, rs.scene.end - 0.3, 0.3)) : 1;
+    ctx.translate(p.x, p.y);
+    if (off?.rotate) ctx.rotate((off.rotate * Math.PI) / 180);
+    const sc = (off?.scale ?? 1) * k;
+    if (sc !== 1) ctx.scale(sc, sc);
+    ctx.translate(-p.x, -p.y);
+  }
+  if (exit) ctx.globalAlpha *= 1 - easeInQuint(progress(t, rs.scene.end - 0.3, 0.3));
+  marks?.begin({ type: 'scene', key: rs.key });
+  draw(ff);
+  marks?.end();
   ctx.restore();
 }
 
