@@ -1,3 +1,4 @@
+import { stylesOf } from '../editorial/ranges';
 import { AudioSample, AudioSampleSource, BufferTarget, CanvasSink, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH } from 'mediabunny';
 import { toAppError } from '../core/errors';
 import type { EditPlan } from '../core/types';
@@ -42,7 +43,7 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   const frames = Math.floor(duration * fps);
   const codecs = await chooseCodecs(width, height);
   // as fontes precisam estar carregadas antes do primeiro quadro (também dentro do Worker)
-  const fonts = await ensureFonts(plan.style);
+  const fonts = await ensureFonts(stylesOf(plan));
 
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d')!;

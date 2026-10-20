@@ -72,8 +72,14 @@ export interface FontsResult {
 }
 
 /** Carrega as fontes do estilo antes de desenhar (tela principal e Worker). Nunca rejeita. */
-export async function ensureFonts(style: StyleDNA): Promise<FontsResult> {
-  const specs = fontsOf(style);
+export async function ensureFonts(style: StyleDNA | StyleDNA[]): Promise<FontsResult> {
+  const seen = new Set<string>();
+  const specs = (Array.isArray(style) ? style : [style]).flatMap(fontsOf).filter((f) => {
+    const k = `${f.family}|${f.weight}|${f.style}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
   const results = await Promise.allSettled(specs.map(load));
   const failed = results.map((r, i) => (r.status === 'rejected' ? `${specs[i]!.family} ${specs[i]!.weight}: ${String(r.reason)}` : '')).filter(Boolean);
   return { ok: failed.length === 0, detail: failed.join('; ') };

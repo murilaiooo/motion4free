@@ -100,3 +100,36 @@ describe('projeto salvo na Fase 3 (plano v2)', () => {
     expect(h.past[0]!.version).toBe(4);
   });
 });
+
+describe('versões com nome (formato 2)', () => {
+  it('guarda e volta versões; projeto do formato 1 abre sem versões', async () => {
+    const { addVersion, removeVersion } = await import('../src/core/versions');
+    let versions = addVersion([], '  Primeira   ideia ', plan, new Date('2026-10-20T10:00:00Z'));
+    versions = addVersion(versions, '', history.present, new Date('2026-10-20T11:00:00Z'));
+    expect(versions.map((v) => [v.id, v.name])).toEqual([
+      ['v1', 'Primeira ideia'],
+      ['v2', 'Versão 2'],
+    ]);
+    const p = makeProject({ video, words, silences: [], warnings: [], history, versions, appVersion: '0.5.0', savedAt: 'x' });
+    const r = parseProject(roundTrip(p));
+    expect(r.ok && r.project.format).toBe(2);
+    if (!r.ok) return;
+    expect(r.project.versions).toEqual(versions);
+    expect(r.project.versions[1]!.plan.captions[0]!.text).toBe('Oi!');
+
+    const old = roundTrip({ ...p, format: 1 }) as Record<string, unknown>;
+    delete old.versions;
+    const r1 = parseProject(old);
+    expect(r1.ok && r1.project.versions).toEqual([]);
+    expect(r1.ok && r1.project.format).toBe(2);
+
+    expect(removeVersion(versions, 'v1').map((v) => v.id)).toEqual(['v2']);
+  });
+
+  it('no máximo 20 versões (M4F-605)', async () => {
+    const { addVersion, MAX_VERSIONS } = await import('../src/core/versions');
+    let list: ReturnType<typeof addVersion> = [];
+    for (let i = 0; i < MAX_VERSIONS; i++) list = addVersion(list, `v${i}`, plan, new Date(0));
+    expect(() => addVersion(list, 'mais uma', plan, new Date(0))).toThrow(/M4F-605/);
+  });
+});
