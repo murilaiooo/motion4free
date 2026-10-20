@@ -129,7 +129,7 @@ const HOOK_NOUNS = ['gancho', 'hook', 'abertura', 'comeco', 'inicio', 'primeira 
 
 /** Pedidos conhecidos que o app ainda não faz (frase amigável para "Ainda não sei fazer"). */
 const UNSUPPORTED: [string[], string][] = [
-  [['musica', 'musicas', 'trilha', 'trilha sonora', 'som de fundo', 'efeito sonoro', 'efeitos sonoros', 'sonoplastia', 'barulho', 'barulhos', 'audio de fundo'], 'música ou efeitos sonoros'],
+  [['musica', 'musicas', 'musica de fundo', 'musicas de fundo', 'musiquinha de fundo', 'trilha de fundo', 'som ambiente', 'trilha', 'trilha sonora', 'som de fundo', 'efeito sonoro', 'efeitos sonoros', 'sonoplastia', 'barulho', 'barulhos', 'audio de fundo'], 'música ou efeitos sonoros'],
   [['narracao', 'locucao', 'dublagem', 'voz de ia', 'voz robotica', 'mudar a voz'], 'voz ou narração'],
   [['filtro', 'filtros', 'preto e branco', 'saturacao', 'brilho do video', 'contraste do video', 'vintage', 'cor do video mais', 'color grading', 'colorizacao'], 'filtro de cor no vídeo'],
   [['logo', 'logotipo', 'marca dagua', 'marca d agua', 'watermark'], 'logo ou marca-d’água'],
@@ -261,7 +261,10 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
       start = i + 1;
     }
   }
-  for (const [a, b] of clauses) parseClause(a, b);
+  // alvo herdado: "legenda grande em cima, amarela com contorno preto" — a parte que começa com uma cor
+  // sem dizer de quem fala continua falando da legenda da parte anterior
+  let carry: { i: number; n: number; t: Target; neg: boolean } | null = null;
+  for (const [a, b] of clauses) carry = parseClause(a, b, carry);
 
   function negatedBefore(i: number): boolean {
     const p1 = toks[i - 1]?.norm ?? '';
@@ -271,7 +274,7 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
     return NEG_PAIRS.some((n) => `${p2} ${p1}` === n || `${toks[i - 3]?.norm} ${p2}` === n);
   }
 
-  function parseClause(a: number, b: number): void {
+  function parseClause(a: number, b: number, inherited: { i: number; n: number; t: Target; neg: boolean } | null): { i: number; n: number; t: Target; neg: boolean } | null {
     // alvos da parte
     const targets: { i: number; n: number; t: Target; neg: boolean }[] = [];
     for (let i = a; i < b; i++) {
@@ -289,6 +292,7 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
     const ownerOf = (i: number): (typeof targets)[number] | null => {
       const before = targets.filter((t) => t.i < i).at(-1);
       if (before) return before;
+      if (inherited && i === a) return inherited;
       return targets.find((t) => t.i > i) ?? null;
     };
     const claim = (i: number, n: number, owner: (typeof targets)[number] | null) => {
@@ -588,6 +592,7 @@ export function parseLookRules(prompt: string, toks: Token[], used: boolean[]): 
 
     // marca os alvos usados
     for (const t of targets) if (usedTargets.has(t.i)) mark(t.i, t.n);
+    return live.filter((t) => t.t === 'caption').at(-1) ?? null;
   }
 
   // 6) cenas ligadas: "com barra de progresso", "coloca zoom"

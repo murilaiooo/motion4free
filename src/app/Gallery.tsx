@@ -71,7 +71,7 @@ export function renderShot(canvas: HTMLCanvasElement, styleId: string, t: number
 
 declare global {
   interface Window {
-    m4fGallery?: { render: (styleId: string, t: number, width?: number) => string; strip: (styleId: string) => string };
+    m4fGallery?: { render: (styleId: string, t: number, width?: number) => string; strip: (styleId: string) => string; styles: () => string[]; bench: (styleId: string, n?: number) => number };
   }
 }
 
@@ -98,6 +98,19 @@ export function Gallery() {
           c.height = Math.round((width * 16) / 9);
           renderShot(c, styleId, t, backdrop.current!);
           return c.toDataURL('image/png');
+        },
+        styles: () => PRESETS.map((p) => p.id),
+        // tempo médio (ms) para desenhar um quadro 1080×1920 ao longo do vídeo de demonstração
+        bench(styleId, n = 240) {
+          const c = document.createElement('canvas');
+          c.width = 1080;
+          c.height = 1920;
+          const ctx = c.getContext('2d')!;
+          const plan = galleryPlan(presetById(styleId)!);
+          const t0 = performance.now();
+          for (let i = 0; i < n; i++) drawFrame(ctx, plan, (i / n) * 28, backdrop.current);
+          ctx.getImageData(0, 0, 1, 1); // espera a GPU terminar
+          return Math.round(((performance.now() - t0) / n) * 100) / 100;
         },
         // tira com todas as cenas de um estilo, para as imagens de comparação em docs/assets/fase3
         strip(styleId) {
