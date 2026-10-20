@@ -189,7 +189,8 @@ export async function loadProjectVideos(fs: Fs, id: string, project: SavedProjec
   const primary = await fs.readFile([...dir(id), VIDEO]);
   for (const c of clips) {
     let blob = await loadClipVideo(fs, id, c.id);
-    if (!blob && c.id === clips[0]!.id) blob = primary;
+    // video.bin sempre contém o c1 original, mesmo depois de reordenar clipes.
+    if (!blob && c.id === 'c1' && primary?.size === project.video.size) blob = primary;
     if (!blob) return null;
     map.set(c.id, blob);
   }
@@ -208,18 +209,21 @@ export async function listProjects(fs: Fs): Promise<ProjectSummary[]> {
     const meta = await readMeta(fs, id);
     const video = await fs.readFile([...dir(id), VIDEO]);
     const clipList = await listClipVideos(fs, id);
-    let hasVideo: boolean;
-    if (clipList.length > 0) {
-      // multi: needs every expected clip; check project to know expected count
-      const projBlob = await fs.readFile([...dir(id), PROJECT]);
-      let expected = clipList.length;
-      try { const j = projBlob ? JSON.parse(await projBlob.text()) : null; const cl = j?.history?.present?.clips; if (Array.isArray(cl)) expected = cl.length; } catch {}
-      hasVideo = clipList.length >= expected && (clipList.length > 1 || !!video);
-      // also consider fallback video.bin for c1: if video.bin exists, counts as c1
-      if (!hasVideo && video && expected === clipList.length + 1) hasVideo = true;
-    } else {
-      hasVideo = !!video && !!meta && video.size === meta.video.size;
-    }
+    const projBlob = await fs.readFile([...dir(id), PROJECT]);
+    let expectedClips: { id: string }[] | null = null;
+    try {
+      const json = projBlob ? JSON.parse(await projBlob.text()) : null;
+      const clips = json?.history?.present?.clips;
+      if (Array.isArray(clips) && clips.length > 1 &&
+          clips.every((c: unknown) => typeof c === 'object' && c !== null && 'id' in c && typeof c.id === 'string')) {
+        expectedClips = clips as { id: string }[];
+      }
+    } catch { /* projeto corrompido: identificado abaixo */ }
+    // Confere os IDs, não a quantidade: arquivos de clipes removidos podem continuar no OPFS.
+    // video.bin é o c1 original (não o primeiro clipe da ordem atual).
+    const hasVideo = expectedClips
+      ? expectedClips.every((c) => clipList.includes(c.id) || (c.id === 'c1' && !!video && video.size === meta?.video.size))
+      : !!video && !!meta && video.size === meta.video.size;
     const thumb = await fs.readFile([...dir(id), THUMB]);
     if (meta) {
       const hasProject = !!(await fs.readFile([...dir(id), PROJECT]));
