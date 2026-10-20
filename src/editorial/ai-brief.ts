@@ -17,6 +17,7 @@ import {
 } from '../core/brief';
 import { EMOJI_SET } from '../core/emoji';
 import { AppError, describeError, type ErrorKey } from '../core/errors';
+import { TEMPLATES } from '../core/templates';
 import { CAPTION_SCALE, CUT_LEVELS, EMOJI_SCALE, HIGHLIGHT_MODES, HOOK_STYLES, LOOK_POSITIONS, SCENE_TOGGLES, mergeLook, sanitizeLook, type HookStyle, type Look } from '../core/look';
 import { CAPTION_ANIMATIONS, EMOJI_ANIMATIONS, EMOJI_MODES, EMOJI_POSITIONS, FONT_FAMILIES, LETTER_CASES, TRANSITIONS } from '../core/style';
 import type { Word } from '../core/types';
@@ -72,7 +73,7 @@ export function systemPrompt(scope: AiScope = 'video'): string {
     'Você é o intérprete de pedidos de um editor de vídeos curtos (Reels) no navegador.',
     'Converta o pedido da pessoa (português do Brasil) em UM objeto JSON. Responda SOMENTE com o JSON: sem texto antes ou depois, sem comentários, sem ```.',
     'Campos (todos opcionais; omita o que o pedido não diz):',
-    `"preset": ${list(PRESET_IDS)} (pop = energético com caixas amarelas; neon = legenda limpa com a palavra falada em verde; editorial = elegante; documental = sério)`,
+    `"preset": ${list(PRESET_IDS)} (o modelo: ${TEMPLATES.map((tp) => `${tp.id} = ${tp.description.split(':')[0]!.toLowerCase()}`).join('; ')})`,
     `"tone": ${list(TONES)}`,
     `"intensity": ${list(LEVELS)} (quanto movimento)`,
     `"pace": ${list(PACES)} (ritmo das animações)`,

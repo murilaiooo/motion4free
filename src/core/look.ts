@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { parseColorValue } from './color-names';
 import { EMOJI_SET, normalizeEmoji, type Emoji } from './emoji';
-import { CAPTION_ANIMATIONS, EMOJI_ANIMATIONS, EMOJI_MODES, EMOJI_POSITIONS, FONT_FAMILIES, LETTER_CASES, TRANSITIONS } from './style';
+import { CAPTION_ANIMATIONS, CAPTION_HIGHLIGHTS, EMOJI_ANIMATIONS, EMOJI_MODES, EMOJI_POSITIONS, FONT_FAMILIES, LETTER_CASES, TRANSITIONS } from './style';
 
 /**
  * Look: o espaço de parâmetros que um pedido pode controlar além do tom (v0.6, ADR-0011).
@@ -11,7 +11,8 @@ import { CAPTION_ANIMATIONS, EMOJI_ANIMATIONS, EMOJI_MODES, EMOJI_POSITIONS, FON
  */
 
 export const LOOK_POSITIONS = ['top', 'center', 'bottom'] as const;
-export const HIGHLIGHT_MODES = ['box', 'color', 'underline', 'reveal'] as const;
+/** Destaque da palavra falada (o mesmo do StyleDNA; 'marker' = marca-texto, v0.9). */
+export const HIGHLIGHT_MODES = CAPTION_HIGHLIGHTS;
 export const CUT_LEVELS = ['suave', 'normal', 'agressivo'] as const;
 export type CutLevel = (typeof CUT_LEVELS)[number];
 /** Cenas que dá para ligar ou desligar pelo nome (as mesmas chaves das proibições). */

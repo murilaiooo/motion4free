@@ -195,7 +195,7 @@ const SIZE = (x: number) => (x >= 1.45 ? 'bem maior' : x > 1.05 ? 'maior' : x <=
 const CASE_LABEL = { upper: 'em maiúsculas', lower: 'em minúsculas', none: 'como foi falada (sem caixa alta)' } as const;
 const POS_LABEL = { top: 'em cima', center: 'no meio da tela', bottom: 'embaixo' } as const;
 const ANIM_LABEL: Record<string, string> = { auto: 'do estilo', none: 'sem animação', fade: 'aparecendo suave', pop: 'estourando (pop)', rise: 'subindo', slide: 'deslizando', bounce: 'quicando', typewriter: 'palavra por palavra, como digitando' };
-const HL_LABEL = { box: 'caixa colorida', color: 'cor', underline: 'sublinhado', reveal: 'acendendo palavra a palavra' } as const;
+const HL_LABEL = { box: 'caixa colorida', color: 'cor', underline: 'sublinhado', reveal: 'acendendo palavra a palavra', marker: 'marca-texto' } as const;
 const EMOJI_POS: Record<string, string> = { auto: 'longe da legenda', top: 'em cima', middle: 'no meio', bottom: 'embaixo', left: 'à esquerda', right: 'à direita' };
 const EMOJI_ANIM: Record<string, string> = { pop: 'estourando', bounce: 'quicando', float: 'flutuando', spin: 'girando', fade: 'aparecendo suave', none: 'parados' };
 const TOGGLE_LABEL: Record<string, string> = { titulo: 'título de abertura', barra: 'barra de progresso', destaques: 'palavras-chave em destaque', zoom: 'zoom', numeros: 'números grandes', listas: 'listas', perguntas: 'perguntas em destaque', nome: 'nome na tela', chamada: 'chamada final', transicoes: 'transições' };

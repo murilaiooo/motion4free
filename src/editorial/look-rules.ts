@@ -67,9 +67,15 @@ const FONTS: [string, FontFamily, boolean][] = [
   // [palavra, fonte, precisa de "fonte/letra" na mesma parte]
   ['anton', 'Anton', false], ['montserrat', 'Montserrat', false], ['inter', 'Inter', true], ['instrument', 'Instrument Serif', false], ['instrument serif', 'Instrument Serif', false],
   ['serifa', 'Instrument Serif', true], ['serifada', 'Instrument Serif', true], ['com serifa', 'Instrument Serif', true], ['classica', 'Instrument Serif', true], ['elegante', 'Instrument Serif', true], ['de revista', 'Instrument Serif', true],
-  ['mono', 'IBM Plex Mono', true], ['monoespacada', 'IBM Plex Mono', true], ['de maquina de escrever', 'IBM Plex Mono', true], ['de codigo', 'IBM Plex Mono', true], ['plex', 'IBM Plex Sans', false], ['ibm plex', 'IBM Plex Sans', false],
+  ['mono', 'IBM Plex Mono', true], ['monoespacada', 'IBM Plex Mono', true], ['de maquina de escrever', 'Courier Prime', true], ['de codigo', 'IBM Plex Mono', true], ['plex', 'IBM Plex Sans', false], ['ibm plex', 'IBM Plex Sans', false],
   ['condensada', 'IBM Plex Sans Condensed', true], ['estreita', 'IBM Plex Sans Condensed', true], ['grossa', 'Montserrat', true], ['gordinha', 'Montserrat', true], ['pesada', 'Montserrat', true], ['negrito', 'Montserrat', true],
   ['impactante', 'Anton', true], ['fina', 'Inter', true], ['simples', 'Inter', true], ['moderna', 'Inter', true], ['tecnica', 'IBM Plex Sans', true],
+  // v0.9: fontes dos modelos novos (todas OFL, ver docs/licencas.md)
+  ['archivo', 'Archivo Black', false], ['archivo black', 'Archivo Black', false], ['dm sans', 'DM Sans', false], ['space grotesk', 'Space Grotesk', false], ['nunito', 'Nunito', false], ['arredondada', 'Nunito', true],
+  ['cormorant', 'Cormorant Garamond', false], ['garamond', 'Cormorant Garamond', false], ['de cinema', 'Cormorant Garamond', true], ['oswald', 'Oswald', false], ['de jornal', 'Oswald', true],
+  ['vt323', 'VT323', false], ['pixel', 'VT323', true], ['pixelada', 'VT323', true], ['de computador antigo', 'VT323', true], ['retro', 'VT323', true], ['bungee', 'Bungee', false], ['de game', 'Bungee', true], ['rubik', 'Rubik', false],
+  ['courier', 'Courier Prime', false], ['courier prime', 'Courier Prime', false], ['datilografada', 'Courier Prime', true], ['caveat', 'Caveat', false], ['kalam', 'Kalam', false], ['manuscrita', 'Kalam', true], ['escrita a mao', 'Kalam', true], ['de mao', 'Kalam', true], ['cursiva', 'Caveat', true],
+  ['playfair', 'Playfair Display', false], ['playfair display', 'Playfair Display', false], ['de luxo', 'Playfair Display', true], ['luxuosa', 'Playfair Display', true],
 ];
 const FONT_PHRASES = FONTS.map(([p]) => p);
 
@@ -89,6 +95,7 @@ const EMOJI_ANIM: [string, LookEmoji['animation']][] = [
 const HIGHLIGHT_MODE: [string, LookCaptions['highlightMode']][] = [
   ['em caixa', 'box'], ['numa caixa', 'box'], ['em caixinha', 'box'], ['com caixa', 'box'], ['sublinhado', 'underline'], ['sublinhada', 'underline'], ['sublinhar', 'underline'], ['grifado', 'underline'], ['grifada', 'underline'],
   ['karaoke', 'reveal'], ['acendendo', 'reveal'], ['acende', 'reveal'], ['colorida', 'color'], ['colorido', 'color'], ['em outra cor', 'color'],
+  ['com marca texto', 'marker'], ['de marca texto', 'marker'], ['riscada', 'marker'], ['riscado', 'marker'], ['com marcador', 'marker'], ['marcada', 'marker'],
 ];
 
 const CUTS: [string, CutLevel][] = [
