@@ -37,6 +37,7 @@ import { FormatSelector } from './FormatSelector';
 import { placeWords, totalDuration } from '../engine/clips';
 import { reorderClipPlan } from '../editorial/clip-ops';
 import { combineAudios } from '../media/multi';
+import { waveformPeaks } from '../analysis/waveform';
 import { ClipList } from './ClipList';
 
 export interface Session {
@@ -150,6 +151,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     if (!session.clipAudios) return session.audio;
     return combineAudios(shown.clips, Object.fromEntries(session.clipAudios));
   }, [session, shown.clips]);
+  const peaks = useMemo(() => shownAudio ? waveformPeaks(shownAudio.channels[0]!, 1200, true) : null, [shownAudio]);
   const range = selectedRange ? (plan.ranges.find((r) => r.id === selectedRange) ?? null) : null;
   const activeSelection = range ? range.out : selection;
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -669,7 +671,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           durationSec={ctx.durationSec}
           plan={plan}
           cuts={cuts}
-          peaks={session.peaks}
+          peaks={peaks}
           time={time}
           playing={playing}
           selectedCut={selectedCut}
