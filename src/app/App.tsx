@@ -28,6 +28,7 @@ import { dirSize } from '../core/storage-fs';
 import { cachedRepos, spaceCheck } from '../core/storage-report';
 import type { EditPlan } from '../core/types';
 import { createHistory, type History } from '../engine/history';
+import { placeWords, placeRanges, unplaceWords, unplaceRanges, totalDuration } from '../engine/clips';
 import type { PlanVersion } from '../core/versions';
 import type { OpenedMedia } from '../media/input';
 import { makeThumbnail } from '../media/thumbnail';
@@ -265,6 +266,8 @@ function EditorApp() {
     }
     // O áudio deve ser reconstituído para o preview e o MP4, não apenas os quadros.
     const combinedAudio = combineAudios(h.present.clips, audiosByClip);
+    const clipWords = unplaceWords(h.present.clips, project.words);
+    const clipSilences = unplaceRanges(h.present.clips, project.silences);
     setFileName(project.video.name);
     setSession({
       file: clipMap.get(h.present.clips[0]!.id)!,
@@ -276,6 +279,10 @@ function EditorApp() {
       warnings: [...project.warnings.map((w) => new AppError(w.key, w.detail)), ...audioWarnings],
       peaks: peaksOf(combinedAudio),
       clipSources,
+      clipWords,
+      clipSilences,
+      clipAudios: new Map(Object.entries(audiosByClip).filter((item): item is [string, import('../media/audio').DecodedAudio] => item[1] !== null)),
+      originalVideo: project.video,
       openedClips: clips,
     } as any);
     setHistory(h);
@@ -440,7 +447,7 @@ function EditorApp() {
         const total = refs.reduce((s, c) => s + c.duration, 0);
         const plan = autoEdit(total, allSilences, allWords, DEFAULT_STYLE, { clips: refs });
         a = { media: clips[0]!.media, audio: combinedAudio, words: allWords, silences: allSilences, warnings: [], asrModel: null, plan } as any;
-        (a as any).__multi = { clips, refs, combinedAudio };
+        (a as any).__multi = { clips, refs, combinedAudio, wordsByClip, silencesByClip };
       }
       setAsrModel(a.asrModel);
       const id = newProjectId(Date.now());
@@ -450,7 +457,7 @@ function EditorApp() {
       setSavedFor(null);
       setVersions([]);
       setVersionsSaved([]);
-      const multi = (a as any).__multi as { clips: import('../media/multi').OpenedClip[]; refs: import('../core/types').ClipRef[] } | undefined;
+      const multi = (a as any).__multi as { clips: import('../media/multi').OpenedClip[]; refs: import('../core/types').ClipRef[]; wordsByClip: Record<string, import('../core/types').Word[]>; silencesByClip: Record<string, import('../core/types').TimeRange[]> } | undefined;
       // Build clipSources map for player/export from opened clips
       let clipSources: Map<string, import('../media/sources').ClipSource> | null = null;
       if (multi) {
@@ -470,6 +477,10 @@ function EditorApp() {
         peaks: peaksOf(a.audio),
         clipSources: clipSources,
         openedClips: multi?.clips ?? null,
+        clipWords: multi?.wordsByClip,
+        clipSilences: multi?.silencesByClip,
+        clipAudios: multi ? new Map(multi.clips.filter((c) => c.audio !== null).map((c): [string, import('../media/audio').DecodedAudio] => [c.id, c.audio!])) : null,
+        originalVideo: { name: primary.name, size: primary.size, durationSec: a.media.durationSec },
       } as any);
       setHistory(h);
       setStatus({ kind: 'ready' });
@@ -496,9 +507,9 @@ function EditorApp() {
     const project = makeProject({
       appVersion: APP_VERSION,
       savedAt: new Date().toISOString(),
-      video: { name: session.fileName, size: session.file.size, durationSec: session.ctx.durationSec },
-      words: session.ctx.words,
-      silences: session.silences,
+      video: session.originalVideo ?? { name: session.fileName, size: session.file.size, durationSec: session.media.durationSec },
+      words: session.clipWords ? placeWords(history.present.clips, session.clipWords) : session.ctx.words,
+      silences: session.clipSilences ? placeRanges(history.present.clips, session.clipSilences) : session.silences,
       warnings: session.warnings.map((w) => ({ key: w.key, detail: w.detail })),
       history,
       versions,
