@@ -1,0 +1,52 @@
+import { describe, expect, it } from 'vitest';
+import { autoEdit } from '../src/editorial/auto-edit';
+import { createHistory, pushHistory } from '../src/engine/history';
+import { editCaptionText } from '../src/editorial/ops';
+import { makeProject, parseProject, restoreHistory, sameVideo } from '../src/core/project';
+
+const words = [{ id: 'w1', text: 'Olá.', start: 0.1, end: 0.5 }];
+const plan = autoEdit(3, [], words);
+const history = pushHistory(createHistory(plan), editCaptionText(plan, 'c1', 'Oi!'));
+const video = { name: 'fala.webm', size: 1234, durationSec: 3 };
+
+function roundTrip(x: unknown): unknown {
+  return JSON.parse(JSON.stringify(x));
+}
+
+describe('projeto salvo', () => {
+  it('ida e volta em JSON preserva plano, histórico e palavras', () => {
+    const p = makeProject({ video, words, silences: [{ start: 1, end: 2 }], warnings: [], history, appVersion: '0.2.0', savedAt: '2026-10-20T10:00:00Z' });
+    const r = parseProject(roundTrip(p));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.project.words).toEqual(words);
+    const h = restoreHistory(r.project);
+    expect(h.present.captions[0]!.text).toBe('Oi!');
+    expect(h.past).toHaveLength(1);
+    expect(h.future).toHaveLength(0);
+  });
+
+  it('rejeita projeto com plano inválido', () => {
+    const p = roundTrip(makeProject({ video, words, silences: [], warnings: [], history, appVersion: '0.2.0', savedAt: 'x' })) as { history: { present: { segments: unknown[] } } };
+    p.history.present.segments = [];
+    const r = parseProject(p);
+    expect(r.ok).toBe(false);
+  });
+
+  it('rejeita lixo e formato desconhecido', () => {
+    expect(parseProject('oi').ok).toBe(false);
+    expect(parseProject({ format: 99 }).ok).toBe(false);
+  });
+
+  it('aviso com código desconhecido é recusado', () => {
+    const p = roundTrip(makeProject({ video, words, silences: [], warnings: [], history, appVersion: '0.2.0', savedAt: 'x' })) as Record<string, unknown>;
+    p.warnings = [{ key: 'EVAL', detail: '' }];
+    expect(parseProject(p).ok).toBe(false);
+  });
+
+  it('confere se o vídeo escolhido de novo é o mesmo (tamanho e duração)', () => {
+    expect(sameVideo(video, { size: 1234, durationSec: 3.01 })).toBe(true);
+    expect(sameVideo(video, { size: 999, durationSec: 3 })).toBe(false);
+    expect(sameVideo(video, { size: 1234, durationSec: 5 })).toBe(false);
+  });
+});
