@@ -1,9 +1,7 @@
 import type { Word } from '../core/types';
+import { groupPieces, toWords, type AsrChunk } from '../analysis/asr-merge';
 
-export interface AsrChunk {
-  text: string;
-  timestamp: [number, number | null];
-}
+export type { AsrChunk };
 
 /**
  * Converte a saída do Whisper (chunks por palavra) em Words com ids estáveis.
@@ -11,20 +9,9 @@ export interface AsrChunk {
  * ("cada" + "j" + "anela") e é colado nela, para a legenda nunca partir uma palavra.
  */
 export function chunksToWords(chunks: AsrChunk[], durationSec: number): Word[] {
-  const words: Word[] = [];
-  for (const c of chunks) {
-    const text = c.text.trim();
-    if (!text) continue;
-    const start = Math.max(0, c.timestamp[0]);
-    const end = Math.min(durationSec, c.timestamp[1] ?? start + 0.3);
-    const prev = words[words.length - 1];
-    if (prev && !/^\s/.test(c.text)) {
-      prev.text += text;
-      prev.end = Math.max(prev.end, end);
-      continue;
-    }
-    if (end <= start) continue;
-    words.push({ id: `w${words.length + 1}`, text, start, end });
-  }
-  return words;
+  return toWords(
+    groupPieces(chunks)
+      .map((w) => ({ text: w.text, start: Math.max(0, w.start), end: Math.min(durationSec, w.end) }))
+      .filter((w) => w.end > w.start),
+  );
 }

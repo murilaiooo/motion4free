@@ -18,6 +18,7 @@ export const ERRORS = {
   WORKER_FALHOU: { code: 'M4F-304', title: 'O processo de transcrição parou inesperadamente.' },
   MODELO_HTTP: { code: 'M4F-305', title: 'O servidor do modelo de transcrição respondeu com erro.' },
   SEM_FALA: { code: 'M4F-306', title: 'Não encontrei fala neste vídeo: ele fica sem legendas e sem título. Dá para escolher estilo e gerar o vídeo final.' },
+  MODELO_RESERVA: { code: 'M4F-307', title: 'O modelo de legenda escolhido não funcionou neste aparelho; usei um modelo mais leve, e a legenda pode ter mais erros.' },
   SEM_ENCODER: { code: 'M4F-401', title: 'Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador.' },
   EXPORTACAO_FALHOU: { code: 'M4F-402', title: 'A geração do vídeo falhou.' },
   SEM_H264: { code: 'M4F-403', title: 'Seu navegador não gera H.264: o vídeo funciona aqui, mas o Instagram pode recusar. Para o arquivo final, use Chrome ou Edge no computador.' },
