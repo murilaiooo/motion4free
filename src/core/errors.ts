@@ -2,7 +2,7 @@
  * Catálogo de erros com código próprio por problema.
  * O código aparece na tela para quem testa e identifica a causa sem ambiguidade.
  * Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos,
- * 6xx projeto salvo, 7xx player, 8xx estilo e animações, 9xx desconhecido, 10xx pedido por texto e IA.
+ * 6xx projeto salvo e armazenamento, 7xx player, 8xx estilo e animações, 9xx desconhecido, 10xx pedido por texto e IA.
  */
 export const ERRORS = {
   FORMATO_DESCONHECIDO: { code: 'M4F-101', title: 'Formato de arquivo não reconhecido.' },
@@ -33,6 +33,15 @@ export const ERRORS = {
   VIDEO_DIFERENTE: { code: 'M4F-603', title: 'Este não é o mesmo vídeo do projeto salvo.' },
   VIDEO_AUSENTE: { code: 'M4F-604', title: 'Para continuar o projeto salvo, escolha de novo o vídeo original.' },
   VERSAO_LIMITE: { code: 'M4F-605', title: 'Limite de 20 versões guardadas. Apague uma para guardar outra.' },
+  ESPACO_INSUFICIENTE: { code: 'M4F-606', title: 'Pode faltar espaço neste navegador para guardar este vídeo (e o modelo de legenda, se ainda não foi baixado). Libere espaço em Armazenamento ou continue mesmo assim.' },
+  MEDIDA_INDISPONIVEL: { code: 'M4F-607', title: 'Este navegador não informa quanto espaço o app está usando; os tamanhos mostrados são só o que deu para medir.' },
+  PROJETOS_INDISPONIVEIS: { code: 'M4F-608', title: 'Este navegador não deixa o app guardar projetos (comum em janela anônima). Dá para editar e exportar, mas nada fica salvo.' },
+  CACHE_INDISPONIVEL: { code: 'M4F-609', title: 'Este navegador não deixa ver os modelos baixados; não dá para medir nem apagar esses arquivos por aqui.' },
+  APAGAR_FALHOU: { code: 'M4F-610', title: 'Não foi possível apagar tudo o que foi pedido. O que não saiu continua na lista.' },
+  PERSISTENCIA_NEGADA: { code: 'M4F-611', title: 'O navegador não aceitou guardar os dados de forma permanente. Eles continuam salvos, mas ele pode apagá-los se o computador ficar sem espaço.' },
+  DUPLICAR_FALHOU: { code: 'M4F-612', title: 'Não foi possível duplicar o projeto (pode faltar espaço). Nada mudou.' },
+  MIGRACAO_FALHOU: { code: 'M4F-613', title: 'Não foi possível passar o projeto da versão anterior para "Meus projetos". Ele continua guardado; o app tenta de novo na próxima vez.' },
+  LISTA_FALHOU: { code: 'M4F-614', title: 'Não foi possível ler a lista de projetos salvos neste navegador.' },
   PLAYER_FALHOU: { code: 'M4F-701', title: 'Não foi possível tocar a prévia.' },
   FONTE_FALHOU: { code: 'M4F-801', title: 'As fontes do estilo não carregaram; o vídeo usa uma fonte reserva.' },
   ESTILO_DESCONHECIDO: { code: 'M4F-802', title: 'Este estilo não existe nesta versão do app.' },
@@ -51,6 +60,7 @@ export const ERRORS = {
   TRECHO_SEM_ALTERNATIVA: { code: 'M4F-1011', title: 'Não há outra animação possível neste trecho (falta fala ou as animações foram proibidas).' },
   IA_RESPOSTA_INVALIDA_REPARO: { code: 'M4F-1012', title: 'A IA respondeu fora do formato duas vezes (mesmo depois de pedir correção); usei as regras.' },
   IA_MODELO_GRANDE: { code: 'M4F-1013', title: 'Este aparelho não tem memória de vídeo suficiente para o modelo de IA escolhido; usei as regras. Tente o modelo leve.' },
+  IA_SEM_ESPACO: { code: 'M4F-1014', title: 'Falta espaço neste navegador para baixar o modelo de IA; usei as regras. Libere espaço em Armazenamento.' },
   IA_CHAVE_RECUSADA: { code: 'M4F-1009', title: 'O serviço recusou a sua chave (confira se ela está certa ou se o limite gratuito acabou); usei as regras.' },
   DESCONHECIDO: { code: 'M4F-999', title: 'Erro inesperado.' },
 } as const;
