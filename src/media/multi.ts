@@ -1,7 +1,7 @@
 import type { ClipRef, Framing } from '../core/types';
 import type { Word, TimeRange } from '../core/types';
 import { clipLayout, placeRanges, placeWords } from '../engine/clips';
-import { AppError } from '../core/errors';
+import { AppError, describeError, toAppError } from '../core/errors';
 import type { OpenedMedia } from './input';
 import { openMedia } from './input';
 import { decodeAudio, toMono16k, type DecodedAudio } from './audio';
@@ -28,6 +28,8 @@ export interface MultiSessionInput {
   silencesByClip: Record<string, TimeRange[]>;
   audiosByClip: Record<string, DecodedAudio | null>;
   combinedAudio: DecodedAudio | null;
+  asrModel: string | null;
+  warnings: AppError[];
 }
 
 /**
@@ -47,18 +49,25 @@ export async function openClips(
   const wordsByClip: Record<string, Word[]> = {};
   const silencesByClip: Record<string, TimeRange[]> = {};
   const audiosByClip: Record<string, DecodedAudio | null> = {};
+  const warnings: AppError[] = [];
+  let asrModel: string | null = null;
+  let runningDuration = 0;
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]!;
     const media = await openMedia(file);
+    runningDuration += media.durationSec;
+    if (runningDuration > 600) throw new AppError('CLIPES_LONGOS', `${runningDuration.toFixed(1)} s > 600 s`);
     const id = `c${firstClipNumber + i}`;
     let audio: DecodedAudio | null = null;
     if (media.audio) {
-      try { audio = await decodeAudio(media.audio, media.durationSec); } catch { audio = null; }
+      try { audio = await decodeAudio(media.audio, media.durationSec); }
+      catch (e) { warnings.push(new AppError('AUDIO_FALHOU', `${file.name}: ${describeError(e)}`)); }
+    } else {
+      warnings.push(new AppError('SEM_AUDIO', file.name));
     }
     let words: Word[] = [];
     let silences: TimeRange[] = [];
-    let asrModel: string | null = null;
     if (audio) {
       try {
         const mono = await toMono16k(audio);
@@ -67,10 +76,11 @@ export async function openClips(
           onStep?.(`Transcrevendo clipe ${i+1}/${files.length}`, 0);
           const r = await transcriber.transcribe(mono.slice(), media.durationSec, planAsr(silences, media.durationSec), onStep ?? (()=>{}), asrMode as any);
           words = toWords(cleanTranscript(r.words, silences)).map((w) => ({ ...w, id: `${id}:${w.id}` })); // IDs únicos entre clipes
-          asrModel = r.model;
+          asrModel ??= r.model;
+          warnings.push(...r.notices);
         }
       } catch (e) {
-        // silences/words stay empty, warnings handled upstream
+        warnings.push(toAppError(e, 'TRANSCRICAO_FALHOU'));
       }
     }
     audiosByClip[id] = audio;
@@ -82,7 +92,7 @@ export async function openClips(
   const refs = buildClipRefs(clips);
   const combinedAudio = combineAudios(refs, audiosByClip);
 
-  return { clips, wordsByClip, silencesByClip, audiosByClip, combinedAudio };
+  return { clips, wordsByClip, silencesByClip, audiosByClip, combinedAudio, warnings, asrModel };
 }
 
 export function buildClipRefs(clips: OpenedClip[], framingOverride?: Framing | null): ClipRef[] {
