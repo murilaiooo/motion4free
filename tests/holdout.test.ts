@@ -107,7 +107,7 @@ describe('holdout: generalização do intérprete (não visto no corpus)', () =>
     }
     const rate = passed / HOLDOUT.length;
     console.log(`holdout: ${passed}/${HOLDOUT.length} (${(rate*100).toFixed(1)}%)`);
-    expect(rate).toBeGreaterThanOrEqual(0.65); // realistic for unseen conversational prompts
+    expect(rate).toBeGreaterThanOrEqual(0.75);
   });
 
   it('cada campo do brief chega ao render (style/look aplicados)', () => {

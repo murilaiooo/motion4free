@@ -186,14 +186,13 @@ export async function loadProjectVideos(fs: Fs, id: string, project: SavedProjec
   const clips = (project.history.present as any)?.clips as { id: string }[] | undefined;
   if (!clips || clips.length <= 1) return null;
   const map = new Map<string, Blob>();
+  const primary = await fs.readFile([...dir(id), VIDEO]);
   for (const c of clips) {
-    const blob = await loadClipVideo(fs, id, c.id);
+    let blob = await loadClipVideo(fs, id, c.id);
+    if (!blob && c.id === clips[0]!.id) blob = primary;
     if (!blob) return null;
     map.set(c.id, blob);
   }
-  // also need primary video.bin for first clip fallback
-  const primary = await fs.readFile([...dir(id), VIDEO]);
-  if (primary && !map.has(clips[0]!.id)) map.set(clips[0]!.id, primary);
   return map;
 }
 
@@ -209,12 +208,21 @@ export async function listProjects(fs: Fs): Promise<ProjectSummary[]> {
     const meta = await readMeta(fs, id);
     const video = await fs.readFile([...dir(id), VIDEO]);
     const clipList = await listClipVideos(fs, id);
-    const hasMulti = clipList.length > 0;
+    let hasVideo: boolean;
+    if (clipList.length > 0) {
+      // multi: needs every expected clip; check project to know expected count
+      const projBlob = await fs.readFile([...dir(id), PROJECT]);
+      let expected = clipList.length;
+      try { const j = projBlob ? JSON.parse(await projBlob.text()) : null; const cl = j?.history?.present?.clips; if (Array.isArray(cl)) expected = cl.length; } catch {}
+      hasVideo = clipList.length >= expected && (clipList.length > 1 || !!video);
+      // also consider fallback video.bin for c1: if video.bin exists, counts as c1
+      if (!hasVideo && video && expected === clipList.length + 1) hasVideo = true;
+    } else {
+      hasVideo = !!video && !!meta && video.size === meta.video.size;
+    }
     const thumb = await fs.readFile([...dir(id), THUMB]);
     if (meta) {
       const hasProject = !!(await fs.readFile([...dir(id), PROJECT]));
-      // For multi, hasVideo true if any clip file exists (or primary)
-      const hasVideo = hasMulti ? true : !!video && video.size === meta.video.size;
       out.push({ ...meta, sizeBytes, hasVideo, thumb, broken: !hasProject });
     } else {
       out.push({

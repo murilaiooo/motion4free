@@ -104,7 +104,6 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
         const handles = handlePositions(g, outputW, outputH);
         for (const h of handles) {
           if (Math.hypot(h.x - x, h.y - y) < HANDLE_SIZE * 2) {
-            // Resize handle - for now treat as drag with scale
             const placement = placementForRef(plan, selectedBox.ref);
             if (!placement) return;
             setDrag({
@@ -115,6 +114,8 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
               box: selectedBox,
             });
             (e.target as Element).setPointerCapture(e.pointerId);
+            e.stopPropagation();
+            e.preventDefault();
             return;
           }
         }
@@ -126,7 +127,6 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
         const placement = placementForRef(plan, hit);
         const offset = offsetForRef(plan, hit);
         if (hit.type === 'scene' && offset) {
-          // For scene, we use offset
           setDrag({
             ref: hit,
             startPlacement: { x: 0.5, y: 0.5, scale: 1, rotate: 0 },
@@ -143,7 +143,6 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
             box: boxes.find((b) => sameRef(b.ref, hit))!,
           });
         } else {
-          // No placement yet, use default from plan
           const fallback = { x: 0.5, y: 0.5, scale: 1, rotate: 0 } as Placement;
           setDrag({
             ref: hit,
@@ -154,8 +153,12 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
           });
         }
         (e.target as Element).setPointerCapture(e.pointerId);
+        e.stopPropagation();
+        e.preventDefault();
       } else {
-        onSelect(null);
+        // No element hit: deselect and let event bubble to canvas for playback
+        if (selected) onSelect(null);
+        return;
       }
     },
     [boxes, selectedBox, selected, onSelect, plan, toOutput, disabled, outputW, outputH],

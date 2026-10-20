@@ -245,14 +245,20 @@ export class PlanPlayer {
         for (const seg of this.plan.segments) {
           const len = seg.srcEnd - seg.srcStart;
           if (offset + len <= from) { offset += len; continue; }
-          const fromSrc = seg.srcStart + Math.max(0, from - offset);
-          for await (const f of this.clipFrames.sink(outputToClip(this.plan.segments, this.plan.clips, offset)!.clipId)!.canvases(fromSrc, seg.srcEnd)) {
-            const outT = offset + (f.timestamp - seg.srcStart);
+          const segClip = outputToClip(this.plan.segments, this.plan.clips, offset);
+          if (!segClip) { offset += len; continue; }
+          const layout = this.clipLayouts!.get(segClip.clipId);
+          if (!layout) { offset += len; continue; }
+          const segLocalStart = seg.srcStart - layout.start;
+          const fromVirtual = seg.srcStart + Math.max(0, from - offset);
+          const fromLocal = fromVirtual - layout.start;
+          const endLocal = seg.srcEnd - layout.start;
+          for await (const f of this.clipFrames.sink(segClip.clipId)!.canvases(fromLocal, endLocal)) {
+            const outT = offset + (f.timestamp - segLocalStart);
             while (s === this.session && this.currentTime < outT - 0.001) await nextFrame();
             if (s !== this.session) return;
-            const info = outputToClip(this.plan.segments, this.plan.clips, outT);
-            if (!info) continue;
-            this.frame = this.clipFrames.frame(this.plan, info.clipId, f.canvas as any, info.local);
+            // f.timestamp is local, info.local should equal f.timestamp; use it directly
+            this.frame = this.clipFrames.frame(this.plan, segClip.clipId, f.canvas as any, f.timestamp);
           }
           offset += len;
         }

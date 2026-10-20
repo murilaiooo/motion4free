@@ -34,6 +34,7 @@ import { Transcript } from './Transcript';
 import { TopBar, type SaveState } from './TopBar';
 import { VERSION_LABEL, APP_BUILT_AT } from '../version';
 import { FormatSelector } from './FormatSelector';
+import { remapSegments } from '../engine/clips';
 import { ClipList } from './ClipList';
 
 export interface Session {
@@ -324,7 +325,12 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     setExportOpen(true);
     setExporting(0);
     try {
-      const out = await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
+      // Route to multi-clip export when session has multiple sources
+      const multiSources = (session as any).clipSources as Map<string, import('../media/sources').ClipSource> | undefined;
+      const isMulti = multiSources && multiSources.size > 1 && plan.clips.length > 1;
+      const out = isMulti
+        ? await (await import('../media/export')).exportPlanMulti(multiSources!, session.audio, plan, { onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
+        : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
       if (result) URL.revokeObjectURL(result.url);
       const base = session.fileName.replace(/\.[^.]+$/, '');
       setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, codec: out.codec, where: out.where, style: plan.style.name, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning });
@@ -623,27 +629,28 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           <div className="card empty-insp">
             <MousePointerClick size={18} aria-hidden />
             <p className="hint">Clique num corte (listrado) na linha do tempo para restaurar ou ajustar, ou arraste na faixa Trechos para mudar só um pedaço.</p>
+            <div style={{marginTop:12}}><FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off} /></div>
             {plan.clips.length > 1 && (
               <div style={{marginTop:12}}>
                 <ClipList
-                  clips={plan.clips.map(c => ({ id: c.id, name: c.name || c.id, file: new File([], c.name) } as any))}
+                  clips={plan.clips.map(c => ({ id: c.id, name: c.name || c.id, duration: c.duration, file: new File([], c.name) } as any))}
                   onReorder={(next) => {
-                    // Reorder clips: remap segments to new order
-                    const { remapSegments } = require('../engine/clips');
-                    const nextPlan = { ...plan, clips: next.map(n => plan.clips.find(c=>c.id===n.id)!), segments: remapSegments(plan.segments, plan.clips, next.map(n => plan.clips.find(c=>c.id===n.id)!)) };
+                    const orderedClips = next.map(n => plan.clips.find(c=>c.id===n.id)!).filter(Boolean) as typeof plan.clips;
+                    const nextPlan = { ...plan, clips: orderedClips, segments: remapSegments(plan.segments, plan.clips, orderedClips) };
                     apply(()=>nextPlan);
                   }}
                   onRemove={(id) => {
                     const nextClips = plan.clips.filter(c=>c.id!==id);
                     if (nextClips.length === 0) return;
-                    const { remapSegments } = require('../engine/clips');
                     apply(()=>({ ...plan, clips: nextClips, segments: remapSegments(plan.segments, plan.clips, nextClips) } as any));
                   }}
-                  onAdd={()=>{}}
+                  onAdd={(files)=> {
+                    // TODO: add new clips via file picker and extend plan with new segments at end
+                    console.log('Adicionar clipes:', files);
+                  }}
                 />
               </div>
             )}
-            <div style={{marginTop:12}}><FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off} /></div>
           </div>
         )}
         <ChangesPanel before={before} beforeLabel={beforeLabel} plan={plan} view={view} onView={setView} onSeek={seek} time={time} />

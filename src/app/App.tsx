@@ -208,7 +208,18 @@ function EditorApp() {
     setProjectId(id);
     setProjectName(meta?.name ?? nameFromFile(loaded.project.video.name));
     await enqueue(() => setCurrent(fs, id)).catch(() => undefined);
+    const isMulti = (loaded.project.history.present as any)?.clips?.length > 1;
     if (!loaded.video) {
+      if (isMulti) {
+        try {
+          const { loadProjectVideos } = await import('../core/project-library');
+          const clipMap = await enqueue(() => loadProjectVideos(fs, id, loaded.project));
+          if (clipMap) {
+            await resumeMulti(id, loaded.project, clipMap, true);
+            return;
+          }
+        } catch {}
+      }
       setPending({ id, project: loaded.project });
       return;
     }
@@ -217,6 +228,44 @@ function EditorApp() {
     } catch (err) {
       fail(err);
     }
+  }
+
+  async function resumeMulti(id: string, project: SavedProject, clipMap: Map<string, Blob>, copyExists: boolean) {
+    step('Abrindo o projeto salvo (multi)', 0);
+    setAsrModel(null);
+    const { openMedia } = await import('../media/input');
+    const clips: import('../media/multi').OpenedClip[] = [];
+    const clipSources = new Map<string, import('../media/sources').ClipSource>();
+    let totalDur = 0;
+    for (const c of (project.history.present as any).clips) {
+      const blob = clipMap.get(c.id);
+      if (!blob) throw new AppError('CLIPES_AUSENTES', c.id);
+      const media = await openMedia(blob);
+      clips.push({ id: c.id, file: blob, name: c.name, media, durationSec: media.durationSec, words: [], silences: [], audio: null });
+      clipSources.set(c.id, { id: c.id, video: media.video, width: media.width, height: media.height });
+      totalDur += media.durationSec;
+    }
+    const h = restoreHistory(project);
+    setFileName(project.video.name);
+    setSession({
+      file: clipMap.get((project.history.present as any).clips[0].id)!,
+      fileName: project.video.name,
+      media: clips[0]!.media,
+      audio: null,
+      ctx: { durationSec: totalDur, words: project.words },
+      silences: project.silences,
+      warnings: project.warnings.map((w) => new AppError(w.key, w.detail)),
+      peaks: null,
+      clipSources,
+      openedClips: clips,
+    } as any);
+    setHistory(h);
+    setSavedFor(h);
+    setVersions(project.versions);
+    setVersionsSaved(project.versions);
+    setPending(null);
+    setStatus({ kind: 'ready' });
+    if (copyExists) setCopy('done');
   }
 
   async function resume(id: string, project: SavedProject, file: Blob, copyExists: boolean) {
@@ -325,30 +374,17 @@ function EditorApp() {
       if (files.length === 1) {
         a = await analyze(primary, transcriber, step, { asrMode: precision.mode });
       } else {
-        // Multi-clip: analyze each file sequentially and assemble virtual timeline
-        const { buildClipRefs, assembledWords, assembledSilences } = await import('../media/multi');
-        const { openMedia } = await import('../media/input');
+        const { openClips, buildClipRefs, assembledWords, assembledSilences } = await import('../media/multi');
         const { autoEdit } = await import('../editorial/auto-edit');
         const { DEFAULT_STYLE } = await import('../core/presets');
-        // Open each file to get media and duration (without full transcription for now; use empty words/silences)
-        const clips: import('../media/multi').OpenedClip[] = [];
-        const wordsByClip: Record<string, import('../core/types').Word[]> = {};
-        const silencesByClip: Record<string, import('../core/types').TimeRange[]> = {};
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i]!;
-          const media = await openMedia(file);
-          const id = `c${i+1}`;
-          clips.push({ id, file, name: file.name, media, durationSec: media.durationSec, words: [], silences: [] });
-          wordsByClip[id] = [];
-          silencesByClip[id] = [];
-        }
+        const { clips, wordsByClip, silencesByClip, combinedAudio } = await openClips(files, transcriber, step, precision.mode);
         const refs = buildClipRefs(clips);
         const allWords = assembledWords(refs, wordsByClip);
         const allSilences = assembledSilences(refs, silencesByClip);
         const total = refs.reduce((s, c) => s + c.duration, 0);
         const plan = autoEdit(total, allSilences, allWords, DEFAULT_STYLE, { clips: refs });
-        a = { media: clips[0]!.media, audio: null, words: allWords, silences: allSilences, warnings: [], asrModel: null, plan } as any;
-        (a as any).__multi = { clips, refs };
+        a = { media: clips[0]!.media, audio: combinedAudio, words: allWords, silences: allSilences, warnings: [], asrModel: null, plan } as any;
+        (a as any).__multi = { clips, refs, combinedAudio };
       }
       setAsrModel(a.asrModel);
       const id = newProjectId(Date.now());
