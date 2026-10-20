@@ -5,9 +5,9 @@ import { outputDuration, outputToSource } from '../engine/timeline';
 import { drawFrame, type SourceFrame } from '../render/frame';
 import type { DecodedAudio } from './audio';
 import type { OpenedMedia } from './input';
-import { spliceAudio } from './splice';
+import { CLIP_CROSSFADE_SEC, spliceAudio } from './splice';
 import { ClipFrames, EXPORT_MAX_SIDE, PREVIEW_MAX_SIDE, type ClipSource } from './sources';
-import { outputToClip } from '../engine/clips';
+import { clipLayout, outputToClip } from '../engine/clips';
 
 interface TimedFrame {
   t: number; // out
@@ -220,7 +220,8 @@ export class PlanPlayer {
 
   private buildAudio(ctx: AudioContext): AudioBuffer {
     const audio = this.audio!;
-    const spliced = spliceAudio(audio.channels, audio.sampleRate, this.plan.segments);
+    const joins = this.clipFrames ? { clips: clipLayout(this.plan.clips).map(c => ({ start: c.start, end: c.end })), crossfadeSec: CLIP_CROSSFADE_SEC } : undefined;
+    const spliced = spliceAudio(audio.channels, audio.sampleRate, this.plan.segments, 0.008, joins);
     const buffer = ctx.createBuffer(spliced.length, Math.max(1, spliced[0]!.length), audio.sampleRate);
     spliced.forEach((ch, c) => buffer.copyToChannel(ch as Float32Array<ArrayBuffer>, c));
     return buffer;
