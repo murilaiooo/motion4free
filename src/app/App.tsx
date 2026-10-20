@@ -8,6 +8,7 @@ import { createHistory, type History } from '../engine/history';
 import { APP_BUILT_AT, APP_VERSION, VERSION_LABEL } from '../version';
 import { Editor, type Session } from './Editor';
 import { ErrorBox } from './ErrorBox';
+import { Gallery } from './Gallery';
 import { analyze, openWithAudio } from './pipeline';
 import { clearProject, loadProject, saveProject, saveVideoCopy, storageAvailable } from './project-store';
 
@@ -20,7 +21,27 @@ function peaksOf(audio: Session['audio']): Float32Array | null {
   return audio ? waveformPeaks(audio.channels[0]!, PEAK_COLUMNS, true) : null;
 }
 
+const GALLERY = typeof location !== 'undefined' && new URLSearchParams(location.search).has('galeria');
+
 export function App() {
+  if (GALLERY) {
+    return (
+      <main className="app">
+        <h1>Motion4Free · estilos</h1>
+        <p className="sub">
+          <a href="./">Voltar ao editor</a>
+        </p>
+        <Gallery />
+        <footer className="version" data-testid="version">
+          Motion4Free {VERSION_LABEL}
+        </footer>
+      </main>
+    );
+  }
+  return <EditorApp />;
+}
+
+function EditorApp() {
   const transcriber = useMemo(
     () =>
       import.meta.env.VITE_FAKE_ASR === '1'
@@ -181,7 +202,9 @@ export function App() {
   return (
     <main className="app">
       <h1>Motion4Free</h1>
-      <p className="sub">Versão de teste: tudo acontece no seu computador. Nenhum vídeo é enviado para a internet.</p>
+      <p className="sub">
+        Versão de teste: tudo acontece no seu computador. Nenhum vídeo é enviado para a internet. <a href="?galeria">Ver os 3 estilos lado a lado</a>
+      </p>
 
       {pending && (
         <div className="notice warning" role="status" data-testid="warning-M4F-604">
