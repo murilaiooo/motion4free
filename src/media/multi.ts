@@ -38,6 +38,7 @@ export async function openClips(
   transcriber?: Transcriber,
   onStep?: (label: string, fraction: number) => void,
   asrMode?: string,
+  firstClipNumber = 1,
 ): Promise<MultiSessionInput> {
   if (files.length === 0) throw new AppError('SEM_VIDEO');
   if (files.length > 30) throw new AppError('CLIPES_DEMAIS', `${files.length} clipes (máximo 30)`);
@@ -50,7 +51,7 @@ export async function openClips(
   for (let i = 0; i < files.length; i++) {
     const file = files[i]!;
     const media = await openMedia(file);
-    const id = `c${i + 1}`;
+    const id = `c${firstClipNumber + i}`;
     let audio: DecodedAudio | null = null;
     if (media.audio) {
       try { audio = await decodeAudio(media.audio, media.durationSec); } catch { audio = null; }
