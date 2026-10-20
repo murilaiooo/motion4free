@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
+import { editCaption, tab } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
@@ -37,6 +38,7 @@ const touching = (p: Plan, r: { start: number; end: number }) => ({
 
 /** Seleciona um pedaço pelos campos de início e fim (tempo do vídeo editado). */
 async function select(page: Page, start: number, end: number) {
+  await tab(page, 'Trechos');
   await page.getByTestId('range-new').click();
   await expect(page.getByTestId('range-panel')).toBeVisible();
   await page.getByTestId('range-start').fill(String(start));
@@ -109,10 +111,12 @@ test('trava o trecho, troca o estilo e o trecho não muda; versões; recarrega; 
   const snap = touching(locked, out);
   expect(snap.captions.length).toBeGreaterThan(0);
 
+  await tab(page, 'Versões');
   await page.getByTestId('version-name').fill('pop travado');
   await page.getByTestId('version-save').click();
   await expect(page.getByTestId('version-v1')).toContainText('pop travado');
 
+  await tab(page, 'Modelos');
   await page.getByTestId('style-editorial').click();
   await expect(page.getByTestId('style-editorial')).toHaveAttribute('aria-pressed', 'true');
   const restyled = await plan(page);
@@ -124,11 +128,11 @@ test('trava o trecho, troca o estilo e o trecho não muda; versões; recarrega; 
   await askRange(page, 'mais calmo aqui');
   await expect(page.getByTestId('error-M4F-504')).toBeVisible();
   const cap = snap.captions[0]!.id;
-  await page.getByTestId(`caption-input-${cap}`).fill('outro texto');
-  await page.getByTestId(`caption-input-${cap}`).press('Enter');
+  await editCaption(page, cap, 'outro texto');
   await expect(page.getByTestId('error-M4F-504').first()).toBeVisible();
 
   // restaurar a versão volta ao Pop (e entra no desfazer)
+  await tab(page, 'Versões');
   await page.getByTestId('version-restore-v1').click();
   await expect(page.getByTestId('style-pop')).toHaveAttribute('aria-pressed', 'true');
   await page.getByTestId('undo').click();
@@ -191,6 +195,7 @@ function bmp(): Buffer {
 test('cores de uma imagem: aplica com contraste, desfaz e recusa arquivo que não é imagem', async ({ page }) => {
   await openVideo(page);
   const accent = (await plan(page)).style.palette.accent;
+  await tab(page, 'Cores');
   await page.getByTestId('reference-input').setInputFiles({ name: 'logo.bmp', mimeType: 'image/bmp', buffer: bmp() });
   await expect(page.getByTestId('reference-colors')).toBeVisible();
   await expect.poll(async () => (await plan(page)).style.palette.accent).not.toBe(accent);

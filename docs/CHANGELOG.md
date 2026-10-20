@@ -1,6 +1,21 @@
 # Histórico de versões
 
-A versão aparece no rodapé do app (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
+A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
+
+## v0.10.0 — 20/10/2026
+**Visual novo, com cara de editor profissional** — a tela inteira foi refeita e agora usa todo o espaço do computador.
+- **Primeira tela nova**: a promessa do app, uma área grande para **arrastar o vídeo** (ou clicar e escolher), o aviso de que o vídeo nunca sai do aparelho e exemplos dos modelos desenhados na hora.
+- **Tela de "editando seu vídeo"** com os passos (abrir, cortar silêncios, transcrever, montar legendas e estilo), qual está acontecendo agora e a porcentagem.
+- **Editor em tela cheia**, como nos editores de vídeo conhecidos: no alto, o nome do projeto, se está salvo, desfazer/refazer e o botão amarelo **Exportar**; à esquerda, as ferramentas em abas (**Modelos, Pedido, Legendas, Gancho, Trechos, Versões, Cores**); no meio, a **prévia grande**; à direita, os **Detalhes** do que você selecionou e **O que mudou** (com Antes/Depois); embaixo, a **linha do tempo** larga, com régua para clicar ou arrastar e **zoom**.
+- **Legendas como um texto corrido**: em vez de centenas de linhas, o que você falou aparece como um parágrafo. Clique numa palavra para ir até ela e corrigir ali mesmo; a palavra falada acende enquanto o vídeo toca; o que foi cortado aparece riscado. Vídeos longos ficam em páginas.
+- **Galeria de modelos**: cada modelo mostra um quadro de verdade (e se mexe quando você passa o mouse), com etiquetas e filtro (Energético, Vendas, Podcast, Tutorial, Elegante…); os **15 modelos** da v0.9 estão todos lá; o escolhido fica marcado.
+- **Área segura do Reels**: um botão mostra na prévia onde os botões do Instagram cobrem a tela.
+- **Atalhos**: Espaço toca/pausa, J e L voltam/avançam 1 segundo, Ctrl+Z desfaz, Ctrl+Shift+Z refaz. Clicar na prévia também toca.
+- **Tema claro** opcional (botão do sol, no alto); o escuro continua o padrão.
+- **Celular e tablet**: prévia em cima, ferramentas numa barra embaixo, sem rolar para o lado.
+- A **Precisão da legenda** (Rápida/Precisa, da v0.8) fica logo abaixo da área de soltar o vídeo, em dois cartões; **"Legenda feita com …"** aparece no alto da aba Legendas.
+- Tudo o que existia continua lá (pedido por texto, IA opcional, gancho, trechos e travas, versões, cores de uma imagem, cortes, exportar, avisos com código e "Copiar detalhes"). Projetos salvos antes abrem normalmente.
+- Roteiro de teste refeito para o novo visual: [roteiro-de-teste.md](roteiro-de-teste.md).
 
 ## v0.9.0 — 20/10/2026
 Muito mais estilos: agora são **15 modelos** prontos, cada um com letra, cores, animações e jeito de legenda próprios.

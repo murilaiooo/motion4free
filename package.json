@@ -1,6 +1,6 @@
 {
   "name": "motion4free",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -49,6 +49,7 @@
     "@huggingface/transformers": "4.3.1",
     "@mediabunny/aac-encoder": "1.61.6",
     "@mlc-ai/web-llm": "0.2.85",
+    "lucide-react": "1.49.0",
     "mediabunny": "1.61.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",

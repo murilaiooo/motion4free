@@ -12,9 +12,12 @@ export function AsrPrecisionOption({ precision, disabled }: { precision: AsrPrec
     <fieldset className="asr-precision" data-testid="asr-precision" disabled={disabled}>
       <legend>Precisão da legenda</legend>
       {(['precisa', 'rapida'] as const).map((m) => (
-        <label key={m}>
+        <label key={m} className="asr-opt">
           <input type="radio" name="asr-precision" value={m} checked={precision.mode === m} onChange={() => precision.setMode(m)} data-testid={`asr-${m}`} />
-          <b>{LABELS[m]}</b> — {precision.describe(m)}
+          <span>
+            <b>{LABELS[m]}</b>
+            <small>{precision.describe(m)}</small>
+          </span>
         </label>
       ))}
     </fieldset>

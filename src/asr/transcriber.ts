@@ -61,6 +61,15 @@ export class WhisperTranscriber implements Transcriber {
   }
 }
 
+/** Fala mais longa para as capturas de tela da interface (`?asr=demo`, só no build de teste). */
+export const FAKE_DEMO_CHUNKS: AsrChunk[] = (() => {
+  const a = 'Três dicas rápidas para gravar melhor com o celular hoje mesmo'.split(' ');
+  const cut = 'éé tipo assim né'.split(' ');
+  const b = 'Primeira dica: luz de janela sempre na frente do rosto'.split(' ');
+  const spread = (words: string[], from: number, to: number) => words.map((w, i) => ({ text: ` ${w}`, timestamp: [from + ((to - from) * i) / words.length, from + ((to - from) * (i + 1)) / words.length] as [number, number] }));
+  return [...spread(a, 0.1, 1.35), ...spread(cut, 1.6, 2.8), ...spread(b, 3.05, 4.25)];
+})();
+
 /**
  * Usado só nos testes automáticos (VITE_FAKE_ASR=1): palavras fixas, sem baixar modelo.
  * `fail` simula falha de rede; `fallback` simula o modelo preciso falhando e o leve assumindo (M4F-307).

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
+import { tab } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 const PEDIDO = 'gancho diferenciado e criativo, legenda verde e amarela, emojis a cada 3 segundos';
@@ -8,6 +9,7 @@ async function openVideo(page: Page) {
   await page.goto('/');
   await page.getByTestId('file-input').setInputFiles(FIXTURE);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
+  await tab(page, 'Pedido');
 }
 
 type Plan = { style: { captions: { colors: { text: string | null; highlight: string | null } }; emoji: { mode: string; everySec: number } }; scenes: { kind: string; emoji?: string }[]; brief: { hookStyle: string | null; unsupported: string[] } };
