@@ -35,7 +35,7 @@ export async function analyze(file: File, transcriber: Transcriber, onStep: (lab
   const { media, audio } = await openWithAudio(file, onStep);
   if (!audio) {
     const plan = autoEdit(media.durationSec, [], []);
-    return { media, audio: null, plan, words: [], silences: [], warnings: [] };
+    return { media, audio: null, plan, words: [], silences: [], warnings: [new AppError('SEM_AUDIO', `${media.durationSec.toFixed(1)} s sem faixa de áudio`)] };
   }
 
   let mono: Float32Array;
@@ -56,6 +56,7 @@ export async function analyze(file: File, transcriber: Transcriber, onStep: (lab
   } catch (err) {
     warnings.push(toAppError(err, 'TRANSCRICAO_FALHOU'));
   }
+  if (warnings.length === 0 && words.length === 0) warnings.push(new AppError('SEM_FALA', `${silences.length} silêncios em ${media.durationSec.toFixed(1)} s`));
 
   const plan = autoEdit(media.durationSec, silences, words);
   return { media, audio, plan, words, silences, warnings };

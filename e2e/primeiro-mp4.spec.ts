@@ -25,5 +25,7 @@ test('vídeo com pausas vira MP4 editado, mais curto, com áudio', async ({ page
   expect(video?.displayWidth).toBe(1080);
   expect(video?.displayHeight).toBe(1920);
   expect(audio?.codec).toBe('aac');
+  // sem H.264 (Chromium de teste), o aviso tem código próprio (v0.7); com H.264, não aparece
+  await expect(page.getByTestId('warning-M4F-403')).toHaveCount(video?.codec === 'avc' ? 0 : 1);
   expect(Math.abs((await input.computeDuration()) - shown)).toBeLessThan(0.2);
 });

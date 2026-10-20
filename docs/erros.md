@@ -11,13 +11,16 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-104 | Nesta versão de teste o vídeo pode ter no máximo 3 minutos. | Corte o vídeo para até 3 minutos. |
 | M4F-105 | Não foi possível abrir o vídeo. | Falha inesperada ao ler o arquivo; ver detalhe. |
 | M4F-201 | Não foi possível ler o áudio do vídeo. | O áudio do vídeo não pôde ser decodificado. |
+| M4F-202 | O vídeo não tem som: ele fica sem legendas e sem cortes de pausas. Dá para escolher estilo e gerar o vídeo final. | O arquivo não tem faixa de áudio (gravação de tela sem microfone, vídeo exportado mudo). Sem som não há fala para transcrever nem pausas para cortar. Antes da v0.7 isso acontecia sem aviso. |
 | M4F-301 | Não foi possível baixar o modelo de transcrição. | Falha de rede ao baixar o modelo ou o runtime. Desde a v0.1.3 o app tenta primeiro o espelho no próprio site (`[site]`) e depois os servidores originais (`[direto]`: huggingface.co, cdn.jsdelivr.net); o detalhe lista as duas tentativas. Causas comuns: firewall, antivírus, rede instável. |
 | M4F-302 | O modelo de transcrição baixou, mas não conseguiu iniciar neste navegador. | Modelo baixado, mas WebGPU e WASM falharam ao iniciar. Ver detalhe. |
 | M4F-303 | A transcrição da fala falhou. | Erro durante a transcrição em si. |
 | M4F-304 | O processo de transcrição parou inesperadamente. | O Worker de transcrição travou (memória, script não carregou). |
 | M4F-305 | O servidor do modelo de transcrição respondeu com erro. | O servidor respondeu 401, 403, 429 ou 5xx. O detalhe traz o status e o servidor; `HTTP 502` no espelho do site significa que a Cloudflare não alcançou o Hugging Face. |
+| M4F-306 | Não encontrei fala neste vídeo: ele fica sem legendas e sem título. Dá para escolher estilo e gerar o vídeo final. | A transcrição terminou sem nenhuma palavra (só música, ruído, silêncio ou fala muito baixa). O detalhe traz quantos silêncios foram achados. Se tem fala, confira o volume do microfone. |
 | M4F-401 | Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador. | Nenhum codificador de vídeo disponível. |
 | M4F-402 | A geração do vídeo falhou. | Falha durante a geração do MP4; ver detalhe. |
+| M4F-403 | Seu navegador não gera H.264: o vídeo funciona aqui, mas o Instagram pode recusar. Para o arquivo final, use Chrome ou Edge no computador. | O vídeo saiu em outro formato (VP9/AV1) porque o navegador não tem codificador H.264 (comum no Chromium sem codecs proprietários e em alguns Linux). Detalhe traz o formato usado. Antes da v0.7 este aviso aparecia sem código. |
 | M4F-501 | A legenda não pode ficar vazia. | Ao editar, o texto da legenda ficou em branco. O texto anterior é mantido. |
 | M4F-502 | A legenda pode ter no máximo 120 caracteres. | Texto longo demais para caber na tela. Divida em frases menores. |
 | M4F-503 | Não dá para cortar o vídeo inteiro. | O ajuste de corte removeria todos os trechos. |

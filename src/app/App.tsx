@@ -46,7 +46,7 @@ function EditorApp() {
   const transcriber = useMemo(
     () =>
       import.meta.env.VITE_FAKE_ASR === '1'
-        ? new FakeTranscriber(FAKE_CHUNKS, new URLSearchParams(location.search).get('asr') === 'falha')
+        ? new FakeTranscriber(new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : FAKE_CHUNKS, new URLSearchParams(location.search).get('asr') === 'falha')
         : new WhisperTranscriber(),
     [],
   );
