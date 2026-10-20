@@ -208,9 +208,10 @@ function EditorApp() {
     setProjectId(id);
     setProjectName(meta?.name ?? nameFromFile(loaded.project.video.name));
     await enqueue(() => setCurrent(fs, id)).catch(() => undefined);
-    const isMulti = (loaded.project.history.present as any)?.clips?.length > 1;
+    const savedClips = loaded.project.history.present.clips;
+    const usesClipStorage = savedClips.length > 1 || (savedClips.length === 1 && savedClips[0]!.id !== 'c1');
     if (!loaded.video) {
-      if (isMulti) {
+      if (usesClipStorage) {
         try {
           const { loadProjectVideos } = await import('../core/project-library');
           const clipMap = await enqueue(() => loadProjectVideos(fs, id, loaded.project));
