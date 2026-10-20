@@ -1,0 +1,100 @@
+/*
+ * Meus projetos, menu do projeto, diálogos e tela Armazenamento (v0.11, ADR-0016).
+ * Só tokens de theme.css (docs/design-system.md).
+ */
+
+/* ---------- botão destrutivo cheio ---------- */
+button.danger-solid { background: var(--red); border-color: var(--red); color: var(--bg-0); font-weight: 650; }
+button.danger-solid:hover:not(:disabled) { background: color-mix(in srgb, var(--red) 85%, var(--text-1)); border-color: transparent; }
+button.ghost.danger { color: var(--red); }
+button.ghost.danger:hover:not(:disabled) { background: var(--red-soft); color: var(--red); }
+
+/* ---------- diálogo ---------- */
+.m4f-overlay { position: fixed; inset: 0; z-index: 60; background: var(--overlay); display: grid; place-items: center; padding: var(--s-4); animation: m4f-fade var(--dur-2) var(--ease); }
+@keyframes m4f-fade { from { opacity: 0; } to { opacity: 1; } }
+.m4f-dialog { width: min(480px, 100%); max-height: calc(100dvh - 2 * var(--s-4)); display: grid; grid-template-rows: auto 1fr; background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--r-xl); box-shadow: var(--shadow-3); outline: none; overflow: hidden; }
+.m4f-dialog.wide { width: min(760px, 100%); }
+.m4f-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: var(--s-4) var(--s-4) var(--s-3) var(--s-5); border-bottom: 1px solid var(--line); }
+.m4f-dialog-head h2 { font-size: var(--fs-xl); min-width: 0; overflow-wrap: anywhere; }
+.m4f-dialog-body { display: grid; gap: var(--s-4); padding: var(--s-5); overflow-y: auto; align-content: start; font-size: var(--fs-md); }
+.m4f-dialog-actions { display: flex; justify-content: flex-end; gap: var(--s-2); flex-wrap: wrap; padding-top: var(--s-2); }
+.m4f-list { margin: calc(-1 * var(--s-2)) 0 0; padding-left: var(--s-5); color: var(--text-2); display: grid; gap: var(--s-1); }
+.m4f-callout { display: flex; gap: var(--s-2); align-items: flex-start; padding: var(--s-3); border-radius: var(--r-md); background: var(--bg-3); color: var(--text-1); font-size: var(--fs-sm); }
+.m4f-callout svg { flex: none; margin-top: 2px; color: var(--text-2); }
+.m4f-callout.ok { background: var(--green-soft); }
+.m4f-callout.ok svg { color: var(--green); }
+.m4f-strong-warn { color: var(--red); font-weight: 650; }
+
+/* ---------- Meus projetos (primeira tela) ---------- */
+.projects { display: grid; gap: var(--s-3); width: 100%; min-width: 0; align-self: start; }
+.projects-head { display: flex; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; }
+.projects-head h2 { font-size: var(--fs-xl); }
+.projects-head .hint { flex: 1; }
+.proj-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); max-height: min(620px, 70dvh); overflow-y: auto; padding-right: var(--s-1); }
+.proj-card { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--s-3); padding: var(--s-3); background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-lg); transition: border-color var(--dur-1) var(--ease); }
+.proj-card:hover { border-color: var(--line-strong); }
+.proj-card.broken { border-style: dashed; }
+.proj-open { padding: 0; border: 0; background: none; min-height: 0; border-radius: var(--r-md); overflow: hidden; align-self: start; }
+.proj-thumb { display: grid; place-items: center; width: 72px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: var(--r-md); background: var(--bg-0); color: var(--text-3); border: 1px solid var(--line); }
+.proj-info { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.proj-name { font-weight: 650; font-size: var(--fs-md); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; max-width: 100%; color: var(--text-1); }
+.proj-name:hover:not(:disabled) { text-decoration: underline; }
+.proj-meta { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; color: var(--text-2); font-size: var(--fs-xs); }
+.proj-meta.warn { color: var(--amber); }
+.proj-actions { display: flex; align-items: center; gap: var(--s-1); flex-wrap: wrap; margin-top: 2px; }
+.proj-rename { display: flex; gap: var(--s-1); align-items: center; min-width: 0; }
+.proj-rename input { flex: 1; min-width: 0; padding: 4px 8px; font-size: var(--fs-sm); }
+.projects-note { font-size: var(--fs-xs); }
+.land-links button { font-size: var(--fs-sm); }
+
+/* ---------- menu do projeto (barra do topo) ---------- */
+.pmenu { position: relative; min-width: 0; }
+.pmenu-trigger { gap: 4px; padding: 0 var(--s-2); margin-left: calc(-1 * var(--s-2)); color: var(--text-1); max-width: 100%; }
+.pmenu-trigger .project-name { max-width: 30vw; }
+.pmenu-list { position: absolute; z-index: 45; top: calc(100% + 6px); left: calc(-1 * var(--s-2)); width: 280px; display: grid; gap: 2px; padding: var(--s-1); background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--r-md); box-shadow: var(--shadow-2); animation: m4f-pop var(--dur-2) var(--ease); }
+.pmenu-list > button, .pmenu-list > label { justify-content: flex-start; align-items: flex-start; text-align: left; white-space: normal; background: transparent; border-color: transparent; padding: 7px var(--s-2); min-height: 34px; }
+.pmenu-list > button svg, .pmenu-list > label svg { margin-top: 2px; color: var(--text-2); }
+.pmenu-list > button:hover:not(:disabled), .pmenu-list > label:hover, .pmenu-list > :focus-visible { background: var(--bg-3); }
+.pmenu-list > button.danger, .pmenu-list > button.danger svg { color: var(--red); }
+.pmenu-list small { display: block; color: var(--text-3); font-size: var(--fs-2xs); font-weight: 450; }
+.pmenu-sep { height: 1px; background: var(--line); margin: 2px var(--s-1); }
+.pmenu-rename input { width: min(280px, 40vw); padding: 4px 8px; font-size: var(--fs-sm); }
+
+/* ---------- Armazenamento ---------- */
+.st-loading { display: flex; align-items: center; gap: var(--s-2); }
+.st-summary { gap: var(--s-4); }
+.st-total { display: flex; gap: var(--s-3); align-items: flex-start; }
+.st-total > svg { flex: none; color: var(--brand); margin-top: 2px; }
+.st-total > div { display: grid; gap: var(--s-2); flex: 1; min-width: 0; }
+.st-total b { font-size: var(--fs-xl); }
+.st-bar { height: 8px; }
+.st-persist { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-3); flex-wrap: wrap; font-size: var(--fs-sm); color: var(--text-2); padding-top: var(--s-3); border-top: 1px solid var(--line); }
+.st-persist p { display: flex; align-items: center; gap: 6px; }
+.st-section { display: grid; gap: var(--s-2); }
+.st-section h3 { display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-md); }
+.st-section h3 .hint { margin-left: auto; font-weight: 500; }
+.st-empty { padding: var(--s-2) 0; }
+.st-list { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.st-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--s-1) var(--s-3); align-items: center; padding: var(--s-3); background: var(--bg-1); }
+.st-row + .st-row { border-top: 1px solid var(--line); }
+.st-row-main { display: grid; gap: 2px; min-width: 0; }
+.st-row-label { font-weight: 600; display: flex; align-items: center; gap: var(--s-2); overflow-wrap: anywhere; }
+.st-row-detail { font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.st-row-size { font-size: var(--fs-sm); white-space: nowrap; }
+.st-confirm { grid-column: 1 / -1; display: grid; gap: var(--s-2); padding: var(--s-3); border-radius: var(--r-sm); background: var(--red-soft); }
+.st-confirm-btns { display: flex; justify-content: flex-end; gap: var(--s-2); flex-wrap: wrap; }
+.st-danger { display: grid; gap: var(--s-2); justify-items: start; padding: var(--s-4); border: 1px solid color-mix(in srgb, var(--red) 45%, transparent); border-radius: var(--r-md); }
+.st-danger h3 { font-size: var(--fs-md); color: var(--red); }
+.st-wipe { display: grid; gap: var(--s-3); width: 100%; }
+.st-wipe label { display: grid; gap: var(--s-1); font-size: var(--fs-sm); }
+.st-wipe input { max-width: 220px; }
+
+@media (max-width: 640px) {
+  .m4f-overlay { padding: 0; place-items: end stretch; }
+  .m4f-dialog, .m4f-dialog.wide { width: 100%; max-height: 92dvh; border-radius: var(--r-xl) var(--r-xl) 0 0; }
+  .m4f-dialog-body { padding: var(--s-4); }
+  .st-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .st-row > button { grid-column: 1 / -1; justify-self: start; }
+  .pmenu-trigger .project-name { max-width: 34vw; }
+  .proj-grid { max-height: none; overflow: visible; }
+}

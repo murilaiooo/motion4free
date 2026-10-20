@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Check, CloudOff, Download, Moon, Redo2, Replace, Sun, Undo2 } from 'lucide-react';
 
 export type SaveState = 'saved' | 'saving' | 'off';
@@ -58,9 +58,11 @@ interface Props {
   onExport: () => void;
   exporting: number | null;
   exportDisabled: boolean;
+  /** menu do projeto (nome clicável: renomear, fechar, apagar, armazenamento) */
+  menu?: ReactNode;
 }
 
-export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, onReplaceFile, busy, onExport, exporting, exportDisabled }: Props) {
+export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, onReplaceFile, busy, onExport, exporting, exportDisabled, menu }: Props) {
   const project = fileName.replace(/\.[^.]+$/, '');
   return (
     <header className="topbar">
@@ -71,9 +73,11 @@ export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, 
         </a>
         <span className="topbar-sep" aria-hidden />
         <div className="project">
-          <span className="project-name" title={fileName}>
-            {project}
-          </span>
+          {menu ?? (
+            <span className="project-name" title={fileName}>
+              {project}
+            </span>
+          )}
           <span className={`save-state ${saveState}`} data-testid={saveState === 'saved' ? 'saved' : 'saving'}>
             {saveState === 'saved' ? (
               <>
@@ -99,10 +103,10 @@ export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, 
           <Redo2 size={18} />
         </button>
         <span className="topbar-sep" aria-hidden />
-        <label className={`btn ghost replace ${busy ? 'disabled' : ''}`} data-tip="O projeto atual será substituído">
+        <label className={`btn ghost replace ${busy ? 'disabled' : ''}`} data-tip="Começa um projeto novo; este continua salvo">
           <Replace size={16} aria-hidden />
           <span className="hide-sm">Trocar vídeo</span>
-          <input className="sr-only" type="file" accept="video/*" disabled={busy} data-testid="file-input-replace" aria-label="Trocar vídeo (o projeto atual será substituído)" onChange={(e) => e.target.files?.[0] && onReplaceFile(e.target.files[0])} />
+          <input className="sr-only" type="file" accept="video/*" disabled={busy} data-testid="file-input-replace" aria-label="Trocar vídeo (começa um projeto novo; este continua salvo em Meus projetos)" onChange={(e) => e.target.files?.[0] && onReplaceFile(e.target.files[0])} />
         </label>
         <ThemeToggle />
         <button className="primary export-btn" onClick={onExport} disabled={exportDisabled} data-testid="export">

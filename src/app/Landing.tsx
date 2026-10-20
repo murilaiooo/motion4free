@@ -1,12 +1,12 @@
 import { useState, type DragEvent, type ReactNode } from 'react';
-import { Captions, Check, Cpu, FileVideo, Scissors, ShieldCheck, Sparkles, Upload, WandSparkles } from 'lucide-react';
+import { Captions, Check, Cpu, FileVideo, HardDrive, Scissors, ShieldCheck, Sparkles, Upload, WandSparkles } from 'lucide-react';
 import { PROCESSING_STEPS, processingStep } from '../core/steps';
 import { listTemplates } from '../core/template-gallery';
 import { APP_BUILT_AT, VERSION_LABEL } from '../version';
 import { TemplateThumb } from './Templates';
 import { Logo, ThemeToggle } from './TopBar';
 
-function Header() {
+function Header({ onStorage }: { onStorage?: () => void }) {
   return (
     <header className="land-nav">
       <a className="brand" href="./" aria-label="Motion4Free">
@@ -15,6 +15,11 @@ function Header() {
       </a>
       <nav className="land-links">
         <a href="?galeria">Modelos</a>
+        {onStorage && (
+          <button className="ghost" onClick={onStorage} aria-label="Armazenamento" data-testid="open-storage">
+            <HardDrive size={16} aria-hidden /> <span className="hide-sm">Armazenamento</span>
+          </button>
+        )}
         <ThemeToggle />
       </nav>
     </header>
@@ -48,7 +53,7 @@ function Footer() {
 /** Três modelos bem diferentes entre si para a vitrine da primeira tela. */
 const SHOWCASE = ['pop', 'podcast', 'cinema'];
 
-export function Landing({ onFile, busy, pendingName, notices, options }: { onFile: (f: File) => void; busy: boolean; pendingName: string | null; notices: ReactNode; options?: ReactNode }) {
+export function Landing({ onFile, busy, pendingName, notices, options, projects, onStorage }: { onFile: (f: File) => void; busy: boolean; pendingName: string | null; notices: ReactNode; options?: ReactNode; projects?: ReactNode; onStorage?: () => void }) {
   const [over, setOver] = useState(false);
   const all = listTemplates();
   const examples = SHOWCASE.map((id) => all.find((t) => t.id === id)).filter((t) => t !== undefined);
@@ -60,7 +65,7 @@ export function Landing({ onFile, busy, pendingName, notices, options }: { onFil
   };
   return (
     <div className="land">
-      <Header />
+      <Header onStorage={onStorage} />
       <main className="hero">
         <section className="hero-copy">
           <span className="eyebrow pill">
@@ -109,6 +114,7 @@ export function Landing({ onFile, busy, pendingName, notices, options }: { onFil
           </ol>
         </section>
 
+        {projects || (
         <section className="hero-show" aria-label="Exemplos de modelos">
           <div className="showcase">
             {examples.map((t, i) => (
@@ -123,6 +129,7 @@ export function Landing({ onFile, busy, pendingName, notices, options }: { onFil
           </div>
           <p className="hint show-note">Quadros de exemplo desenhados agora, no seu navegador, com os modelos do app.</p>
         </section>
+        )}
       </main>
       <Footer />
     </div>
