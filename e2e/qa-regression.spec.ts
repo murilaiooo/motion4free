@@ -70,7 +70,7 @@ test('QA real: primeiro vídeo removido preserva segundo após fechar e reabrir,
   expect(m.streams.some(s => s.codec_type === 'audio')).toBe(true);
   const pixel = execFileSync('ffmpeg', ['-v','error','-ss','0.3','-i',out,'-frames:v','1','-vf','scale=1:1:flags=area','-pix_fmt','rgb24','-f','rawvideo','pipe:1']);
   expect(pixel.length).toBe(3);
-  expect(pixel[2]).toBeGreaterThan(pixel[0] + 35);
+  expect(pixel[2]!).toBeGreaterThan(pixel[0]! + 35);
 });
 
 test('QA: trocas de formato são guardadas, sobrevivem ao reiniciar e ao desfazer', async ({ page }) => {
