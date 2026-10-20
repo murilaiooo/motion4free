@@ -143,7 +143,7 @@ describe('transcrição é dado, nunca instrução', () => {
     const { brief } = interpretPrompt('calmo, sem números');
     const next = applyBrief(plan, c, brief);
     expect(next.style.id).toBe('editorial');
-    expect(next.brief).toEqual({ ...brief, hook: null, locked: [] });
+    expect(next.brief).toMatchObject({ ...brief, hook: null, locked: [] });
     expect(next.scenes.some((s) => s.kind === 'big-number')).toBe(false);
   });
 

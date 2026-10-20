@@ -17,7 +17,7 @@ import { STOPWORDS } from './detect';
 import { TEMPLATES } from '../core/templates';
 import { lookIsEmpty } from '../core/look';
 import { parseLookRules } from './look-rules';
-import { findNiche, nicheSpans, parseExtras } from './extra-rules';
+import { findNiche } from './extra-rules';
 import { stripAccents, tokenize, type Token } from './tokens';
 
 export { stripAccents, tokenize } from './tokens';
@@ -84,21 +84,8 @@ const LEXICON: Entry[] = [
   ...entry('editorial|estilo editorial|estilo revista|revista', [{ f: 'preset', v: 'editorial', strong: true }]),
   ...entry('documental|estilo documental|documentario', [{ f: 'preset', v: 'documental', strong: true }, { f: 'tone', v: 'serio' }]),
   ...entry('animado|animada|energetico|energetica|energia|agitado|agitada|vibrante|empolgante|eletrico|eletrica|impactante|chamativo|chamativa|intenso|intensa|explosivo', TONE_ENERGETIC, 'up'),
-  ...entry('calmo|calma|tranquilo|tranquila|suave|sereno|serena|relaxante|zen|leve|sem pressa|sossegado|calminho|calminha|levinho|tranquilinho|bem leve', TONE_CALM, 'down'),
-  // v0.12: tons novos (inspirador, acolhedor)
-  ...entry('inspirador|inspiradora|motivacional|motivador|motivadora|emocionante|emocionar|inspiracional|reflexivo|reflexiva', [
-    { f: 'tone', v: 'inspirador' },
-    { f: 'goal', v: 'inspirar' },
-  ]),
-  ...entry('acolhedor|acolhedora|carinhoso|carinhosa|fofo|fofa|fofinho|fofinha|afetivo|afetiva|aconchegante|empatico|empatica|delicado|delicada|acolhimento|amoroso|amorosa|gentil', [
-    { f: 'tone', v: 'acolhedor' },
-    { f: 'intensity', v: 'baixa', strong: false },
-  ], 'down'),
-  ...entry('confianca|confiavel|credibilidade|autoridade|respeitoso|respeitosa|serio e profissional', [{ f: 'tone', v: 'serio' }]),
-  ...entry('urgencia|urgente|escassez|ultimas vagas', [{ f: 'pace', v: 'rapido', strong: false }, { f: 'intensity', v: 'alta', strong: false }]),
-  ...entry('moderno|moderna|atual|atualizado|inovador|inovadora|tecnologico|tecnologica', [{ f: 'preset', v: 'neon', strong: false }]),
-  ...entry('rapidinho|rapidinha|rapidao|curtinho', [{ f: 'pace', v: 'rapido', strong: true }], 'up'),
-  ...entry('elegante|sofisticado|sofisticada|discreto|discreta|chique|refinado|refinada', [
+  ...entry('calmo|calma|tranquilo|tranquila|suave|sereno|serena|relaxante|zen|leve|sem pressa|sossegado', TONE_CALM, 'down'),
+  ...entry('elegante|sofisticado|sofisticada|discreto|discreta|chique|refinado|refinada|delicado', [
     { f: 'tone', v: 'elegante' },
     { f: 'preset', v: 'editorial', strong: false },
   ]),
@@ -118,11 +105,11 @@ const LEXICON: Entry[] = [
   ...entry('rapido|rapida|dinamico|dinamica|acelerado|acelerada|agil|ritmo rapido|frenetico|ritmado', [{ f: 'pace', v: 'rapido', strong: true }], 'up'),
   ...entry('lento|lenta|devagar|pausado|pausada|ritmo lento|cadenciado', [{ f: 'pace', v: 'lento', strong: true }], 'down'),
   ...entry('ritmo normal|ritmo medio', [{ f: 'pace', v: 'normal', strong: true }]),
-  ...entry('vender|venda|vendas|vendendo|produto|oferta|promocao|comprar|compra|lancamento|converter|conversao|vendedor|vendedora|anuncio|propaganda|publicidade|vender mais', [{ f: 'goal', v: 'vender' }]),
+  ...entry('vender|venda|vendas|vendendo|produto|oferta|promocao|comprar|compra|lancamento|converter|conversao', [{ f: 'goal', v: 'vender' }]),
   ...entry('ensinar|ensino|tutorial|aula|explicar|explicativo|explicativa|didatico|didatica|dicas|dica|passo a passo|educativo|educativa', [{ f: 'goal', v: 'ensinar' }]),
-  ...entry('inspirar|motivar|motivacao', [{ f: 'goal', v: 'inspirar' }]),
+  ...entry('inspirar|inspirador|inspiradora|motivar|motivacional|motivacao|emocionante|emocionar', [{ f: 'goal', v: 'inspirar' }]),
   ...entry('entreter|entretenimento|divertir', [{ f: 'goal', v: 'entreter' }]),
-  ...entry('informar|informativo|informativa|noticia|noticias|informacao|explicando|explica', [{ f: 'goal', v: 'informar' }]),
+  ...entry('informar|informativo|informativa|noticia|noticias|informacao', [{ f: 'goal', v: 'informar' }]),
   ...entry('gancho|gancho forte|comeco forte|abertura forte|inicio forte|prender a atencao|prenda a atencao|chamar atencao|chame atencao|prender atencao', [{ f: 'hook' }]),
 ];
 
@@ -194,8 +181,7 @@ const AUDIENCES: Record<string, string> = {
   iniciantes: 'iniciantes', jovens: 'jovens', adolescentes: 'adolescentes', criancas: 'crianças', empresarios: 'empresários', empreendedores: 'empreendedores',
   empreendedoras: 'empreendedoras', maes: 'mães', pais: 'pais', estudantes: 'estudantes', profissionais: 'profissionais', leigos: 'leigos', idosos: 'idosos',
   mulheres: 'mulheres', homens: 'homens', medicos: 'médicos', advogados: 'advogados', professores: 'professores', clientes: 'clientes', seguidores: 'seguidores',
-  investidores: 'investidores', mei: 'MEIs', meis: 'MEIs', concurseiros: 'concurseiros', pacientes: 'pacientes', noivas: 'noivas', gestantes: 'gestantes', mamaes: 'mamães', donos: 'donos de negócio',
-  alunos: 'alunos', iniciante: 'iniciantes', empresas: 'empresas', mentorados: 'mentorados', seguidoras: 'seguidoras', universitarios: 'universitários', aposentados: 'aposentados', autonomos: 'autônomos', atletas: 'atletas', gestores: 'gestores', vendedores: 'vendedores', criadores: 'criadores', programadores: 'programadores',
+  investidores: 'investidores', atletas: 'atletas', gestores: 'gestores', vendedores: 'vendedores', criadores: 'criadores', programadores: 'programadores',
 };
 const AUDIENCE_ADJ: Record<string, string> = { jovem: 'público jovem', adulto: 'público adulto', feminino: 'público feminino', masculino: 'público masculino', infantil: 'público infantil', geral: 'público geral', leigo: 'público leigo' };
 
@@ -223,13 +209,13 @@ const FORBID_TRIGGERS = 'sem|nada de|nenhum|nenhuma|zero|nao use|nao usar|nao us
 
 /** Alvos dos destaques. */
 const EMPHASIS_TARGETS: { phrase: string[]; v: Emphasis }[] = [
-  ...'numero|numeros|dados|valores|valor|estatistica|estatisticas|porcentagem|porcentagens|precos|preco|resultados|datas|data|prazos|prazo|metragem|calorias|series|repeticoes|especificacoes|medidas|quantidades|taxas|juros|numero das series'.split('|').map((p) => ({ phrase: words(p), v: 'numeros' as const })),
+  ...'numero|numeros|dados|valores|valor|estatistica|estatisticas|porcentagem|porcentagens|precos|preco|resultados'.split('|').map((p) => ({ phrase: words(p), v: 'numeros' as const })),
   ...'palavra chave|palavras chave|palavras|termos|palavras importantes|pontos importantes|ideias principais'.split('|').map((p) => ({ phrase: words(p), v: 'palavras' as const })),
   ...'pergunta|perguntas'.split('|').map((p) => ({ phrase: words(p), v: 'perguntas' as const })),
   ...'lista|listas|topicos|passos|etapas|itens'.split('|').map((p) => ({ phrase: words(p), v: 'listas' as const })),
   ...'nome|meu nome'.split('|').map((p) => ({ phrase: words(p), v: 'nome' as const })),
 ];
-const EMPHASIS_TRIGGERS = 'mostra|mostre|mostrar|destaque|destaca|destacar|destacando|destacado|destacados|realce|realca|realcar|enfatize|enfatiza|enfatizar|enfase|foco|focar|foque|valorize|valoriza|valorizar|ressalte|ressaltar|evidencie|evidenciar|aumente|grandes'
+const EMPHASIS_TRIGGERS = 'destaque|destaca|destacar|destacando|destacado|destacados|realce|realca|realcar|enfatize|enfatiza|enfatizar|enfase|foco|focar|foque|valorize|valoriza|valorizar|ressalte|ressaltar|evidencie|evidenciar|aumente|grandes'
   .split('|')
   .map(words);
 
@@ -290,17 +276,14 @@ export function interpretPrompt(text: string): Interpretation {
   // 0) look (cores, legenda, emojis, cortes, gancho criativo...): antes das proibições, porque
   //    "legenda sem animação" e "sem fundo" são da legenda; "sem emojis" fica para as proibições
   const templatePicks = templatePass(toks, used);
-  // v0.12: chamada final, @, título entre aspas, linguagem, "pronto pra postar", rosto, listas, aberturas
-  const extras = parseExtras(prompt, toks, used);
-  conflicts.push(...extras.notes);
-  const beforeLook = [...used];
   const lookRules = parseLookRules(prompt, toks, used);
   conflicts.push(...lookRules.notes);
-  // tipo de conteúdo: palavras usadas pelo look (cores, emojis…) não contam; as do modelo e da chamada contam
-  const lookUsed = (i: number) => used[i] === true && !beforeLook[i];
-  const nicheHit = findNiche(toks, lookUsed);
-  if (nicheHit) conflicts.push(...nicheHit.notes);
-  for (const [from, n] of nicheSpans(toks, lookUsed)) mark(from, n);
+  {
+    const beforeLook = [...used];
+    const lookUsed = (i: number) => used[i] === true && !beforeLook[i];
+    const nicheHit = findNiche(toks, lookUsed);
+    if (nicheHit) conflicts.push(...nicheHit.notes);
+  }
 
   // 1) proibições (antes de tudo: "sem pressa" é tom, não proibição; o léxico de tom é testado primeiro só nessa posição)
   for (let i = 0; i < toks.length; i++) {
@@ -361,29 +344,13 @@ export function interpretPrompt(text: string): Interpretation {
       if (hit >= 0) mark(i, hit - i);
       continue;
     }
-    // "números em destaque", "preço grande", "dados e porcentagens em destaque", "número das séries grande"
+    // "números em destaque", "números grandes"
     const t = matchAt(toks, i, EMPHASIS_TARGETS);
     if (t) {
-      const found: { v: Emphasis; k: number; n: number }[] = [];
-      let k = i;
-      while (k < toks.length && k <= i + 6 && !used[k]) {
-        const tt = matchAt(toks, k, EMPHASIS_TARGETS);
-        if (tt) {
-          found.push({ v: tt.v, k, n: tt.phrase.length });
-          k += tt.phrase.length;
-          continue;
-        }
-        if (LIST_GLUE.has(toks[k]!.norm) || ART.has(toks[k]!.norm)) {
-          k++;
-          continue;
-        }
-        break;
-      }
-      const tail = toks[k]?.norm === 'em' && toks[k + 1]?.norm === 'destaque' ? 2 : ['grande', 'grandes', 'grandao', 'grandona'].includes(toks[k]?.norm ?? '') ? 1 : toks[k]?.norm === 'na' && toks[k + 1]?.norm === 'tela' ? 2 : 0;
-      if (tail && found.length) {
-        for (const f of found) if (!emphasize.includes(f.v)) emphasize.push(f.v);
-        mark(i, k - i + tail);
-        i = k + tail - 1;
+      const after = i + t.phrase.length;
+      if ((toks[after]?.norm === 'em' && toks[after + 1]?.norm === 'destaque') || toks[after]?.norm === 'grandes') {
+        if (!emphasize.includes(t.v)) emphasize.push(t.v);
+        mark(i, t.phrase.length + (toks[after]?.norm === 'em' ? 2 : 1));
       }
     }
   }
@@ -419,7 +386,7 @@ export function interpretPrompt(text: string): Interpretation {
   let pace: Pick<Pace> = null;
   let tone: Tone | null = null;
   let goal: Goal | null = null;
-  let wantsHook = lookRules.wantsHook || extras.wantsHook;
+  let wantsHook = lookRules.wantsHook;
   const setPick = <T extends string>(cur: Pick<T>, v: T, strong: boolean, word: string, label: (x: T) => string, what: string): Pick<T> => {
     if (!cur || (strong && !cur.strong)) {
       if (cur && cur.v !== v) conflicts.push(`${what}: "${word}" vale mais que "${cur.word}"; ficou ${label(v)}.`);
@@ -493,20 +460,6 @@ export function interpretPrompt(text: string): Interpretation {
 
   // proibição sempre vence o look: "sem emojis" desliga emojis pedidos; "sem barra" vence "com barra"
   const look = lookRules.look;
-  if (extras.title) look.title = extras.title;
-  if (extras.handle) look.handle = extras.handle;
-  if (extras.avoidFace) look.captions = { ...look.captions, avoidFace: true };
-  const ctaOff = forbid.includes('chamada') || forbid.includes('textos') || look.scenes?.chamada === false;
-  if (extras.cta && !ctaOff) look.cta = extras.cta;
-  else if (extras.cta) conflicts.push('Você pediu uma chamada final e também "sem chamada": a proibição vale mais.');
-  if (extras.ctaScene && !ctaOff) look.scenes = { ...look.scenes, chamada: true };
-  if (look.title && (forbid.includes('titulo') || forbid.includes('textos'))) {
-    delete look.title;
-    conflicts.push('Você escreveu um título e também pediu sem título/textos: a proibição vale mais.');
-  }
-  for (const e of [...lookRules.emphasize, ...(extras.lists ? (['listas'] as const) : [])]) {
-    if (!emphasize.includes(e) && !blocks[e].some((p) => forbid.includes(p))) emphasize.push(e);
-  }
   if (forbid.includes('emojis') && look.emoji && look.emoji.mode !== 'off') {
     delete look.emoji;
     conflicts.push('Você pediu emojis e também "sem emojis": a proibição vale mais.');
@@ -530,7 +483,6 @@ export function interpretPrompt(text: string): Interpretation {
     if (used[i] || !meaningful(t)) return;
     if (!ignored.includes(t.raw) && ignored.length < 12) ignored.push(t.raw.slice(0, 40));
   });
-  if (mentionedCaptionsOff) lookRules.unsupported.push('tirar a legenda (nesta versão ela sempre aparece)');
   const unsupported = [...lookRules.unsupported, ...leftoverPhrases(toks, used)].filter((x, i, all) => all.indexOf(x) === i).slice(0, UNSUPPORTED_MAX);
 
   const finalPreset = preset as Pick<PresetId>;
@@ -556,11 +508,8 @@ export function interpretPrompt(text: string): Interpretation {
     hookStyle: lookRules.hookStyle,
     unsupported: unsupported.map((u) => u.slice(0, 60)),
     summary: '',
-    ...(nicheHit ? { niche: nicheHit.niche } : {}),
-    ...(extras.register ? { register: extras.register } : {}),
   };
-  if (!brief.hookStyle && extras.hookStyle) brief.hookStyle = extras.hookStyle;
-  const understood = !!(nicheHit || extras.register || audience || tone || brief.intensity || brief.pace || brief.preset || forbid.length || emphasize.length || wantsHook || mentionedCaptionsOff || !lookIsEmpty(look) || lookRules.hookStyle);
+  const understood = !!(goal || audience || tone || brief.intensity || brief.pace || brief.preset || forbid.length || emphasize.length || wantsHook || mentionedCaptionsOff || !lookIsEmpty(look) || lookRules.hookStyle);
   return { brief, understood, knownUnsupported: lookRules.unsupported.slice(0, UNSUPPORTED_MAX) };
 }
 

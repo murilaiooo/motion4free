@@ -24,6 +24,8 @@ function cap(id: string, text: string, start: number, end: number, wordStarts: n
 export function galleryPlan(style: StyleDNA): EditPlan {
   return {
     version: 6,
+    clips: [{ id: 'c1', name: '', duration: 28, framing: null }],
+    framing: { mode: 'fill', fill: 'blur', zoom: 1, x: 0, y: 0 },
     ranges: [],
     reference: null,
     edits: EMPTY_EDITS,

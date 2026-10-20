@@ -1,5 +1,5 @@
 import type { EditPlan, SceneInstance } from '../core/types';
-import type { Framing } from '../core/edits';
+import type { Framing as ManualFraming } from '../core/edits';
 import { resolvePlan, type Resolved, type ResolvedScene } from '../editorial/elements';
 import type { ElementMarks } from './bounds';
 import { drawAdded } from './added';
@@ -17,6 +17,7 @@ import { easeInOutQuint, easeOutExpo, springIn, wiggle } from './motion';
 import { alphaOf, composition, makeFrame, withAlpha, type Frame } from './kit';
 import { drawOverlay, drawProgress } from './scenes';
 import { drawHandle, drawLetterbox, drawScanlines, drawTag, drawTicker, drawTint, drawVignette, tickerText } from './decor';
+import { framingFor, placeSource, type Focus } from './framing';
 
 export function activeAt<T extends { start: number; end: number }>(items: T[], t: number): T[] {
   return items.filter((i) => t >= i.start && t < i.end);
@@ -82,7 +83,7 @@ export function cameraAt(plan: EditPlan, t: number, S: StyleDNA = styleAt(plan, 
         // tremor curto no impacto, só em estilos bem intensos
         const d = 1 - progress(t, s.start, 0.32);
         if (S.motion.intensity >= 0.6 && d > 0) {
-          const amp = 9 * (plan.output.width / 1080) * S.motion.intensity * d * d;
+          const amp = 9 * (Math.min(plan.output.width, plan.output.height) / 1080) * S.motion.intensity * d * d;
           dx = wiggle(t - s.start, 13, 1) * amp;
           dy = wiggle(t - s.start, 11, 2) * amp * 0.7;
         }
@@ -131,16 +132,71 @@ export function sameWords(a: string, b: string): boolean {
   return common / Math.min(wa.length, wb.size) >= 0.6;
 }
 
+/**
+ * Quadro de um clipe no tamanho de origem (v0.14), com o que o enquadramento precisa: proporção real,
+ * de qual clipe ele é (enquadramento próprio), o foco do rosto naquele instante e uma cópia minúscula
+ * para o fundo desfocado do modo "ajustar". Quem decodifica (player/exportação) monta isto; o desenho é puro.
+ */
+export interface SourceFrame {
+  kind: 'clip';
+  image: CanvasImageSource;
+  width: number;
+  height: number;
+  clipId: string;
+  focus: Focus | null;
+  /** cópia bem pequena do mesmo quadro: esticada, vira o fundo desfocado */
+  backdrop: CanvasImageSource | null;
+}
+
+export function isSourceFrame(x: unknown): x is SourceFrame {
+  return !!x && typeof x === 'object' && (x as { kind?: unknown }).kind === 'clip';
+}
+
+/** Desenha o vídeo de fundo: legado (já no tamanho da saída) ou clipe com enquadramento. */
+function drawSource(ctx: Ctx2D, plan: EditPlan, source: CanvasImageSource | SourceFrame, w: number, h: number, style: StyleDNA): void {
+  if (!isSourceFrame(source)) {
+    // sem clipe (galeria/testes): usa a moldura manual antiga se existir
+    // se houver enquadramento de clipe único, ele já está em plan.framing; mas sem SourceFrame tratamos como legado
+    // tenta usar edits.video se existir, senão desenha direto
+    const manual = (plan as any).edits?.video as ManualFraming | undefined;
+    if (manual) {
+      drawVideo(ctx, source, w, h, manual);
+      return;
+    }
+    ctx.drawImage(source, 0, 0, w, h);
+    return;
+  }
+  const framing = framingFor(plan, source.clipId);
+  const p = placeSource(source.width, source.height, w, h, framing, source.focus);
+  if (p.needsBackdrop) {
+    if (framing.fill === 'blur' && source.backdrop) {
+      // fundo: o mesmo quadro esticado (cobrindo a tela) a partir de uma cópia minúscula = desfoque barato
+      const cover = placeSource(source.width, source.height, w, h, { mode: 'fill', fill: 'blur', zoom: 1.08, x: 0, y: 0 }, null);
+      const k = 1 / source.width;
+      const bw = (source.backdrop as { width?: number }).width ?? 1;
+      const bh = (source.backdrop as { height?: number }).height ?? 1;
+      ctx.drawImage(source.backdrop, cover.src.x * k * bw, (cover.src.y / source.height) * bh, cover.src.w * k * bw, (cover.src.h / source.height) * bh, 0, 0, w, h);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.fillRect(0, 0, w, h);
+    } else {
+      ctx.fillStyle = style.palette.panel.slice(0, 7);
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+  ctx.drawImage(source.image, p.src.x, p.src.y, p.src.w, p.src.h, p.dst.x, p.dst.y, p.dst.w, p.dst.h);
+}
+
 const OVERLAY_ORDER: SceneInstance['kind'][] = ['lower-third', 'kinetic-title', 'big-number', 'list', 'quote', 'end-cta'];
 
 /**
  * Desenha um quadro do vídeo final no instante `t` (tempo de saída).
  * `source` é o quadro do vídeo original (qualquer tamanho; enquadrado aqui conforme as edições).
+ * `source` pode ser um SourceFrame (v0.14) para múltiplos clipes com enquadramento.
  * A mesma função serve para a prévia e para a exportação: é isso que garante prévia = MP4.
  * Depende só de (plano, t, quadro de origem): desenhar em qualquer ordem dá o mesmo resultado.
  * `marks` (opcional) recebe o começo e o fim de cada elemento selecionável (caixas da edição manual).
  */
-export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasImageSource | null, marks?: ElementMarks): void {
+export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasImageSource | SourceFrame | null, marks?: ElementMarks): void {
   const { width: w, height: h } = plan.output;
   const R = resolvePlan(plan);
   const rp = drawnPlan(plan, R);
@@ -166,7 +222,9 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
       ctx.scale(zz, zz);
       ctx.translate(-ox, -oy);
     }
-    drawVideo(ctx, source, w, h, plan.edits.video);
+    // multi-clipe: SourceFrame com enquadramento; legado: CanvasImageSource com moldura manual
+    if (isSourceFrame(source)) drawSource(ctx, plan, source, w, h, style);
+    else drawVideo(ctx, source, w, h, (plan as any).edits?.video ?? { fit: 'fill', scale: 1, x: 0, y: 0 });
     ctx.restore();
   }
   // acabamento do modelo (v0.9): véu de cor e vinheta sobre o vídeo, antes de qualquer texto
@@ -253,7 +311,7 @@ export function zoomAt(plan: EditPlan, t: number): number {
 }
 
 /** Retângulo onde o quadro do vídeo original é desenhado no 9:16 (preencher, caber, tamanho e posição). */
-export function videoRect(srcW: number, srcH: number, w: number, h: number, v: Framing): Rect {
+export function videoRect(srcW: number, srcH: number, w: number, h: number, v: ManualFraming): Rect {
   const base = v.fit === 'fill' ? Math.max(w / srcW, h / srcH) : Math.min(w / srcW, h / srcH);
   const k = base * v.scale;
   const dw = srcW * k;
@@ -261,7 +319,7 @@ export function videoRect(srcW: number, srcH: number, w: number, h: number, v: F
   return { x: (w - dw) / 2 + v.x * w, y: (h - dh) / 2 + v.y * h, w: dw, h: dh };
 }
 
-function drawVideo(ctx: Ctx2D, source: CanvasImageSource, w: number, h: number, v: Framing): void {
+function drawVideo(ctx: Ctx2D, source: CanvasImageSource, w: number, h: number, v: ManualFraming): void {
   const sw = Number((source as { width?: number }).width);
   const sh = Number((source as { height?: number }).height);
   const plain = v.fit === 'fill' && v.scale === 1 && v.x === 0 && v.y === 0;

@@ -35,7 +35,7 @@ export interface EmojiContext {
 export function emojiPose(f: Frame, s: EmojiScene, t: number, around: EmojiContext = {}): EmojiPose {
   const E = f.style.emoji;
   const { safe, u } = f;
-  const size = E.size * f.w;
+  const size = E.size * 1080 * u;
   const k = 0.4 + 0.6 * f.style.motion.intensity;
   // posição: longe da legenda, variando entre centro, esquerda e direita (pelo instante, sempre igual)
   const lane = Math.round(s.start * 7) % 3;

@@ -16,6 +16,8 @@ const H = 1920;
 function plan(style: StyleDNA, over: Partial<EditPlan> = {}): EditPlan {
   return {
     version: 6,
+    clips: [{ id: 'c1', name: '', duration: 20, framing: null }],
+    framing: { mode: 'fill', fill: 'blur', zoom: 1, x: 0, y: 0 },
     ranges: [],
     reference: null,
     edits: EMPTY_EDITS,

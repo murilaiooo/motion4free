@@ -184,6 +184,8 @@ describe('legendas estilo Reels', () => {
 describe('drawFrame', () => {
   const plan = (style: StyleDNA, scenes: SceneInstance[] = SCENES): EditPlan => ({
     version: 6,
+    clips: [{ id: 'c1', name: '', duration: 60, framing: null }],
+    framing: { mode: 'fill', fill: 'blur', zoom: 1, x: 0, y: 0 },
     ranges: [],
     reference: null,
     edits: EMPTY_EDITS,
