@@ -52,6 +52,7 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
     pointerStart: { x: number; y: number };
     box: ElementBox;
   } | null>(null);
+  const pendingScene = useRef<null | { ref: ElementRef; x: number; y: number; box: ElementBox }>(null);
   const [guides, setGuides] = useState<{ x: number | null; y: number | null }>({ x: null, y: null });
 
   const outputW = plan.output.width;
@@ -124,17 +125,16 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
       const hit = hitTest(boxes, x, y, PAD);
       if (hit) {
         if (!sameRef(hit, selected)) onSelect(hit);
+        // Scene (video) clicks should play, not drag immediately - drag only on move
+        if (hit.type === 'scene') {
+          pendingScene.current = { ref: hit, x, y, box: boxes.find((b) => sameRef(b.ref, hit))! };
+          const canvas = canvasRef.current;
+          if (canvas) canvas.click();
+          return;
+        }
         const placement = placementForRef(plan, hit);
         const offset = offsetForRef(plan, hit);
-        if (hit.type === 'scene' && offset) {
-          setDrag({
-            ref: hit,
-            startPlacement: { x: 0.5, y: 0.5, scale: 1, rotate: 0 },
-            startOffset: offset,
-            pointerStart: { x, y },
-            box: boxes.find((b) => sameRef(b.ref, hit))!,
-          });
-        } else if (placement) {
+        if (placement) {
           setDrag({
             ref: hit,
             startPlacement: placement,
@@ -168,6 +168,25 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
+      if (!drag && pendingScene.current) {
+        const { x, y } = toOutput(e.clientX, e.clientY);
+        const dx = x - pendingScene.current.x;
+        const dy = y - pendingScene.current.y;
+        if (Math.hypot(dx, dy) * Math.min(outputW, outputH) < 4) return;
+        const hit = pendingScene.current;
+        const offset = offsetForRef(plan, hit.ref);
+        setDrag({
+          ref: hit.ref,
+          startPlacement: { x: 0.5, y: 0.5, scale: 1, rotate: 0 },
+          startOffset: offset ?? null,
+          pointerStart: { x: hit.x, y: hit.y },
+          box: hit.box,
+        });
+        pendingScene.current = null;
+        (e.target as Element).setPointerCapture(e.pointerId);
+        e.stopPropagation();
+        return;
+      }
       if (!drag) return;
       const { x, y } = toOutput(e.clientX, e.clientY);
       const dxPx = x - drag.pointerStart.x;
@@ -214,6 +233,7 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent) => {
+      pendingScene.current = null;
       setDrag(null);
       setGuides({ x: null, y: null });
       (e.target as Element).releasePointerCapture?.(e.pointerId);
