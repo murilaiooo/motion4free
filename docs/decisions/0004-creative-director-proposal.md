@@ -1,7 +1,7 @@
 # ADR-0004 — AI Creative Director + Creative Composer
 
 **Data:** 2026-10-18
-**Status:** PROPOSTA EM REVISÃO, NÃO APROVADA.
+**Status:** ACEITA EM PARTE (20/10/2026). A [spec v1](../superpowers/specs/2026-10-20-motion4free-v1-design.md) adota a direção criativa como IA que escolhe e parametriza um sistema de motion design curado (Fases 3–4), não como autora livre de cenas.
 
 ## Contexto
 A spec anterior define IA como seletora de ganchos, narrativas e templates. O responsável exige visual autoral, diferente em cada vídeo, sem aparência padronizada, com prompts e presets e IA atuando durante o processamento para aperfeiçoar direção artística.

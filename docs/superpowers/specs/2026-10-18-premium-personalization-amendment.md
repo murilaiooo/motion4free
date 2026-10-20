@@ -1,5 +1,7 @@
 # Adendo de especificação: qualidade premium, criação customizada e presets
 
+> **Incorporado** em 20/10/2026 à [spec v1 consolidada](2026-10-20-motion4free-v1-design.md). Este documento fica como histórico.
+
 **Data:** 2026-10-18 · **Status:** PROPOSTA EM REVISÃO, sem implementação autorizada.
 **Motivo:** [auditoria](../../reviews/2026-10-18-premium-creative-audit.md) detectou que o plano original depende demais de templates fixos e não atende o requisito explícito de vídeos altamente personalizados.
 

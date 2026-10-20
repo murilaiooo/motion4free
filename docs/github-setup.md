@@ -23,7 +23,7 @@ A conexão GitHub atual **não expõe ações de atualização de configuraçõe
 - Habilitar segurança de dependências e reporte privado de vulnerabilidade conforme disponível.
 - Configurar labels de roadmap se houver utilidade (p0, p1, spike, ai, browser, motion, qa).
 - Não configurar GitHub Pages ou site público antes de existir um app e termos claros.
-- Não adicionar licença MIT automaticamente sem decisão expressa do mantenedor.
+- Licença MIT adotada em 20/10/2026 por decisão delegada pelo mantenedor ([ADR-0005](decisions/0005-stack-v1.md)).
 
 ## Custo e CI
 GitHub Actions em repositório privado pode consumir cotas conforme o plano; workflow é pequeno, mas acompanhar uso. Não ligar infraestrutura paga.
