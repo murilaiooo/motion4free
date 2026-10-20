@@ -18,6 +18,29 @@ import plexCond600 from '@fontsource/ibm-plex-sans-condensed/files/ibm-plex-sans
 import plexCond700 from '@fontsource/ibm-plex-sans-condensed/files/ibm-plex-sans-condensed-latin-700-normal.woff2?url';
 import plexMono500 from '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2?url';
 import plexMono600 from '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-600-normal.woff2?url';
+// v0.9 (modelos, ADR-0014)
+import archivoBlack400 from '@fontsource/archivo-black/files/archivo-black-latin-400-normal.woff2?url';
+import dmSans500 from '@fontsource/dm-sans/files/dm-sans-latin-500-normal.woff2?url';
+import dmSans700 from '@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff2?url';
+import spaceGrotesk500 from '@fontsource/space-grotesk/files/space-grotesk-latin-500-normal.woff2?url';
+import spaceGrotesk700 from '@fontsource/space-grotesk/files/space-grotesk-latin-700-normal.woff2?url';
+import nunito800 from '@fontsource/nunito/files/nunito-latin-800-normal.woff2?url';
+import nunito900 from '@fontsource/nunito/files/nunito-latin-900-normal.woff2?url';
+import cormorantGaramond500 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2?url';
+import cormorantGaramond600 from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2?url';
+import cormorantGaramond500I from '@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-italic.woff2?url';
+import oswald500 from '@fontsource/oswald/files/oswald-latin-500-normal.woff2?url';
+import oswald700 from '@fontsource/oswald/files/oswald-latin-700-normal.woff2?url';
+import vt323400 from '@fontsource/vt323/files/vt323-latin-400-normal.woff2?url';
+import bungee400 from '@fontsource/bungee/files/bungee-latin-400-normal.woff2?url';
+import rubik800I from '@fontsource/rubik/files/rubik-latin-800-italic.woff2?url';
+import rubik900I from '@fontsource/rubik/files/rubik-latin-900-italic.woff2?url';
+import courierPrime400 from '@fontsource/courier-prime/files/courier-prime-latin-400-normal.woff2?url';
+import courierPrime700 from '@fontsource/courier-prime/files/courier-prime-latin-700-normal.woff2?url';
+import caveat700 from '@fontsource/caveat/files/caveat-latin-700-normal.woff2?url';
+import kalam700 from '@fontsource/kalam/files/kalam-latin-700-normal.woff2?url';
+import playfairDisplay400 from '@fontsource/playfair-display/files/playfair-display-latin-400-normal.woff2?url';
+import playfairDisplay400I from '@fontsource/playfair-display/files/playfair-display-latin-400-italic.woff2?url';
 
 /**
  * Fontes livres (OFL) que acompanham o app, servidas do próprio site (sem Google Fonts).
@@ -41,6 +64,28 @@ const FILES: Record<string, string> = {
   'IBM Plex Sans Condensed|700|normal': plexCond700,
   'IBM Plex Mono|500|normal': plexMono500,
   'IBM Plex Mono|600|normal': plexMono600,
+  'Archivo Black|400|normal': archivoBlack400,
+  'DM Sans|500|normal': dmSans500,
+  'DM Sans|700|normal': dmSans700,
+  'Space Grotesk|500|normal': spaceGrotesk500,
+  'Space Grotesk|700|normal': spaceGrotesk700,
+  'Nunito|800|normal': nunito800,
+  'Nunito|900|normal': nunito900,
+  'Cormorant Garamond|500|normal': cormorantGaramond500,
+  'Cormorant Garamond|600|normal': cormorantGaramond600,
+  'Cormorant Garamond|500|italic': cormorantGaramond500I,
+  'Oswald|500|normal': oswald500,
+  'Oswald|700|normal': oswald700,
+  'VT323|400|normal': vt323400,
+  'Bungee|400|normal': bungee400,
+  'Rubik|800|italic': rubik800I,
+  'Rubik|900|italic': rubik900I,
+  'Courier Prime|400|normal': courierPrime400,
+  'Courier Prime|700|normal': courierPrime700,
+  'Caveat|700|normal': caveat700,
+  'Kalam|700|normal': kalam700,
+  'Playfair Display|400|normal': playfairDisplay400,
+  'Playfair Display|400|italic': playfairDisplay400I,
 };
 
 const loading = new Map<string, Promise<void>>();

@@ -122,6 +122,9 @@ export class RecordingContext {
   createLinearGradient(): CanvasGradient {
     return { addColorStop() {} } as CanvasGradient;
   }
+  createRadialGradient(): CanvasGradient {
+    return { addColorStop() {} } as CanvasGradient;
+  }
 
   asCtx(): Ctx2D {
     return this as unknown as Ctx2D;

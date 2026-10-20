@@ -43,11 +43,15 @@ export function readable(color: RGB, against: RGB[], min = MIN_CONTRAST): RGB | 
   return null;
 }
 
-/** Contra o que cada cor de destaque precisa ter contraste: o preto (vídeo escuro, sombra) e, se o texto do painel é escuro, ele. */
+/**
+ * Contra o que cada cor de destaque precisa ter contraste: o preto (vídeo escuro, sombra) e, se o texto do
+ * painel é escuro, ele. Texto do painel claro sobre a caixa da palavra falada (Impacto, v0.9) não entra: o
+ * desenho troca por preto quando a caixa fica clara (`onBox`), e exigir as duas coisas seria impossível.
+ */
 function accentAgainst(style: StyleDNA): RGB[] {
   const onPanel = hexToRgb(style.palette.onPanel);
   const darkOnPanel = luminance(onPanel) < 0.2;
-  return darkOnPanel || style.captions.highlight === 'box' ? [BLACK, onPanel] : [BLACK];
+  return darkOnPanel ? [BLACK, onPanel] : [BLACK];
 }
 
 export function applyReference(style: StyleDNA, ref: ReferencePalette | null): StyleDNA {

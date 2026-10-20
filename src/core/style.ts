@@ -9,7 +9,29 @@ import { z } from 'zod';
 export const STYLE_VERSION = 2;
 
 /** Só fontes com licença livre (OFL) que acompanham o app. Ver docs/licencas.md. */
-export const FONT_FAMILIES = ['Instrument Serif', 'Inter', 'Anton', 'Montserrat', 'IBM Plex Sans', 'IBM Plex Sans Condensed', 'IBM Plex Mono'] as const;
+export const FONT_FAMILIES = [
+  'Instrument Serif',
+  'Inter',
+  'Anton',
+  'Montserrat',
+  'IBM Plex Sans',
+  'IBM Plex Sans Condensed',
+  'IBM Plex Mono',
+  // v0.9 (modelos): todas OFL-1.1, ver docs/licencas.md
+  'Archivo Black',
+  'DM Sans',
+  'Space Grotesk',
+  'Nunito',
+  'Cormorant Garamond',
+  'Oswald',
+  'VT323',
+  'Bungee',
+  'Rubik',
+  'Courier Prime',
+  'Caveat',
+  'Kalam',
+  'Playfair Display',
+] as const;
 export type FontFamily = (typeof FONT_FAMILIES)[number];
 
 /** Pesos e estilos disponíveis de cada família (os arquivos que o app carrega). */
@@ -24,7 +46,35 @@ export const FONT_FILES: Record<FontFamily, { weight: number; style: 'normal' | 
   'IBM Plex Sans': [500, 600, 700].map((weight) => ({ weight, style: 'normal' as const })),
   'IBM Plex Sans Condensed': [600, 700].map((weight) => ({ weight, style: 'normal' as const })),
   'IBM Plex Mono': [500, 600].map((weight) => ({ weight, style: 'normal' as const })),
+  'Archivo Black': [{ weight: 400, style: 'normal' }],
+  'DM Sans': [500, 700].map((weight) => ({ weight, style: 'normal' as const })),
+  'Space Grotesk': [500, 700].map((weight) => ({ weight, style: 'normal' as const })),
+  Nunito: [800, 900].map((weight) => ({ weight, style: 'normal' as const })),
+  'Cormorant Garamond': [
+    { weight: 500, style: 'normal' },
+    { weight: 600, style: 'normal' },
+    { weight: 500, style: 'italic' },
+  ],
+  Oswald: [500, 700].map((weight) => ({ weight, style: 'normal' as const })),
+  VT323: [{ weight: 400, style: 'normal' }],
+  Bungee: [{ weight: 400, style: 'normal' }],
+  Rubik: [
+    { weight: 800, style: 'italic' },
+    { weight: 900, style: 'italic' },
+  ],
+  'Courier Prime': [400, 700].map((weight) => ({ weight, style: 'normal' as const })),
+  Caveat: [{ weight: 700, style: 'normal' }],
+  Kalam: [{ weight: 700, style: 'normal' }],
+  'Playfair Display': [
+    { weight: 400, style: 'normal' },
+    { weight: 400, style: 'italic' },
+  ],
 };
+
+/** Famílias com serifa, monoespaçadas e manuscritas (reserva do sistema enquanto a fonte não carrega). */
+const SERIF_FAMILIES: ReadonlySet<FontFamily> = new Set(['Instrument Serif', 'Cormorant Garamond', 'Playfair Display']);
+const MONO_FAMILIES: ReadonlySet<FontFamily> = new Set(['IBM Plex Mono', 'VT323', 'Courier Prime']);
+const HAND_FAMILIES: ReadonlySet<FontFamily> = new Set(['Caveat', 'Kalam']);
 
 const color = z.string().regex(/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/, 'cor deve ser #RRGGBB ou #RRGGBBAA');
 
@@ -69,6 +119,54 @@ export const EMOJI_POSITIONS = ['auto', 'top', 'middle', 'bottom', 'left', 'righ
 export const EMOJI_ANIMATIONS = ['pop', 'bounce', 'float', 'spin', 'fade', 'none'] as const;
 export const TRANSITIONS = ['zoom', 'flash', 'dip', 'none'] as const;
 
+/**
+ * Entradas das cenas: rise (máscara que sobe), pop (mola), wipe (cortina) e, desde a v0.9, slide (desliza
+ * da esquerda e sai pela direita), drop (cai de cima e quica), zoom (assenta de um pouco maior, cinema) e
+ * type (aparece letra a letra, como digitando).
+ */
+export const MOTION_ENTERS = ['rise', 'pop', 'wipe', 'slide', 'drop', 'zoom', 'type'] as const;
+export type MotionEnter = (typeof MOTION_ENTERS)[number];
+/** Destaque da palavra falada; 'marker' (v0.9) = traço de marca-texto desenhado atrás da palavra. */
+export const CAPTION_HIGHLIGHTS = ['box', 'color', 'underline', 'reveal', 'marker'] as const;
+/** Caixa da legenda: nenhuma, uma por linha ou, desde a v0.9, uma por palavra ('word'). */
+export const CAPTION_BOXES = ['none', 'line', 'word'] as const;
+
+/** Moldura do título e da chamada final (v0.9); 'auto' = a composição do estilo (só tipografia, adesivo, cartão). */
+export const TITLE_DECORS = ['auto', 'frame', 'corners', 'band', 'marker'] as const;
+/** Selo no canto de cima: rótulo, "ao vivo" (ponto que pisca) ou gravação (ponto + tempo do vídeo). */
+export const TAG_KINDS = ['none', 'label', 'live', 'rec'] as const;
+/** Marcador dos itens das listas. */
+export const LIST_MARKERS = ['number', 'circle'] as const;
+
+/**
+ * Acabamento do quadro (v0.9, ADR-0014). Tudo desligado por padrão: estilos e projetos antigos ficam iguais.
+ * Cada campo é um número com limite, um valor fechado ou uma cor; nada é código.
+ */
+export const DECOR_OFF = {
+  title: 'auto',
+  /** faixas pretas de cinema, em fração da altura (cada uma) */
+  letterbox: 0,
+  /** escurecimento das bordas */
+  vignette: 0,
+  /** linhas de TV antiga */
+  scanlines: 0,
+  /** separação de cores (vermelho/ciano) nas letras da legenda e dos títulos */
+  chroma: 0,
+  /** tremor de fita na legenda (segue a intensidade do movimento) */
+  jitter: 0,
+  /** véu de cor sobre o vídeo (#RRGGBBAA; alfa 0 = nenhum) */
+  tint: '#00000000',
+  tag: 'none',
+  tagText: '',
+  /** faixa de manchetes correndo embaixo (frases das cenas do próprio vídeo) */
+  ticker: false,
+  /** cursor de digitação depois da última palavra que apareceu */
+  cursor: false,
+  listMarker: 'number',
+  /** palavra falada e palavra-chave pintadas em degradê (destaque → segundo destaque) */
+  gradient: false,
+} as const;
+
 /** Emojis desligados: o que os estilos e os planos antigos (v1) usam. */
 export const EMOJI_OFF = { mode: 'off', everySec: 3, position: 'auto', size: 0.14, animation: 'pop' } as const;
 /** Cores próprias da legenda desligadas (null = cor do estilo). */
@@ -103,7 +201,7 @@ export const styleSchema = z.object({
     scale: z.number().min(0.6).max(1.6),
   }),
   motion: z.object({
-    enter: z.enum(['rise', 'pop', 'wipe']),
+    enter: z.enum(MOTION_ENTERS),
     ease: z.enum(['smooth', 'snappy', 'gentle']),
     inSec: z.number().min(0.05).max(1.2),
     outSec: z.number().min(0.05).max(1),
@@ -142,9 +240,9 @@ export const styleSchema = z.object({
     maxWords: z.number().int().min(1).max(12),
     maxLines: z.number().int().min(1).max(3),
     /** como a palavra falada aparece: caixa colorida, cor de destaque, sublinhado ou "revelação" (já faladas acesas, próximas apagadas) */
-    highlight: z.enum(['box', 'color', 'underline', 'reveal']),
-    /** caixa atrás da linha inteira */
-    box: z.enum(['none', 'line']),
+    highlight: z.enum(CAPTION_HIGHLIGHTS),
+    /** caixa atrás da linha inteira ('line') ou de cada palavra ('word') */
+    box: z.enum(CAPTION_BOXES),
     stroke: z.number().min(0).max(24),
     /** opacidade das palavras que ainda não foram faladas */
     upcomingAlpha: z.number().min(0).max(1),
@@ -171,6 +269,24 @@ export const styleSchema = z.object({
   progress: z.enum(['none', 'line', 'bar']),
   zoomScale: z.number().min(1).max(1.3),
   cta: z.string().min(1).max(32),
+  /** acabamento do quadro (v0.9); ausente nos projetos antigos = tudo desligado */
+  decor: z
+    .object({
+      title: z.enum(TITLE_DECORS),
+      letterbox: z.number().min(0).max(0.16),
+      vignette: z.number().min(0).max(1),
+      scanlines: z.number().min(0).max(1),
+      chroma: z.number().min(0).max(1),
+      jitter: z.number().min(0).max(1),
+      tint: color,
+      tag: z.enum(TAG_KINDS),
+      tagText: z.string().max(18),
+      ticker: z.boolean(),
+      cursor: z.boolean(),
+      listMarker: z.enum(LIST_MARKERS),
+      gradient: z.boolean(),
+    })
+    .default(() => ({ ...DECOR_OFF })),
 });
 
 export type StyleDNA = z.infer<typeof styleSchema>;
@@ -180,7 +296,7 @@ export const styleV1Schema = styleSchema.extend({
   version: z.literal(1),
   type: z.object({ display: fontV1, text: fontV1, emphasis: fontV1, label: fontV1, scale: z.number().min(0.6).max(1.6) }),
   captions: styleSchema.shape.captions.omit({ y: true, enter: true, wordsPerLine: true, colors: true }).extend({ position: z.enum(['bottom', 'middle']), size: z.number().min(0.04).max(0.12) }),
-}).omit({ emoji: true });
+}).omit({ emoji: true, decor: true });
 export type StyleV1 = z.infer<typeof styleV1Schema>;
 
 /** v1 → v2: os campos novos começam com o comportamento antigo (nada muda na tela). */
@@ -190,13 +306,14 @@ export function migrateStyle(v1: StyleV1): StyleDNA {
     version: STYLE_VERSION,
     captions: { ...v1.captions, y: 0.5, enter: 'auto', wordsPerLine: 0, colors: { ...CAPTION_COLORS_DEFAULT } },
     emoji: { ...EMOJI_OFF },
+    decor: { ...DECOR_OFF },
   };
 }
 export type FontSpec = StyleDNA['type']['display'];
 
 /** String CSS de fonte para o canvas, com reserva do sistema caso a fonte não carregue. */
 export function cssFont(f: Pick<FontSpec, 'family' | 'weight' | 'style'>, sizePx: number): string {
-  const fallback = f.family === 'Instrument Serif' ? 'Georgia, serif' : f.family === 'IBM Plex Mono' ? 'ui-monospace, monospace' : 'system-ui, sans-serif';
+  const fallback = SERIF_FAMILIES.has(f.family) ? 'Georgia, serif' : MONO_FAMILIES.has(f.family) ? 'ui-monospace, monospace' : HAND_FAMILIES.has(f.family) ? 'cursive' : 'system-ui, sans-serif';
   return `${f.style === 'italic' ? 'italic ' : ''}${f.weight} ${Math.round(sizePx * 100) / 100}px "${f.family}", ${fallback}`;
 }
 

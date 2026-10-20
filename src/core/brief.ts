@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { HOOK_STYLES, lookIsEmpty, lookSchema, type HookStyle, type Look } from './look';
+import { TEMPLATE_IDS, TEMPLATE_NAMES, type TemplateId } from './templates';
 
 /**
  * CreativeBrief: o que a pessoa pediu, já entendido e em campos fechados.
@@ -13,8 +14,9 @@ export const SUMMARY_MAX = 300;
 
 export const PROMPT_MAX = 500;
 
-export const PRESET_IDS = ['pop', 'neon', 'editorial', 'documental'] as const;
-export type PresetId = (typeof PRESET_IDS)[number];
+/** Estilos que um pedido pode escolher: os modelos do registro (v0.9, ADR-0014). */
+export const PRESET_IDS = TEMPLATE_IDS;
+export type PresetId = TemplateId;
 
 export const GOALS = ['ensinar', 'vender', 'inspirar', 'entreter', 'informar'] as const;
 export type Goal = (typeof GOALS)[number];
@@ -45,7 +47,7 @@ export type BriefSource = (typeof BRIEF_SOURCES)[number];
 
 /** Nomes em português simples, para o resumo "o que entendi". */
 export const LABELS = {
-  preset: { pop: 'Pop', neon: 'Neon', editorial: 'Editorial', documental: 'Documental' } satisfies Record<PresetId, string>,
+  preset: TEMPLATE_NAMES satisfies Record<PresetId, string>,
   goal: { ensinar: 'ensinar', vender: 'vender', inspirar: 'inspirar', entreter: 'entreter', informar: 'informar' } satisfies Record<Goal, string>,
   tone: { calmo: 'calmo', energetico: 'animado', elegante: 'elegante', serio: 'sério', divertido: 'divertido' } satisfies Record<Tone, string>,
   intensity: { baixa: 'pouco movimento', media: 'movimento médio', alta: 'muito movimento' } satisfies Record<Level, string>,

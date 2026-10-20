@@ -1,6 +1,6 @@
 import { cssFont, type FontSpec, type StyleDNA } from '../core/style';
 import type { Ctx2D } from './ctx';
-import { clamp01, easeInCubic, progress } from './easing';
+import { clamp01, easeInCubic, easeOutBounce, progress } from './easing';
 import { reelsSafeArea, type Rect } from './layout';
 import { cubicBezier, easeOutExpo, springIn, type SpringSpec } from './motion';
 
@@ -17,8 +17,14 @@ export interface Frame {
   overlayY: number;
 }
 
+/** Altura da faixa de manchetes (decor.ticker), em px de um quadro de 1080. */
+export const TICKER_H = 66;
+
 export function makeFrame(w: number, h: number, style: StyleDNA): Frame {
-  return { w, h, u: w / 1080, safe: reelsSafeArea(w, h), style, overlayY: overlayYFor(style) };
+  const safe = reelsSafeArea(w, h);
+  // a faixa de manchetes ocupa o pé da área segura: legenda e cenas ficam acima dela
+  if (style.decor.ticker) safe.h -= (TICKER_H + 18) * (w / 1080);
+  return { w, h, u: w / 1080, safe, style, overlayY: overlayYFor(style) };
 }
 
 /** Centro vertical aproximado da legenda, em fração da área segura. */
@@ -89,13 +95,21 @@ export function phase(style: StyleDNA, t: number, start: number, end: number, de
   const outSec = Math.min(style.motion.outSec, len * 0.35);
   const inRaw = progress(t, start + delay, inSec);
   const out = easeInCubic(progress(t, end - outSec, outSec));
-  const fade = style.motion.enter === 'pop' ? clamp01(inRaw * 4) : style.motion.enter === 'wipe' ? clamp01(inRaw * 4) : clamp01(inRaw * 2.5);
-  return { p: ease(style, inRaw), inRaw, out, alpha: fade * (1 - out) };
+  const e = style.motion.enter;
+  const fade = e === 'pop' || e === 'wipe' || e === 'drop' ? clamp01(inRaw * 4) : e === 'type' ? (inRaw > 0 ? 1 : 0) : e === 'zoom' ? clamp01(inRaw * 1.6) : clamp01(inRaw * 2.5);
+  // a queda quica no chão (curva própria); o resto segue a personalidade do estilo
+  const p = e === 'drop' ? easeOutBounce(inRaw) : ease(style, inRaw);
+  return { p, inRaw, out, alpha: fade * (1 - out) };
 }
+
+/** Passos da entrada "digitando" (type): a largura revelada anda em degraus, como letras surgindo. */
+export const TYPE_STEPS = 22;
 
 /**
  * Aplica a entrada/saída do estilo num elemento com caixa `box` (já com ctx.save feito pelo chamador):
- * rise = sobe e aparece; pop = cresce com sobra elástica e leve giro; wipe = cortina da esquerda para a direita.
+ * rise = sobe e aparece; pop = cresce com sobra elástica e leve giro; wipe = cortina da esquerda para a direita;
+ * slide = desliza da esquerda e sai pela direita; drop = cai de cima e quica; zoom = assenta de um pouco
+ * maior (cinema); type = revela em degraus da esquerda para a direita, como digitando.
  */
 export function applyMotion(ctx: Ctx2D, f: Frame, ph: Phase, box: Rect): void {
   const m = f.style.motion;
@@ -118,6 +132,23 @@ export function applyMotion(ctx: Ctx2D, f: Frame, ph: Phase, box: Rect): void {
     ctx.rotate(rot);
     ctx.scale(s, s);
     ctx.translate(-cx, -cy);
+  } else if (m.enter === 'slide') {
+    const travel = (90 + 140 * m.intensity) * f.u;
+    ctx.translate(-(1 - ph.p) * travel + ph.out * travel * 0.8, 0);
+  } else if (m.enter === 'drop') {
+    const travel = box.h * (1.1 + 0.6 * m.intensity) + 60 * f.u;
+    ctx.translate(0, -(1 - ph.p) * travel + ph.out * 40 * f.u);
+  } else if (m.enter === 'zoom') {
+    const s = 1 + (1 - clamp01(ph.p)) * (0.1 + 0.12 * m.intensity) + ph.out * 0.04;
+    ctx.translate(cx, cy);
+    ctx.scale(s, s);
+    ctx.translate(-cx, -cy);
+  } else if (m.enter === 'type') {
+    const pad = 40 * f.u;
+    const k = ph.inRaw >= 1 ? 1 : Math.floor(ph.inRaw * TYPE_STEPS) / TYPE_STEPS;
+    ctx.beginPath();
+    ctx.rect(box.x - pad, box.y - pad, pad + box.w * k, box.h + 2 * pad);
+    ctx.clip();
   } else {
     const pad = 40 * f.u;
     const from = box.x - pad;

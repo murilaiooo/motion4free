@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { PRESETS, presetById } from '../core/presets';
+import { presetById } from '../core/presets';
+import { TEMPLATES } from '../core/templates';
 import { GALLERY_SHOTS, galleryPlan } from '../editorial/sample';
 import { ensureFonts } from '../media/fonts';
 import { drawFrame } from '../render/frame';
@@ -82,10 +83,10 @@ export function Gallery() {
 
   useEffect(() => {
     let alive = true;
-    void Promise.all(PRESETS.map(ensureFonts)).then(() => {
+    void Promise.all(TEMPLATES.map((tp) => ensureFonts(tp.style))).then(() => {
       if (!alive) return;
       backdrop.current = paintBackdrop(1080, 1920);
-      for (const style of PRESETS) {
+      for (const { style } of TEMPLATES) {
         for (const shot of GALLERY_SHOTS) {
           const c = refs.current.get(`${style.id}-${shot.id}`);
           if (c) renderShot(c, style.id, shot.t, backdrop.current);
@@ -99,7 +100,7 @@ export function Gallery() {
           renderShot(c, styleId, t, backdrop.current!);
           return c.toDataURL('image/png');
         },
-        styles: () => PRESETS.map((p) => p.id),
+        styles: () => TEMPLATES.map((tp) => tp.id),
         // tempo médio (ms) para desenhar um quadro 1080×1920 ao longo do vídeo de demonstração
         bench(styleId, n = 240) {
           const c = document.createElement('canvas');
@@ -141,9 +142,10 @@ export function Gallery() {
   return (
     <section className="gallery" data-testid="gallery" data-ready={ready ? '1' : '0'}>
       <p className="hint">As mesmas animações em cada estilo, sobre um fundo de exemplo. No editor, o estilo vale para o vídeo inteiro.</p>
-      {PRESETS.map((style) => (
-        <div key={style.id}>
+      {TEMPLATES.map(({ style, description }) => (
+        <div key={style.id} data-testid={`gal-${style.id}`}>
           <h2>{style.name}</h2>
+          <p className="hint">{description}</p>
           <div className="gallery-row">
             {GALLERY_SHOTS.map((shot) => (
               <canvas
