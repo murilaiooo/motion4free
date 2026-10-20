@@ -15,9 +15,9 @@ import {
 } from '../core/brief';
 import { STOPWORDS } from './detect';
 import { TEMPLATES } from '../core/templates';
-import { lookIsEmpty } from '../core/look';
+import { lookIsEmpty, mergeLook } from '../core/look';
 import { parseLookRules } from './look-rules';
-import { findNiche } from './extra-rules';
+import { findNiche, nicheSpans, parseExtras } from './extra-rules';
 import { stripAccents, tokenize, type Token } from './tokens';
 
 export { stripAccents, tokenize } from './tokens';
@@ -99,13 +99,16 @@ const LEXICON: Entry[] = [
     { f: 'tone', v: 'divertido' },
     { f: 'preset', v: 'pop', strong: false },
   ]),
+  ...entry('inspirador|inspiradora|inspiradores|inspiradoras|inspirar|motivacional|motivacionais|motivar|motivacao|emocionante|emocionar|encorajador|edificante', [{ f: 'tone', v: 'inspirador' }]),
+  ...entry('acolhedor|acolhedora|acolhedores|acolhedoras|acolhimento|acolher|fofo|fofa|fofinho|fofinha|carinhoso|carinhosa|suavidade|delicado e fofo|fofo e delicado', [{ f: 'tone', v: 'acolhedor' }]),
   ...entry('muito movimento|mais movimento|bastante movimento|mais animacao|muita animacao|bem dinamico|intensidade alta', [{ f: 'intensity', v: 'alta', strong: true }], 'up'),
   ...entry('pouco movimento|menos movimento|quase parado|sutil|sutis|pouca animacao|menos animacao|intensidade baixa|parado', [{ f: 'intensity', v: 'baixa', strong: true }], 'down'),
   ...entry('moderado|moderada|equilibrado|equilibrada|intensidade media|meio termo', [{ f: 'intensity', v: 'media', strong: true }]),
-  ...entry('rapido|rapida|dinamico|dinamica|acelerado|acelerada|agil|ritmo rapido|frenetico|ritmado', [{ f: 'pace', v: 'rapido', strong: true }], 'up'),
-  ...entry('lento|lenta|devagar|pausado|pausada|ritmo lento|cadenciado', [{ f: 'pace', v: 'lento', strong: true }], 'down'),
+  ...entry('rapido|rapida|rapidinho|rapidinha|dinamico|dinamica|acelerado|acelerada|agil|ritmo rapido|frenetico|ritmado|bem dinamico', [{ f: 'pace', v: 'rapido', strong: true }], 'up'),
+  ...entry('lento|lenta|devagar|pausado|pausada|ritmo lento|cadenciado|lentinho|lentinha|devagarzinho', [{ f: 'pace', v: 'lento', strong: true }], 'down'),
+  ...entry('calminho|calminha|calminhos|calminhas', [{ f: 'tone', v: 'calmo' }]),
   ...entry('ritmo normal|ritmo medio', [{ f: 'pace', v: 'normal', strong: true }]),
-  ...entry('vender|venda|vendas|vendendo|produto|oferta|promocao|comprar|compra|lancamento|converter|conversao', [{ f: 'goal', v: 'vender' }]),
+  ...entry('vender|venda|vendas|vendendo|produto|oferta|promocao|comprar|compra|lancamento|converter|conversao|vendedor|vendedora|vendedores|ofertas|anuncio', [{ f: 'goal', v: 'vender' }]),
   ...entry('ensinar|ensino|tutorial|aula|explicar|explicativo|explicativa|didatico|didatica|dicas|dica|passo a passo|educativo|educativa', [{ f: 'goal', v: 'ensinar' }]),
   ...entry('inspirar|inspirador|inspiradora|motivar|motivacional|motivacao|emocionante|emocionar', [{ f: 'goal', v: 'inspirar' }]),
   ...entry('entreter|entretenimento|divertir', [{ f: 'goal', v: 'entreter' }]),
@@ -278,12 +281,30 @@ export function interpretPrompt(text: string): Interpretation {
   const templatePicks = templatePass(toks, used);
   const lookRules = parseLookRules(prompt, toks, used);
   conflicts.push(...lookRules.notes);
+
+  // 0b) extras (v0.12): chamada final, @ no canto, título escrito, registro, pronto pra postar, longe do rosto, listas
+  const extras = parseExtras(prompt, toks, used);
+  conflicts.push(...extras.notes);
+
+  // 0c) tipo de conteúdo (nicho): a frase mais longa do pedido vale
+  let niche: import('../core/niches').NicheId | null = null;
   {
-    const beforeLook = [...used];
-    const lookUsed = (i: number) => used[i] === true && !beforeLook[i];
-    const nicheHit = findNiche(toks, lookUsed);
-    if (nicheHit) conflicts.push(...nicheHit.notes);
+    const nicheHit = findNiche(toks, () => false);
+    if (nicheHit) {
+      niche = nicheHit.niche;
+      conflicts.push(...nicheHit.notes);
+      for (let k = nicheHit.from; k < nicheHit.from + nicheHit.n; k++) used[k] = true;
+      for (const [s, n] of nicheSpans(toks, () => false)) {
+        let overlap = false;
+        for (let k = s; k < s + n; k++) if (used[k]) overlap = true;
+        if (!overlap || (s === nicheHit.from && n === nicheHit.n)) {
+          for (let k = s; k < s + n; k++) used[k] = true;
+        }
+      }
+    }
   }
+  // listas ("3 dicas", "numera") viram destaque de listas
+  if (extras.lists && !emphasize.includes('listas')) emphasize.push('listas');
 
   // 1) proibições (antes de tudo: "sem pressa" é tom, não proibição; o léxico de tom é testado primeiro só nessa posição)
   for (let i = 0; i < toks.length; i++) {
@@ -386,7 +407,7 @@ export function interpretPrompt(text: string): Interpretation {
   let pace: Pick<Pace> = null;
   let tone: Tone | null = null;
   let goal: Goal | null = null;
-  let wantsHook = lookRules.wantsHook;
+  let wantsHook = lookRules.wantsHook || extras.wantsHook;
   const setPick = <T extends string>(cur: Pick<T>, v: T, strong: boolean, word: string, label: (x: T) => string, what: string): Pick<T> => {
     if (!cur || (strong && !cur.strong)) {
       if (cur && cur.v !== v) conflicts.push(`${what}: "${word}" vale mais que "${cur.word}"; ficou ${label(v)}.`);
@@ -401,6 +422,7 @@ export function interpretPrompt(text: string): Interpretation {
     preset = setPick<PresetId>(preset, p.id, true, p.word, (x) => `o estilo ${LABELS.preset[x]}`, 'Estilo');
     // o Documental também diz o tom (como "estilo documental" já fazia)
     if (p.id === 'documental') tone ??= 'serio';
+    if (p.id === 'minimal') tone ??= 'elegante';
   }
   for (let i = 0; i < toks.length; i++) {
     if (used[i]) continue;
@@ -458,8 +480,16 @@ export function interpretPrompt(text: string): Interpretation {
   }
   if (mentionedCaptionsOff) conflicts.push('A legenda não pode ser desligada nesta versão; ela continua no vídeo.');
 
-  // proibição sempre vence o look: "sem emojis" desliga emojis pedidos; "sem barra" vence "com barra"
-  const look = lookRules.look;
+  // junta look das regras + extras (chamada final, @, título, longe do rosto, pronto pra postar)
+  const extraLook: import('../core/look').Look = {};
+  if (extras.cta) extraLook.cta = extras.cta;
+  if (extras.handle) extraLook.handle = extras.handle;
+  if (extras.title) extraLook.title = extras.title;
+  if (extras.ctaScene) extraLook.scenes = { ...(extraLook.scenes ?? {}), chamada: true };
+  if (extras.avoidFace) extraLook.captions = { ...(extraLook.captions ?? {}), avoidFace: true };
+  // listas já viraram emphasize; ainda marca cena de listas se o app usar
+  const lookBase = mergeLook(lookRules.look, extraLook);
+  const look = lookBase;
   if (forbid.includes('emojis') && look.emoji && look.emoji.mode !== 'off') {
     delete look.emoji;
     conflicts.push('Você pediu emojis e também "sem emojis": a proibição vale mais.');
@@ -488,6 +518,7 @@ export function interpretPrompt(text: string): Interpretation {
   const finalPreset = preset as Pick<PresetId>;
   const finalIntensity = intensity as Pick<Level>;
   const finalPace = pace as Pick<Pace>;
+  const finalHookStyle = lookRules.hookStyle ?? extras.hookStyle;
   const brief: CreativeBrief = {
     version: BRIEF_VERSION,
     prompt,
@@ -505,11 +536,13 @@ export function interpretPrompt(text: string): Interpretation {
     locked: [],
     notes: { conflicts: conflicts.slice(0, 10).map((c) => c.slice(0, 200)), ignored },
     look,
-    hookStyle: lookRules.hookStyle,
+    hookStyle: finalHookStyle,
     unsupported: unsupported.map((u) => u.slice(0, 60)),
     summary: '',
+    niche,
+    register: extras.register,
   };
-  const understood = !!(goal || audience || tone || brief.intensity || brief.pace || brief.preset || forbid.length || emphasize.length || wantsHook || mentionedCaptionsOff || !lookIsEmpty(look) || lookRules.hookStyle);
+  const understood = !!(goal || audience || tone || brief.intensity || brief.pace || brief.preset || forbid.length || emphasize.length || wantsHook || mentionedCaptionsOff || !lookIsEmpty(look) || finalHookStyle || niche || extras.register || extras.cta || extras.title || extras.handle || extras.avoidFace || extras.ctaScene || extras.lists);
   return { brief, understood, knownUnsupported: lookRules.unsupported.slice(0, UNSUPPORTED_MAX) };
 }
 

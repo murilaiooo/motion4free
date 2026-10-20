@@ -46,7 +46,7 @@ describe('corpus de pedidos por nicho (regras, sem IA)', () => {
   it('acerta a grande maioria (≥ 90%)', () => {
     const fails = results.filter((r) => r.errs.length).map((r) => `[${r.c.niche}] ${r.c.text} → ${r.errs.join('; ')}`);
     console.log(`corpus: ${passed}/${CORPUS.length} (${(rate * 100).toFixed(1)}%)\n${fails.join('\n')}`);
-    expect(rate).toBeGreaterThanOrEqual(0.4); // v0.12 Frente 2 parcial: 46% com regras main; nichos completos elevam para ≥90%
+    expect(rate).toBeGreaterThanOrEqual(0.9);
   });
 
   it('nenhum pedido some calado: cada um muda algo ou aparece em "ainda não sei fazer"', () => {
