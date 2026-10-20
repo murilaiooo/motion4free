@@ -441,13 +441,13 @@ function EditorApp() {
         const { openClips, buildClipRefs, assembledWords, assembledSilences } = await import('../media/multi');
         const { autoEdit } = await import('../editorial/auto-edit');
         const { DEFAULT_STYLE } = await import('../core/presets');
-        const { clips, wordsByClip, silencesByClip, combinedAudio } = await openClips(files, transcriber, step, precision.mode);
+        const { clips, wordsByClip, silencesByClip, combinedAudio, warnings, asrModel } = await openClips(files, transcriber, step, precision.mode);
         const refs = buildClipRefs(clips);
         const allWords = assembledWords(refs, wordsByClip);
         const allSilences = assembledSilences(refs, silencesByClip);
         const total = refs.reduce((s, c) => s + c.duration, 0);
         const plan = autoEdit(total, allSilences, allWords, DEFAULT_STYLE, { clips: refs });
-        a = { media: clips[0]!.media, audio: combinedAudio, words: allWords, silences: allSilences, warnings: [], asrModel: null, plan } as any;
+        a = { media: clips[0]!.media, audio: combinedAudio, words: allWords, silences: allSilences, warnings, asrModel, plan } as any;
         (a as any).__multi = { clips, refs, combinedAudio, wordsByClip, silencesByClip };
       }
       setAsrModel(a.asrModel);
@@ -541,6 +541,7 @@ function EditorApp() {
       const combined = combineAudios(nextPlan.clips, Object.fromEntries(audios));
       setSession({
         ...initialSession,
+        warnings: [...initialSession.warnings, ...opened.warnings],
         clipSources: sources,
         clipAudios: audios,
         clipWords: allWords,
@@ -556,6 +557,7 @@ function EditorApp() {
         silences: placeRanges(nextPlan.clips, allSilences),
       });
       setHistory(pushHistory(initialHistory, nextPlan));
+      if (opened.asrModel) setAsrModel(opened.asrModel);
       setCopy('pending');
       if (fs && projectId) {
         const id = projectId;
