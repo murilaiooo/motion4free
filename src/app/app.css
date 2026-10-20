@@ -8,7 +8,13 @@ h1 { margin: 0 0 4px; }
 .drop.disabled { opacity: 0.5; cursor: progress; }
 .status { display: grid; gap: 8px; margin: 16px 0; }
 .status progress { width: 100%; }
-.error { color: #d33; }
+.notice { border-radius: 10px; padding: 12px 14px; margin: 16px 0; border: 1px solid; }
+.notice p { margin: 0 0 8px; }
+.notice.error { border-color: #d33; color: #d33; }
+.notice.warning { border-color: #b80; color: #b80; }
+.notice pre { white-space: pre-wrap; word-break: break-word; font-size: 12px; color: CanvasText; opacity: 0.85; }
+.notice button { margin-top: 8px; font-size: 14px; padding: 6px 12px; }
+.version { margin-top: 48px; font-size: 12px; opacity: 0.6; text-align: center; }
 .warn { color: #b80; }
 .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 button { font: inherit; padding: 10px 16px; border-radius: 8px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }

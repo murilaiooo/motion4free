@@ -29,6 +29,10 @@ O responsável pelo produto (murilo) não é técnico e delegou as decisões té
 Spec v1 aprovada; execução por fases conforme o plano mestre. Cada fase: plano detalhado (`writing-plans`) → implementação tarefa a tarefa com TDD → PR com CI verde → roteiro de teste para o responsável → gate. Não começar uma fase antes do gate da anterior passar.
 Documentar decisões arquiteturais em ADR, atualizar docs com testes e exemplos reproduzíveis.
 
+## Erros e versão (pedido do responsável, 20/10/2026)
+- Todo problema que o usuário pode ver tem um código próprio `M4F-xxx` em `src/core/errors.ts`, documentado em `docs/erros.md`. Nunca mostrar mensagem genérica; erro novo ganha código novo.
+- Toda mudança publicada sobe a versão em `package.json` e ganha entrada em `docs/CHANGELOG.md`. A versão e o commit aparecem no rodapé do app.
+
 ## Critérios para mudanças futuras
 Uma mudança em motor de corte exige casos de fala, sync e áudio. Motion exige teste de frames/seek e licenças. IA exige validação semântica, custo e regressão. Export exige arquivo real e inspeção, não apenas sucesso da UI.
 

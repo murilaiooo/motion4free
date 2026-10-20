@@ -1,3 +1,4 @@
+import { AppError } from '../core/errors';
 import type { Word } from '../core/types';
 import type { FromWorker } from './protocol';
 import { chunksToWords, type AsrChunk } from './words';
@@ -19,18 +20,26 @@ export class WhisperTranscriber implements Transcriber {
         }
         if (m.type === 'error') {
           worker.terminate();
-          reject(new Error(m.message));
+          reject(new AppError(m.key, m.detail));
         }
+      };
+      worker.onerror = (e) => {
+        worker.terminate();
+        reject(new AppError('WORKER_FALHOU', `${e.message || 'sem mensagem'} ${e.filename ?? ''}:${e.lineno ?? ''}`));
       };
       worker.postMessage({ type: 'transcribe', audio: audio16k, language: 'portuguese' }, [audio16k.buffer]);
     });
   }
 }
 
-/** Usado só nos testes automáticos (VITE_FAKE_ASR=1): palavras fixas, sem baixar modelo. */
+/** Usado só nos testes automáticos (VITE_FAKE_ASR=1): palavras fixas, sem baixar modelo. `fail` simula falha de rede. */
 export class FakeTranscriber implements Transcriber {
-  constructor(private chunks: AsrChunk[]) {}
+  constructor(
+    private chunks: AsrChunk[],
+    private fail = false,
+  ) {}
   async transcribe(_audio: Float32Array, durationSec: number): Promise<Word[]> {
+    if (this.fail) throw new AppError('MODELO_REDE', 'servidor huggingface.co: TypeError: Failed to fetch (simulado)');
     return chunksToWords(this.chunks, durationSec);
   }
 }
