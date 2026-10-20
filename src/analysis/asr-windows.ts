@@ -20,3 +20,41 @@ export function planAsrWindows(silences: TimeRange[], durationSec: number, maxSe
   if (durationSec - cursor > 0) windows.push({ start: cursor, end: durationSec });
   return windows;
 }
+
+/**
+ * Janela que o Whisper recebe: `own` é o pedaço pelo qual ela responde; `feed` é o áudio que ela ouve,
+ * com uma folga de cada lado. A folga dá contexto e salva a palavra que cai bem no corte (quando não há
+ * silêncio e o corte é no limite). As palavras da folga são descartadas na junção (ver asr-merge.ts).
+ * `skip`: a janela é quase só silêncio e não vai ao Whisper (no silêncio ele inventa frases como
+ * "Legendas pela comunidade Amara.org").
+ */
+export interface AsrWindow {
+  own: TimeRange;
+  feed: TimeRange;
+  skip: boolean;
+}
+
+/** Folga padrão de cada lado: com janelas de até 28 s, o Whisper nunca recebe mais que 30 s. */
+export const ASR_OVERLAP_SEC = 1;
+
+/** Fração de `range` coberta pelos silêncios. */
+export function silentFraction(range: TimeRange, silences: TimeRange[]): number {
+  const len = range.end - range.start;
+  if (len <= 0) return 1;
+  let covered = 0;
+  for (const s of silences) covered += Math.max(0, Math.min(s.end, range.end) - Math.max(s.start, range.start));
+  return Math.min(1, covered / len);
+}
+
+export function withOverlap(windows: TimeRange[], silences: TimeRange[], durationSec: number, padSec = ASR_OVERLAP_SEC): AsrWindow[] {
+  return windows.map((own) => ({
+    own,
+    feed: { start: Math.max(0, own.start - padSec), end: Math.min(durationSec, own.end + padSec) },
+    skip: own.end - own.start < 0.2 || silentFraction(own, silences) >= 0.95,
+  }));
+}
+
+/** Janelas prontas para o Whisper: corte em silêncio (≤ 28 s), folga de 1 s e janelas mudas marcadas. */
+export function planAsr(silences: TimeRange[], durationSec: number): AsrWindow[] {
+  return withOverlap(planAsrWindows(silences, durationSec), silences, durationSec);
+}
