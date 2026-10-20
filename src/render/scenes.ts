@@ -7,6 +7,7 @@ import type { Rect } from './layout';
 import { wrapText } from './layout';
 import { easeOutExpo } from './motion';
 import { onBox } from '../core/color';
+import { chromaBehind } from './decor';
 
 /**
  * Cenas de sobreposição. Cada uma é função pura de (cena, t, estilo): nada guarda estado entre quadros.
@@ -41,7 +42,7 @@ function lineBox(x: number, align: Align, y: number, w: number, h: number, padX:
 }
 
 /** Bloco de linhas de texto com a entrada do estilo em cada linha (título, citação, chamada final). */
-function drawLines(ctx: Ctx2D, f: Frame, lines: string[], spec: FontSpec, size: number, cy: number, start: number, end: number, t: number, colors: { text: string; box: string }, opts: { boxed: boolean; lineGap?: number; tilt?: number; alt?: { text: string; box: string } } = { boxed: false }): Rect {
+function drawLines(ctx: Ctx2D, f: Frame, lines: string[], spec: FontSpec, size: number, cy: number, start: number, end: number, t: number, colors: { text: string; box: string }, opts: { boxed: boolean; lineGap?: number; tilt?: number; alt?: { text: string; box: string }; noShadow?: boolean } = { boxed: false }): Rect {
   const { x, align } = anchor(f);
   const lineH = size * (opts.lineGap ?? 1.12);
   const top = cy - (lines.length * lineH) / 2;
@@ -72,8 +73,9 @@ function drawLines(ctx: Ctx2D, f: Frame, lines: string[], spec: FontSpec, size: 
       setShadow(ctx, f);
       fillBox(ctx, box, f.style.shape.radius * box.h, c.box);
       clearShadow(ctx);
-    } else {
+    } else if (!opts.noShadow) {
       setShadow(ctx, f);
+      chromaBehind(ctx, f, line, x, y + size * 0.04);
     }
     ctx.fillStyle = c.text;
     ctx.fillText(line, x, y + size * 0.04);
@@ -99,12 +101,121 @@ function cardAround(f: Frame, block: Rect, padX: number, padY: number): Rect {
   return { x: block.x - padX, y: block.y - padY, w: block.w + 2 * padX + 8 * f.u, h: block.h + 2 * padY };
 }
 
+/** Bloco de linhas medido (para as molduras do título). */
+function measureBlock(ctx: Ctx2D, f: Frame, lines: string[], spec: FontSpec, size: number, cy: number, lineGap: number): Rect {
+  const { x, align } = anchor(f);
+  setFont(ctx, spec, size);
+  const widest = Math.max(0, ...lines.map((l) => ctx.measureText(l).width));
+  const h = lines.length * size * lineGap;
+  return { x: align === 'center' ? x - widest / 2 : x, y: cy - h / 2, w: widest, h };
+}
+
+/**
+ * Título com moldura do modelo (v0.9, `decor.title`): moldura fina que se desenha (frame), cantos de visor
+ * que se fecham (corners), tarja de ponta a ponta que entra pela esquerda (band) ou traço de marca-texto
+ * atrás de cada linha (marker). O texto entra com o movimento do estilo, por cima da moldura.
+ */
+function drawDecoratedTitle(ctx: Ctx2D, f: Frame, lines: string[], spec: FontSpec, size: number, cy: number, start: number, end: number, t: number): void {
+  const S = f.style;
+  const P = S.palette;
+  const kind = S.decor.title;
+  const lineGap = kind === 'band' || kind === 'marker' ? 1.18 : 1.08;
+  const block = measureBlock(ctx, f, lines, spec, size, cy, lineGap);
+  const ph = phase(S, t, start, end);
+  const k = easeOutExpo(ph.inRaw);
+  ctx.save();
+  clearShadow(ctx);
+  ctx.globalAlpha *= 1 - ph.out;
+  let text = P.text;
+  if (kind === 'frame' || kind === 'corners') {
+    const padX = 64 * f.u;
+    const padY = 52 * f.u;
+    const r = { x: block.x - padX, y: block.y - padY, w: block.w + 2 * padX, h: block.h + 2 * padY };
+    const th = Math.max(2, (kind === 'frame' ? Math.max(1.5, S.shape.stroke * 2.5) : 6) * f.u);
+    ctx.fillStyle = P.accent;
+    if (kind === 'frame') {
+      // a linha nasce no meio de cima, desce pelos lados e se fecha no meio de baixo
+      const per = r.w / 2 + r.h + r.w / 2;
+      let left = per * k;
+      const cxr = r.x + r.w / 2;
+      const seg = (len: number, draw: (l: number) => void) => {
+        const l = Math.min(len, left);
+        if (l > 0) draw(l);
+        left -= l;
+      };
+      seg(r.w / 2, (l) => {
+        ctx.fillRect(cxr, r.y, l, th);
+        ctx.fillRect(cxr - l, r.y, l, th);
+      });
+      seg(r.h, (l) => {
+        ctx.fillRect(r.x + r.w - th, r.y, th, l);
+        ctx.fillRect(r.x, r.y, th, l);
+      });
+      seg(r.w / 2, (l) => {
+        ctx.fillRect(r.x + r.w - l, r.y + r.h - th, l, th);
+        ctx.fillRect(r.x, r.y + r.h - th, l, th);
+      });
+    } else {
+      const len = Math.min(70 * f.u, r.w * 0.25, r.h * 0.4);
+      const off = (1 - k) * 40 * f.u;
+      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+        const x0 = sx < 0 ? r.x - off : r.x + r.w + off - th;
+        const y0 = sy < 0 ? r.y - off : r.y + r.h + off - th;
+        ctx.fillRect(sx < 0 ? x0 : x0 - len + th, y0, len, th);
+        ctx.fillRect(x0, sy < 0 ? y0 : y0 - len + th, th, len);
+      }
+    }
+  } else if (kind === 'band') {
+    const padY = size * 0.16;
+    const y = block.y - padY;
+    const h = block.h + 2 * padY;
+    const right = S.layout.align === 'left' ? Math.min(f.w, block.x + block.w + 56 * f.u) : f.w;
+    ctx.fillStyle = P.accent;
+    ctx.fillRect(0, y, right * k, h);
+    ctx.fillStyle = withAlpha(P.panel, 1);
+    ctx.fillRect(0, y + h, right * k * 0.72, Math.max(6, 14 * f.u));
+    text = onBox(P.accent, P.onPanel);
+  } else if (kind === 'marker') {
+    const lineH = size * lineGap;
+    lines.forEach((line, i) => {
+      setFont(ctx, spec, size);
+      const w = ctx.measureText(line).width;
+      const kk = easeOutExpo(progress(t, start + 0.08 + i * 0.12, 0.38));
+      if (kk <= 0) return;
+      const lx = S.layout.align === 'left' ? block.x : f.w / 2 - w / 2;
+      const ly = block.y + lineH * (i + 0.5) + size * 0.08;
+      ctx.save();
+      ctx.globalAlpha *= 0.95;
+      ctx.translate(lx - size * 0.14, ly);
+      ctx.rotate(-0.025 + 0.012 * (i % 2));
+      ctx.fillStyle = i % 2 === 1 ? P.accent2 : P.accent;
+      ctx.beginPath();
+      const ww = (w + size * 0.28) * kk;
+      const hh = size * 0.72;
+      ctx.moveTo(0, -hh / 2 + 4 * f.u);
+      ctx.lineTo(ww, -hh / 2);
+      ctx.lineTo(ww + 6 * f.u, hh * 0.1);
+      ctx.lineTo(ww - 4 * f.u, hh / 2);
+      ctx.lineTo(2 * f.u, hh / 2 - 3 * f.u);
+      ctx.lineTo(-6 * f.u, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    });
+    text = onBox(P.accent, P.onPanel);
+  }
+  ctx.restore();
+  drawLines(ctx, f, lines, spec, size, cy, start + 0.06, end, t, { text, box: '' }, { boxed: false, lineGap, noShadow: kind === 'band' || kind === 'marker' });
+}
+
 export function drawKineticTitle(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, { kind: 'kinetic-title' }>, t: number): void {
   const S = f.style;
   const comp = composition(S);
   const spec = S.type.display;
-  const { lines, size } = fitLines(ctx, spec, applyCase(spec, scene.text), 128 * f.u * S.type.scale, f.safe.w * (comp === 'card' ? 0.78 : 0.9), 3);
+  const decorated = S.decor.title !== 'auto';
+  const { lines, size } = fitLines(ctx, spec, applyCase(spec, scene.text), 128 * f.u * S.type.scale, f.safe.w * (decorated ? 0.78 : comp === 'card' ? 0.78 : 0.9), 3);
   const cy = centerY(f);
+  if (decorated) return drawDecoratedTitle(ctx, f, lines, spec, size, cy, scene.start, scene.end, t);
   if (comp === 'card') {
     setFont(ctx, spec, size);
     const widest = Math.max(...lines.map((l) => ctx.measureText(l).width));
@@ -152,9 +263,10 @@ export function drawBigNumber(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance
   const x = a.x + (comp === 'card' ? 28 * f.u : 0);
   const cy = centerY(f);
   const size = fitSize(ctx, spec, scene.value, 330 * f.u * S.type.scale, f.safe.w * (comp === 'card' ? 0.75 : 0.9));
-  const labelSize = 44 * f.u;
   const label = applyCase(lab, scene.label);
-  const counting = S.motion.intensity >= 0.2 ? easeOutExpo(progress(t, scene.start, Math.max(0.7, S.motion.inSec * 2.4))) : 1;
+  // rótulo cabe na largura (letras muito espaçadas, como no Cinema e no Luxo, encolhem o rótulo)
+  const labelSize = label ? fitSize(ctx, lab, label, 44 * f.u, f.safe.w * (comp === 'card' ? 0.75 : 0.9)) : 44 * f.u;
+  const counting = S.motion.intensity >= 0.2 ? easeOutExpo(progress(t, scene.start, Math.max(0.7, Math.min(1.4, S.motion.inSec * 2.4)))) : 1;
   const shown = countUp(scene.value, counting);
   setFont(ctx, spec, size);
   const numW = ctx.measureText(scene.value).width;
@@ -221,8 +333,10 @@ export function drawList(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, { k
   const base = 66 * f.u;
   const numSize = base * 1.25;
   setFont(ctx, numSpec, numSize);
-  const nums = items.map((_, i) => String(firstOrd + i).padStart(2, '0'));
-  const numW = Math.max(...nums.map((n) => ctx.measureText(n).width));
+  // marcador: "01" na fonte dos títulos ou, desde a v0.9, o número dentro de um círculo (passos)
+  const circle = S.decor.listMarker === 'circle';
+  const nums = items.map((_, i) => (circle ? String(firstOrd + i) : String(firstOrd + i).padStart(2, '0')));
+  const numW = circle ? numSize * 1.15 : Math.max(...nums.map((n) => ctx.measureText(n).width));
   const gap = 28 * f.u;
   const pad = comp === 'type' ? 0 : 30 * f.u;
   const maxText = f.safe.w * 0.9 - numW - gap - 2 * pad - (comp === 'card' ? 36 * f.u : 0);
@@ -268,9 +382,23 @@ export function drawList(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, { k
     } else if (comp === 'type') {
       setShadow(ctx, f);
     }
-    setFont(ctx, numSpec, numSize);
-    ctx.fillStyle = numColor;
-    ctx.fillText(nums[i]!, left + pad, y + numSize * 0.03);
+    if (circle) {
+      const r = numW / 2;
+      clearShadow(ctx);
+      ctx.fillStyle = P.accent;
+      ctx.beginPath();
+      ctx.arc(left + pad + r, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      setFont(ctx, numSpec, numSize * 0.62);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = onBox(P.accent, P.onPanel);
+      ctx.fillText(nums[i]!, left + pad + r, y + numSize * 0.03);
+      ctx.textAlign = 'left';
+    } else {
+      setFont(ctx, numSpec, numSize);
+      ctx.fillStyle = numColor;
+      ctx.fillText(nums[i]!, left + pad, y + numSize * 0.03);
+    }
     setFont(ctx, textSpec, size);
     ctx.fillStyle = textColor;
     ctx.fillText(texts[i]!, left + pad + numW + gap, y + size * 0.03);
@@ -323,14 +451,75 @@ export function drawQuote(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, { 
   ctx.fillText('“', x, markY + markSize * 0.2);
   ctx.restore();
   if (comp === 'sticker') {
-    drawLines(ctx, f, lines, spec, size, cy + size * 0.2, scene.start + 0.08, scene.end, t, { text: P.onPanel, box: P.text }, { boxed: true, lineGap: 1.3, tilt: 0.02 * S.motion.intensity });
+    drawLines(ctx, f, lines, spec, size, cy + size * 0.2, scene.start + 0.08, scene.end, t, { text: onBox(P.text, P.onPanel), box: P.text }, { boxed: true, lineGap: 1.3, tilt: 0.02 * S.motion.intensity });
   } else {
     drawLines(ctx, f, lines, spec, size, cy + size * 0.1, scene.start + 0.08, scene.end, t, { text: P.text, box: '' }, { boxed: false, lineGap: 1.14 });
   }
 }
 
+/**
+ * Tarja de telejornal (modelos com `decor.title` 'band'): nome numa barra do painel que entra pela esquerda,
+ * encostada na borda da tela, e a descrição numa faixa da cor de destaque logo abaixo.
+ */
+function drawChyron(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, { kind: 'lower-third' }>, t: number): void {
+  const S = f.style;
+  const P = S.palette;
+  const spec = S.type.display;
+  const lab = S.type.label;
+  const title = applyCase(spec, scene.title);
+  const sub = scene.subtitle ? applyCase(lab, scene.subtitle) : '';
+  const y = f.safe.y + f.safe.h * (S.captions.position === 'bottom' ? 0.66 : 0.9);
+  const size = fitSize(ctx, spec, title, 76 * f.u, f.safe.w * 0.8);
+  const subSize = 34 * f.u;
+  setFont(ctx, spec, size);
+  const titleW = ctx.measureText(title).width;
+  setFont(ctx, lab, subSize);
+  const subW = sub ? ctx.measureText(sub).width : 0;
+  const x = f.safe.x + 10 * f.u;
+  const barH = size * 1.32;
+  const subH = subSize * 1.7;
+  const ph = phase(S, t, scene.start, scene.end);
+  const phSub = phase(S, t, scene.start, scene.end, S.motion.staggerSec * 2);
+  const k = easeOutExpo(ph.inRaw);
+  const ks = easeOutExpo(phSub.inRaw);
+  ctx.save();
+  clearShadow(ctx);
+  ctx.globalAlpha *= ph.alpha;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  const barW = (x + titleW + 48 * f.u) * k;
+  ctx.fillStyle = withAlpha(P.panel, 1);
+  ctx.fillRect(0, y - barH / 2, barW, barH);
+  ctx.fillStyle = P.accent;
+  ctx.fillRect(barW - 10 * f.u * k, y - barH / 2, 10 * f.u * k, barH);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, y - barH / 2, Math.max(0, barW - 10 * f.u), barH);
+  ctx.clip();
+  setFont(ctx, spec, size);
+  ctx.fillStyle = onBox(P.panel.slice(0, 7), P.onPanel);
+  ctx.fillText(title, x, y + size * 0.04);
+  ctx.restore();
+  if (sub) {
+    const sy = y + barH / 2 + subH / 2;
+    const subBarW = (x + subW + 32 * f.u) * ks;
+    ctx.fillStyle = P.accent;
+    ctx.fillRect(0, sy - subH / 2, subBarW, subH);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, sy - subH / 2, subBarW, subH);
+    ctx.clip();
+    setFont(ctx, lab, subSize);
+    ctx.fillStyle = onBox(P.accent, P.onPanel);
+    ctx.fillText(sub, x, sy + subSize * 0.04);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
 export function drawLowerThird(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, { kind: 'lower-third' }>, t: number): void {
   const S = f.style;
+  if (S.decor.title === 'band') return drawChyron(ctx, f, scene, t);
   const P = S.palette;
   const comp = composition(S);
   const spec = S.type.display;
@@ -408,8 +597,10 @@ export function drawEndCta(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, {
   const P = S.palette;
   const comp = composition(S);
   const spec = S.type.display;
-  const { lines, size } = fitLines(ctx, spec, applyCase(spec, scene.text), 104 * f.u * S.type.scale, f.safe.w * (comp === 'card' ? 0.78 : 0.86), 2);
+  const decorated = S.decor.title !== 'auto';
+  const { lines, size } = fitLines(ctx, spec, applyCase(spec, scene.text), 104 * f.u * S.type.scale, f.safe.w * (decorated || comp === 'card' ? 0.78 : 0.86), 2);
   const cy = centerY(f);
+  if (decorated) return drawDecoratedTitle(ctx, f, lines, spec, size, cy, scene.start, scene.end, t);
   if (comp === 'card') {
     setFont(ctx, spec, size);
     const widest = Math.max(...lines.map((l) => ctx.measureText(l).width));

@@ -33,9 +33,10 @@ test('pedido por texto muda estilo e cenas, mostra o que entendeu e entra no des
   await expect(page.getByTestId('scene-summary')).not.toContainText('transiç');
 
   // pedido de estilo
+  // (v0.9: "minimalista" tem modelo próprio)
   await ask(page, 'minimalista e elegante');
-  await expect(page.getByTestId('style-editorial')).toHaveAttribute('aria-pressed', 'true');
-  await expect(summary).toContainText('Estilo Editorial');
+  await expect(page.getByTestId('style-minimal')).toHaveAttribute('aria-pressed', 'true');
+  await expect(summary).toContainText('Estilo Minimal');
 
   // desfazer volta ao pedido anterior (texto, estilo e resumo)
   await page.getByTestId('undo').click();

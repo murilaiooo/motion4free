@@ -5,6 +5,9 @@ import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 const STYLES = ['pop', 'neon', 'editorial', 'documental'] as const;
 const SHOTS = ['abertura', 'numero', 'lista', 'pergunta', 'nome', 'legenda', 'chamada'] as const;
+/** Modelos da v0.9: duas referências cada (abertura e legenda); o resto fica nos testes de unidade. */
+const TEMPLATES_V09 = ['impacto', 'minimal', 'podcast', 'tutorial', 'cinema', 'jornal', 'retro', 'turbo', 'datilografia', 'marca-texto', 'luxo'] as const;
+const SHOTS_V09 = ['abertura', 'legenda'] as const;
 
 async function openVideo(page: Page) {
   await page.goto('/');
@@ -79,20 +82,21 @@ test.describe('galeria de estilos', () => {
     const same = await page.evaluate(() => {
       const g = window.m4fGallery!;
       const results: boolean[] = [];
-      for (const s of ['pop', 'neon', 'editorial', 'documental']) {
+      for (const s of g.styles()) {
         const first = g.render(s, 8.3, 270);
         for (const t of [26.9, 0.4, 12.0, 4.4, 22.0]) g.render(s, t, 270);
         results.push(g.render(s, 8.3, 270) === first);
       }
       return results;
     });
-    expect(same).toEqual([true, true, true, true]);
+    expect(same.length).toBe(4 + TEMPLATES_V09.length);
+    expect(same.every(Boolean)).toBe(true);
   });
 
   test('os estilos desenham quadros diferentes entre si', async ({ page }) => {
     for (const t of [1.3, 4.6, 12.2, 22.1]) {
-      const frames = await page.evaluate((tt) => ['pop', 'neon', 'editorial', 'documental'].map((s) => window.m4fGallery!.render(s, tt, 270)), t);
-      expect(new Set(frames).size).toBe(4);
+      const frames = await page.evaluate((tt) => window.m4fGallery!.styles().map((s) => window.m4fGallery!.render(s, tt, 270)), t);
+      expect(new Set(frames).size).toBe(4 + TEMPLATES_V09.length);
     }
   });
 
@@ -103,6 +107,14 @@ test.describe('galeria de estilos', () => {
         // Chromium 1194 e a CI usa o 1248, cuja métrica de fonte muda a largura das caixas de texto
         // (até 9% dos pixels no título documental). A regressão fina fica nos testes de unidade das cenas.
         await expect(page.getByTestId(`gal-${style}-${shot}`)).toHaveScreenshot(`${style}-${shot}.png`, { maxDiffPixelRatio: 0.12, threshold: 0.35 });
+      }
+    });
+  }
+
+  for (const id of TEMPLATES_V09) {
+    test(`quadros de referência · ${id}`, async ({ page }) => {
+      for (const shot of SHOTS_V09) {
+        await expect(page.getByTestId(`gal-${id}-${shot}`)).toHaveScreenshot(`${id}-${shot}.png`, { maxDiffPixelRatio: 0.12, threshold: 0.35 });
       }
     });
   }

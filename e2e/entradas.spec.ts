@@ -53,7 +53,9 @@ for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await open(page, 'e2e/fixtures/curto.webm');
     const grid = await page.locator('.template-grid').boundingBox();
-    for (const id of ['pop', 'neon', 'editorial', 'documental']) {
+    const ids = await page.locator('.template-grid [data-testid^="style-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.slice(6)));
+    expect(ids.length).toBeGreaterThanOrEqual(15);
+    for (const id of ids) {
       const card = await page.getByTestId(`style-${id}`).boundingBox();
       expect(card!.x + card!.width, id).toBeLessThanOrEqual(grid!.x + grid!.width + 1);
       // a miniatura (quadro desenhado do modelo) fica dentro do cartão

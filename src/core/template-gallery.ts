@@ -1,37 +1,34 @@
-import { PRESETS } from './presets';
 import type { StyleDNA } from './style';
+import { TAG_LABELS, TEMPLATES, TEMPLATE_TAGS } from './templates';
 
 /**
- * Adaptador da galeria de modelos (v0.10): a tela só conhece `TemplateInfo`. Hoje vem da lista de
- * estilos; quando existir um registro de modelos, só esta função muda.
+ * Adaptador da galeria de modelos (v0.10): a tela só conhece `TemplateInfo`. Os dados vêm do registro
+ * de modelos (`templates.ts`, ADR-0014); aqui as etiquetas viram rótulos em português, na ordem do registro.
  */
 export interface TemplateInfo {
   id: string;
   name: string;
   description: string;
+  /** rótulos em português (ex.: "Energético") */
   tags: string[];
   style: StyleDNA;
 }
 
-const ABOUT: Record<string, { description: string; tags: string[] }> = {
-  pop: { description: 'Energético: letras grandes, palavra falada em destaque amarelo, cortes com flash e muitas animações.', tags: ['Energético', 'Caixa de destaque'] },
-  neon: { description: 'Limpo e atual: letras brancas grossas, poucas palavras por vez e a palavra falada acendendo em verde.', tags: ['Limpo', 'Energético'] },
-  editorial: { description: 'Elegante: letra de revista, legenda que acende palavra por palavra, movimento lento e poucas animações.', tags: ['Elegante', 'Calmo'] },
-  documental: { description: 'Sóbrio: painéis escuros à esquerda, letra técnica, quase sem movimento.', tags: ['Sóbrio', 'Calmo'] },
-};
-
 export function listTemplates(): TemplateInfo[] {
-  return PRESETS.map((style) => ({
-    id: style.id,
-    name: style.name,
-    description: ABOUT[style.id]?.description ?? style.name,
-    tags: ABOUT[style.id]?.tags ?? ['Outros'],
-    style,
+  return TEMPLATES.map((tp) => ({
+    id: tp.id,
+    name: tp.name,
+    description: tp.description,
+    tags: tp.tags.map((tag) => TAG_LABELS[tag]),
+    style: tp.style,
   }));
 }
 
+/** Etiquetas usadas por algum modelo da lista, na ordem do registro (as desconhecidas vão no fim). */
 export function templateTags(list: TemplateInfo[]): string[] {
-  return [...new Set(list.flatMap((t) => t.tags))];
+  const used = new Set(list.flatMap((t) => t.tags));
+  const known = TEMPLATE_TAGS.map((tag) => TAG_LABELS[tag]).filter((label) => used.has(label));
+  return [...known, ...[...used].filter((label) => !known.includes(label))];
 }
 
 export function filterTemplates(list: TemplateInfo[], tag: string | null): TemplateInfo[] {

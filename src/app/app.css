@@ -113,9 +113,10 @@
 .gallery-main { padding: var(--s-4) clamp(16px, 4vw, 48px) var(--s-7); display: grid; gap: var(--s-5); align-content: start; }
 .gallery-main h1 { font-size: var(--fs-2xl); }
 .gallery { display: grid; gap: var(--s-6); }
-.gallery h2 { font-size: var(--fs-lg); margin-bottom: var(--s-3); }
+.gallery h2 { font-size: var(--fs-lg); line-height: 24px; margin-bottom: var(--s-3); }
+.gallery .hint { line-height: 20px; }
 .gallery-row { display: flex; gap: var(--s-3); overflow-x: auto; padding-bottom: var(--s-2); }
-.gallery-row canvas { width: 160px; aspect-ratio: 9 / 16; border-radius: var(--r-md); flex: none; border: 1px solid var(--line); }
+.gallery-row canvas { width: 160px; height: 284px; /* altura inteira: o quadro de referência não oscila 1 px */ border-radius: var(--r-md); flex: none; border: 1px solid var(--line); }
 
 /* ============ editor ============ */
 .ws {
@@ -278,6 +279,9 @@
 /* galeria de modelos */
 .templates { display: grid; gap: var(--s-3); }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+/* filtros em uma linha que rola para o lado (só a linha, nunca a página) */
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; padding-bottom: 6px; margin-bottom: -2px; mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+.chips.scroll > .chip { flex: none; }
 .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(136px, 100%), 1fr)); gap: var(--s-3); }
 .tpl-card { min-width: 0; height: auto; display: grid; gap: 0; padding: 0; text-align: left; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--bg-2); overflow: hidden; align-items: start; justify-content: stretch; white-space: normal; transition: border-color var(--dur-1) var(--ease), transform var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease); }
 .tpl-card:hover:not(:disabled) { background: var(--bg-2); border-color: var(--line-strong); transform: translateY(-2px); box-shadow: var(--shadow-2); }

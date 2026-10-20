@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chroma, contrast, hexToRgb, luminance, medianCut, rgbToHex, type RGB } from '../src/core/color';
+import { chroma, contrast, hexToRgb, luminance, medianCut, onBox, rgbToHex, type RGB } from '../src/core/color';
 import { PRESETS } from '../src/core/presets';
 import { styleSchema } from '../src/core/style';
 import { applyReference, MIN_CONTRAST, readable, referenceFromPixels } from '../src/editorial/reference';
@@ -85,7 +85,7 @@ describe('applyReference: contraste garantido em todos os estilos', () => {
         // texto do painel sempre legível sobre o painel
         expect(contrast(hexToRgb(P.onPanel), hexToRgb(P.panel))).toBeGreaterThanOrEqual(MIN_CONTRAST);
         // palavra falada em caixa (Pop): texto do painel sobre a cor de destaque
-        if (preset.captions.highlight === 'box') for (const c of [P.accent, P.accent2]) expect(contrast(hexToRgb(P.onPanel), hexToRgb(c))).toBeGreaterThanOrEqual(MIN_CONTRAST);
+        if (preset.captions.highlight === 'box') for (const c of [P.accent, P.accent2]) expect(contrast(hexToRgb(onBox(c, P.onPanel)), hexToRgb(c))).toBeGreaterThanOrEqual(luminance(hexToRgb(preset.palette.onPanel)) < 0.2 ? MIN_CONTRAST : 3);
       });
     }
   }

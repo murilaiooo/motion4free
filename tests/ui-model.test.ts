@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PROCESSING_STEPS, processingStep } from '../src/core/steps';
 import { filterTemplates, listTemplates, templateTags } from '../src/core/template-gallery';
 import { PRESETS } from '../src/core/presets';
+import { TAG_LABELS, TEMPLATES } from '../src/core/templates';
 
 describe('passos do processamento', () => {
   it('cada mensagem do processamento cai num passo, em ordem', () => {
@@ -37,5 +38,14 @@ describe('galeria de modelos (adaptador)', () => {
     const some = filterTemplates(list, tags[0]!);
     expect(some.length).toBeGreaterThan(0);
     expect(some.every((t) => t.tags.includes(tags[0]!))).toBe(true);
+  });
+
+  it('vem do registro de modelos, com as etiquetas em português e na ordem do registro', () => {
+    const list = listTemplates();
+    expect(list).toHaveLength(TEMPLATES.length);
+    expect(list.find((t) => t.id === 'podcast')?.tags).toContain(TAG_LABELS.podcast);
+    const tags = templateTags(list);
+    expect(tags[0]).toBe(TAG_LABELS.energetico);
+    expect(filterTemplates(list, TAG_LABELS.games).map((t) => t.id)).toEqual(TEMPLATES.filter((t) => t.tags.includes('games')).map((t) => t.id));
   });
 });

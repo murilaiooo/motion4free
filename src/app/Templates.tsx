@@ -18,15 +18,25 @@ const DEMO_SEC = 28;
 export function TemplateThumb({ styleId, t, width = 180, playing = false, className = '' }: { styleId: string; t: number; width?: number; playing?: boolean; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
+  const [seen, setSeen] = useState(false);
+  // só baixa as fontes e desenha quando o cartão chega perto da tela (15 modelos, ~13 famílias de letra)
+  useEffect(() => {
+    const c = ref.current;
+    if (!c || seen) return;
+    if (typeof IntersectionObserver === 'undefined') return setSeen(true);
+    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setSeen(true), { rootMargin: '300px' });
+    io.observe(c);
+    return () => io.disconnect();
+  }, [seen]);
   useEffect(() => {
     let alive = true;
     const style = presetById(styleId);
-    if (!style) return;
+    if (!style || !seen) return;
     void ensureFonts(style).then(() => alive && setReady(true));
     return () => {
       alive = false;
     };
-  }, [styleId]);
+  }, [styleId, seen]);
   useEffect(() => {
     const c = ref.current;
     if (!c || !ready) return;
@@ -60,7 +70,7 @@ export function TemplateGallery({ current, onPick, disabled, templates }: { curr
   const shown = filterTemplates(list, tag);
   return (
     <section className="templates" aria-label="Modelos">
-      <div className="chips" role="group" aria-label="Filtrar modelos">
+      <div className="chips scroll" role="group" aria-label="Filtrar modelos">
         <button type="button" className="chip" aria-pressed={tag === null} onClick={() => setTag(null)}>
           Todos
         </button>

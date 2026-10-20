@@ -14,11 +14,25 @@ Todas sob a **SIL Open Font License 1.1 (OFL)**, que permite usar, embutir e red
 | IBM Plex Sans | `@fontsource/ibm-plex-sans@5.3.0` | latin 500, 600, 700 | 2019 IBM Corp. | Documental (legendas) |
 | IBM Plex Sans Condensed | `@fontsource/ibm-plex-sans-condensed@5.3.0` | latin 600, 700 | 2019 IBM Corp. | Documental (títulos) |
 | IBM Plex Mono | `@fontsource/ibm-plex-mono@5.3.0` | latin 500, 600 | 2017 IBM Corp. | Documental (rótulos) |
+| Archivo Black | `@fontsource/archivo-black@5.3.0` | latin 400 | 2017 The Archivo Black Project Authors (github.com/Omnibus-Type/ArchivoBlack) | Impacto (títulos e legendas) (desde a v0.9.0) |
+| DM Sans | `@fontsource/dm-sans@5.3.0` | latin 500, 700 | 2014 The DM Sans Project Authors (github.com/googlefonts/dm-fonts) | Minimal (desde a v0.9.0) |
+| Space Grotesk | `@fontsource/space-grotesk@5.3.0` | latin 500, 700 | 2020 The Space Grotesk Project Authors (github.com/floriankarsten/space-grotesk) | Podcast (desde a v0.9.0) |
+| Nunito | `@fontsource/nunito@5.3.0` | latin 800, 900 | 2014 The Nunito Project Authors (github.com/googlefonts/nunito) | Tutorial (desde a v0.9.0) |
+| Cormorant Garamond | `@fontsource/cormorant-garamond@5.3.0` | latin 500, 600 e 500 itálico | 2015 The Cormorant Project Authors (github.com/CatharsisFonts/Cormorant) | Cinema (desde a v0.9.0) |
+| Oswald | `@fontsource/oswald@5.3.0` | latin 500, 700 | 2016 The Oswald Project Authors (github.com/googlefonts/OswaldFont) | Jornal (desde a v0.9.0) |
+| VT323 | `@fontsource/vt323@5.3.0` | latin 400 | 2011 The VT323 Project Authors (peter.hull@oikoi.com) | Retrô 90 (desde a v0.9.0) |
+| Bungee | `@fontsource/bungee@5.3.0` | latin 400 | 2023 The Bungee Project Authors (github.com/djrrb/Bungee) | Turbo (títulos) (desde a v0.9.0) |
+| Rubik | `@fontsource/rubik@5.3.0` | latin 800 e 900 itálico | 2015 The Rubik Project Authors (github.com/googlefonts/rubik) | Turbo (legendas, rótulos) (desde a v0.9.0) |
+| Courier Prime | `@fontsource/courier-prime@5.3.0` | latin 400, 700 | 2015 The Courier Prime Project Authors (github.com/quoteunquoteapps/CourierPrime) | Datilografia (desde a v0.9.0) |
+| Caveat | `@fontsource/caveat@5.3.0` | latin 700 | 2014 The Caveat Project Authors (github.com/googlefonts/caveat) | Marca-texto (títulos, ênfase) (desde a v0.9.0) |
+| Kalam | `@fontsource/kalam@5.3.0` | latin 700 | 2014 Indian Type Foundry (info@indiantypefoundry.com) | Marca-texto (legendas, rótulos) (desde a v0.9.0) |
+| Playfair Display | `@fontsource/playfair-display@5.3.0` | latin 400 normal e itálico | 2017 The Playfair Display Project Authors (github.com/clauseggers/Playfair-Display), com nome reservado "Playfair Display" | Luxo (títulos, ênfase) (desde a v0.9.0) |
 
 - **Procedência:** pacotes oficiais do projeto Fontsource no registro npm (os mesmos arquivos do Google Fonts, sem acesso ao Google Fonts em tempo de execução). A licença `OFL-1.1` está declarada no `package.json` de cada pacote e o arquivo `LICENSE` de cada um foi conferido em 20/10/2026.
 - **Subconjunto latino** (`latin`): cobre todos os acentos do português. Cada arquivo tem de 18 a 40 KB (limite da Cloudflare: 25 MiB por arquivo).
 - **Carregamento:** `src/media/fonts.ts`, pela FontFace API, na página e dentro do Worker de exportação. Nenhuma fonte é baixada de servidor externo.
-- **Nomes reservados:** a OFL proíbe distribuir versões *modificadas* com o mesmo nome; o app usa os arquivos sem modificação.
+- **Nomes reservados:** a OFL proíbe distribuir versões *modificadas* com o mesmo nome (só a Playfair Display declara um nome reservado); o app usa os arquivos sem modificação.
+- **Modelos da v0.9.0:** as 13 famílias novas foram conferidas em 20/10/2026 (`license: OFL-1.1` no `package.json` e arquivo `LICENSE` de cada pacote, versão 5.3.0 fixada). Só os pesos usados pelos modelos são carregados, e só quando um estilo que os usa está na tela.
 
 ## Emojis (desde a v0.6.0)
 | Recurso | Origem (versão fixada) | Licença | O que vai no site |

@@ -8,7 +8,7 @@ A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Mo
 - **Tela de "editando seu vídeo"** com os passos (abrir, cortar silêncios, transcrever, montar legendas e estilo), qual está acontecendo agora e a porcentagem.
 - **Editor em tela cheia**, como nos editores de vídeo conhecidos: no alto, o nome do projeto, se está salvo, desfazer/refazer e o botão amarelo **Exportar**; à esquerda, as ferramentas em abas (**Modelos, Pedido, Legendas, Gancho, Trechos, Versões, Cores**); no meio, a **prévia grande**; à direita, os **Detalhes** do que você selecionou e **O que mudou** (com Antes/Depois); embaixo, a **linha do tempo** larga, com régua para clicar ou arrastar e **zoom**.
 - **Legendas como um texto corrido**: em vez de centenas de linhas, o que você falou aparece como um parágrafo. Clique numa palavra para ir até ela e corrigir ali mesmo; a palavra falada acende enquanto o vídeo toca; o que foi cortado aparece riscado. Vídeos longos ficam em páginas.
-- **Galeria de modelos**: cada modelo mostra um quadro de verdade (e se mexe quando você passa o mouse), com etiquetas e filtro (Energético, Limpo, Elegante, Calmo…); o escolhido fica marcado.
+- **Galeria de modelos**: cada modelo mostra um quadro de verdade (e se mexe quando você passa o mouse), com etiquetas e filtro (Energético, Vendas, Podcast, Tutorial, Elegante…); os **15 modelos** da v0.9 estão todos lá; o escolhido fica marcado.
 - **Área segura do Reels**: um botão mostra na prévia onde os botões do Instagram cobrem a tela.
 - **Atalhos**: Espaço toca/pausa, J e L voltam/avançam 1 segundo, Ctrl+Z desfaz, Ctrl+Shift+Z refaz. Clicar na prévia também toca.
 - **Tema claro** opcional (botão do sol, no alto); o escuro continua o padrão.
@@ -16,6 +16,16 @@ A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Mo
 - A **Precisão da legenda** (Rápida/Precisa, da v0.8) fica logo abaixo da área de soltar o vídeo, em dois cartões; **"Legenda feita com …"** aparece no alto da aba Legendas.
 - Tudo o que existia continua lá (pedido por texto, IA opcional, gancho, trechos e travas, versões, cores de uma imagem, cortes, exportar, avisos com código e "Copiar detalhes"). Projetos salvos antes abrem normalmente.
 - Roteiro de teste refeito para o novo visual: [roteiro-de-teste.md](roteiro-de-teste.md).
+
+## v0.9.0 — 20/10/2026
+Muito mais estilos: agora são **15 modelos** prontos, cada um com letra, cores, animações e jeito de legenda próprios.
+- **11 modelos novos**: **Impacto** (vendas: cada palavra num bloco, a falada em vermelho), **Minimal** (tudo em minúsculas, discreto), **Podcast** (selo de podcast no canto, legenda em pílulas, nome de quem fala em destaque), **Tutorial** (passos numerados em círculos, palavra falada sublinhada), **Cinema** (faixas pretas, cor quente, letra clássica), **Jornal** (selo "ao vivo", faixa de manchetes correndo embaixo, tarja com o nome), **Retrô 90** (letra de computador antigo, linhas de TV, "REC" com o tempo), **Turbo** (games: títulos que caem quicando, palavra em degradê), **Datilografia** (a legenda vai sendo digitada numa tira de papel, com cursor), **Marca-texto** (escrito à mão, palavra falada riscada de amarelo) e **Luxo** (preto e dourado, título numa moldura fina).
+- **Pedir pelo nome**: escreva "estilo podcast", "template tutorial", "quero algo cinematográfico", "estilo de jornal", "retrô anos 90", "estilo gamer", "escrito à mão" ou "luxuoso" no pedido e o modelo é escolhido. Com a IA ligada, ela também conhece todos os modelos.
+- **Tudo o que você já pedia continua valendo em qualquer modelo**: cores da legenda, tamanho, posição, emojis, pedidos por trecho, travas e versões.
+- Novas letras para pedir na legenda: "letra pixelada", "letra manuscrita", "letra de máquina de escrever", "de jornal"… e o destaque "com marca-texto".
+- Todas as letras novas são gratuitas e livres (licença OFL), vêm junto com o app e só são baixadas quando o modelo é usado. Ver [licencas.md](licencas.md).
+- Projetos salvos nas versões anteriores abrem iguais.
+- Imagens dos modelos para comparar: pasta `motion4free/templates-v0.9` (uma imagem por modelo: abertura e legenda). Decisão técnica: [ADR-0014](decisions/0014-registro-de-modelos.md).
 
 ## v0.8.0 — 20/10/2026
 Legenda muito mais certa, principalmente em vídeos longos e gravados no celular.

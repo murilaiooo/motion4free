@@ -45,9 +45,13 @@ function Footer() {
  * Primeira tela: promessa, área para soltar o vídeo, nota de privacidade e exemplos de modelos
  * desenhados de verdade (mesma `drawFrame` do vídeo final).
  */
+/** Três modelos bem diferentes entre si para a vitrine da primeira tela. */
+const SHOWCASE = ['pop', 'podcast', 'cinema'];
+
 export function Landing({ onFile, busy, pendingName, notices, options }: { onFile: (f: File) => void; busy: boolean; pendingName: string | null; notices: ReactNode; options?: ReactNode }) {
   const [over, setOver] = useState(false);
-  const examples = listTemplates().slice(0, 4);
+  const all = listTemplates();
+  const examples = SHOWCASE.map((id) => all.find((t) => t.id === id)).filter((t) => t !== undefined);
   const drop = (e: DragEvent) => {
     e.preventDefault();
     setOver(false);
