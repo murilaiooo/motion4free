@@ -234,7 +234,7 @@ function EditorApp() {
     }
   }
 
-  async function resumeMulti(id: string, project: SavedProject, clipMap: Map<string, Blob>, copyExists: boolean) {
+  async function resumeMulti(id: string, project: SavedProject, clipMap: Map<string, Blob>, copyExists: boolean): Promise<import('../media/multi').OpenedClip[]> {
     step('Abrindo o projeto salvo (multi)', 0);
     setAsrModel(null);
     const { openMedia } = await import('../media/input');
@@ -284,6 +284,7 @@ function EditorApp() {
     setPending(null);
     setStatus({ kind: 'ready' });
     if (copyExists) setCopy('done');
+    return clips;
   }
 
   async function resume(id: string, project: SavedProject, file: Blob, copyExists: boolean) {
@@ -374,9 +375,27 @@ function EditorApp() {
     const files = Array.isArray(f) ? f : [f];
     const primary = files[0]!;
     if (pending) {
+      const savedClips = pending.project.history.present.clips;
+      const relinkClips = savedClips.length > 1 || (savedClips.length === 1 && savedClips[0]!.id !== 'c1');
       setFileName(primary.name);
       try {
-        await resume(pending.id, pending.project, primary, false);
+        if (relinkClips) {
+          const { openMedia } = await import('../media/input');
+          const { matchOriginalClips } = await import('../core/clip-relink');
+          const candidates = await Promise.all(files.map(async (file) => {
+            const media = await openMedia(file);
+            return { name: file.name, durationSec: media.durationSec, size: file.size };
+          }));
+          const assignments = matchOriginalClips(savedClips, candidates, pending.project.video);
+          if (!assignments) {
+            throw new AppError('CLIPES_AUSENTES', 'Selecione novamente todos os clipes originais. Os nomes e durações precisam corresponder ao projeto salvo.');
+          }
+          const map = new Map(savedClips.map((c) => [c.id, files[assignments.get(c.id)!]!] as const));
+          const reopened = await resumeMulti(pending.id, pending.project, map, false);
+          storeMultiCopies(pending.id, reopened);
+        } else {
+          await resume(pending.id, pending.project, primary, false);
+        }
       } catch (err) {
         fail(err);
       }
@@ -570,10 +589,16 @@ function EditorApp() {
   const saved = !!history && savedFor === history && versionsSaved === versions && copy !== 'pending';
   const saveState: SaveState = saved ? 'saved' : storageAvailable() ? 'saving' : 'off';
 
+  const pendingClips = pending?.project.history.present.clips ?? [];
+  const pendingMulti = pendingClips.length > 1 || (pendingClips.length === 1 && pendingClips[0]!.id !== 'c1');
   const pendingNotice = pending && (
-    <div className="notice warning" role="status" data-testid="warning-M4F-604">
+    <div className="notice warning" role="status" data-testid={pendingMulti ? 'warning-M4F-615' : 'warning-M4F-604'}>
       <p>
-        <b className="code">Aviso M4F-604</b>: Para continuar o projeto salvo, escolha de novo o vídeo original (<b>{pending.project.video.name}</b>). Suas edições estão guardadas.
+        {pendingMulti ? (
+          <><b className="code">Aviso M4F-615</b>: Selecione novamente os {pendingClips.length} arquivos originais deste projeto, de uma vez. Suas edições continuam guardadas.</>
+        ) : (
+          <><b className="code">Aviso M4F-604</b>: Para continuar o projeto salvo, escolha de novo o vídeo original (<b>{pending.project.video.name}</b>). Suas edições estão guardadas.</>
+        )}
       </p>
       <div className="notice-row">
         <button className="sm" onClick={() => void closeProject()} data-testid="start-over">
@@ -667,6 +692,7 @@ function EditorApp() {
         onFile={(f) => void onFile(f)}
         busy={busy}
         pendingName={pending?.project.video.name ?? null}
+        pendingClipCount={pendingMulti ? pendingClips.length : undefined}
         options={!pending && <AsrPrecisionOption precision={precision} disabled={busy} />}
         onStorage={() => setStorageOpen(true)}
         projects={
