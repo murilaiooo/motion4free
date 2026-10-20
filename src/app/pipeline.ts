@@ -1,5 +1,6 @@
 import type { EditPlan, Word } from '../core/types';
 import { AppError, toAppError } from '../core/errors';
+import { planAsrWindows } from '../analysis/asr-windows';
 import { findSilences } from '../analysis/silence';
 import { autoEdit } from '../editorial/auto-edit';
 import { decodeAudio, toMono16k, type DecodedAudio } from '../media/audio';
@@ -41,7 +42,7 @@ export async function analyze(file: File, transcriber: Transcriber, onStep: (lab
   const warnings: AppError[] = [];
   let words: Word[] = [];
   try {
-    words = await transcriber.transcribe(mono.slice(), media.durationSec, onStep);
+    words = await transcriber.transcribe(mono.slice(), media.durationSec, planAsrWindows(silences, media.durationSec), onStep);
   } catch (err) {
     warnings.push(toAppError(err, 'TRANSCRICAO_FALHOU'));
   }

@@ -1,14 +1,14 @@
 import { AppError } from '../core/errors';
-import type { Word } from '../core/types';
+import type { TimeRange, Word } from '../core/types';
 import type { FromWorker } from './protocol';
 import { chunksToWords, type AsrChunk } from './words';
 
 export interface Transcriber {
-  transcribe(audio16k: Float32Array, durationSec: number, onProgress: (label: string, fraction: number) => void): Promise<Word[]>;
+  transcribe(audio16k: Float32Array, durationSec: number, windows: TimeRange[], onProgress: (label: string, fraction: number) => void): Promise<Word[]>;
 }
 
 export class WhisperTranscriber implements Transcriber {
-  transcribe(audio16k: Float32Array, durationSec: number, onProgress: (label: string, fraction: number) => void): Promise<Word[]> {
+  transcribe(audio16k: Float32Array, durationSec: number, windows: TimeRange[], onProgress: (label: string, fraction: number) => void): Promise<Word[]> {
     const worker = new Worker(new URL('./whisper.worker.ts', import.meta.url), { type: 'module' });
     return new Promise((resolve, reject) => {
       worker.onmessage = (e: MessageEvent<FromWorker>) => {
@@ -27,7 +27,7 @@ export class WhisperTranscriber implements Transcriber {
         worker.terminate();
         reject(new AppError('WORKER_FALHOU', `${e.message || 'sem mensagem'} ${e.filename ?? ''}:${e.lineno ?? ''}`));
       };
-      worker.postMessage({ type: 'transcribe', audio: audio16k, language: 'portuguese' }, [audio16k.buffer]);
+      worker.postMessage({ type: 'transcribe', audio: audio16k, language: 'portuguese', windows }, [audio16k.buffer]);
     });
   }
 }
