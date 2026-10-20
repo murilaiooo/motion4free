@@ -159,9 +159,7 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
         // No element hit: deselect and forward to canvas for play/pause (overlay covers canvas)
         if (selected) onSelect(null);
         const canvas = canvasRef.current;
-        if (canvas) {
-          canvas.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY }));
-        }
+        if (canvas) canvas.click();
         return;
       }
     },
