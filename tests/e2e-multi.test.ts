@@ -127,6 +127,41 @@ describe('E2E multi-clip workflow (pipeline puro + persistência)', () => {
     }
   });
 
+  it('reabre com c1 original após reordenação e não confunde arquivo extra com clipe ausente', async () => {
+    const fs = new MemoryFs();
+    const reordered = [clips[1]!, clips[0]!];
+    const plan = autoEdit(7.5, [], [], DEFAULT_STYLE, { clips: reordered });
+    const primary = new Blob(['first'], { type: 'video/mp4' });
+    const second = new Blob(['second'], { type: 'video/mp4' });
+    const project = makeProject({
+      appVersion: APP_VERSION,
+      savedAt: '2026-10-20T00:00:00Z',
+      video: { name: clips[0]!.name, size: primary.size, durationSec: clips[0]!.duration },
+      words: [],
+      silences: [],
+      warnings: [],
+      history: createHistory(plan),
+      versions: [],
+    });
+    const id = 'p-order';
+    await saveProjectData(fs, id, project, 'Reordenado', project.savedAt);
+    // O formato legado guarda c1 em video.bin; c2 está em video/c2.bin.
+    await saveVideo(fs, id, primary);
+    await saveClipVideo(fs, id, 'c2', second);
+
+    const loaded = await loadProjectVideos(fs, id, project);
+    expect(loaded?.size).toBe(2);
+    expect(await loaded!.get('c1')!.text()).toBe('first');
+    expect(await loaded!.get('c2')!.text()).toBe('second');
+    expect((await listProjects(fs))[0]!.hasVideo).toBe(true);
+
+    // Um arquivo antigo que sobrou não substitui c2 ausente.
+    await saveClipVideo(fs, id, 'c3', new Blob(['extra']));
+    await fs.remove(['motion4free', 'projects', id, 'video', 'c2.bin']);
+    expect((await listProjects(fs))[0]!.hasVideo).toBe(false);
+    expect(await loadProjectVideos(fs, id, project)).toBeNull();
+  });
+
   it('remove clip e reordena refletem em novo plano sem perder edições manuais', () => {
     const plan = autoEdit(10, [], placeWords(clips, {}), DEFAULT_STYLE, { clips });
     const added = addElement(plan, { durationSec: 10, words: [] }, { kind: 'text', text: 'Meu título' }, 1);
