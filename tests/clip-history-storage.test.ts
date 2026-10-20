@@ -38,7 +38,7 @@ describe('persistência de mídia referenciada por undo/redo', () => {
     if (loaded.kind !== 'ok') return;
     expect(loaded.video).toBeNull(); // o futuro exige um segundo arquivo
     expect(referencedClips(loaded.project).map(c => c.id)).toEqual(['c1', 'c2']);
-    expect(loaded.project.clipAnnotations?.c2.words[0]!.text).toBe('segundo');
+    expect(loaded.project.clipAnnotations?.c2?.words[0]!.text).toBe('segundo');
     const videos = await loadProjectVideos(fs, 'p-history', loaded.project);
     expect([...videos!.keys()]).toEqual(['c1', 'c2']);
     expect((await listProjects(fs))[0]!.hasVideo).toBe(true);
