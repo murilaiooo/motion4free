@@ -8,7 +8,7 @@ Todas sob a **SIL Open Font License 1.1 (OFL)**, que permite usar, embutir e red
 | Fonte | Pacote npm (versão fixada) | Arquivos usados | Copyright / origem | Usada no estilo |
 |---|---|---|---|---|
 | Instrument Serif | `@fontsource/instrument-serif@5.3.0` | latin 400 normal e itálico | 2022 The Instrument Serif Project Authors (github.com/Instrument/instrument-serif) | Editorial (títulos, ênfase) |
-| Inter | `@fontsource/inter@5.3.0` | latin 500, 600, 700, 800 | 2016 The Inter Project Authors (github.com/rsms/inter) | Editorial (legendas, rótulos) |
+| Inter | `@fontsource/inter@5.3.0` | latin 400 (só interface), 500, 600, 700, 800 | 2016 The Inter Project Authors (github.com/rsms/inter) | Editorial e Neon (legendas, rótulos); desde a v0.10 também a fonte da interface do app (família "M4F UI", 400–700) |
 | Anton | `@fontsource/anton@5.3.0` | latin 400 | 2020 The Anton Project Authors (github.com/googlefonts/AntonFont) | Pop (títulos) |
 | Montserrat | `@fontsource/montserrat@5.3.0` | latin 700, 800, 900 | 2011 The Montserrat Project Authors (github.com/JulietaUla/Montserrat) | Pop (legendas, rótulos) |
 | IBM Plex Sans | `@fontsource/ibm-plex-sans@5.3.0` | latin 500, 600, 700 | 2019 IBM Corp. | Documental (legendas) |
@@ -46,5 +46,12 @@ Só é baixada se a pessoa ligar "IA no navegador" no painel avançado; o resto 
 
 O texto da licença Apache-2.0 acompanha o pacote npm (`node_modules/@mlc-ai/web-llm/LICENSE`) e é público em apache.org/licenses/LICENSE-2.0. A chave do Google Gemini é da própria pessoa e segue os termos do Google; o app não distribui nada do Google.
 
+## Ícones da interface (desde a v0.10.0)
+| Recurso | Origem (versão fixada) | Licença | O que vai no site |
+|---|---|---|---|
+| Lucide | pacote npm `lucide-react@1.49.0` (lucide.dev, github.com/lucide-icons/lucide) | **ISC** (declarada no `package.json` e no `LICENSE` do pacote, conferidos em 20/10/2026); os ícones derivados do Feather (ex.: `check`, `download`, `upload`, `x`, `zoom-in`) seguem a **MIT** de Cole Bemis, no mesmo arquivo | só os ícones importados em `src/app` (tree-shaking, ~40 ícones dentro do JS); texto da licença no site em [`/licencas-icones.txt`](../public/licencas-icones.txt) |
+
+- **Por que Lucide:** traço consistente, cobre todos os ícones de editor de vídeo que o app usa, componentes React sem dependências, licença permissiva que exige só manter o aviso (feito no arquivo acima). Nenhum ícone ou logo de outro produto (CapCut, Descript etc.) foi copiado; o logo "M" do Motion4Free é um SVG desenhado no próprio código (`src/app/TopBar.tsx`).
+
 ## Nada mais
-Cenas, transições e estilos foram escritos do zero para o Motion4Free (sem código, preset ou asset copiado de outros projetos). As ideias de cenas do Editonny foram apenas referência de nomes de categorias (ver `docs/research/upstream-implementation/INDEX.md`).
+Cenas, transições, estilos e a interface (layout, CSS, componentes) foram escritos do zero para o Motion4Free (sem código, preset ou asset copiado de outros projetos). As ideias de cenas do Editonny foram apenas referência de nomes de categorias (ver `docs/research/upstream-implementation/INDEX.md`).

@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Caption, Segment, Word } from '../core/types';
 import { activeToken, buildTranscript, pageOfCaption, paginate, type TranscriptBlock } from '../editorial/transcript';
 
@@ -138,7 +138,7 @@ const Paragraph = memo(function Paragraph({ blocks, editing, onSeek, onOpen, onC
                 </span>
               ))}
             </span>
-            <Pencil className="t-pen" size={11} aria-hidden />{' '}
+            {' '}
           </span>
         ),
       )}

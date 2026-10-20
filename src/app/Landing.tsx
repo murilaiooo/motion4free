@@ -27,7 +27,16 @@ function Footer() {
       <span data-testid="version" title={`Gerado em ${APP_BUILT_AT}`}>
         Motion4Free {VERSION_LABEL}
       </span>
-      <span className="muted">Código aberto · sem cadastro · sem anúncios</span>
+      <span className="muted">
+        Código aberto · sem cadastro · sem anúncios ·{' '}
+        <a href="licencas-fontes.txt" target="_blank" rel="noreferrer">
+          licenças das fontes
+        </a>{' '}
+        e{' '}
+        <a href="licencas-icones.txt" target="_blank" rel="noreferrer">
+          dos ícones
+        </a>
+      </span>
     </footer>
   );
 }

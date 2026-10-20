@@ -9,6 +9,9 @@ Este arquivo cumpre o destino `docs/design.md` previsto no Vibe Coding Toolkit, 
 - [Jornada completa](product/creative-experience.md): experiência de usuário e fallback de IA.
 - [Auditoria crítica](reviews/2026-10-18-premium-creative-audit.md): problemas detectados na primeira especificação.
 
+## Sistema visual em vigor (v0.10)
+A interface tem um sistema próprio de tokens e componentes: [design-system.md](design-system.md), decidido no [ADR-0015](decisions/0015-novo-visual.md). As seções abaixo são o contexto de 18–19/10.
+
 ## Gate antes de implementar a UI
 A experiência concreta e a identidade visual **ainda não têm protótipos aprovados**. Presets precisam ter amostras reais; o app não pode entregar os mesmos layouts com paletas diferentes. Validar acessibilidade, compatibilidade e projetos editáveis.
 
