@@ -131,6 +131,16 @@ describe('legenda profissional (v0.7)', () => {
     expect(mid).toBeLessThan(mudaX - 5);
   });
 
+  it('Pop: no instante da troca, o texto escuro fica na palavra que a caixa cobre (nunca texto escuro fora da caixa)', () => {
+    const at = (t: number) => {
+      const rc = draw(POP, t).rc;
+      return { isso: word(rc, 'isso')!.fillStyle, muda: word(rc, 'muda')!.fillStyle };
+    };
+    // exatamente no começo de "muda", a caixa ainda está em "isso"
+    expect(at(1.4)).toEqual({ isso: POP.palette.onPanel, muda: POP.palette.text });
+    expect(at(1.6)).toEqual({ isso: POP.palette.text, muda: POP.palette.onPanel });
+  });
+
   it('sai animando quando há pausa depois; sem pausa, fica inteira até o fim', () => {
     const exitDrawn = draw(POP, 2.97, true).rc;
     const stay = draw(POP, 2.97, false).rc;

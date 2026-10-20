@@ -11,7 +11,8 @@
 - [Plano detalhado da Fase 4 — pedido por texto + IA](superpowers/plans/2026-10-20-fase4-pedido.md) e [ADR-0009](decisions/0009-pedido-e-ia.md).
 - [Plano detalhado da Fase 5 — ajuste por trecho e por conversa](superpowers/plans/2026-10-20-fase5-trechos.md) e [ADR-0010](decisions/0010-trechos-travas-versoes.md).
 - [Plano da v0.6 — IA como intérprete principal e espaço de parâmetros](superpowers/plans/2026-10-20-fase6-ia-interprete.md) e [ADR-0011](decisions/0011-ia-interprete-e-look.md).
-- [Roteiro de teste consolidado (Fases 1 a 5 + pedido com IA), para quem testa](roteiro-de-teste.md).
+- [v0.7 — qualidade profissional do movimento](decisions/0012-sistema-de-movimento.md) (ADR-0012).
+- [Roteiro de teste consolidado (Fases 1 a 5 + pedido com IA + v0.7), para quem testa](roteiro-de-teste.md).
 
 ## Contexto e histórico
 - [Visão do produto](vision.md): público, problema, proposta de valor e princípios.
@@ -58,6 +59,7 @@
 - [ADR-0009: CreativeBrief, intérprete do pedido em camadas e IA opcional (Fase 4)](decisions/0009-pedido-e-ia.md)
 - [ADR-0010: trechos, travas, revisão focal, versões e cores de referência (Fase 5)](decisions/0010-trechos-travas-versoes.md)
 - [ADR-0011: IA como intérprete principal, look, emojis e ritmo de cortes (v0.6)](decisions/0011-ia-interprete-e-look.md)
+- [ADR-0012: sistema de movimento — molas, curvas, câmera e legenda palavra a palavra (v0.7)](decisions/0012-sistema-de-movimento.md)
 - [Licenças de recursos de terceiros incluídos no app (fontes, IA opcional)](licencas.md)
 - [Contribuição](../CONTRIBUTING.md) · [Segurança](../SECURITY.md)
 

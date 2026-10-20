@@ -1,10 +1,10 @@
-# Roteiro de teste — Motion4Free v0.6.0 (Fases 1 a 5 + pedido com IA)
+# Roteiro de teste — Motion4Free v0.7.0 (Fases 1 a 5 + pedido com IA + movimento profissional)
 
 Para quem vai testar. Não precisa instalar nada nem usar terminal. Leva uns 30 a 40 minutos.
 
 **Antes de começar**
 - Use o **Chrome ou o Edge do computador**, atualizados.
-- Abra o **link de prévia** que veio na mensagem do PR (ou o endereço do Motion4Free). Confira no rodapé da página se está escrito **Motion4Free v0.6.0**.
+- Abra o **link de prévia** que veio na mensagem do PR (ou o endereço do Motion4Free). Confira no rodapé da página se está escrito **Motion4Free v0.7.0**.
 - Separe **um vídeo seu falando**, de 30 a 90 segundos, com algumas pausas (pode ser gravado no celular). Se der, separe também uma **foto ou logo bem colorida**.
 - Nada do vídeo sai do seu computador: tudo acontece dentro do navegador.
 
@@ -14,11 +14,18 @@ Para quem vai testar. Não precisa instalar nada nem usar terminal. Leva uns 30 
 2. **Conferir o resumo.** Aparece "Original: X s · Editado: Y s". O editado deve ser mais curto (as pausas longas foram cortadas). Clique em **Assistir** e veja se o som e a imagem estão juntos e se nenhum corte comeu pedaço de palavra.
 3. **Legendas.** Role até "Legendas". Corrija uma palavra errada (clique no texto, corrija, aperte Enter). Assista de novo: a legenda corrigida aparece no vídeo.
 4. **Cortes.** Na linha do tempo, as partes listradas de vermelho foram cortadas. Clique numa delas e em **Restaurar este trecho**. Depois clique em **Desfazer** e **Refazer** e veja se tudo volta e vai de novo.
-5. **Estilos.** Em "Estilo", toque em **Pop**, **Editorial** e **Documental**. Cada um deve mudar letras, cores, animações e ritmo (não só a cor). Escolha o que mais gostou.
+5. **Estilos.** Em "Estilo", toque em **Pop**, **Neon** (novo), **Editorial** e **Documental**. Cada um deve mudar letras, cores, animações e ritmo (não só a cor). Escolha o que mais gostou.
+5b. **Movimento (novo na v0.7).** Escolha **Pop** e clique em **Assistir**. Repare:
+   - as palavras da legenda entram **uma depois da outra**, com um pulinho; a **caixa amarela desliza** de uma palavra para a outra junto com a sua voz; a palavra falada cresce sem encostar nas vizinhas;
+   - quando você faz uma pausa, a legenda **sai suavemente** (não some de uma vez);
+   - o título de abertura **não repete** a mesma frase na legenda logo embaixo; o gancho alterna amarelo e branco;
+   - num trecho longo sem corte, o vídeo **aproxima bem devagar**; no zoom de destaque do Pop há um "soco" com um tremor curto;
+   - na parte de baixo, a legenda não passa por baixo dos botões do Instagram (fica no meio, um pouco mais estreita).
+   Troque para **Neon**: legenda branca, poucas palavras por vez, a palavra falada acende em verde. Troque para **Editorial**: o título sobe de trás de uma linha invisível, com uma faixa escura suave atrás. *Conte se algum movimento pareceu exagerado, lento ou "travado".*
 6. **Pedido por texto (sem IA).** Em "O que você quer?", deixe "Só regras" e escreva exatamente:
    *gancho diferenciado e criativo, legenda verde e amarela, emojis a cada 3 segundos*
    Toque em **Aplicar**. Deve acontecer: a **legenda fica verde** com a **palavra falada em amarelo**; aparecem **emojis a cada uns 3 segundos**, combinando com o que você fala (ex.: 💰 quando fala de dinheiro); o título de abertura passa a ser uma frase sua **diferente da mais óbvia**. Embaixo aparece **"Apliquei:"** (com o que mudou) e **"Ainda não sei fazer:"** (aqui deve dizer que entendeu tudo).
-   - Teste também: *legenda grande em cima, amarela com contorno preto*; *emojis grandes pulando nas palavras importantes*; *cortes rápidos e sem pausas* (o vídeo fica mais curto e a legenda continua junto com a voz); *legenda em minúsculas, fonte anton*.
+   - Teste também: *legenda grande em cima, amarela com contorno preto* (a legenda fica amarela e o contorno preto; o título de abertura desce para não ficar embaixo da legenda); *emojis grandes pulando nas palavras importantes*; *cortes rápidos e sem pausas* (o vídeo fica mais curto e a legenda continua junto com a voz); *legenda em minúsculas, fonte anton*.
    - Peça algo que o app ainda não faz: *legenda verde e música de fundo*. A legenda muda e "Ainda não sei fazer" mostra **música ou efeitos sonoros**.
    - Pedido que se contradiz: *bem animado mas sem efeitos* (não pode aparecer zoom nem flash) e *emojis a cada 3 segundos, mas sem emojis* (nenhum emoji).
 6b. **(Opcional) Com IA.** Abra "IA opcional (avançado)". **IA no navegador**: escolha **Padrão** (recomendado; baixa cerca de 0,9 GB na primeira vez) ou **Leve** (computador mais fraco) ou **Forte** (placa de vídeo boa, ~2,3 GB). Escreva o mesmo pedido e mais algo com suas palavras, ex.: *quero um visual de festa junina com legenda laranja e emojis divertidos*. Confira se aparece "Apliquei (com a IA no navegador)", uma frase-resumo da IA e "Ainda não sei fazer". *Anote quanto tempo levou a primeira vez.* Se aparecer **M4F-1013**, escolha o modelo Leve. **Minha chave do Google Gemini** também funciona (só o texto vai para o Google).
@@ -44,8 +51,11 @@ Responda no projeto do jeito que for mais fácil. Ajuda muito dizer:
 
 **Se aparecer uma caixa com "Erro M4F-…" ou "Aviso M4F-…":** toque no botão **Copiar detalhes** dentro da caixa e cole o texto na sua resposta (ele traz o código, o que aconteceu, a versão do app e o navegador). Não precisa explicar mais nada; o código já diz onde está o problema. A lista de todos os códigos está em [erros.md](erros.md).
 
+**Vídeos diferentes (opcional, v0.7):** um vídeo **sem som** mostra o aviso **M4F-202** e um vídeo **sem fala** (só música ou silêncio) mostra **M4F-306**; os dois continuam editáveis e geram o vídeo final. No Chromium do computador sem codificador H.264, o vídeo final traz o aviso **M4F-403**.
+
 ## Já sabemos que
 - Mover a frase do gancho para o começo do vídeo **ainda não existe**: o gancho aparece como título de abertura.
 - A IA opcional (no navegador ou com sua chave do Google) **ainda não foi testada de verdade num aparelho real** (o ambiente de desenvolvimento não baixa os modelos). As regras funcionam sem ela, inclusive para o pedido do passo 6.
 - Os emojis vêm de uma lista de 72; música, voz, filtros de cor, 3D e b-roll ainda não existem (aparecem em "Ainda não sei fazer").
 - A imagem de referência muda só as cores, não a posição das coisas na tela.
+- A aproximação lenta da câmera deixa a geração do vídeo final um pouco mais demorada em computadores sem placa de vídeo (até uns 40% em vídeos longos sem cortes).

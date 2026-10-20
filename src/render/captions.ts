@@ -253,7 +253,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     return 1;
   };
   // a palavra que cresce empurra as vizinhas da mesma linha (a linha "respira" sem encavalar letras)
-  const growth = tokens.map((_, i) => (activeScaleOf(i) - 1) * widths[i]!);
+  const growth = tokens.map((_, i) => Math.max(0, wordEnter(i).scale * activeScaleOf(i) - 1) * widths[i]!);
   const xOf = (i: number) => {
     let dx = 0;
     for (const j of lines[wordLine[i]!]!) {
@@ -291,7 +291,11 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   }
 
   // 2) caixa da palavra falada: desliza da palavra anterior (mesma linha) ou cresce com mola
-  const boxed = (i: number) => C.highlight === 'box' && i === active;
+  // enquanto a caixa desliza, o texto escuro "de dentro da caixa" fica na palavra que ela cobre mais
+  const slideK = active >= 0 ? easeOutExpo(progress(t, starts[active]!, 0.16)) : 1;
+  const sliding = active > 0 && wordLine[active - 1] === wordLine[active] && slideK < 1;
+  const boxedIdx = sliding && slideK < 0.5 ? active - 1 : active;
+  const boxed = (i: number) => C.highlight === 'box' && i === boxedIdx;
   if (C.highlight === 'box' && active >= 0) {
     const i = active;
     const we = wordEnter(i);
@@ -317,7 +321,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     ctx.scale(sc, sc);
     ctx.translate(-bx, -y);
     setShadow(ctx, f, 'hard');
-    fillBox(ctx, { x: r.x, y: y - h / 2, w: r.w, h }, style.shape.radius * h, isKw[i] ? K.keyword : K.highlight);
+    fillBox(ctx, { x: r.x, y: y - h / 2, w: r.w, h }, style.shape.radius * h, isKw[boxedIdx] ? K.keyword : K.highlight);
     clearShadow(ctx);
     ctx.restore();
   }
