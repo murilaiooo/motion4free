@@ -40,6 +40,17 @@ describe('códigos de erro', () => {
     expect(e.detail).toContain('HTTP 502');
   });
 
+  it('faixas da Fase 2: edição 5xx, projeto 6xx, player 7xx', () => {
+    expect(new AppError('LEGENDA_VAZIA').code).toBe('M4F-501');
+    expect(new AppError('LEGENDA_LONGA').code).toBe('M4F-502');
+    expect(new AppError('CORTE_TOTAL').code).toBe('M4F-503');
+    expect(new AppError('SALVAR_FALHOU').code).toBe('M4F-601');
+    expect(new AppError('PROJETO_CORROMPIDO').code).toBe('M4F-602');
+    expect(new AppError('VIDEO_DIFERENTE').code).toBe('M4F-603');
+    expect(new AppError('VIDEO_AUSENTE').code).toBe('M4F-604');
+    expect(new AppError('PLAYER_FALHOU').code).toBe('M4F-701');
+  });
+
   it('relatório inclui código, versão e detalhe', () => {
     const r = formatReport(new AppError('SEM_VIDEO', 'faixa ausente'), 'v0.1.1 · abc1234');
     expect(r).toContain('M4F-102');

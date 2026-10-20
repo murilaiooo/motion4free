@@ -1,7 +1,8 @@
 /**
  * Catálogo de erros com código próprio por problema.
  * O código aparece na tela para quem testa e identifica a causa sem ambiguidade.
- * Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 9xx desconhecido.
+ * Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição,
+ * 6xx projeto salvo, 7xx player, 9xx desconhecido.
  */
 export const ERRORS = {
   FORMATO_DESCONHECIDO: { code: 'M4F-101', title: 'Formato de arquivo não reconhecido.' },
@@ -17,6 +18,14 @@ export const ERRORS = {
   MODELO_HTTP: { code: 'M4F-305', title: 'O servidor do modelo de transcrição respondeu com erro.' },
   SEM_ENCODER: { code: 'M4F-401', title: 'Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador.' },
   EXPORTACAO_FALHOU: { code: 'M4F-402', title: 'A geração do vídeo falhou.' },
+  LEGENDA_VAZIA: { code: 'M4F-501', title: 'A legenda não pode ficar vazia.' },
+  LEGENDA_LONGA: { code: 'M4F-502', title: 'A legenda pode ter no máximo 120 caracteres.' },
+  CORTE_TOTAL: { code: 'M4F-503', title: 'Não dá para cortar o vídeo inteiro.' },
+  SALVAR_FALHOU: { code: 'M4F-601', title: 'Não foi possível salvar o projeto neste navegador. As edições se perdem ao fechar a aba.' },
+  PROJETO_CORROMPIDO: { code: 'M4F-602', title: 'O projeto salvo não pôde ser aberto e foi descartado.' },
+  VIDEO_DIFERENTE: { code: 'M4F-603', title: 'Este não é o mesmo vídeo do projeto salvo.' },
+  VIDEO_AUSENTE: { code: 'M4F-604', title: 'Para continuar o projeto salvo, escolha de novo o vídeo original.' },
+  PLAYER_FALHOU: { code: 'M4F-701', title: 'Não foi possível tocar a prévia.' },
   DESCONHECIDO: { code: 'M4F-999', title: 'Erro inesperado.' },
 } as const;
 

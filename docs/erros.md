@@ -1,7 +1,7 @@
 # Catálogo de erros
 
 Cada problema mostra na tela um código `M4F-xxx`. O código-fonte do catálogo é `src/core/errors.ts`.
-Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 9xx desconhecido.
+Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição, 6xx projeto salvo, 7xx player, 9xx desconhecido.
 
 | Código | Mensagem | O que costuma significar |
 |---|---|---|
@@ -18,6 +18,15 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 9xx
 | M4F-305 | O servidor do modelo de transcrição respondeu com erro. | O servidor respondeu 401, 403, 429 ou 5xx. O detalhe traz o status e o servidor; `HTTP 502` no espelho do site significa que a Cloudflare não alcançou o Hugging Face. |
 | M4F-401 | Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador. | Nenhum codificador de vídeo disponível. |
 | M4F-402 | A geração do vídeo falhou. | Falha durante a geração do MP4; ver detalhe. |
+| M4F-501 | A legenda não pode ficar vazia. | Ao editar, o texto da legenda ficou em branco. O texto anterior é mantido. |
+| M4F-502 | A legenda pode ter no máximo 120 caracteres. | Texto longo demais para caber na tela. Divida em frases menores. |
+| M4F-503 | Não dá para cortar o vídeo inteiro. | O ajuste de corte removeria todos os trechos. |
+| M4F-601 | Não foi possível salvar o projeto neste navegador. As edições se perdem ao fechar a aba. | O navegador não oferece armazenamento local (OPFS), está em janela anônima ou sem espaço. A edição e a exportação continuam funcionando. |
+| M4F-602 | O projeto salvo não pôde ser aberto e foi descartado. | O arquivo do projeto no navegador está incompleto ou é de uma versão incompatível. Escolha o vídeo de novo. |
+| M4F-603 | Este não é o mesmo vídeo do projeto salvo. | Ao reabrir, o vídeo escolhido tem tamanho ou duração diferente do original do projeto. Escolha o arquivo certo ou comece outro vídeo. |
+| M4F-604 | Para continuar o projeto salvo, escolha de novo o vídeo original. | O navegador apagou (ou não conseguiu guardar) a cópia local do vídeo. O projeto e as edições continuam salvos; basta escolher o mesmo arquivo. |
+| M4F-701 | Não foi possível tocar a prévia. | Falha ao decodificar quadros ou iniciar o som da prévia; a exportação pode funcionar mesmo assim. Ver detalhe. |
 | M4F-999 | Erro inesperado. | Erro não previsto; ver detalhe. |
 
 Erros 3xx são avisos: o vídeo continua sendo editado e exportado sem legendas e sem título.
+Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
