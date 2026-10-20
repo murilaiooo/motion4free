@@ -2,6 +2,9 @@
 
 A versão aparece no rodapé do app (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.4.1 — 20/10/2026
+- IA no navegador: corrigido o erro M4F-1006 ("GrammarMatcherInitError") que aparecia logo depois de baixar o modelo. A resposta da IA continua sendo conferida e, se vier errada, o app usa as regras.
+
 ## v0.4.0 — 20/10/2026
 Fase 4: pedido por texto.
 - **"O que você quer?"**: logo abaixo da prévia há uma caixa para escrever o pedido com suas palavras, por exemplo "gancho forte, estilo calmo, sem emojis, destaque os números". Há exemplos prontos para tocar e usar. Ao apertar **Aplicar**, o vídeo muda: estilo, quantidade de movimento, ritmo das animações e o que aparece ou não na tela.

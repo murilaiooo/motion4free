@@ -39,7 +39,9 @@ export function loadLocalAi(onProgress: (fraction: number, text: string) => void
           ],
           temperature: 0,
           max_tokens: 300,
-          response_format: { type: 'json_object' },
+          // Sem response_format: o modo JSON do WebLLM 0.2.85 falha ao iniciar a gramática
+          // (GrammarMatcherInitError, visto no teste real). O pedido já exige JSON e
+          // parseAiReply extrai o objeto e valida; resposta inválida cai para as regras.
         });
         const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new AppError('IA_LOCAL_FALHOU', `sem resposta em ${TIMEOUT_MS / 1000} s`)), TIMEOUT_MS));
         const reply = await Promise.race([run, timeout]);
