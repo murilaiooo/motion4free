@@ -1,5 +1,5 @@
 import { planSummary } from '../core/text';
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Captions, ChevronRight, Download, History, LayoutTemplate, Magnet, MousePointerClick, Palette, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, X } from 'lucide-react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, TimeRange } from '../core/types';
