@@ -1,0 +1,42 @@
+/**
+ * Subconjunto do Canvas 2D que o compositor usa. Tipar contra ele (e não contra o contexto inteiro)
+ * garante que o desenho roda igual em tela, em OffscreenCanvas no Worker e no contexto gravador dos testes.
+ */
+export type Ctx2D = Pick<
+  CanvasRenderingContext2D,
+  | 'save'
+  | 'restore'
+  | 'translate'
+  | 'scale'
+  | 'rotate'
+  | 'fillRect'
+  | 'fillText'
+  | 'strokeText'
+  | 'measureText'
+  | 'drawImage'
+  | 'beginPath'
+  | 'moveTo'
+  | 'lineTo'
+  | 'closePath'
+  | 'arc'
+  | 'rect'
+  | 'roundRect'
+  | 'fill'
+  | 'stroke'
+  | 'clip'
+  | 'createLinearGradient'
+  | 'font'
+  | 'fillStyle'
+  | 'strokeStyle'
+  | 'lineWidth'
+  | 'lineJoin'
+  | 'lineCap'
+  | 'globalAlpha'
+  | 'textAlign'
+  | 'textBaseline'
+  | 'shadowColor'
+  | 'shadowBlur'
+  | 'shadowOffsetX'
+  | 'shadowOffsetY'
+  | 'letterSpacing'
+>;

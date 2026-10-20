@@ -3,7 +3,7 @@ import { AppError } from '../src/core/errors';
 import { parseEditPlan } from '../src/core/schema';
 import type { Word } from '../src/core/types';
 import { autoEdit } from '../src/editorial/auto-edit';
-import { adjustCut, editCaptionText, listCuts, restoreCut, segmentsFromCuts, withSegments, type EditContext } from '../src/editorial/ops';
+import { adjustCut, applyStyle, editCaptionText, listCuts, restoreCut, segmentsFromCuts, withSegments, type EditContext } from '../src/editorial/ops';
 import { outputDuration } from '../src/engine/timeline';
 
 const words: Word[] = [
@@ -87,9 +87,15 @@ describe('restaurar e ajustar corte', () => {
     expect(code(() => adjustCut(p, ctx, 0, { start: 0, end: 6 }))).toBe('M4F-503');
   });
 
-  it('título não passa do fim do vídeo editado', () => {
+  it('cenas são recalculadas e não passam do fim do vídeo editado', () => {
     const p = withSegments(plan, ctx, [{ srcStart: 0, srcEnd: 1 }]);
-    expect(p.scenes[0]!.end).toBe(1);
+    expect(p.scenes.length).toBeGreaterThan(0);
+    for (const s of p.scenes) expect(s.end).toBeLessThanOrEqual(1);
+  });
+
+  it('sem palavras, as cenas existentes são mantidas e recortadas', () => {
+    const p = withSegments(plan, { durationSec: 6, words: [] }, [{ srcStart: 0, srcEnd: 1 }]);
+    expect(p.scenes.map((s) => s.kind)).toEqual(plan.scenes.filter((s) => s.start < 1).map((s) => s.kind));
   });
 });
 
@@ -114,5 +120,30 @@ describe('editar legenda', () => {
     const edited = editCaptionText(plan, 'c2', 'Primeira dica!');
     const next = restoreCut(edited, ctx, 0);
     expect(next.captions.find((c) => c.wordIds.join() === 'w4,w5')!.text).toBe('Primeira dica!');
+  });
+});
+
+describe('trocar estilo', () => {
+  it('troca o estilo, reagrupa legendas e propõe cenas no ritmo do novo estilo', () => {
+    const next = applyStyle(plan, ctx, 'documental');
+    expect(next.style.id).toBe('documental');
+    expect(next.segments).toBe(plan.segments);
+    expect(next.scenes.some((s) => s.kind === 'progress-bar')).toBe(false);
+    expect(parseEditPlan(next).ok).toBe(true);
+  });
+
+  it('mesmo estilo não muda nada (sem entrada vazia no histórico)', () => {
+    expect(applyStyle(plan, ctx, plan.style.id)).toBe(plan);
+  });
+
+  it('estilo desconhecido é M4F-802', () => {
+    expect(code(() => applyStyle(plan, ctx, 'eval'))).toBe('M4F-802');
+  });
+
+  it('texto corrigido sobrevive à troca de estilo quando o grupo de palavras não muda', () => {
+    const edited = editCaptionText(plan, 'c2', 'Primeira dica!');
+    const next = applyStyle(edited, ctx, 'editorial');
+    expect(next.captions.find((c) => c.wordIds.join() === 'w4,w5')!.text).toBe('Primeira dica!');
+    expect(applyStyle(next, ctx, 'pop').captions.find((c) => c.wordIds.join() === 'w4,w5')!.text).toBe('Primeira dica!');
   });
 });

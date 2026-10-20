@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, TimeRange } from '../core/types';
-import { adjustCut, editCaptionText, listCuts, restoreCut, type EditContext } from '../editorial/ops';
+import { PRESETS } from '../core/presets';
+import { adjustCut, applyStyle, editCaptionText, listCuts, restoreCut, type EditContext } from '../editorial/ops';
 import { canRedo, canUndo, pushHistory, redo, undo, type History } from '../engine/history';
 import { outputDuration } from '../engine/timeline';
 import type { DecodedAudio } from '../media/audio';
 import { exportInBackground } from '../media/export-client';
+import { ensureFonts } from '../media/fonts';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
 import { ErrorBox } from './ErrorBox';
+import { StylePicker } from './StylePicker';
 import { Timeline } from './Timeline';
 
 export interface Session {
@@ -27,6 +30,29 @@ interface Result {
   name: string;
   degraded: boolean;
   where: 'worker' | 'main';
+  style: string;
+  fontWarning: string;
+}
+
+const SCENE_NAMES: Partial<Record<EditPlan['scenes'][number]['kind'], [string, string]>> = {
+  'kinetic-title': ['título', 'títulos'],
+  'big-number': ['número grande', 'números grandes'],
+  list: ['lista', 'listas'],
+  quote: ['pergunta em destaque', 'perguntas em destaque'],
+  'lower-third': ['nome na tela', 'nomes na tela'],
+  'highlight-word': ['palavra-chave', 'palavras-chave'],
+  'emphasis-zoom': ['zoom', 'zooms'],
+  'cut-transition': ['transição', 'transições'],
+  'end-cta': ['chamada final', 'chamadas finais'],
+};
+
+/** "1 número grande, 3 palavras-chave e 2 transições" */
+export function describeScenes(scenes: EditPlan['scenes']): string {
+  const counts = new Map<string, number>();
+  for (const s of scenes) if (SCENE_NAMES[s.kind]) counts.set(s.kind, (counts.get(s.kind) ?? 0) + 1);
+  const parts = [...counts].map(([k, n]) => `${n} ${SCENE_NAMES[k as keyof typeof SCENE_NAMES]![n === 1 ? 0 : 1]}`);
+  if (parts.length === 0) return 'nenhuma';
+  return parts.length === 1 ? parts[0]! : `${parts.slice(0, -1).join(', ')} e ${parts.at(-1)}`;
 }
 
 const fmt = (s: number) => `${s.toFixed(2).replace('.', ',')} s`;
@@ -43,6 +69,7 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
   const [exporting, setExporting] = useState<number | null>(null);
   const [exportError, setExportError] = useState<AppError | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  const [fontError, setFontError] = useState<AppError | null>(null);
   const planRef = useRef(plan);
   planRef.current = plan;
 
@@ -60,6 +87,22 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
       playerRef.current = null;
     };
   }, [session]);
+
+  // fontes do estilo atual antes de desenhar; as dos outros estilos ficam prontas para a troca ser instantânea
+  useEffect(() => {
+    let alive = true;
+    void ensureFonts(plan.style).then((r) => {
+      if (!alive) return;
+      setFontError(r.ok ? null : new AppError('FONTE_FALHOU', r.detail));
+      playerRef.current?.redraw();
+    });
+    return () => {
+      alive = false;
+    };
+  }, [plan.style]);
+  useEffect(() => {
+    for (const p of PRESETS) void ensureFonts(p);
+  }, []);
 
   useEffect(() => {
     playerRef.current?.setPlan(plan);
@@ -111,7 +154,7 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
       const out = await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
       if (result) URL.revokeObjectURL(result.url);
       const base = session.fileName.replace(/\.[^.]+$/, '');
-      setResult({ url: URL.createObjectURL(out.blob), name: `${base}-motion4free.mp4`, degraded: out.degraded, where: out.where });
+      setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, where: out.where, style: plan.style.name, fontWarning: out.fontWarning });
     } catch (err) {
       setExportError(toAppError(err, 'EXPORTACAO_FALHOU'));
     } finally {
@@ -150,6 +193,12 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
         </div>
       </div>
       {playerError && <ErrorBox error={playerError} kind="warning" />}
+      {fontError && <ErrorBox error={fontError} kind="warning" />}
+
+      <StylePicker current={plan.style.id} onPick={(id) => apply((p) => applyStyle(p, session.ctx, id))} disabled={exporting !== null} />
+      <p className="scene-summary" data-testid="scene-summary">
+        Animações neste estilo: {describeScenes(plan.scenes)}.
+      </p>
 
       <div className="actions">
         <button onClick={doUndo} disabled={!canUndo(history)} data-testid="undo" title="Ctrl+Z">
@@ -261,7 +310,8 @@ export function Editor({ session, history, onHistory, disabled }: { session: Ses
         <section className="result">
           <video src={result.url} controls playsInline data-testid="result-video" />
           {result.degraded && <p className="warn">Seu navegador não gera H.264. O vídeo funciona aqui, mas o Instagram pode recusar. Para o arquivo final, use Chrome ou Edge no computador.</p>}
-          <a href={result.url} download={result.name} data-testid="download" data-export-where={result.where}>
+          {result.fontWarning && <ErrorBox error={new AppError('FONTE_FALHOU', result.fontWarning)} kind="warning" />}
+          <a href={result.url} download={result.name} data-testid="download" data-export-where={result.where} data-style={result.style}>
             Baixar vídeo ({result.name})
           </a>
         </section>

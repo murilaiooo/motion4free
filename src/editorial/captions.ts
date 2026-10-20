@@ -1,12 +1,19 @@
 import type { Caption, Segment, Word } from '../core/types';
+import type { StyleDNA } from '../core/style';
 import { sourceToOutput } from '../engine/timeline';
 
 export interface CaptionOptions {
   maxChars: number;
   maxDurationSec: number;
+  maxWords: number;
 }
 
-export const DEFAULT_CAPTIONS: CaptionOptions = { maxChars: 22, maxDurationSec: 1.6 };
+export const DEFAULT_CAPTIONS: CaptionOptions = { maxChars: 22, maxDurationSec: 1.6, maxWords: 8 };
+
+/** Cada estilo tem seu tamanho de legenda (Pop: 3 palavras; Documental: frases maiores). */
+export function captionOptionsFor(style: StyleDNA): CaptionOptions {
+  return { maxChars: style.captions.maxChars, maxWords: style.captions.maxWords, maxDurationSec: Math.max(1.2, style.captions.maxWords * 0.45) };
+}
 
 /** Agrupa palavras em legendas curtas (estilo Reels) já no tempo do vídeo editado. */
 export function buildCaptions(words: Word[], segments: Segment[], opts: CaptionOptions = DEFAULT_CAPTIONS): Caption[] {
@@ -28,13 +35,14 @@ export function buildCaptions(words: Word[], segments: Segment[], opts: CaptionO
       start: group[0]!.start,
       end: group[group.length - 1]!.end,
       wordIds: group.map((g) => g.id),
+      wordStarts: group.map((g) => g.start),
     });
     group = [];
   };
 
   for (const w of placed) {
     const text = [...group, w].map((g) => g.text.trim()).join(' ');
-    const tooLong = text.length > opts.maxChars;
+    const tooLong = text.length > opts.maxChars || group.length >= opts.maxWords;
     const tooSlow = group.length > 0 && w.end - group[0]!.start > opts.maxDurationSec;
     const gap = group.length > 0 && w.start - group[group.length - 1]!.end > 0.6;
     if (group.length > 0 && (tooLong || tooSlow || gap)) flush();

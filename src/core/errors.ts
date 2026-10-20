@@ -2,7 +2,7 @@
  * Catálogo de erros com código próprio por problema.
  * O código aparece na tela para quem testa e identifica a causa sem ambiguidade.
  * Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição,
- * 6xx projeto salvo, 7xx player, 9xx desconhecido.
+ * 6xx projeto salvo, 7xx player, 8xx estilo e animações, 9xx desconhecido.
  */
 export const ERRORS = {
   FORMATO_DESCONHECIDO: { code: 'M4F-101', title: 'Formato de arquivo não reconhecido.' },
@@ -26,6 +26,8 @@ export const ERRORS = {
   VIDEO_DIFERENTE: { code: 'M4F-603', title: 'Este não é o mesmo vídeo do projeto salvo.' },
   VIDEO_AUSENTE: { code: 'M4F-604', title: 'Para continuar o projeto salvo, escolha de novo o vídeo original.' },
   PLAYER_FALHOU: { code: 'M4F-701', title: 'Não foi possível tocar a prévia.' },
+  FONTE_FALHOU: { code: 'M4F-801', title: 'As fontes do estilo não carregaram; o vídeo usa uma fonte reserva.' },
+  ESTILO_DESCONHECIDO: { code: 'M4F-802', title: 'Este estilo não existe nesta versão do app.' },
   DESCONHECIDO: { code: 'M4F-999', title: 'Erro inesperado.' },
 } as const;
 
