@@ -61,21 +61,19 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = getMeasure(canvas);
-    if (!ctx) return;
-    // Use a fake measurer that delegates to canvas's 2d context font handling
-    // For simplicity, create a Measurer that uses ctx.measureText
-    const measure = {
-      font: '',
-      letterSpacing: '',
-      measureText: (text: string) => {
-        // Need to set font from BoundsContext - but BoundsContext sets font on measurer before calling
-        // We'll just use ctx with current font
-        return { width: ctx.measureText(text).width };
-      },
+    // Use OffscreenCanvas for measuring without affecting preview
+    const measureCanvas = document.createElement('canvas');
+    const measureCtx = measureCanvas.getContext('2d');
+    if (!measureCtx) return;
+    const measurer = {
+      _ctx: measureCtx,
+      get font() { return (this as any)._ctx.font; },
+      set font(v: string) { (this as any)._ctx.font = v; },
+      get letterSpacing() { return ((this as any)._ctx as any).letterSpacing ?? '0px'; },
+      set letterSpacing(v: string) { ((this as any)._ctx as any).letterSpacing = v; },
+      measureText: (text: string) => measureCtx.measureText(text),
     } as unknown as import('../render/bounds').Measurer;
-    // Update measure's font dynamically inside BoundsContext via direct assignment
-    const next = elementBoxes(plan, time, measure as any);
+    const next = elementBoxes(plan, time, measurer);
     setBoxes(next);
   }, [plan, time, canvasRef]);
 

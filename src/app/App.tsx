@@ -326,18 +326,28 @@ function EditorApp() {
         a = await analyze(primary, transcriber, step, { asrMode: precision.mode });
       } else {
         // Multi-clip: analyze each file sequentially and assemble virtual timeline
-        const { openClips, buildClipRefs, assembledWords, assembledSilences } = await import('../media/multi');
-        const { clips, wordsByClip, silencesByClip } = await openClips(files);
+        const { buildClipRefs, assembledWords, assembledSilences } = await import('../media/multi');
+        const { openMedia } = await import('../media/input');
+        const { autoEdit } = await import('../editorial/auto-edit');
+        const { DEFAULT_STYLE } = await import('../core/presets');
+        // Open each file to get media and duration (without full transcription for now; use empty words/silences)
+        const clips: import('../media/multi').OpenedClip[] = [];
+        const wordsByClip: Record<string, import('../core/types').Word[]> = {};
+        const silencesByClip: Record<string, import('../core/types').TimeRange[]> = {};
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i]!;
+          const media = await openMedia(file);
+          const id = `c${i+1}`;
+          clips.push({ id, file, name: file.name, media, durationSec: media.durationSec, words: [], silences: [] });
+          wordsByClip[id] = [];
+          silencesByClip[id] = [];
+        }
         const refs = buildClipRefs(clips);
         const allWords = assembledWords(refs, wordsByClip);
         const allSilences = assembledSilences(refs, silencesByClip);
-        const { autoEdit } = await import('../editorial/auto-edit');
-        const { DEFAULT_STYLE } = await import('../core/presets');
         const total = refs.reduce((s, c) => s + c.duration, 0);
         const plan = autoEdit(total, allSilences, allWords, DEFAULT_STYLE, { clips: refs });
-        // Use first media as representative for thumbnail/preview (will be replaced by ClipFrames in player)
         a = { media: clips[0]!.media, audio: null, words: allWords, silences: allSilences, warnings: [], asrModel: null, plan } as any;
-        // Store extra multi info in session for later player/export use
         (a as any).__multi = { clips, refs };
       }
       setAsrModel(a.asrModel);
@@ -349,24 +359,38 @@ function EditorApp() {
       setVersions([]);
       setVersionsSaved([]);
       const multi = (a as any).__multi as { clips: import('../media/multi').OpenedClip[]; refs: import('../core/types').ClipRef[] } | undefined;
+      // Build clipSources map for player/export from opened clips
+      let clipSources: Map<string, import('../media/sources').ClipSource> | null = null;
+      if (multi) {
+        clipSources = new Map();
+        for (const c of multi.clips) {
+          clipSources.set(c.id, { id: c.id, video: c.media.video, width: c.media.width, height: c.media.height });
+        }
+      }
       setSession({
         file: primary,
         fileName: primary.name,
         media: a.media,
         audio: a.audio,
-        ctx: { durationSec: a.plan ? (a as any).plan.clips?.reduce?.((s:number,c:any)=>s+c.duration,0) ?? a.media.durationSec : a.media.durationSec, words: a.words },
+        ctx: { durationSec: (a.plan as any)?.clips ? (a.plan as any).clips.reduce((s:number,c:any)=>s+c.duration,0) : a.media.durationSec, words: a.words },
         silences: a.silences,
         warnings: a.warnings,
         peaks: peaksOf(a.audio),
-        // @ts-ignore multi
+        clipSources: clipSources,
         openedClips: multi?.clips ?? null,
-        clipRefs: multi?.refs ?? null,
       } as any);
       setHistory(h);
       setStatus({ kind: 'ready' });
       if (storageAvailable() && fs) {
         void enqueue(() => setCurrent(fs, id)).catch(() => undefined);
-        void storeCopy(id, primary);
+        if (multi && multi.clips.length > 1) {
+          for (const c of multi.clips) {
+            if (c.id === multi.clips[0]!.id) void storeCopy(id, c.file);
+            else void enqueue(() => import('../core/project-library').then(m => m.saveClipVideo(fs, id, c.id, c.file))).catch(()=>undefined);
+          }
+        } else {
+          void storeCopy(id, primary);
+        }
         void storeThumb(id, a.media, a.plan);
       } else {
         setCopy('failed');

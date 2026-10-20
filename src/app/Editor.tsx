@@ -34,6 +34,7 @@ import { Transcript } from './Transcript';
 import { TopBar, type SaveState } from './TopBar';
 import { VERSION_LABEL, APP_BUILT_AT } from '../version';
 import { FormatSelector } from './FormatSelector';
+import { ClipList } from './ClipList';
 
 export interface Session {
   file: Blob;
@@ -44,6 +45,10 @@ export interface Session {
   silences: TimeRange[];
   warnings: AppError[];
   peaks: Float32Array | null;
+  /** multi-clip: mapa de fontes por clipId e áudio combinado */
+  clipSources?: Map<string, import('../media/sources').ClipSource> | null;
+  clipAudios?: Map<string, DecodedAudio> | null;
+  openedClips?: import('../media/multi').OpenedClip[] | null;
 }
 
 interface Result {
@@ -174,7 +179,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
   // Um player por vídeo aberto; o plano é trocado sem recriar.
   useEffect(() => {
-    const player = new PlanPlayer(session.media, session.audio, canvasRef.current!, shownRef.current);
+    const player = new PlanPlayer(session.media, session.audio, canvasRef.current!, shownRef.current, 0.5, (session as any).clipSources ?? undefined);
     player.onTime = (t, p) => {
       setTime(t);
       setPlaying(p);
@@ -618,6 +623,26 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           <div className="card empty-insp">
             <MousePointerClick size={18} aria-hidden />
             <p className="hint">Clique num corte (listrado) na linha do tempo para restaurar ou ajustar, ou arraste na faixa Trechos para mudar só um pedaço.</p>
+            {plan.clips.length > 1 && (
+              <div style={{marginTop:12}}>
+                <ClipList
+                  clips={plan.clips.map(c => ({ id: c.id, name: c.name || c.id, file: new File([], c.name) } as any))}
+                  onReorder={(next) => {
+                    // Reorder clips: remap segments to new order
+                    const { remapSegments } = require('../engine/clips');
+                    const nextPlan = { ...plan, clips: next.map(n => plan.clips.find(c=>c.id===n.id)!), segments: remapSegments(plan.segments, plan.clips, next.map(n => plan.clips.find(c=>c.id===n.id)!)) };
+                    apply(()=>nextPlan);
+                  }}
+                  onRemove={(id) => {
+                    const nextClips = plan.clips.filter(c=>c.id!==id);
+                    if (nextClips.length === 0) return;
+                    const { remapSegments } = require('../engine/clips');
+                    apply(()=>({ ...plan, clips: nextClips, segments: remapSegments(plan.segments, plan.clips, nextClips) } as any));
+                  }}
+                  onAdd={()=>{}}
+                />
+              </div>
+            )}
             <div style={{marginTop:12}}><FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off} /></div>
           </div>
         )}
