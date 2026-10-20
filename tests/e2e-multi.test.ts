@@ -162,6 +162,37 @@ describe('E2E multi-clip workflow (pipeline puro + persistência)', () => {
     expect(await loadProjectVideos(fs, id, project)).toBeNull();
   });
 
+  it('não abre c1 por engano quando só o c2 permanece no projeto', async () => {
+    const fs = new MemoryFs();
+    const onlySecond = [clips[1]!];
+    const plan = autoEdit(3.5, [], [], DEFAULT_STYLE, { clips: onlySecond });
+    const project = makeProject({
+      appVersion: APP_VERSION,
+      savedAt: '2026-10-20T00:00:00Z',
+      video: { name: 'clipe1.mp4', size: 5, durationSec: 4 },
+      words: [],
+      silences: [],
+      warnings: [],
+      history: createHistory(plan),
+      versions: [],
+    });
+    const id = 'p-second';
+    await saveProjectData(fs, id, project, 'Apenas c2', project.savedAt);
+    await saveVideo(fs, id, new Blob(['first']));
+    await saveClipVideo(fs, id, 'c2', new Blob(['second']));
+    const loaded = await loadProject(fs, id);
+    expect(loaded.kind).toBe('ok');
+    if (loaded.kind === 'ok') expect(loaded.video).toBeNull();
+    const videos = await loadProjectVideos(fs, id, project);
+    expect(videos?.size).toBe(1);
+    expect(await videos!.get('c2')!.text()).toBe('second');
+    expect((await listProjects(fs))[0]!.hasVideo).toBe(true);
+
+    await fs.remove(['motion4free', 'projects', id, 'video', 'c2.bin']);
+    expect((await listProjects(fs))[0]!.hasVideo).toBe(false);
+    expect(await loadProjectVideos(fs, id, project)).toBeNull();
+  });
+
   it('remove clip e reordena refletem em novo plano sem perder edições manuais', () => {
     const plan = autoEdit(10, [], placeWords(clips, {}), DEFAULT_STYLE, { clips });
     const added = addElement(plan, { durationSec: 10, words: [] }, { kind: 'text', text: 'Meu título' }, 1);
