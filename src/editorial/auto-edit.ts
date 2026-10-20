@@ -16,5 +16,5 @@ export function autoEdit(durationSec: number, silences: TimeRange[], words: Word
   const segments = planKeepSegments(durationSec, silences, words);
   const captions = buildCaptions(words, segments, captionOptionsFor(style));
   const scenes = proposeScenes(words, segments, style);
-  return { version: 3, output: REELS_PROFILE, style, brief: EMPTY_BRIEF, segments, captions, scenes };
+  return { version: 4, output: REELS_PROFILE, style, brief: EMPTY_BRIEF, segments, captions, scenes, ranges: [], reference: null };
 }

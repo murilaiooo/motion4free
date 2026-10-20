@@ -182,7 +182,9 @@ describe('legendas estilo Reels', () => {
 
 describe('drawFrame', () => {
   const plan = (style: StyleDNA, scenes: SceneInstance[] = SCENES): EditPlan => ({
-    version: 3,
+    version: 4,
+    ranges: [],
+    reference: null,
     brief: EMPTY_BRIEF,
     output: { width: W, height: H, fps: 30 },
     style,

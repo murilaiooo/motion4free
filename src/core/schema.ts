@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EMPTY_BRIEF, briefSchema } from './brief';
+import { EMPHASES, EMPTY_BRIEF, LEVELS, PACES, PROHIBITIONS, TONES, briefSchema } from './brief';
 import { DEFAULT_STYLE } from './presets';
 import { styleSchema } from './style';
 import type { EditPlan } from './types';
@@ -42,18 +42,45 @@ const scene = z.discriminatedUnion('kind', [
   z.object({ ...base, kind: z.literal('end-cta'), text: line(32) }),
 ]);
 
+const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
+const range = z
+  .object({
+    id: z.string().regex(/^r[0-9]{1,4}$/),
+    srcStart: time,
+    srcEnd: time,
+    out: z.object({ start: time, end: time }),
+    prompt: z.string().max(200),
+    tone: z.enum(TONES).nullable(),
+    intensity: z.enum(LEVELS).nullable(),
+    pace: z.enum(PACES).nullable(),
+    forbid: z.array(z.enum(PROHIBITIONS)).max(PROHIBITIONS.length),
+    emphasize: z.array(z.enum(EMPHASES)).max(EMPHASES.length),
+    quiet: z.boolean(),
+    accent: z.boolean(),
+    variant: z.number().int().min(0).max(999),
+    style: styleSchema.nullable(),
+    locked: z.object({ outStart: time, scenes: z.array(scene).max(200), captions: z.array(caption).max(200) }).nullable(),
+  })
+  .refine((r) => r.srcEnd > r.srcStart, { message: 'trecho com fim antes do início' });
+
 export const editPlanSchema = z.object({
-  version: z.literal(3),
+  version: z.literal(4),
   output,
   style: styleSchema,
   brief: briefSchema,
   segments: z.array(segment).min(1),
   captions: z.array(caption),
   scenes: z.array(scene),
+  ranges: z.array(range).max(50),
+  reference: z.object({ colors: z.array(color).min(1).max(6) }).nullable(),
 });
 
+/** Formato da Fase 4 (pedido por texto, sem trechos). Mantido para abrir projetos antigos. */
+export const editPlanV3Schema = editPlanSchema.omit({ ranges: true, reference: true }).extend({ version: z.literal(3) });
+
 /** Formato da Fase 3 (estilo, sem pedido por texto). Mantido para abrir projetos antigos. */
-export const editPlanV2Schema = editPlanSchema.omit({ brief: true }).extend({ version: z.literal(2) });
+export const editPlanV2Schema = editPlanV3Schema.omit({ brief: true }).extend({ version: z.literal(2) });
 
 /** Formato da Fase 1/2 (só título cinético, sem estilo). Mantido para abrir projetos antigos. */
 export const editPlanV1Schema = z.object({
@@ -70,6 +97,7 @@ export const editPlanV1Schema = z.object({
  * - v1 → v2: ganha o estilo padrão; legendas sem tempos por palavra (o desenho distribui
  *   proporcionalmente); o título cinético continua igual.
  * - v2 → v3: ganha um pedido vazio (nada muda no vídeo).
+ * - v3 → v4: sem trechos ajustados e sem cores de referência (nada muda no vídeo).
  */
 export function migratePlan(input: unknown): unknown {
   let current = input;
@@ -87,10 +115,12 @@ export function migratePlan(input: unknown): unknown {
   }
   const v2 = editPlanV2Schema.safeParse(current);
   if (v2.success) current = { ...v2.data, version: 3, brief: EMPTY_BRIEF };
+  const v3 = editPlanV3Schema.safeParse(current);
+  if (v3.success) current = { ...v3.data, version: 4, ranges: [], reference: null };
   return current;
 }
 
-/** Aceita plano v1, v2 ou v3 e entrega sempre v3 validado (usado no projeto salvo). */
+/** Aceita plano v1 a v4 e entrega sempre v4 validado (usado no projeto salvo). */
 export const anyPlanSchema = z.preprocess(migratePlan, editPlanSchema);
 
 export type ParseResult = { ok: true; plan: EditPlan } | { ok: false; errors: string[] };

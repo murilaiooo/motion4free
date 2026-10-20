@@ -52,7 +52,7 @@ describe('projeto salvo', () => {
 });
 
 describe('projeto salvo na Fase 2 (plano v1)', () => {
-  it('abre com os planos migrados para v3, histórico inteiro', () => {
+  it('abre com os planos migrados para v4, histórico inteiro', () => {
     const v1 = {
       version: 1,
       output: { width: 1080, height: 1920, fps: 30 },
@@ -74,11 +74,11 @@ describe('projeto salvo na Fase 2 (plano v1)', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const h = restoreHistory(r.project);
-    expect(h.present.version).toBe(3);
+    expect(h.present.version).toBe(4);
     expect(h.present.brief.prompt).toBe('');
     expect(h.present.style.id).toBe('pop');
     expect(h.present.captions[0]!.text).toBe('Oi!');
-    expect(h.past[0]!.version).toBe(3);
+    expect(h.past[0]!.version).toBe(4);
     expect(h.past[0]!.captions[0]!.text).toBe('Olá.');
   });
 });
@@ -94,9 +94,9 @@ describe('projeto salvo na Fase 3 (plano v2)', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const h = restoreHistory(r.project);
-    expect(h.present.version).toBe(3);
+    expect(h.present.version).toBe(4);
     expect(h.present.brief.forbid).toEqual([]);
     expect(h.present.captions[0]!.text).toBe('Oi!');
-    expect(h.past[0]!.version).toBe(3);
+    expect(h.past[0]!.version).toBe(4);
   });
 });
