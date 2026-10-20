@@ -3,7 +3,10 @@ import type { Caption, EditPlan, Segment, TimeRange, Word } from '../core/types'
 import { outputDuration } from '../engine/timeline';
 import { presetById } from '../core/presets';
 import type { StyleDNA } from '../core/style';
+import type { CreativeBrief, Hook } from '../core/brief';
+import { sceneOptionsFor, styleForBrief } from './brief-apply';
 import { buildCaptions, captionOptionsFor } from './captions';
+import { findHooks } from './hooks';
 import { proposeScenes } from './selector';
 
 /**
@@ -62,8 +65,8 @@ function rebuildCaptions(plan: EditPlan, ctx: EditContext, segments: Segment[], 
  * Cenas são derivadas (palavras + trechos + estilo) enquanto não há edição manual de cenas.
  * Sem palavras (transcrição falhou ou projeto antigo sem cenas novas), mantém as cenas que existem, recortadas.
  */
-function rebuildScenes(plan: EditPlan, ctx: EditContext, segments: Segment[], style: StyleDNA): EditPlan['scenes'] {
-  if (ctx.words.length > 0) return proposeScenes(ctx.words, segments, style);
+function rebuildScenes(plan: EditPlan, ctx: EditContext, segments: Segment[], style: StyleDNA, brief: CreativeBrief = plan.brief): EditPlan['scenes'] {
+  if (ctx.words.length > 0) return proposeScenes(ctx.words, segments, style, sceneOptionsFor(brief));
   const total = outputDuration(segments);
   return plan.scenes.map((s) => ({ ...s, end: Math.min(s.end, total) })).filter((s) => s.end > s.start);
 }
@@ -83,9 +86,39 @@ export function withSegments(plan: EditPlan, ctx: EditContext, segments: Segment
  */
 export function applyStyle(plan: EditPlan, ctx: EditContext, styleId: string): EditPlan {
   if (plan.style.id === styleId) return plan;
-  const style = presetById(styleId);
-  if (!style) throw new AppError('ESTILO_DESCONHECIDO', styleId);
-  return { ...plan, style, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style) };
+  const preset = presetById(styleId);
+  if (!preset) throw new AppError('ESTILO_DESCONHECIDO', styleId);
+  // a escolha manual vira o estilo do pedido; os outros ajustes do pedido (calmo, proibições...) continuam valendo
+  const brief = plan.brief.preset ? { ...plan.brief, preset: preset.id as CreativeBrief['preset'] } : plan.brief;
+  const style = styleForBrief(preset, brief);
+  return { ...plan, style, brief, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style, brief) };
+}
+
+/**
+ * Aplica um pedido já entendido (regras ou IA): estilo pedido (ou o atual) ajustado pelo pedido,
+ * legendas no tamanho do estilo e cenas propostas de novo com proibições e destaques.
+ * Gancho: mantém o que a pessoa escolheu antes; se o pedido quer gancho e não há escolha, usa o melhor candidato.
+ */
+export function applyBrief(plan: EditPlan, ctx: EditContext, incoming: CreativeBrief): EditPlan {
+  const presetId = incoming.preset ?? plan.style.id;
+  const preset = presetById(presetId);
+  if (!preset) throw new AppError('ESTILO_DESCONHECIDO', presetId);
+  let hook: Hook | null = incoming.hook ?? plan.brief.hook;
+  if (!hook && incoming.wantsHook) {
+    const best = findHooks(ctx.words, 1)[0];
+    hook = best ? { text: best.text, wordIds: best.wordIds } : null;
+  }
+  const brief: CreativeBrief = { ...incoming, hook, locked: plan.brief.locked };
+  const style = styleForBrief(preset, brief);
+  return { ...plan, style, brief, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style, brief) };
+}
+
+/** Escolhe (ou tira, com null) o gancho de abertura. Mesmo gancho = mesmo objeto. */
+export function applyHook(plan: EditPlan, ctx: EditContext, hook: Hook | null): EditPlan {
+  const same = (a: Hook | null, b: Hook | null) => (a === null && b === null) || (!!a && !!b && a.wordIds.join('|') === b.wordIds.join('|') && a.text === b.text);
+  if (same(plan.brief.hook, hook)) return plan;
+  const brief: CreativeBrief = { ...plan.brief, hook, wantsHook: hook === null ? false : plan.brief.wantsHook };
+  return { ...plan, brief, scenes: rebuildScenes(plan, ctx, plan.segments, plan.style, brief) };
 }
 
 /**

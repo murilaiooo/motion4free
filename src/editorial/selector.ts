@@ -1,5 +1,6 @@
 import type { StyleDNA } from '../core/style';
-import type { SceneInstance, Segment, Word } from '../core/types';
+import type { Emphasis } from '../core/brief';
+import type { SceneInstance, SceneKind, Segment, Word } from '../core/types';
 import { outputDuration, sourceToOutput } from '../engine/timeline';
 import { findName, isQuestion, keywordScore, normalizeToken, ordinalOf, parseNumberAt, splitSentences } from './detect';
 
@@ -102,7 +103,22 @@ interface Candidate {
   priority: number;
 }
 
-export function proposeScenes(words: Word[], segments: Segment[], style: StyleDNA): SceneInstance[] {
+/** O que o pedido (CreativeBrief) muda no seletor. Sem opções = comportamento da Fase 3. */
+export interface SceneOptions {
+  /** tipos de cena proibidos: nunca aparecem */
+  forbid: ReadonlySet<SceneKind>;
+  /** destaques pedidos: ganham prioridade e não contam no orçamento de cenas */
+  emphasize: ReadonlySet<Emphasis>;
+  /** frase do gancho escolhido: vira o título de abertura (texto falado, nunca inventado) */
+  title: string | null;
+}
+
+export const NO_SCENE_OPTIONS: SceneOptions = { forbid: new Set(), emphasize: new Set(), title: null };
+
+const EMPHASIS_KIND: Record<Emphasis, SceneKind | null> = { numeros: 'big-number', perguntas: 'quote', listas: 'list', nome: 'lower-third', palavras: 'highlight-word' };
+
+export function proposeScenes(words: Word[], segments: Segment[], style: StyleDNA, opts: SceneOptions = NO_SCENE_OPTIONS): SceneInstance[] {
+  const boosted = new Set([...opts.emphasize].map((e) => EMPHASIS_KIND[e]).filter((k): k is SceneKind => k !== null && !opts.forbid.has(k)));
   const total = outputDuration(segments);
   const ws = placeWords(words, segments);
   const tokens = ws.map((w) => w.raw);
@@ -122,15 +138,15 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     const special = /[%$]/.test(num.value);
     const lastOfNumber = i + num.consumed - 1;
     const label = endsSentence(ws[lastOfNumber]!.raw) ? '' : phrase(ws, i + num.consumed, 5, 28).text.toLowerCase();
-    if (num.value.length > 12 || (!special && (num.n < 2 || !label))) continue;
-    numbers.push({ scene: { kind: 'big-number', value: num.value, label, ...dur(ws[i]!.start - 0.15, R.sceneSec) }, priority: 80 });
+    if (num.value.length > 12 || (!special && (num.n < 2 || (!label && !boosted.has('big-number'))))) continue;
+    numbers.push({ scene: { kind: 'big-number', value: num.value, label, ...dur(ws[i]!.start - 0.15, R.sceneSec) }, priority: boosted.has('big-number') ? 92 : 80 });
     i = lastOfNumber;
   }
   candidates.push(...numbers);
 
   // nome → lower third (faixa própria)
   const name = findName(tokens);
-  const nameAt = name && ws[name.index]!.start < 20 ? ws[name.index]! : null;
+  const nameAt = name && (ws[name.index]!.start < 20 || boosted.has('lower-third')) ? ws[name.index]! : null;
   if (name && nameAt) {
     candidates.push({ scene: { kind: 'lower-third', title: name.name.slice(0, 32), subtitle: '', ...dur(nameAt.start - 0.2, Math.max(R.sceneSec, 2.6)) }, priority: 85 });
   }
@@ -140,7 +156,11 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   const opensWithNumber = numbers.some((n) => n.scene.start < 1);
   const opensWithName = !!nameAt && nameAt.start < 3;
   const opensWithQuestion = sentences.length > 0 && isQuestion(sentences[0]!.map((k) => tokens[k]!));
-  if (title && total > 1.5 && !opensWithNumber && !opensWithName && !opensWithQuestion) {
+  if (opts.title) {
+    // gancho escolhido pela pessoa: sempre abre o vídeo, com tempo para ler a frase inteira
+    const readSec = Math.min(5, Math.max(R.titleSec, opts.title.split(/\s+/).length * 0.4));
+    candidates.push({ scene: { kind: 'kinetic-title', text: opts.title.slice(0, 60), ...dur(0, Math.min(readSec, total)) }, priority: 100 });
+  } else if (title && total > 1.5 && !opensWithNumber && !opensWithName && !opensWithQuestion) {
     candidates.push({ scene: { kind: 'kinetic-title', text: title, ...dur(0, Math.min(R.titleSec, total)) }, priority: 100 });
   }
 
@@ -180,7 +200,7 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     const lastAt = ws[seq.at(-1)!.i]!;
     if (seq.length >= 2 && lastAt.start - first.start <= 25) {
       const start = Math.max(0, first.start - 0.2);
-      candidates.push({ scene: { kind: 'list', items: items.slice(0, 5), ...dur(start, lastAt.start - start + R.sceneSec + 0.6) }, priority: 90 });
+      candidates.push({ scene: { kind: 'list', items: items.slice(0, 5), ...dur(start, lastAt.start - start + R.sceneSec + 0.6) }, priority: boosted.has('list') ? 93 : 90 });
     } else {
       seq.forEach((m, k) => {
         candidates.push({ scene: { kind: 'list', items: items.slice(Math.max(0, k - 4), k + 1), ...dur(ws[m.i]!.start - 0.1, R.sceneSec) }, priority: 90 });
@@ -198,13 +218,18 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     const a = ws[sent[0]!]!;
     const b = ws[sent.at(-1)!]!;
     const start = a.start - 0.1;
-    candidates.push({ scene: { kind: 'quote', text: capitalize(text), ...dur(start, Math.min(4.5, Math.max(1.5, b.end + 0.3 - start))) }, priority: 70 });
+    candidates.push({ scene: { kind: 'quote', text: capitalize(text), ...dur(start, Math.min(4.5, Math.max(1.5, b.end + 0.3 - start))) }, priority: boosted.has('quote') ? 91 : 70 });
   }
 
   // chamada final
   if (total >= 8) candidates.push({ scene: { kind: 'end-cta', text: style.cta, ...dur(total - Math.min(2.4, R.sceneSec + 0.4), 10) }, priority: 95 });
 
-  const accepted = placeOverlays(candidates, total, style);
+  const accepted = placeOverlays(
+    candidates.filter((c) => !opts.forbid.has(c.scene.kind)),
+    total,
+    style,
+    boosted,
+  );
 
   // destaque de palavra-chave: a melhor palavra de cada frase, espaçadas pelo ritmo do estilo
   const quotes = accepted.filter((s) => s.kind === 'quote');
@@ -226,7 +251,7 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     const prev = highlights.at(-1);
     const word = w ? strip(w.raw).slice(0, 30) : '';
     const inQuote = w && quotes.some((q) => w.start < q.end && w.end > q.start);
-    if (w && bestScore >= 0.75 && !inQuote && w.start - lastKw >= R.keywordEverySec && (!prev || sceneKey(prev) !== `highlight-word|${word.toLowerCase()}`)) {
+    if (w && bestScore >= (boosted.has('highlight-word') ? 0.5 : 0.75) && !inQuote && w.start - lastKw >= R.keywordEverySec && (!prev || sceneKey(prev) !== `highlight-word|${word.toLowerCase()}`)) {
       highlights.push({ kind: 'highlight-word', text: word, ...dur(w.start, w.end - w.start + 0.5) });
       lastKw = w.start;
     }
@@ -262,16 +287,16 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   const progress: Draft[] = style.progress !== 'none' && total >= 3 ? [{ kind: 'progress-bar', start: 0, end: r3(total) }] : [];
 
   return [...progress, ...transitions, ...zooms, ...accepted, ...highlights]
-    .filter((s) => s.end - s.start > 0.05)
+    .filter((s) => s.end - s.start > 0.05 && !opts.forbid.has(s.kind))
     .sort((a, b) => a.start - b.start || a.kind.localeCompare(b.kind))
     .map((s, i) => ({ ...s, id: `s${i + 1}` }) as SceneInstance);
 }
 
 /** Escolhe as cenas de sobreposição respeitando prioridade, intervalo, orçamento e anti-repetição. */
-function placeOverlays(candidates: Candidate[], total: number, style: StyleDNA): Draft[] {
+function placeOverlays(candidates: Candidate[], total: number, style: StyleDNA, boosted: ReadonlySet<SceneKind>): Draft[] {
   const R = style.rhythm;
   const budget = Math.ceil((total / 10) * R.overlaysPer10s);
-  const exempt = (s: Draft) => s.kind === 'kinetic-title' || s.kind === 'end-cta';
+  const exempt = (s: Draft) => s.kind === 'kinetic-title' || s.kind === 'end-cta' || boosted.has(s.kind);
   const central: Draft[] = [];
   const lower: Draft[] = [];
   let used = 0;
@@ -283,7 +308,9 @@ function placeOverlays(candidates: Candidate[], total: number, style: StyleDNA):
       continue;
     }
     if (!exempt(scene) && used >= budget) continue;
-    const clash = central.some((o) => scene.start < o.end + R.minGapSec && o.start < scene.end + R.minGapSec);
+    // destaque pedido: intervalo curto (1 s no máximo), mas nunca sobreposto
+    const gap = boosted.has(scene.kind) ? Math.min(R.minGapSec, 1) : R.minGapSec;
+    const clash = central.some((o) => scene.start < o.end + gap && o.start < scene.end + gap);
     if (clash) continue;
     const key = sceneKey(scene);
     const byTime = [...central, scene].sort((a, b) => a.start - b.start);

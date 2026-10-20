@@ -2,7 +2,7 @@
  * Catálogo de erros com código próprio por problema.
  * O código aparece na tela para quem testa e identifica a causa sem ambiguidade.
  * Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição,
- * 6xx projeto salvo, 7xx player, 8xx estilo e animações, 9xx desconhecido.
+ * 6xx projeto salvo, 7xx player, 8xx estilo e animações, 9xx desconhecido, 10xx pedido por texto e IA.
  */
 export const ERRORS = {
   FORMATO_DESCONHECIDO: { code: 'M4F-101', title: 'Formato de arquivo não reconhecido.' },
@@ -28,6 +28,15 @@ export const ERRORS = {
   PLAYER_FALHOU: { code: 'M4F-701', title: 'Não foi possível tocar a prévia.' },
   FONTE_FALHOU: { code: 'M4F-801', title: 'As fontes do estilo não carregaram; o vídeo usa uma fonte reserva.' },
   ESTILO_DESCONHECIDO: { code: 'M4F-802', title: 'Este estilo não existe nesta versão do app.' },
+  PEDIDO_VAZIO: { code: 'M4F-1001', title: 'Escreva o que você quer antes de aplicar.' },
+  PEDIDO_LONGO: { code: 'M4F-1002', title: 'O pedido pode ter no máximo 500 caracteres.' },
+  PEDIDO_NAO_ENTENDIDO: { code: 'M4F-1003', title: 'Não entendi nenhum pedido neste texto; nada mudou. Veja os exemplos.' },
+  GANCHO_SEM_FRASES: { code: 'M4F-1004', title: 'A fala não tem frases completas e curtas para sugerir um gancho.' },
+  IA_LOCAL_INDISPONIVEL: { code: 'M4F-1005', title: 'A IA no navegador não funciona neste aparelho (precisa de WebGPU); usei as regras.' },
+  IA_LOCAL_FALHOU: { code: 'M4F-1006', title: 'A IA no navegador não carregou ou parou; usei as regras.' },
+  IA_RESPOSTA_INVALIDA: { code: 'M4F-1007', title: 'A IA respondeu fora do formato esperado; usei as regras.' },
+  IA_CHAVE_FALHOU: { code: 'M4F-1008', title: 'O serviço da sua chave não respondeu; usei as regras.' },
+  IA_CHAVE_RECUSADA: { code: 'M4F-1009', title: 'O serviço recusou a sua chave (confira se ela está certa ou se o limite gratuito acabou); usei as regras.' },
   DESCONHECIDO: { code: 'M4F-999', title: 'Erro inesperado.' },
 } as const;
 

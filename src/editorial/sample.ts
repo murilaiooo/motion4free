@@ -1,3 +1,4 @@
+import { EMPTY_BRIEF } from '../core/brief';
 import type { StyleDNA } from '../core/style';
 import type { Caption, EditPlan } from '../core/types';
 
@@ -21,9 +22,10 @@ function cap(id: string, text: string, start: number, end: number, wordStarts: n
 
 export function galleryPlan(style: StyleDNA): EditPlan {
   return {
-    version: 2,
+    version: 3,
     output: { width: 1080, height: 1920, fps: 30 },
     style,
+    brief: EMPTY_BRIEF,
     segments: [{ srcStart: 0, srcEnd: 28 }],
     captions: [
       cap('c1', 'Três dicas que mudam tudo', 0.2, 2.6, [0.2, 0.5, 0.9, 1.1, 1.5]),

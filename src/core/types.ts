@@ -1,3 +1,4 @@
+import type { CreativeBrief } from './brief';
 import type { StyleDNA } from './style';
 
 /** Tempo sempre em segundos (number). "src" = tempo no vídeo original; "out" = tempo no vídeo editado. */
@@ -68,9 +69,11 @@ export interface OutputProfile {
 }
 
 export interface EditPlan {
-  version: 2;
+  version: 3;
   output: OutputProfile;
   style: StyleDNA;
+  /** o pedido por texto já entendido (vazio = nenhum pedido) */
+  brief: CreativeBrief;
   segments: Segment[];
   captions: Caption[];
   scenes: SceneInstance[];
