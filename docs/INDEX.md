@@ -5,6 +5,7 @@
 ## Comece aqui (em vigor desde 20/10/2026)
 - [Spec v1 consolidada e aprovada](superpowers/specs/2026-10-20-motion4free-v1-design.md): o que é o produto, arquitetura, decisões e fases.
 - [Plano mestre](superpowers/plans/2026-10-20-plano-mestre.md): 6 fases, roteiro de teste e gate de cada uma.
+- [Plano do produto final (passagem de bastão)](superpowers/plans/2026-10-20-plano-produto-final.md): **comece por aqui** — pedidos do responsável, 4 frentes em andamento, estado de cada branch e como continuar.
 - [Plano detalhado da Fase 1 — primeiro MP4](superpowers/plans/2026-10-20-fase1-primeiro-mp4.md): tarefas com código e testes.
 - [ADR-0005: stack v1 e forma de decidir](decisions/0005-stack-v1.md).
 - [Plano detalhado da Fase 3 — sistema de motion design](superpowers/plans/2026-10-20-fase3-motion.md) e [ADR-0008](decisions/0008-styledna-e-cenas.md).
