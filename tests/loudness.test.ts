@@ -66,9 +66,28 @@ describe('áudio contínuo nas trocas de clipe', () => {
     expect(Math.max(...Array.from(out!))).toBeLessThanOrEqual(0.5 + 1e-6);
   });
 
-  it('splicePlan: emendas dentro do mesmo clipe continuam com o fade curto de antes', () => {
+  it('splicePlan: com um clipe é igual ao de antes (fade curto nos cortes)', () => {
     const ch = new Float32Array(2 * SR).fill(1);
     const plan = { clips: [{ id: 'c1', name: '', duration: 2, framing: null }], segments: [{ srcStart: 0, srcEnd: 0.5 }, { srcStart: 1, srcEnd: 2 }] };
-    expect(Array.from(splicePlan([ch], SR, plan)[0]!)).toEqual(Array.from(spliceAudio([ch], SR, plan.segments)[0]!));
+    expect(Array.from(splicePlan({ sampleRate: SR, numberOfChannels: 1, byClip: { c1: [ch] } }, plan)[0]!)).toEqual(Array.from(spliceAudio([ch], SR, plan.segments)[0]!));
+  });
+
+  it('splicePlan: lê cada clipe do seu próprio áudio, na ordem do plano, com mistura na troca', () => {
+    const a = new Float32Array(SR).fill(0.8);
+    const b = new Float32Array(SR).fill(-0.8);
+    const clips = [{ id: 'c2', name: '', duration: 1, framing: null }, { id: 'c1', name: '', duration: 1, framing: null }];
+    const plan = { clips, segments: [{ srcStart: 0.2, srcEnd: 0.8 }, { srcStart: 1.2, srcEnd: 1.8 }] };
+    const audio = { sampleRate: SR, numberOfChannels: 2, byClip: { c1: [a], c2: [b, b] } };
+    const out = splicePlan(audio, plan);
+    expect(out).toHaveLength(2);
+    expect(out[0]!.length).toBe(1200);
+    expect(out[0]![100]).toBeCloseTo(-0.8, 6); // c2 primeiro (ordem do plano)
+    expect(out[1]![1100]).toBeCloseTo(0.8, 6); // c1 mono serve os dois canais
+    // perto da troca (600), sem degrau
+    const near = Array.from(out[0]!.subarray(550, 650));
+    const jump = Math.max(...near.slice(1).map((v, i) => Math.abs(v - near[i]!)));
+    expect(jump).toBeLessThan(0.05);
+    // clipe sem áudio vira silêncio
+    expect(splicePlan({ sampleRate: SR, numberOfChannels: 1, byClip: { c1: [a] } }, plan)[0]![100]).toBe(0);
   });
 });

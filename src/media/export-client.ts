@@ -1,29 +1,46 @@
 import { AppError, describeError } from '../core/errors';
 import type { EditPlan } from '../core/types';
-import type { DecodedAudio } from './audio';
-import { exportPlan, type ExportResult } from './export';
+import type { FaceTrack } from '../render/framing';
+import { exportPlan, outputAudio, type ExportResult, type OutputAudio } from './export';
 import type { FromExportWorker, ToExportWorker } from './export-protocol';
-import type { OpenedMedia } from './input';
+import type { ClipSource } from './sources';
+import type { ClipAudio } from './splice';
 
 export interface BackgroundExport extends ExportResult {
   /** Onde rodou: 'worker' (normal) ou 'main' (reserva quando o Worker não funciona neste navegador). */
   where: 'worker' | 'main';
 }
 
+/** O que a exportação precisa de cada clipe: o arquivo (Worker) e o vídeo já aberto (reserva na tela). */
+export interface ExportClip {
+  id: string;
+  file: Blob;
+  source: ClipSource;
+}
+
 /**
  * Exporta num Worker para a tela não travar. Se o Worker não iniciar ou falhar,
  * tenta de novo na tela principal (mais lento para a interface, mesmo resultado).
+ * O áudio é emendado aqui (só o do vídeo final vai para o Worker, não o de todos os clipes).
  */
-export async function exportInBackground(file: Blob, media: OpenedMedia, audio: DecodedAudio | null, plan: EditPlan, onProgress: (f: number) => void): Promise<BackgroundExport> {
+export async function exportInBackground(clips: ExportClip[], tracks: Record<string, FaceTrack | null>, audio: ClipAudio | null, plan: EditPlan, onProgress: (f: number) => void): Promise<BackgroundExport> {
+  const used = clips.filter((c) => plan.clips.some((p) => p.id === c.id));
   try {
-    return { ...(await runWorker(file, audio, plan, onProgress)), where: 'worker' };
+    return { ...(await runWorker(used, tracks, outputAudio(audio, plan), plan, onProgress)), where: 'worker' };
   } catch (workerErr) {
+    if (workerErr instanceof AppError && workerErr.key === 'EXPORTACAO_CLIPE') throw workerErr;
     console.warn('Exportação no Worker falhou; tentando na tela principal.', workerErr);
-    return { ...(await exportPlan(media, audio, plan, { onProgress })), where: 'main' };
+    const byId = new Map(used.map((c) => [c.id, c.source]));
+    const open = async (id: string) => {
+      const s = byId.get(id);
+      if (!s) throw new AppError('EXPORTACAO_CLIPE', `clipe ${id} sem arquivo`);
+      return s;
+    };
+    return { ...(await exportPlan({ open, tracks }, outputAudio(audio, plan), plan, { onProgress })), where: 'main' };
   }
 }
 
-function runWorker(file: Blob, audio: DecodedAudio | null, plan: EditPlan, onProgress: (f: number) => void): Promise<ExportResult> {
+function runWorker(clips: ExportClip[], tracks: Record<string, FaceTrack | null>, audio: OutputAudio | null, plan: EditPlan, onProgress: (f: number) => void): Promise<ExportResult> {
   const worker = new Worker(new URL('./export.worker.ts', import.meta.url), { type: 'module' });
   return new Promise((resolve, reject) => {
     worker.onmessage = (e: MessageEvent<FromExportWorker>) => {
@@ -42,9 +59,8 @@ function runWorker(file: Blob, audio: DecodedAudio | null, plan: EditPlan, onPro
       worker.terminate();
       reject(new AppError('EXPORTACAO_FALHOU', `worker: ${e.message || describeError(e)}`));
     };
-    // cópia do áudio: o original continua com a tela principal (player)
-    const copy = audio ? { channels: audio.channels.map((c) => c.slice()), sampleRate: audio.sampleRate } : null;
-    const msg: ToExportWorker = { type: 'export', file, plan, audio: copy };
-    worker.postMessage(msg, copy ? copy.channels.map((c) => c.buffer) : []);
+    // o áudio do vídeo final é transferido (não copiado): foi feito só para esta exportação
+    const msg: ToExportWorker = { type: 'export', clips: clips.map((c) => ({ id: c.id, file: c.file })), tracks, plan, audio };
+    worker.postMessage(msg, audio ? audio.channels.map((c) => c.buffer) : []);
   });
 }

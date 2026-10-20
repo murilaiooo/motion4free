@@ -1,5 +1,5 @@
 import type { EditPlan, Segment, TimeRange } from '../core/types';
-import { clipLayout } from '../engine/clips';
+import { clipSpans } from '../engine/clips';
 
 export interface SpliceJoins {
   /** duração total da mistura nas emendas entre clipes (s) */
@@ -72,8 +72,70 @@ export function spliceAudio(channels: Float32Array[], sampleRate: number, segmen
 /** Mistura padrão nas trocas de clipe: 40 ms (curta o bastante para não embolar a fala, longa para não estalar). */
 export const CLIP_CROSSFADE_SEC = 0.04;
 
-/** Áudio do vídeo editado a partir do áudio do original virtual (todos os clipes, já com o volume acertado). */
-export function splicePlan(channels: Float32Array[], sampleRate: number, plan: Pick<EditPlan, 'segments' | 'clips'>, segments: Segment[] = plan.segments): Float32Array[] {
-  const clips = clipLayout(plan.clips).map((l) => ({ start: l.start, end: l.end }));
-  return spliceAudio(channels, sampleRate, segments, 0.008, clips.length > 1 ? { crossfadeSec: CLIP_CROSSFADE_SEC, clips } : undefined);
+/** Áudio de cada clipe (tempo local), todos na mesma taxa e com o mesmo número de canais, volume já acertado. */
+export interface ClipAudio {
+  sampleRate: number;
+  numberOfChannels: number;
+  byClip: Readonly<Record<string, Float32Array[]>>;
+}
+
+/**
+ * Áudio do vídeo editado direto do áudio de cada clipe (sem montar um "original" gigante na memória).
+ * Cortes dentro do mesmo clipe: fade curto (8 ms) como sempre. Troca de clipe: mistura curta (40 ms,
+ * potência constante) lendo além do corte só dentro do próprio arquivo. Clipe sem áudio = silêncio.
+ * Puro e testado (tests/loudness.test.ts).
+ */
+export function splicePlan(audio: ClipAudio, plan: Pick<EditPlan, 'segments' | 'clips'>, segments: Segment[] = plan.segments, crossfadeSec = CLIP_CROSSFADE_SEC, fadeSec = 0.008): Float32Array[] {
+  const sr = audio.sampleRate;
+  const spans = clipSpans(segments, plan.clips).map((s) => {
+    const a = Math.round(s.localStart * sr);
+    return { id: s.clipId, a, len: Math.max(0, Math.round(s.localEnd * sr) - a) };
+  });
+  const total = spans.reduce((acc, s) => acc + s.len, 0);
+  const fade = Math.round(fadeSec * sr);
+  const half = Math.max(1, Math.round((crossfadeSec * sr) / 2));
+  const out = Array.from({ length: audio.numberOfChannels }, () => new Float32Array(total));
+  for (let c = 0; c < audio.numberOfChannels; c++) {
+    const dst = out[c]!;
+    const chOf = (id: string) => audio.byClip[id]?.[Math.min(c, (audio.byClip[id]?.length ?? 1) - 1)];
+    let o = 0;
+    spans.forEach((s, k) => {
+      const ch = chOf(s.id);
+      const prev = spans[k - 1];
+      const next = spans[k + 1];
+      const joinBefore = !!prev && prev.id !== s.id;
+      const joinAfter = !!next && next.id !== s.id;
+      if (ch) {
+        const n = Math.max(0, Math.min(s.len, ch.length - s.a));
+        dst.set(ch.subarray(s.a, s.a + n), o);
+        for (let i = 0; i < Math.min(fade, s.len); i++) {
+          const g = i / fade;
+          if (!joinBefore) dst[o + i]! *= g;
+          if (!joinAfter) dst[o + s.len - 1 - i]! *= g;
+        }
+      }
+      o += s.len;
+    });
+    // misturas nas trocas de clipe
+    o = 0;
+    spans.forEach((s, k) => {
+      o += s.len;
+      const next = spans[k + 1];
+      if (!next || next.id === s.id || crossfadeSec <= 0) return;
+      const ca = chOf(s.id);
+      const cb = chOf(next.id);
+      const h = Math.min(half, s.len, next.len);
+      for (let n = -h; n < h; n++) {
+        const idx = o + n;
+        if (idx < 0 || idx >= total) continue;
+        const g = (n + h) / (2 * h);
+        const sa = s.a + s.len + n;
+        const sb = next.a + n;
+        const va = ca && sa >= 0 && sa < ca.length ? ca[sa]! : 0;
+        const vb = cb && sb >= 0 && sb < cb.length ? cb[sb]! : 0;
+        dst[idx] = va * Math.cos((g * Math.PI) / 2) + vb * Math.sin((g * Math.PI) / 2);
+      }
+    });
+  }
+  return out;
 }

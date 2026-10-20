@@ -1,47 +1,33 @@
-import { CanvasSink } from 'mediabunny';
-import { toAppError, type AppError } from '../core/errors';
-import type { EditPlan, Segment } from '../core/types';
-import { outputDuration, outputToSource } from '../engine/timeline';
-import { drawFrame } from '../render/frame';
-import type { DecodedAudio } from './audio';
-import type { OpenedMedia } from './input';
-import { spliceAudio } from './splice';
+import { AppError, toAppError } from '../core/errors';
+import type { EditPlan } from '../core/types';
+import { clipSpans, outputToClip } from '../engine/clips';
+import { outputDuration } from '../engine/timeline';
+import { drawFrame, type SourceFrame } from '../render/frame';
+import type { FaceTrack } from '../render/framing';
+import { ClipFrames, PREVIEW_MAX_SIDE, type ClipSource } from './sources';
+import { splicePlan, type ClipAudio } from './splice';
 
 interface TimedFrame {
   t: number; // out
-  canvas: CanvasImageSource;
-}
-
-/** Quadros do vídeo editado, em ordem, a partir de `fromOut`, atravessando os cortes. */
-async function* outputFrames(sink: CanvasSink, segments: Segment[], fromOut: number): AsyncGenerator<TimedFrame> {
-  let offset = 0;
-  for (const s of segments) {
-    const len = s.srcEnd - s.srcStart;
-    if (offset + len <= fromOut) {
-      offset += len;
-      continue;
-    }
-    const from = s.srcStart + Math.max(0, fromOut - offset);
-    for await (const f of sink.canvases(from, s.srcEnd)) {
-      yield { t: offset + Math.max(0, f.timestamp - s.srcStart), canvas: f.canvas };
-    }
-    offset += len;
-  }
+  frame: SourceFrame;
 }
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
 /**
  * Player em tempo real do plano. Desenha com a mesma `drawFrame` da exportação e toca o
- * áudio emendado com a mesma `spliceAudio`; o relógio é o do Web Audio (ou do sistema,
+ * áudio emendado com a mesma `splicePlan`; o relógio é o do Web Audio (ou do sistema,
  * se o som não puder iniciar), então imagem e som seguem o mesmo tempo.
+ * Vários clipes (v0.14): lê cada pedaço do arquivo dele; ao começar um pedaço já busca o primeiro
+ * quadro do próximo clipe, para a troca de clipe não engasgar.
  */
 export class PlanPlayer {
   onTime: (t: number, playing: boolean) => void = () => {};
   onError: (e: AppError) => void = () => {};
 
   private readonly ctx: CanvasRenderingContext2D;
-  private readonly sink: CanvasSink;
+  private readonly canvas: HTMLCanvasElement;
+  private readonly frames: ClipFrames;
   private audioCtx: AudioContext | null = null;
   private audioBuffer: AudioBuffer | null = null;
   private node: AudioBufferSourceNode | null = null;
@@ -52,24 +38,23 @@ export class PlanPlayer {
   private pausedAt = 0;
   private session = 0;
   private stillSession = 0;
-  private frame: CanvasImageSource | null = null;
+  private frame: SourceFrame | null = null;
   private raf = 0;
   private lastReport = 0;
+  private failedClips = new Set<string>();
 
   constructor(
-    media: OpenedMedia,
-    private readonly audio: DecodedAudio | null,
+    sources: ReadonlyMap<string, ClipSource>,
+    private readonly audio: ClipAudio | null,
     canvas: HTMLCanvasElement,
     private plan: EditPlan,
-    scale = 0.5,
+    tracks: Readonly<Record<string, FaceTrack | null>> = {},
+    private readonly scale = 0.5,
   ) {
-    const w = even(plan.output.width * scale);
-    const h = even(plan.output.height * scale);
-    canvas.width = w;
-    canvas.height = h;
+    this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
-    this.ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    this.sink = new CanvasSink(media.video, { width: w, height: h, fit: 'cover', poolSize: 4 });
+    this.frames = new ClipFrames(sources, { maxSide: PREVIEW_MAX_SIDE, poolSize: 4 }, tracks);
+    this.resize();
     void this.renderStill(0);
   }
 
@@ -86,16 +71,29 @@ export class PlanPlayer {
     return Math.min(this.duration, this.startT + (this.clock() - this.startClock));
   }
 
+  /** Tamanho do canvas pelo formato de saída (muda quando a pessoa troca o formato). */
+  private resize(): void {
+    const w = even(this.plan.output.width * this.scale);
+    const h = even(this.plan.output.height * this.scale);
+    if (this.canvas.width !== w || this.canvas.height !== h) {
+      this.canvas.width = w;
+      this.canvas.height = h;
+    }
+    this.ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+  }
+
   setPlan(plan: EditPlan): void {
     if (plan === this.plan) return;
-    const sameAudio = plan.segments === this.plan.segments;
+    const sameAudio = plan.segments === this.plan.segments && plan.clips.map((c) => c.id).join('|') === this.plan.clips.map((c) => c.id).join('|');
+    const sameFrames = sameAudio && plan.framing === this.plan.framing && plan.clips === this.plan.clips;
     this.plan = plan;
+    this.resize();
     if (!sameAudio) this.audioBuffer = null;
     const t = Math.min(this.currentTime, this.duration);
-    if (this.playing && !sameAudio) this.restart(t);
+    if (this.playing && (!sameAudio || !sameFrames)) this.restart(t);
     else if (!this.playing) {
       this.pausedAt = t;
-      if (sameAudio) this.draw(t);
+      if (sameFrames) this.draw(t);
       else void this.renderStill(t);
     }
   }
@@ -194,7 +192,7 @@ export class PlanPlayer {
 
   private buildAudio(ctx: AudioContext): AudioBuffer {
     const audio = this.audio!;
-    const spliced = spliceAudio(audio.channels, audio.sampleRate, this.plan.segments);
+    const spliced = splicePlan(audio, this.plan);
     const buffer = ctx.createBuffer(spliced.length, Math.max(1, spliced[0]!.length), audio.sampleRate);
     spliced.forEach((ch, c) => buffer.copyToChannel(ch as Float32Array<ArrayBuffer>, c));
     return buffer;
@@ -219,14 +217,49 @@ export class PlanPlayer {
     this.raf = requestAnimationFrame(this.tick);
   };
 
+  private clipFailed(id: string, err: unknown): void {
+    if (this.failedClips.has(id)) return;
+    this.failedClips.add(id);
+    const app = toAppError(err, 'PLAYER_CLIPE');
+    this.onError(app.key === 'PLAYER_CLIPE' ? app : new AppError('PLAYER_CLIPE', `clipe ${id}: ${app.code} ${app.detail}`));
+  }
+
+  /** Quadros do vídeo editado, em ordem, a partir de `fromOut`, atravessando cortes e clipes. */
+  private async *outputFrames(fromOut: number, plan: EditPlan): AsyncGenerator<TimedFrame> {
+    const spans = clipSpans(plan.segments, plan.clips);
+    let warm: { id: string; local: number; p: Promise<{ canvas: HTMLCanvasElement | OffscreenCanvas } | null> } | null = null;
+    for (let k = 0; k < spans.length; k++) {
+      const span = spans[k]!;
+      const len = span.localEnd - span.localStart;
+      if (span.outStart + len <= fromOut) continue;
+      const sink = this.frames.sink(span.clipId);
+      if (!sink || this.failedClips.has(span.clipId)) continue;
+      const from = span.localStart + Math.max(0, fromOut - span.outStart);
+      // já pede o primeiro quadro do próximo clipe (a troca de arquivo não engasga)
+      const next = spans[k + 1];
+      const nextWarm = next && next.clipId !== span.clipId ? { id: next.clipId, local: next.localStart, p: this.frames.sink(next.clipId)?.getCanvas(next.localStart).catch(() => null) ?? Promise.resolve(null) } : null;
+      if (warm && warm.id === span.clipId && Math.abs(warm.local - from) < 1e-3) {
+        const first = await warm.p;
+        if (first) yield { t: span.outStart + (from - span.localStart), frame: this.frames.frame(plan, span.clipId, first.canvas, from) };
+      }
+      warm = nextWarm;
+      try {
+        for await (const f of sink.canvases(from, span.localEnd)) {
+          yield { t: span.outStart + Math.max(0, f.timestamp - span.localStart), frame: this.frames.frame(plan, span.clipId, f.canvas, f.timestamp) };
+        }
+      } catch (err) {
+        this.clipFailed(span.clipId, err);
+      }
+    }
+  }
+
   /** Busca quadros um pouco à frente do relógio e troca o quadro atual na hora certa. */
   private async pump(s: number, from: number): Promise<void> {
-    const segments = this.plan.segments;
     try {
-      for await (const f of outputFrames(this.sink, segments, from)) {
+      for await (const f of this.outputFrames(from, this.plan)) {
         while (s === this.session && this.currentTime < f.t - 0.001) await nextFrame();
         if (s !== this.session) return;
-        this.frame = f.canvas;
+        this.frame = f.frame;
       }
     } catch (err) {
       if (s === this.session) this.onError(toAppError(err, 'PLAYER_FALHOU'));
@@ -235,19 +268,23 @@ export class PlanPlayer {
 
   private async renderStill(t: number): Promise<void> {
     const s = ++this.stillSession;
-    const segments = this.plan.segments;
-    const src = outputToSource(segments, Math.min(t, this.duration - 1e-3)) ?? 0;
+    const plan = this.plan;
+    const at = outputToClip(plan.segments, plan.clips, Math.min(t, this.duration - 1e-3));
+    if (!at) return;
+    const sink = this.frames.sink(at.clipId);
     try {
-      const wrapped = await this.sink.getCanvas(src);
+      const wrapped = sink ? await sink.getCanvas(at.local) : null;
       if (s !== this.stillSession || this.playing) return;
-      this.frame = wrapped?.canvas ?? null;
+      this.frame = wrapped ? this.frames.frame(plan, at.clipId, wrapped.canvas, at.local) : null;
       this.draw(t);
     } catch (err) {
-      this.onError(toAppError(err, 'PLAYER_FALHOU'));
+      if (plan.clips.length > 1) this.clipFailed(at.clipId, err);
+      else this.onError(toAppError(err, 'PLAYER_FALHOU'));
     }
   }
 
   private draw(t: number): void {
+    // quadro de outro clipe/enquadramento (logo depois de mudar o plano) ainda vale até o novo chegar
     drawFrame(this.ctx, this.plan, t, this.frame);
   }
 }
