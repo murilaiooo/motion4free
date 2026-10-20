@@ -20,7 +20,7 @@
 .spinner.dark { border-color: rgba(0, 0, 0, 0.18); border-top-color: var(--brand-ink); }
 
 /* ============ primeira tela ============ */
-.land, .gallery-page { min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; background:
+.land, .gallery-page { overflow-x: clip; min-height: 100dvh; display: grid; grid-template-rows: auto 1fr auto; background:
   radial-gradient(1100px 600px at 85% -10%, color-mix(in srgb, var(--brand) 9%, transparent), transparent 60%),
   radial-gradient(900px 500px at -10% 110%, color-mix(in srgb, var(--blue) 10%, transparent), transparent 60%),
   var(--bg-0); }
@@ -58,15 +58,15 @@
 :root[data-theme='light'] .how-steps svg { color: #8a6d00; }
 
 .hero-show { display: grid; gap: var(--s-3); justify-items: center; min-width: 0; }
-.showcase { position: relative; width: 100%; max-width: 560px; aspect-ratio: 1 / 0.92; }
+.showcase { position: relative; width: 100%; max-width: 580px; aspect-ratio: 1 / 0.8; }
 .phone { position: absolute; margin: 0; width: 34%; border-radius: 22px; overflow: hidden; background: #000; border: 1px solid var(--line-strong); box-shadow: var(--shadow-3); transition: transform 400ms var(--ease); }
 .phone .tpl-thumb { display: block; width: 100%; height: auto; }
 .phone figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 10px 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 6px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: #fff; font-size: var(--fs-2xs); }
 .phone figcaption b { font-size: var(--fs-sm); }
 .phone figcaption span { opacity: 0.75; }
 .phone.p0 { left: 33%; top: 0; z-index: 3; width: 36%; }
-.phone.p1 { left: 2%; top: 9%; z-index: 2; transform: rotate(-6deg); }
-.phone.p2 { right: 2%; top: 9%; z-index: 2; transform: rotate(6deg); }
+.phone.p1 { left: 0; top: 8%; z-index: 2; transform: rotate(-6deg); }
+.phone.p2 { right: 0; top: 8%; z-index: 2; transform: rotate(6deg); }
 .phone.p3 { display: none; }
 .showcase:hover .phone.p1 { transform: rotate(-8deg) translateX(-6px); }
 .showcase:hover .phone.p2 { transform: rotate(8deg) translateX(6px); }
@@ -197,7 +197,7 @@
 .tl-inner { height: 100%; min-width: 100%; padding: 6px 12px 10px; }
 .tl-lanes { position: relative; display: grid; grid-template-rows: 24px minmax(44px, 1fr) 30px 30px; gap: 6px; height: 100%; }
 .tl-lanes > :not(.tl-playhead) { position: relative; }
-.tl-ruler { cursor: ew-resize; border-bottom: 1px solid var(--line); touch-action: none; }
+.tl-ruler { overflow: hidden; cursor: ew-resize; border-bottom: 1px solid var(--line); touch-action: none; }
 .tick { position: absolute; bottom: 0; height: 100%; border-left: 1px solid var(--line-strong); padding-left: 4px; font-size: 10px; color: var(--text-3); font-variant-numeric: tabular-nums; line-height: 14px; white-space: nowrap; }
 .track { border-radius: var(--r-sm); background: var(--bg-3); overflow: hidden; cursor: pointer; }
 .kept { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--green) 22%, transparent); border-left: 1px solid color-mix(in srgb, var(--green) 60%, transparent); border-right: 1px solid color-mix(in srgb, var(--green) 60%, transparent); }

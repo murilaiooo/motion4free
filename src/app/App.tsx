@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FAKE_CHUNKS, FakeTranscriber, WhisperTranscriber } from '../asr/transcriber';
+import { FAKE_CHUNKS, FAKE_DEMO_CHUNKS, FakeTranscriber, WhisperTranscriber } from '../asr/transcriber';
 import { waveformPeaks } from '../analysis/waveform';
 import { AppError, toAppError } from '../core/errors';
 import { makeProject, restoreHistory, sameVideo, type SavedProject } from '../core/project';
@@ -56,7 +56,7 @@ function EditorApp() {
   const transcriber = useMemo(
     () =>
       import.meta.env.VITE_FAKE_ASR === '1'
-        ? new FakeTranscriber(new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : FAKE_CHUNKS, new URLSearchParams(location.search).get('asr') === 'falha')
+        ? new FakeTranscriber(new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : new URLSearchParams(location.search).get('asr') === 'demo' ? FAKE_DEMO_CHUNKS : FAKE_CHUNKS, new URLSearchParams(location.search).get('asr') === 'falha')
         : new WhisperTranscriber(),
     [],
   );

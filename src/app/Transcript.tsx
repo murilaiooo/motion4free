@@ -74,7 +74,9 @@ export function Transcript({ words, captions, segments, time, playing, onSeek, o
   const current = pages[Math.min(page, pages.length - 1)] ?? [];
   return (
     <div className="transcript-wrap">
-      <p className="hint">Clique numa palavra para ir até ela e corrigir a legenda. Enter confirma, Esc cancela. Riscado = trecho cortado.</p>
+      <p className="hint transcript-legend">
+        <span className="kbd">Enter</span> confirma · <span className="kbd">Esc</span> cancela · <s>riscado</s> = trecho cortado
+      </p>
       <div className="transcript" ref={rootRef} data-testid="transcript">
         <Paragraph blocks={current} editing={editing} onSeek={seek} onOpen={open} onClose={close} onEdit={edit} />
       </div>

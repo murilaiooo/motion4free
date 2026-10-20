@@ -246,9 +246,10 @@ label { cursor: pointer; }
   padding: 5px 8px; border-radius: var(--r-sm);
   background: var(--text-1); color: var(--bg-0);
   font-size: var(--fs-2xs); font-weight: 600; white-space: nowrap;
-  opacity: 0; transition: opacity var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+  display: none;
 }
-[data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: translate(-50%, 0); transition-delay: 350ms; }
+[data-tip]:hover::after, [data-tip]:focus-visible::after { display: block; transform: translate(-50%, 0); animation: m4f-tip 160ms var(--ease) 350ms both; }
+@keyframes m4f-tip { from { opacity: 0; } to { opacity: 1; } }
 [data-tip-side='right']::after { left: calc(100% + 10px); top: 50%; transform: translate(-2px, -50%); }
 [data-tip-side='right']:hover::after, [data-tip-side='right']:focus-visible::after { transform: translate(0, -50%); }
 
