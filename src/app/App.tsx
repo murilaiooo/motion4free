@@ -218,7 +218,10 @@ function EditorApp() {
             await resumeMulti(id, loaded.project, clipMap, true);
             return;
           }
-        } catch {}
+        } catch (err) {
+          fail(err);
+          return;
+        }
       }
       setPending({ id, project: loaded.project });
       return;
@@ -234,28 +237,42 @@ function EditorApp() {
     step('Abrindo o projeto salvo (multi)', 0);
     setAsrModel(null);
     const { openMedia } = await import('../media/input');
+    const { decodeAudio } = await import('../media/audio');
+    const { combineAudios } = await import('../media/multi');
+    const h = restoreHistory(project);
     const clips: import('../media/multi').OpenedClip[] = [];
     const clipSources = new Map<string, import('../media/sources').ClipSource>();
+    const audiosByClip: Record<string, import('../media/audio').DecodedAudio | null> = {};
+    const audioWarnings: AppError[] = [];
     let totalDur = 0;
-    for (const c of (project.history.present as any).clips) {
+    for (const [index, c] of h.present.clips.entries()) {
       const blob = clipMap.get(c.id);
       if (!blob) throw new AppError('CLIPES_AUSENTES', c.id);
+      step(`Abrindo clipe ${index + 1}/${h.present.clips.length}`, index / h.present.clips.length);
       const media = await openMedia(blob);
-      clips.push({ id: c.id, file: blob, name: c.name, media, durationSec: media.durationSec, words: [], silences: [], audio: null });
+      const audio = media.audio
+        ? await decodeAudio(media.audio, media.durationSec).catch((err): null => {
+            audioWarnings.push(new AppError('AUDIO_FALHOU', `${c.name}: ${describeError(err)}`));
+            return null;
+          })
+        : null;
+      audiosByClip[c.id] = audio;
+      clips.push({ id: c.id, file: blob, name: c.name, media, durationSec: media.durationSec, words: [], silences: [], audio });
       clipSources.set(c.id, { id: c.id, video: media.video, width: media.width, height: media.height });
       totalDur += media.durationSec;
     }
-    const h = restoreHistory(project);
+    // O áudio deve ser reconstituído para o preview e o MP4, não apenas os quadros.
+    const combinedAudio = combineAudios(h.present.clips, audiosByClip);
     setFileName(project.video.name);
     setSession({
-      file: clipMap.get((project.history.present as any).clips[0].id)!,
+      file: clipMap.get(h.present.clips[0]!.id)!,
       fileName: project.video.name,
       media: clips[0]!.media,
-      audio: null,
+      audio: combinedAudio,
       ctx: { durationSec: totalDur, words: project.words },
       silences: project.silences,
-      warnings: project.warnings.map((w) => new AppError(w.key, w.detail)),
-      peaks: null,
+      warnings: [...project.warnings.map((w) => new AppError(w.key, w.detail)), ...audioWarnings],
+      peaks: peaksOf(combinedAudio),
       clipSources,
       openedClips: clips,
     } as any);
@@ -297,6 +314,23 @@ function EditorApp() {
     else storeCopy(id, file);
     // projeto migrado da v0.10 ainda sem miniatura
     if (fs && !(await fs.readFile([...PROJECTS_DIR, id, THUMB]).catch(() => null))) storeThumb(id, media, h.present);
+  }
+
+  /** Grava todos os clipes em uma fila e mostra falhas, inclusive nos clipes 2..N. */
+  function storeMultiCopies(id: string, clips: import('../media/multi').OpenedClip[]) {
+    if (!fs) return;
+    setCopy('pending');
+    void enqueue(async () => {
+      const { saveClipVideo } = await import('../core/project-library');
+      for (const clip of clips) {
+        // c1 fica em video.bin para poupar espaço e manter projetos anteriores compatíveis.
+        if (clip.id === 'c1') await saveVideo(fs, id, clip.file);
+        else await saveClipVideo(fs, id, clip.id, clip.file);
+      }
+    }).then(() => setCopy('done')).catch((err) => {
+      setCopy('failed');
+      notify(new AppError('SALVAR_FALHOU', `Não foi possível guardar todos os clipes: ${describeError(err)}`));
+    });
   }
 
   function storeCopy(id: string, file: Blob) {
@@ -420,10 +454,7 @@ function EditorApp() {
       if (storageAvailable() && fs) {
         void enqueue(() => setCurrent(fs, id)).catch(() => undefined);
         if (multi && multi.clips.length > 1) {
-          for (const c of multi.clips) {
-            if (c.id === multi.clips[0]!.id) void storeCopy(id, c.file);
-            else void enqueue(() => import('../core/project-library').then(m => m.saveClipVideo(fs, id, c.id, c.file))).catch(()=>undefined);
-          }
+          storeMultiCopies(id, multi.clips);
         } else {
           void storeCopy(id, primary);
         }
