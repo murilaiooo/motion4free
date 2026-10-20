@@ -43,14 +43,15 @@ tests/*.test.ts              e2e/primeiro-mp4.spec.ts
 
 ## Tarefa 0 — Esqueleto do projeto
 
-**Arquivos:** criar `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.tsx` (provisório); alterar `.gitignore`.
+**Arquivos:** criar `.npmrc`, `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.tsx` (provisório); alterar `.gitignore`.
 
-**Passo 1.** Na raiz do repositório:
+**Passo 1.** Na raiz do repositório (o `.npmrc` evita que o Transformers.js baixe binários nativos do onnxruntime-node, que não usamos e que falham sem acesso ao GitHub):
 
 ```bash
+printf 'onnxruntime-node-install=skip\n' > .npmrc
 npm init -y
 npm install --save-exact react@19.3.1 react-dom@19.3.1 mediabunny@1.61.6 @mediabunny/aac-encoder@1.61.6 @huggingface/transformers@4.3.1 zod@4.6.7
-npm install --save-exact --save-dev typescript@7.0.2 vite@8.3.4 vitest@5.0.5 @vitejs/plugin-react@6.1.2 @types/react@19.3.0 @types/react-dom@19.3.0 @types/node @playwright/test@1.64.1
+npm install --save-exact --save-dev typescript@7.0.2 vite@8.3.4 vitest@5.0.5 @vitejs/plugin-react@6.1.2 @types/react@19.3.0 @types/react-dom@19.3.0 @types/node@22 @playwright/test@1.64.1
 ```
 
 **Passo 2.** Ajustar o `package.json` (manter as dependências que o npm escreveu):

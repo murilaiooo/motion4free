@@ -52,6 +52,15 @@ Lista completa e ressalvas de licença em [repositórios de referência](docs/re
 ## Custo e privacidade
 Custo zero é uma restrição de projeto: nada de API ou servidor pago, nada de contornar limites de serviços gratuitos. Vídeos e transcrições ficam no dispositivo por padrão. IA externa, quando existir, só com a chave da própria pessoa e consentimento claro, e nunca recebe o vídeo. A mídia original nunca é alterada.
 
+## Rodar localmente (desenvolvimento)
+Requer Node 22.
+```bash
+npm install
+npm run dev                     # abre em http://localhost:5173
+npm test                        # testes de unidade
+npm run fixture && npm run e2e  # teste de ponta a ponta (precisa de ffmpeg)
+```
+
 ## Toolkit de agentes
 O [Vibe Coding Toolkit](https://github.com/soumatheusgomes/vibe-coding-toolkit) está como submódulo em `tooling/vibe-coding-toolkit` (prompts e processos, não é o motor). Para clonar com ele: `git clone --recurse-submodules https://github.com/murilaiooo/motion4free.git`.
 
