@@ -1801,10 +1801,28 @@ Neste ambiente sem Chromium padrão, usar `CHROMIUM_PATH=/caminho/do/chrome npm 
 
 ## Tarefa 16 — CI e build de hospedagem
 
+Instalar o publicador da Cloudflare: `npm install --save-exact --save-dev wrangler@4.151.2`.
+
+`wrangler.jsonc`
+
+```jsonc
+// Hospedagem na Cloudflare (Workers com arquivos estáticos). O site é só o build do Vite em ./dist.
+{
+  "name": "motion4free",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
+```
+
+Verificação: `npm run build && npx wrangler deploy --dry-run` lê os arquivos de `dist` sem erro.
+
 `scripts/prune-dist.mjs`
 
 ```js
-// Cloudflare Pages aceita no máximo 25 MiB por arquivo. O runtime ONNX já é
+// A Cloudflare aceita no máximo 25 MiB por arquivo. O runtime ONNX já é
 // carregado do CDN jsdelivr pelo Transformers.js, então a cópia local é removida.
 import { readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
@@ -1878,12 +1896,12 @@ jobs:
 
 ## Tarefa 18 — Publicar (ação única do murilo) e teste real
 
-**Passo a passo para conectar a hospedagem (uma vez só, sem custo):**
+**Passo a passo para conectar a hospedagem (uma vez só, sem custo).** A Cloudflare concentra os sites novos em *Workers* (o fluxo antigo de *Pages* fica escondido), então o repositório traz um `wrangler.jsonc` que publica `./dist` como arquivos estáticos e o `wrangler` fixado como dependência de desenvolvimento.
 1. Criar conta grátis em <https://dash.cloudflare.com/sign-up>.
-2. No painel: **Workers & Pages → Create → Pages → Connect to Git**.
-3. Autorizar o GitHub e escolher o repositório `murilaiooo/motion4free`.
-4. Configurar: *Framework preset* = `None`; *Build command* = `npm run build`; *Build output directory* = `dist`; em *Environment variables* adicionar `NODE_VERSION` = `22`.
-5. Clicar em **Save and Deploy**. O endereço fica parecido com `motion4free.pages.dev`, e cada PR passa a ganhar um link de prévia próprio.
+2. No menu lateral: **Compute (Workers) → Workers & Pages → Create application**.
+3. Na aba **Workers**, escolher **Import a repository**, autorizar o GitHub e escolher `murilaiooo/motion4free`.
+4. Configurar: *Project name* = `motion4free`; *Build command* = `npm run build`; *Deploy command* = `npx wrangler deploy` (padrão); em *Advanced settings → Build variables* adicionar `NODE_VERSION` = `22`. Se aparecer opção de builds para branches que não são a principal, deixar ligada (gera link de prévia por PR).
+5. **Create and deploy**. O endereço fica parecido com `motion4free.<subdomínio>.workers.dev`.
 
 **Teste real (gate da Fase 1, roteiro no [plano mestre](2026-10-20-plano-mestre.md#fase-1--primeiro-mp4)):** três vídeos reais exportados em H.264 no Chrome/Edge, abertos no celular, sem cortes comendo palavras, legendas ≥ 90% corretas, tempos de análise e exportação anotados.
 

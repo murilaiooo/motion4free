@@ -24,7 +24,7 @@ Sem GPU ou sem IA disponível, o site continua cortando, legendando, animando po
 | [Stack (ADR-0005)](docs/decisions/0005-stack-v1.md) | **Decidida**: TypeScript, Vite, React, Mediabunny, Transformers.js |
 | [Plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md) | Pronto, 6 fases com gates |
 | [Plano detalhado da Fase 1](docs/superpowers/plans/2026-10-20-fase1-primeiro-mp4.md) | Pronto e validado em protótipo (28 testes + MP4 real) |
-| Site publicado | Não implantado (Cloudflare Pages ao fim da Fase 1) |
+| Site publicado | Não implantado (Cloudflare, ao fim da Fase 1) |
 | Avaliação de qualidade criativa | Não executada (gate da Fase 3) |
 
 ## Como o trabalho acontece

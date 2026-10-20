@@ -46,7 +46,7 @@ Whisper base multilíngue com timestamps por palavra (`onnx-community/whisper-ba
 Silêncio é medido pela energia do áudio (RMS em quadros de 20 ms, limiar −40 dBFS, mínimo 0,45 s). A transcrição só **protege**: nenhum corte pode cair dentro de uma palavra reconhecida, e há 120 ms de margem em cada emenda, com fade de 8 ms no áudio para não estalar.
 
 ### Hospedagem
-Cloudflare Pages com integração Git: grátis, funciona com o repositório privado, gera uma URL de prévia por branch (cada PR vira um link para testar) e aceita cabeçalhos customizados se um dia precisarmos de COOP/COEP. GitHub Pages foi descartado porque não publica repositório privado no plano gratuito. Limite de 25 MiB por arquivo: o `.wasm` do ONNX (~27 MB) é removido do build porque o runtime já o carrega do CDN.
+Cloudflare com integração Git, publicado como Worker de arquivos estáticos (`wrangler.jsonc` apontando para `./dist`), porque o painel da Cloudflare passou a criar sites novos em Workers e esconde o fluxo antigo de Pages (ajustado em 20/10/2026 após o primeiro contato com o painel). Grátis, funciona com o repositório privado, gera uma URL de prévia por branch (cada PR vira um link para testar) e aceita cabeçalhos customizados se um dia precisarmos de COOP/COEP. GitHub Pages foi descartado porque não publica repositório privado no plano gratuito. Limite de 25 MiB por arquivo: o `.wasm` do ONNX (~27 MB) é removido do build porque o runtime já o carrega do CDN.
 
 ### Estrutura do repositório
 App na raiz: `src/` (código), `tests/` (unidade), `e2e/` (ponta a ponta), `scripts/`, `public/`. Camadas puras (`core`, `engine`, `analysis`, `editorial`, `render`) não importam APIs do navegador; `media`, `asr` e `app` sim.

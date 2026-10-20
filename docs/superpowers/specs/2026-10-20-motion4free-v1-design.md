@@ -68,7 +68,7 @@ A IA disponível de graça no navegador é fraca para inventar arte do zero. Por
 | Validação | zod |
 | Testes | Vitest (unidade) + Playwright (ponta a ponta, verificando o MP4 gerado) |
 | CI | GitHub Actions |
-| Hospedagem | Cloudflare Pages (grátis, funciona com repositório privado, URL de prévia por branch) |
+| Hospedagem | Cloudflare Workers com arquivos estáticos (grátis, funciona com repositório privado, link de prévia por branch) |
 | Licença do código | MIT |
 | Navegador-alvo inicial | Chrome/Edge atuais no computador |
 
