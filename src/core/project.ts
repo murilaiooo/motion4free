@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ERRORS, type ErrorKey } from './errors';
 import { anyPlanSchema } from './schema';
-import type { EditPlan, TimeRange, Word } from './types';
+import type { ClipRef, EditPlan, TimeRange, Word } from './types';
 import { createHistory, type History } from '../engine/history';
 import { MAX_VERSIONS, VERSION_NAME_MAX, type PlanVersion } from './versions';
 
@@ -30,6 +30,8 @@ export interface SavedProject {
   video: VideoMeta;
   words: Word[];
   silences: TimeRange[];
+  /** Anotações locais de todos os arquivos, inclusive dos clipes guardados no histórico de desfazer. */
+  clipAnnotations?: Record<string, { words: Word[]; silences: TimeRange[] }>;
   warnings: SavedWarning[];
   history: { past: EditPlan[]; present: EditPlan; future: EditPlan[] };
   /** versões com nome (formato 2; projetos do formato 1 abrem sem versões) */
@@ -47,6 +49,10 @@ const projectSchema = z.object({
   video: z.object({ name: z.string(), size: z.number().int().nonnegative(), durationSec: time }),
   words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
   silences: z.array(z.object({ start: time, end: time })),
+  clipAnnotations: z.record(z.string(), z.object({
+    words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
+    silences: z.array(z.object({ start: time, end: time })),
+  })).optional(),
   warnings: z.array(z.object({ key: errorKey, detail: z.string() })),
   // planos v1 (Fase 2) são migrados para v2 ao abrir
   history: z.object({ past: z.array(anyPlanSchema), present: anyPlanSchema, future: z.array(anyPlanSchema) }),
@@ -78,4 +84,13 @@ export function restoreHistory(p: SavedProject): History<EditPlan> {
 /** O arquivo escolhido de novo é o mesmo do projeto? Confere tamanho exato e duração. */
 export function sameVideo(meta: VideoMeta, candidate: { size: number; durationSec: number }): boolean {
   return meta.size === candidate.size && Math.abs(meta.durationSec - candidate.durationSec) < 0.1;
+}
+
+
+/** Nenhum vídeo referenciado pelo histórico/versões deve sumir quando o usuário desfaz e salva. */
+export function referencedClips(project: Pick<SavedProject, 'history' | 'versions'>): ClipRef[] {
+  const seen = new Map<string, ClipRef>();
+  const plans = [project.history.present, ...project.history.past, ...project.history.future, ...project.versions.map(v => v.plan)];
+  for (const plan of plans) for (const c of plan.clips) if (!seen.has(c.id)) seen.set(c.id, c);
+  return [...seen.values()];
 }
