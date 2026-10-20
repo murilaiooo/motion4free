@@ -126,6 +126,11 @@ export class PlanPlayer {
     }
   }
 
+  /** Redesenha o quadro parado (ex.: fontes do estilo acabaram de carregar). */
+  redraw(): void {
+    if (!this.playing) this.draw(this.pausedAt);
+  }
+
   destroy(): void {
     this.stop();
     this.session++;
