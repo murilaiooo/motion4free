@@ -1,5 +1,5 @@
 import { planSummary } from '../core/text';
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Captions, ChevronRight, Download, History, LayoutTemplate, Magnet, MousePointerClick, Palette, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, X } from 'lucide-react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, TimeRange } from '../core/types';
@@ -20,6 +20,10 @@ import { loadKey } from '../ai/own-key';
 import type { AiSettings } from './AiOptions';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
+import { PreviewOverlay } from './PreviewOverlay';
+import { setElementPlacement, deleteElement, duplicateElement, setElementText } from '../editorial/manual';
+import type { ElementRef } from '../editorial/elements';
+import { elementName, resolvePlan, sceneText, sameRef as sameEl } from '../editorial/elements';
 import { ErrorBox } from './ErrorBox';
 import { BriefPanel, HookPanel } from './BriefPanel';
 import { TemplateGallery } from './Templates';
@@ -29,6 +33,12 @@ import { ChangesPanel, ReferencePicker, VersionsPanel, type CompareView } from '
 import { Transcript } from './Transcript';
 import { TopBar, type SaveState } from './TopBar';
 import { VERSION_LABEL, APP_BUILT_AT } from '../version';
+import { FormatSelector } from './FormatSelector';
+import { placeWords, totalDuration } from '../engine/clips';
+import { reorderClipPlan } from '../editorial/clip-ops';
+import { combineAudios } from '../media/multi';
+import { waveformPeaks } from '../analysis/waveform';
+import { ClipList } from './ClipList';
 
 export interface Session {
   file: Blob;
@@ -39,6 +49,13 @@ export interface Session {
   silences: TimeRange[];
   warnings: AppError[];
   peaks: Float32Array | null;
+  /** multi-clip: mapa de fontes por clipId e áudio combinado */
+  clipSources?: Map<string, import('../media/sources').ClipSource> | null;
+  clipAudios?: Map<string, DecodedAudio> | null;
+  openedClips?: import('../media/multi').OpenedClip[] | null;
+  clipWords?: Record<string, import('../core/types').Word[]>;
+  clipSilences?: Record<string, TimeRange[]>;
+  originalVideo?: { name: string; size: number; durationSec: number };
 }
 
 interface Result {
@@ -109,13 +126,14 @@ interface EditorProps {
   /** modelo que fez a legenda (v0.8), quando o vídeo acabou de ser transcrito */
   asrModel?: string | null;
   onReplaceFile: (f: File) => void;
+  onAddClips: (files: File[]) => void;
   /** avisos do app (projeto, transcrição, sem áudio…) */
   notices: ReactNode;
   /** menu do projeto na barra do topo (v0.11: renomear, fechar, apagar, armazenamento) */
   projectMenu?: ReactNode;
 }
 
-export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, notices, projectMenu }: EditorProps) {
+export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, projectMenu }: EditorProps) {
   const plan = history.present;
   const [tab, setTab] = useState<TabId>('modelos');
   const [selection, setSelection] = useState<TimeRange | null>(null);
@@ -126,6 +144,14 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const before = comparedVersion?.plan ?? history.past.at(-1) ?? null;
   const beforeLabel = comparedVersion ? `a versão “${comparedVersion.name}”` : 'antes da última mudança';
   const shown = view === 'antes' && before ? before : plan;
+  const ctx = session.clipWords
+    ? { durationSec: totalDuration(plan.clips), words: placeWords(plan.clips, session.clipWords) }
+    : session.ctx;
+  const shownAudio = useMemo(() => {
+    if (!session.clipAudios) return session.audio;
+    return combineAudios(shown.clips, Object.fromEntries(session.clipAudios));
+  }, [session, shown.clips]);
+  const peaks = useMemo(() => shownAudio ? waveformPeaks(shownAudio.channels[0]!, 1200, true) : null, [shownAudio]);
   const range = selectedRange ? (plan.ranges.find((r) => r.id === selectedRange) ?? null) : null;
   const activeSelection = range ? range.out : selection;
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -136,6 +162,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const [playing, setPlaying] = useState(false);
   const [safeZone, setSafeZone] = useState(false);
   const [selectedCut, setSelectedCut] = useState<number | null>(null);
+  const [selectedEl, setSelectedEl] = useState<ElementRef | null>(null);
+  const [editingEl, setEditingEl] = useState<ElementRef | null>(null);
   const [editError, setEditError] = useState<AppError | null>(null);
   const [playerError, setPlayerError] = useState<AppError | null>(null);
   const [exporting, setExporting] = useState<number | null>(null);
@@ -167,7 +195,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
   // Um player por vídeo aberto; o plano é trocado sem recriar.
   useEffect(() => {
-    const player = new PlanPlayer(session.media, session.audio, canvasRef.current!, shownRef.current);
+    const player = new PlanPlayer(session.media, shownAudio, canvasRef.current!, shownRef.current, 0.5, session.clipSources ?? undefined);
     player.onTime = (t, p) => {
       setTime(t);
       setPlaying(p);
@@ -211,17 +239,17 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   }, [usesEmoji]);
 
   useEffect(() => {
-    playerRef.current?.setPlan(shown);
+    playerRef.current?.setPlan(shown, shownAudio);
     setTime((t) => Math.min(t, outputDuration(shown.segments)));
-  }, [shown]);
+  }, [shown, shownAudio]);
 
-  const cuts = listCuts(plan.segments, session.ctx.durationSec);
+  const cuts = listCuts(plan.segments, ctx.durationSec);
   // palavras faladas no trecho selecionado (vão para a IA, se escolhida, junto com o pedido do trecho)
   const rangeWords = (() => {
     if (!activeSelection) return [];
     const a = outputToSource(plan.segments, activeSelection.start) ?? 0;
     const b = outputToSource(plan.segments, Math.max(activeSelection.start, activeSelection.end - 0.001)) ?? a;
-    return session.ctx.words.filter((w) => w.end > a && w.start < b);
+    return ctx.words.filter((w) => w.end > a && w.start < b);
   })();
   const total = outputDuration(plan.segments);
 
@@ -243,7 +271,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     if (!activeSelection) return null;
     try {
       const target = selectedRange ? { id: selectedRange } : activeSelection;
-      const r = applyRange(history.present, session.ctx, target, req);
+      const r = applyRange(history.present, ctx, target, req);
       onHistory(pushHistory(history, r.plan));
       setView('depois');
       if (r.rangeId) setSelectedRange(r.rangeId);
@@ -312,7 +340,13 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     setExportOpen(true);
     setExporting(0);
     try {
-      const out = await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
+      // Route to multi-clip export when session has multiple sources
+      const multiSources = session.clipSources;
+      const isMulti = !!multiSources && multiSources.size > 0;
+      const multiAudio = session.clipAudios ? combineAudios(plan.clips, Object.fromEntries(session.clipAudios)) : session.audio;
+      const out = isMulti
+        ? await (await import('../media/export')).exportPlanMulti(multiSources!, multiAudio, plan, { onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
+        : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
       if (result) URL.revokeObjectURL(result.url);
       const base = session.fileName.replace(/\.[^.]+$/, '');
       setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, codec: out.codec, where: out.where, style: plan.style.name, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning });
@@ -327,11 +361,11 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const nudge = (which: 'start' | 'end', delta: number) => {
     if (!cut || selectedCut === null) return;
     const r = which === 'start' ? { start: cut.start + delta, end: cut.end } : { start: cut.start, end: cut.end + delta };
-    apply((p) => adjustCut(p, session.ctx, selectedCut, r));
+    apply((p) => adjustCut(p, ctx, selectedCut, r));
   };
   const setEdge = (which: 'start' | 'end', value: number) => {
     if (!cut || selectedCut === null || !Number.isFinite(value)) return;
-    apply((p) => adjustCut(p, session.ctx, selectedCut, which === 'start' ? { start: value, end: cut.end } : { start: cut.start, end: value }));
+    apply((p) => adjustCut(p, ctx, selectedCut, which === 'start' ? { start: value, end: cut.end } : { start: cut.start, end: value }));
   };
 
   const pickTab = (id: TabId) => {
@@ -392,7 +426,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             <p className="scene-summary" data-testid="scene-summary">
               Animações neste estilo: {describeScenes(plan.scenes)}.
             </p>
-            <TemplateGallery current={plan.style.id} onPick={(id) => apply((p) => applyStyle(p, session.ctx, id))} disabled={off} />
+            <TemplateGallery current={plan.style.id} onPick={(id) => apply((p) => applyStyle(p, ctx, id))} disabled={off} />
             <p className="hint">
               <a href="?galeria" target="_blank" rel="noreferrer">
                 Ver todos os modelos lado a lado, cena por cena
@@ -400,7 +434,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             </p>
           </div>
           <div role="tabpanel" id="panel-pedido" aria-labelledby="tab-pedido" hidden={tab !== 'pedido'}>
-            <BriefPanel plan={plan} words={session.ctx.words} onBrief={(b) => apply((p) => applyBrief(p, session.ctx, b))} disabled={off} ai={ai} onAi={setAi} />
+            <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} disabled={off} ai={ai} onAi={setAi} />
           </div>
           <div role="tabpanel" id="panel-legendas" aria-labelledby="tab-legendas" hidden={tab !== 'legendas'} className="stack">
             {asrModel && (
@@ -408,10 +442,10 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
                 <Captions size={14} aria-hidden /> Legenda feita com {asrModel}.
               </p>
             )}
-            <Transcript words={session.ctx.words} captions={plan.captions} segments={plan.segments} time={time} playing={playing} onSeek={seek} onEdit={(id, text) => apply((p) => editCaptionText(p, id, text))} disabled={off} />
+            <Transcript words={ctx.words} captions={plan.captions} segments={plan.segments} time={time} playing={playing} onSeek={seek} onEdit={(id, text) => apply((p) => editCaptionText(p, id, text))} disabled={off} />
           </div>
           <div role="tabpanel" id="panel-gancho" aria-labelledby="tab-gancho" hidden={tab !== 'gancho'}>
-            <HookPanel plan={plan} words={session.ctx.words} onHook={(h) => apply((p) => applyHook(p, session.ctx, h))} disabled={off} />
+            <HookPanel plan={plan} words={ctx.words} onHook={(h) => apply((p) => applyHook(p, ctx, h))} disabled={off} />
           </div>
           <div role="tabpanel" id="panel-trechos" aria-labelledby="tab-trechos" hidden={tab !== 'trechos'} className="stack">
             <div className="card how">
@@ -480,7 +514,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
                 </span>
               ))}
             </div>
-            <ReferencePicker reference={plan.reference} onReference={(r) => apply((p) => applyReferencePalette(p, session.ctx, r))} disabled={off} />
+            <ReferencePicker reference={plan.reference} onReference={(r) => apply((p) => applyReferencePalette(p, ctx, r))} disabled={off} />
           </div>
         </div>
       </section>
@@ -489,7 +523,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <div className="stage-head">
           <div className="summary" data-testid="summary">
             <span className="stat">
-              <span className="muted">Original</span> <b className="tnum">{session.ctx.durationSec.toFixed(1)} s</b>
+              <span className="muted">Original</span> <b className="tnum">{ctx.durationSec.toFixed(1)} s</b>
             </span>
             <ChevronRight size={14} className="muted" aria-hidden />
             <span className="stat">
@@ -499,7 +533,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
               </b>
             </span>
             <span className="summary-sep" aria-hidden />
-            <span className="muted summary-detail">{planSummary(plan.segments.length, plan.captions.length, session.ctx.words.length)}</span>
+            <span className="muted summary-detail">{planSummary(plan.segments.length, plan.captions.length, ctx.words.length)}</span>
           </div>
         </div>
         <div className="stage-notices">
@@ -512,6 +546,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <div className="viewer">
           <div className="canvas-box">
             <canvas ref={canvasRef} data-testid="player-canvas" onClick={togglePlay} />
+            <PreviewOverlay plan={plan} time={time} selected={selectedEl} onSelect={setSelectedEl} onChange={(next)=>apply(()=>next)} canvasRef={canvasRef} onEditText={setEditingEl} disabled={off} />
             {safeZone && (
               <div className="safe-zone" style={{ top: `${SAFE.top}%`, left: `${SAFE.left}%`, right: `${SAFE.right}%`, bottom: `${SAFE.bottom}%` }} aria-hidden>
                 <span>Área segura do Reels</span>
@@ -542,7 +577,24 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
       <aside className="inspector" ref={inspectorRef} aria-label="Detalhes">
         <h2 className="insp-title">Detalhes</h2>
-        {cut && selectedCut !== null ? (
+        <div className="card" style={{display:'grid',gap:10,marginBottom:12}} data-testid="clip-and-format">
+          <FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off || disabled} />
+          <ClipList
+            clips={plan.clips.map(c => ({ id:c.id, name:c.name || c.id, duration:c.duration, file: new File([], c.name) }))}
+            onReorder={(next) => {
+              const ordered = next.map(n => plan.clips.find(c => c.id === n.id)!).filter(Boolean);
+              apply(p => reorderClipPlan(p, ordered, session.clipWords ?? {}));
+            }}
+            onRemove={(id) => {
+              const remaining = plan.clips.filter(c => c.id !== id);
+              if (remaining.length > 0) apply(p => reorderClipPlan(p, remaining, session.clipWords ?? {}));
+            }}
+            onAdd={onAddClips}
+          />
+        </div>
+        {selectedEl ? (
+          <ElementInspector plan={plan} refEl={selectedEl} onChange={(next)=>apply(()=>next)} onClose={()=>setSelectedEl(null)} onEditText={(t)=>apply((p)=>setElementText(p, selectedEl!, t))} editing={editingEl} setEditing={setEditingEl} />
+        ) : cut && selectedCut !== null ? (
           <div className="cut-panel card" data-testid="cut-panel">
             <div className="card-head">
               <h3 className="section-title">
@@ -555,7 +607,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             <p className="hint">
               De {fmt(cut.start)} até {fmt(cut.end)} ({fmt(cut.end - cut.start)}) do vídeo original.
             </p>
-            <button className="primary" onClick={() => apply((p) => restoreCut(p, session.ctx, selectedCut))} data-testid="restore-cut">
+            <button className="primary" onClick={() => apply((p) => restoreCut(p, ctx, selectedCut))} data-testid="restore-cut">
               Restaurar este trecho
             </button>
             <div className="edges">
@@ -608,6 +660,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           <div className="card empty-insp">
             <MousePointerClick size={18} aria-hidden />
             <p className="hint">Clique num corte (listrado) na linha do tempo para restaurar ou ajustar, ou arraste na faixa Trechos para mudar só um pedaço.</p>
+
           </div>
         )}
         <ChangesPanel before={before} beforeLabel={beforeLabel} plan={plan} view={view} onView={setView} onSeek={seek} time={time} />
@@ -615,10 +668,10 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
       <div className="tl-area">
         <Timeline
-          durationSec={session.ctx.durationSec}
+          durationSec={ctx.durationSec}
           plan={plan}
           cuts={cuts}
-          peaks={session.peaks}
+          peaks={peaks}
           time={time}
           playing={playing}
           selectedCut={selectedCut}
@@ -693,3 +746,56 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   );
 }
 
+
+
+function ElementInspector({ plan, refEl, onChange, onClose, onEditText, editing, setEditing }: { plan: import('../core/types').EditPlan; refEl: ElementRef; onChange: (n: import('../core/types').EditPlan)=>void; onClose: ()=>void; onEditText: (t:string)=>void; editing: ElementRef|null; setEditing: (r:ElementRef|null)=>void }) {
+  const name = (() => { try { return elementName(plan, refEl); } catch { return 'Elemento'; } })();
+  const [draft, setDraft] = useState('');
+  const isEditing = editing && sameEl(editing, refEl);
+  useEffect(() => {
+    if (isEditing) {
+      try {
+        const { resolvePlan, sceneText } = require('../editorial/elements');
+        const R = resolvePlan(plan);
+        if (refEl.type === 'added') {
+          const a = R.added.find((x:any)=> x.el.id===refEl.id);
+          setDraft(a?.el.text ?? '');
+        } else if (refEl.type === 'scene') {
+          const s = R.scenes.find((x:any)=> x.key===refEl.key);
+          setDraft(s ? (sceneText(s.scene) ?? '') : '');
+        } else {
+          const c = R.captions.find((x:any)=> x.key===refEl.key);
+          setDraft(c?.caption.text ?? c?.base.text ?? '');
+        }
+      } catch { setDraft(''); }
+    }
+  }, [isEditing, plan, refEl]);
+  return (
+    <div className="card" data-testid="element-panel">
+      <div className="card-head">
+        <h3 className="section-title">{name}</h3>
+        <button className="icon sm ghost" onClick={onClose} aria-label="Fechar"><X size={15} /></button>
+      </div>
+      <p className="hint">Arraste direto no vídeo para mover. Duplo clique para editar texto. Segure Shift para travar eixo.</p>
+      {isEditing ? (
+        <div className="edit-text">
+          <textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={3} data-testid="element-text-input" />
+          <div className="row">
+            <button className="primary sm" onClick={()=>{ onEditText(draft); setEditing(null); }}>Salvar</button>
+            <button className="sm" onClick={()=>setEditing(null)}>Cancelar</button>
+          </div>
+        </div>
+      ) : (
+        <button className="sm" onClick={()=>setEditing(refEl)} data-testid="edit-text-btn">Editar texto</button>
+      )}
+      <div className="row" style={{marginTop:8}}>
+        <button className="sm" onClick={()=>{
+          try { const r = duplicateElement(plan, refEl); if (r) onChange(r.plan); } catch {}
+        }} data-testid="duplicate-el">Duplicar</button>
+        <button className="sm danger" onClick={()=>{
+          try { onChange(deleteElement(plan, refEl)); onClose(); } catch {}
+        }} data-testid="delete-el">Apagar</button>
+      </div>
+    </div>
+  );
+}

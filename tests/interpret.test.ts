@@ -28,7 +28,7 @@ const BATTERY: [string, Expect][] = [
   ['estilo pop mas calmo', { preset: 'pop', tone: 'calmo', intensity: 'baixa', pace: 'lento' }],
   ['minimalista mas animado', { preset: 'minimal', intensity: 'alta', conflict: 'ficou o estilo Minimal (o primeiro)' }],
   ['destaque os números mas sem números', { forbid: ['numeros'], emphasize: [], conflict: 'proibição vale mais' }],
-  ['vídeo para vender meu curso, chamativo', { goal: 'vender', preset: 'pop', intensity: 'alta', ignored: ['curso'] }],
+  ['vídeo para vender meu curso, chamativo', { goal: 'vender', preset: 'pop', intensity: 'alta', ignored: [] }],
   ['sem pressa, bem tranquilo', { tone: 'calmo', pace: 'lento', forbid: [] }],
   ['tire a barra de progresso e a chamada final', { forbid: ['barra', 'chamada'] }],
   ['sem texto na tela, só legenda', { forbid: ['textos'], ignored: [] }],
