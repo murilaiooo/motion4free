@@ -1,6 +1,19 @@
 # Verificação de qualidade — Motion4Free
 
-> Integração do Vibe Coding Toolkit **adaptada ao estado do repositório**: não há aplicação para executar lint, typecheck, tests ou build de produto.
+> **Atualizado na Fase 1 (20/10/2026):** o app existe e tem verificações automáticas.
+
+## Verificações do app (Fase 1)
+| Comando | O que verifica |
+|---|---|
+| `npm run typecheck` | Tipos de todo o código (TypeScript estrito) |
+| `npm test` | Testes de unidade das camadas puras: contratos, linha do tempo, silêncio, cortes protegidos, legendas, render, emenda de áudio |
+| `npm run build` | Build de produção e remoção do `.wasm` do ONNX acima de 25 MiB |
+| `npm run fixture && npm run e2e` | Ponta a ponta no Chromium: vídeo com pausas → análise → exportação → MP4 conferido (1080×1920, AAC, duração) |
+
+A CI (`.github/workflows/app-ci.yml`) roda os quatro em todo PR. O Chromium de testes não tem H.264, então a CI valida o caminho de reserva (VP9 + AAC em WASM); o caminho H.264 é validado no teste manual no Chrome, conforme o [plano mestre](superpowers/plans/2026-10-20-plano-mestre.md).
+
+## Histórico (antes do app)
+Integração do Vibe Coding Toolkit adaptada ao estado documental do repositório.
 
 ## Evidência atual
 - GitHub Actions `Documentation check`: valida arquivos obrigatórios e links Markdown relativos. Ver [Actions](https://github.com/murilaiooo/motion4free/actions).

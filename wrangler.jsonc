@@ -1,0 +1,9 @@
+// Hospedagem na Cloudflare (Workers com arquivos estáticos). O site é só o build do Vite em ./dist.
+{
+  "name": "motion4free",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

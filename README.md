@@ -24,7 +24,7 @@ Sem GPU ou sem IA disponível, o site continua cortando, legendando, animando po
 | [Stack (ADR-0005)](docs/decisions/0005-stack-v1.md) | **Decidida**: TypeScript, Vite, React, Mediabunny, Transformers.js |
 | [Plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md) | Pronto, 6 fases com gates |
 | [Plano detalhado da Fase 1](docs/superpowers/plans/2026-10-20-fase1-primeiro-mp4.md) | Pronto e validado em protótipo (28 testes + MP4 real) |
-| Site publicado | Não implantado (Cloudflare Pages ao fim da Fase 1) |
+| Site publicado | Não implantado (Cloudflare, ao fim da Fase 1) |
 | Avaliação de qualidade criativa | Não executada (gate da Fase 3) |
 
 ## Como o trabalho acontece
@@ -51,6 +51,15 @@ Lista completa e ressalvas de licença em [repositórios de referência](docs/re
 
 ## Custo e privacidade
 Custo zero é uma restrição de projeto: nada de API ou servidor pago, nada de contornar limites de serviços gratuitos. Vídeos e transcrições ficam no dispositivo por padrão. IA externa, quando existir, só com a chave da própria pessoa e consentimento claro, e nunca recebe o vídeo. A mídia original nunca é alterada.
+
+## Rodar localmente (desenvolvimento)
+Requer Node 22.
+```bash
+npm install
+npm run dev                     # abre em http://localhost:5173
+npm test                        # testes de unidade
+npm run fixture && npm run e2e  # teste de ponta a ponta (precisa de ffmpeg)
+```
 
 ## Toolkit de agentes
 O [Vibe Coding Toolkit](https://github.com/soumatheusgomes/vibe-coding-toolkit) está como submódulo em `tooling/vibe-coding-toolkit` (prompts e processos, não é o motor). Para clonar com ele: `git clone --recurse-submodules https://github.com/murilaiooo/motion4free.git`.

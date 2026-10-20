@@ -8,7 +8,7 @@ Este plano diz **o que** cada fase entrega, **como murilo testa** e **o que prec
 1. O agente escreve o plano detalhado da fase.
 2. Implementa tarefa por tarefa com TDD (teste falhando → código → teste passando → commit).
 3. Abre um PR. A CI roda os testes de unidade, o build e o teste de ponta a ponta no navegador.
-4. O PR ganha um **link de prévia** (Cloudflare Pages). murilo abre o link e segue o **roteiro de teste** do PR.
+4. O PR ganha um **link de prévia** (Cloudflare). murilo abre o link e segue o **roteiro de teste** do PR.
 5. murilo responde no projeto com o que achou. O agente corrige até o gate passar e faz o merge.
 
 ### Formato do feedback de teste

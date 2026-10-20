@@ -1,0 +1,17 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; --accent: #ffd400; }
+body { margin: 0; background: Canvas; color: CanvasText; }
+.app { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { margin: 0 0 4px; }
+.sub { opacity: 0.75; margin-top: 0; }
+.drop { display: block; border: 2px dashed currentColor; border-radius: 12px; padding: 32px 16px; text-align: center; cursor: pointer; margin: 24px 0; }
+.drop input { display: none; }
+.drop.disabled { opacity: 0.5; cursor: progress; }
+.status { display: grid; gap: 8px; margin: 16px 0; }
+.status progress { width: 100%; }
+.error { color: #d33; }
+.warn { color: #b80; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; }
+button { font: inherit; padding: 10px 16px; border-radius: 8px; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+button.primary { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 700; }
+button:disabled { opacity: 0.5; cursor: progress; }
+.result video { width: 100%; max-height: 70vh; background: #000; border-radius: 12px; margin: 16px 0 8px; }

@@ -32,3 +32,7 @@ user-media/
 renders/
 exports/
 models-cache/
+# Playwright
+test-results/
+playwright-report/
+e2e/fixtures/
