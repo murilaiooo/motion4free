@@ -1,4 +1,6 @@
+import { MB, formatBytes } from '../core/bytes';
 import { AppError, describeError } from '../core/errors';
+import { spaceCheck } from '../core/storage-report';
 import { LLM_MODELS, localAiErrorKey, type LlmKey } from '../core/llm-models';
 import { llmModelRecord } from '../core/mirror';
 import { REPLY_MAX_TOKENS, chatTurns, type AiMessages, type Completer } from '../editorial/ai-brief';
@@ -47,8 +49,18 @@ export async function loadLocalAi(key: LlmKey, onProgress: (fraction: number, te
       const webllm = await import('@mlc-ai/web-llm');
       const worker = new Worker(new URL('./webllm.worker.ts', import.meta.url), { type: 'module' });
       const origin = import.meta.env.DEV ? null : self.location.origin;
+      const appConfig = { model_list: [llmModelRecord(origin, key)] };
+      // ainda não baixado e sem espaço: avisa antes de começar um download que não vai caber (M4F-1014)
+      if (!(await webllm.hasModelInCache(model.id, appConfig).catch(() => true))) {
+        const est = await navigator.storage?.estimate?.().catch(() => null);
+        const check = spaceCheck(est && typeof est.usage === 'number' && typeof est.quota === 'number' ? { usage: est.usage, quota: est.quota } : null, model.downloadMB * MB);
+        if (!check.ok) {
+          worker.terminate();
+          throw new AppError('IA_SEM_ESPACO', `livre para o app: ${formatBytes(check.free ?? 0)}; o modelo ${model.id} precisa de cerca de ${formatBytes(check.needed)}`);
+        }
+      }
       const e = await webllm.CreateWebWorkerMLCEngine(worker, model.id, {
-        appConfig: { model_list: [llmModelRecord(origin, key)] },
+        appConfig,
         initProgressCallback: (r) => onProgress(r.progress, r.text),
       });
       unloadFn = async () => {

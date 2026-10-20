@@ -17,3 +17,25 @@ export function formatBytes(bytes: number): string {
 }
 
 export const MB = 1024 * 1024;
+
+/** Duração curta: "0:42", "2:05". */
+export function formatClock(sec: number): string {
+  const s = Math.max(0, Math.round(sec));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** "agora há pouco", "há 5 min", "há 3 h", "ontem", "há 4 dias" ou a data (dd/mm/aaaa). */
+export function formatWhen(iso: string, now: number): string {
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return '';
+  const min = Math.floor((now - t) / 60_000);
+  if (min < 1) return 'agora há pouco';
+  if (min < 60) return `há ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `há ${h} h`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'ontem';
+  if (d < 7) return `há ${d} dias`;
+  const date = new Date(t);
+  return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+}

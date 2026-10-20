@@ -29,7 +29,7 @@ export const ERRORS = {
   TRECHO_CURTO: { code: 'M4F-505', title: 'O trecho precisa ter pelo menos meio segundo dentro do vídeo editado.' },
   TRECHO_SOBREPOSTO: { code: 'M4F-506', title: 'Este pedaço encosta num trecho já ajustado. Clique no trecho existente ou escolha outro pedaço.' },
   SALVAR_FALHOU: { code: 'M4F-601', title: 'Não foi possível salvar o projeto neste navegador. As edições se perdem ao fechar a aba.' },
-  PROJETO_CORROMPIDO: { code: 'M4F-602', title: 'O projeto salvo não pôde ser aberto e foi descartado.' },
+  PROJETO_CORROMPIDO: { code: 'M4F-602', title: 'O projeto salvo não pôde ser aberto. Ele continua em Meus projetos; você pode apagá-lo.' },
   VIDEO_DIFERENTE: { code: 'M4F-603', title: 'Este não é o mesmo vídeo do projeto salvo.' },
   VIDEO_AUSENTE: { code: 'M4F-604', title: 'Para continuar o projeto salvo, escolha de novo o vídeo original.' },
   VERSAO_LIMITE: { code: 'M4F-605', title: 'Limite de 20 versões guardadas. Apague uma para guardar outra.' },

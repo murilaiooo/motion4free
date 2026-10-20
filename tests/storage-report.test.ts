@@ -17,6 +17,9 @@ class FakeCaches implements CacheBackend {
   async names() {
     return [...this.store.keys()];
   }
+  async urls(cache: string) {
+    return (this.store.get(cache) ?? []).map((e) => e.url);
+  }
   async entries(cache: string) {
     return [...(this.store.get(cache) ?? [])];
   }

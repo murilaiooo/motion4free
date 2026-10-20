@@ -1,7 +1,7 @@
 # Catálogo de erros
 
 Cada problema mostra na tela um código `M4F-xxx`. O código-fonte do catálogo é `src/core/errors.ts`.
-Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos, 6xx projeto salvo e versões, 7xx player, 8xx estilo, animações e imagem de referência, 9xx desconhecido, 10xx pedido por texto (geral e por trecho) e IA.
+Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos, 6xx projeto salvo, versões e armazenamento, 7xx player, 8xx estilo, animações e imagem de referência, 9xx desconhecido, 10xx pedido por texto (geral e por trecho) e IA.
 
 | Código | Mensagem | O que costuma significar |
 |---|---|---|
@@ -29,10 +29,19 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-505 | O trecho precisa ter pelo menos meio segundo dentro do vídeo editado. | O pedaço selecionado é curto demais ou está fora do vídeo editado. Arraste um pedaço maior ou corrija os campos de início e fim. |
 | M4F-506 | Este pedaço encosta num trecho já ajustado. Clique no trecho existente ou escolha outro pedaço. | Trechos ajustados não podem se sobrepor. Clique no trecho que já existe (faixa "Trechos") para mudar o pedido dele. |
 | M4F-601 | Não foi possível salvar o projeto neste navegador. As edições se perdem ao fechar a aba. | O navegador não oferece armazenamento local (OPFS), está em janela anônima ou sem espaço. A edição e a exportação continuam funcionando. |
-| M4F-602 | O projeto salvo não pôde ser aberto e foi descartado. | O arquivo do projeto no navegador está incompleto ou é de uma versão incompatível. Escolha o vídeo de novo. |
+| M4F-602 | O projeto salvo não pôde ser aberto. Ele continua em Meus projetos; você pode apagá-lo. | O arquivo do projeto no navegador está incompleto ou é de uma versão incompatível. Até a v0.10 o projeto era descartado sozinho; desde a v0.11 ele fica na lista ("Este projeto não abre" quando falta o arquivo de dados) e só sai se você apagar. |
 | M4F-603 | Este não é o mesmo vídeo do projeto salvo. | Ao reabrir, o vídeo escolhido tem tamanho ou duração diferente do original do projeto. Escolha o arquivo certo ou comece outro vídeo. |
 | M4F-604 | Para continuar o projeto salvo, escolha de novo o vídeo original. | O navegador apagou (ou não conseguiu guardar) a cópia local do vídeo. O projeto e as edições continuam salvos; basta escolher o mesmo arquivo. |
 | M4F-605 | Limite de 20 versões guardadas. Apague uma para guardar outra. | Já existem 20 versões no projeto. Apague uma antiga na lista "Versões". |
+| M4F-606 | Pode faltar espaço neste navegador para guardar este vídeo (e o modelo de legenda, se ainda não foi baixado). Libere espaço em Armazenamento ou continue mesmo assim. | Antes de abrir um vídeo novo, o app compara o tamanho da cópia do vídeo (mais o download do modelo de legenda, se ele ainda não está no navegador) com o espaço livre que o navegador informa (`navigator.storage.estimate`), com 10% de folga. O detalhe mostra o espaço livre e quanto precisa. "Continuar mesmo assim" segue (se a cópia não couber, o projeto fica sem a cópia e o app pede o vídeo de novo ao reabrir: M4F-604). |
+| M4F-607 | Este navegador não informa quanto espaço o app está usando; os tamanhos mostrados são só o que deu para medir. | Navegador sem `navigator.storage.estimate` (ou ela falhou). A tela Armazenamento mostra só a soma do que mediu item a item. |
+| M4F-608 | Este navegador não deixa o app guardar projetos (comum em janela anônima). Dá para editar e exportar, mas nada fica salvo. | Sem armazenamento privado (OPFS, `navigator.storage.getDirectory`). Aparece na primeira tela e na tela Armazenamento. Use uma janela normal do Chrome, Edge ou Firefox. |
+| M4F-609 | Este navegador não deixa ver os modelos baixados; não dá para medir nem apagar esses arquivos por aqui. | Sem Cache Storage (`caches`), onde ficam os modelos de legenda e de IA. Eles podem ser apagados nas configurações do navegador ("Dados de sites"). |
+| M4F-610 | Não foi possível apagar tudo o que foi pedido. O que não saiu continua na lista. | O navegador recusou apagar algum arquivo, cache ou banco (outra aba usando, bloqueio do navegador). O detalhe lista o que falhou. Feche outras abas do app e tente de novo. |
+| M4F-611 | O navegador não aceitou guardar os dados de forma permanente. Eles continuam salvos, mas ele pode apagá-los se o computador ficar sem espaço. | `navigator.storage.persist()` respondeu "não" (o Chrome decide sozinho, por exemplo se o site foi pouco usado ou não está nos favoritos; o Firefox pergunta). Não é falha: nada foi perdido. |
+| M4F-612 | Não foi possível duplicar o projeto (pode faltar espaço). Nada mudou. | A cópia inclui a cópia do vídeo; se não couber, ela é desfeita. O detalhe traz o espaço livre e quanto precisava. |
+| M4F-613 | Não foi possível passar o projeto da versão anterior para "Meus projetos". Ele continua guardado; o app tenta de novo na próxima vez. | A v0.11 move o projeto único das versões anteriores (pasta `motion4free-projeto`) para a lista. Se faltar espaço ou o navegador recusar, a pasta antiga fica intacta (aparece em Armazenamento → Outros como "Projeto da versão anterior"). |
+| M4F-614 | Não foi possível ler a lista de projetos salvos neste navegador. | Falha ao ler a pasta dos projetos no OPFS. O detalhe traz o erro do navegador. Recarregue a página. |
 | M4F-701 | Não foi possível tocar a prévia. | Falha ao decodificar quadros ou iniciar o som da prévia; a exportação pode funcionar mesmo assim. Ver detalhe. |
 | M4F-801 | As fontes do estilo não carregaram; o vídeo usa uma fonte reserva. | Os arquivos de fonte do app não baixaram (rede instável, bloqueio do navegador) na página ou durante a geração do vídeo. Tudo continua funcionando, mas as letras ficam com a fonte padrão do sistema. Recarregue a página; o detalhe lista quais fontes falharam. |
 | M4F-802 | Este estilo não existe nesta versão do app. | Pedido de troca para um estilo que esta versão não tem. Nada é alterado. |
@@ -52,6 +61,7 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-1011 | Não há outra animação possível neste trecho (falta fala ou as animações foram proibidas). | "Troca essa animação" num trecho sem palavras reconhecidas ou com as animações proibidas pelo pedido. Nada muda. |
 | M4F-1012 | A IA respondeu fora do formato duas vezes (mesmo depois de pedir correção); usei as regras. | A resposta da IA não tinha um objeto JSON (ou nenhum campo válido) e a segunda tentativa, com o erro explicado, também falhou. O pedido foi entendido só pelas regras. Com o modelo leve isso é mais comum; tente o modelo padrão ou a chave própria. |
 | M4F-1013 | Este aparelho não tem memória de vídeo suficiente para o modelo de IA escolhido; usei as regras. Tente o modelo leve. | A placa de vídeo não tem memória para o modelo (o padrão pede ~1,6 GB; o forte, ~3,4 GB) ou o navegador perdeu a GPU ao carregar. Escolha "leve" (~0,9 GB) ou use a chave própria. |
+| M4F-1014 | Falta espaço neste navegador para baixar o modelo de IA; usei as regras. Libere espaço em Armazenamento. | Antes de baixar o modelo de IA (leve ~300 MB, padrão ~0,9 GB, forte ~2,3 GB) o app confere o espaço livre que o navegador informa. Apague projetos ou modelos que não usa na tela Armazenamento, ou escolha o modelo leve. |
 | M4F-999 | Erro inesperado. | Erro não previsto; ver detalhe. |
 
 Erros 3xx são avisos: o vídeo continua sendo editado e exportado sem legendas e sem título.

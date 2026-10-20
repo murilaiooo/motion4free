@@ -24,6 +24,8 @@ export interface CacheEntry {
 
 export interface CacheBackend {
   names(): Promise<string[]>;
+  /** só as URLs (rápido: não mede nada) */
+  urls(cache: string): Promise<string[]>;
   entries(cache: string): Promise<CacheEntry[]>;
   deleteEntries(cache: string, urls: string[]): Promise<void>;
   deleteCache(cache: string): Promise<void>;
@@ -138,8 +140,8 @@ export async function cachedRepos(caches: CacheBackend | null): Promise<Set<stri
   const out = new Set<string>();
   if (!caches) return out;
   for (const name of await caches.names()) {
-    for (const e of await caches.entries(name)) {
-      const repo = HF_REPO.exec(e.url)?.[1];
+    for (const url of await caches.urls(name)) {
+      const repo = HF_REPO.exec(url)?.[1];
       if (repo) out.add(repo);
     }
   }
@@ -237,7 +239,7 @@ export async function deleteItem(deps: StorageDeps, item: StorageItem): Promise<
         if (!deps.caches) throw new Error('Cache Storage ausente');
         await deps.caches.deleteEntries(ref.cache, ref.urls);
         // cache que ficou vazio sai inteiro (libera também o espaço de controle)
-        if ((await deps.caches.entries(ref.cache)).length === 0) await deps.caches.deleteCache(ref.cache);
+        if ((await deps.caches.urls(ref.cache)).length === 0) await deps.caches.deleteCache(ref.cache);
       } else {
         if (!deps.idb) throw new Error('IndexedDB ausente');
         await deps.idb.remove(ref.name);

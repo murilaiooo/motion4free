@@ -20,7 +20,7 @@ import {
   saveVideo,
   setCurrent,
 } from '../src/core/project-library';
-import { formatBytes } from '../src/core/bytes';
+import { formatBytes, formatClock, formatWhen } from '../src/core/bytes';
 import { MemoryFs } from './helpers/memory-fs';
 
 const words = [{ id: 'w1', text: 'Olá.', start: 0.1, end: 0.5 }];
@@ -188,5 +188,18 @@ describe('formatBytes', () => {
     expect(formatBytes(350 * 1024 * 1024)).toBe('350 MB');
     expect(formatBytes(1.4 * 1024 ** 3)).toBe('1,4 GB');
     expect(formatBytes(2 * 1024 ** 3)).toBe('2 GB');
+  });
+
+  it('duração e "quando" em português', () => {
+    expect(formatClock(42.4)).toBe('0:42');
+    expect(formatClock(125)).toBe('2:05');
+    const now = Date.parse('2026-10-20T12:00:00');
+    expect(formatWhen('2026-10-20T11:59:40', now)).toBe('agora há pouco');
+    expect(formatWhen('2026-10-20T11:55:00', now)).toBe('há 5 min');
+    expect(formatWhen('2026-10-20T09:00:00', now)).toBe('há 3 h');
+    expect(formatWhen('2026-10-19T09:00:00', now)).toBe('ontem');
+    expect(formatWhen('2026-10-16T12:00:00', now)).toBe('há 4 dias');
+    expect(formatWhen('2026-09-01T12:00:00', now)).toBe('01/09/2026');
+    expect(formatWhen('lixo', now)).toBe('');
   });
 });
