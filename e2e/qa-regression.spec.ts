@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 const RED = 'e2e/fixtures/clip-red.webm';
 const BLUE = 'e2e/fixtures/clip-blue.webm';
@@ -93,7 +94,11 @@ test('QA: um arquivo corrompido entre arquivos válidos não cancela o projeto n
   test.setTimeout(180_000);
   await page.goto('/?asr=vazio');
   const invalid = { name: 'defeituoso.mp4', mimeType: 'video/mp4', buffer: Buffer.from('isto nao e um video') };
-  await page.getByTestId('file-input').setInputFiles([invalid, RED, BLUE]);
+  await page.getByTestId('file-input').setInputFiles([
+    invalid,
+    { name: 'clip-red.webm', mimeType: 'video/webm', buffer: readFileSync(RED) },
+    { name: 'clip-blue.webm', mimeType: 'video/webm', buffer: readFileSync(BLUE) },
+  ]);
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('clip-c2')).toBeVisible();
   await expect(page.getByTestId('clip-c3')).toHaveCount(0);
