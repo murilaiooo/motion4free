@@ -106,12 +106,14 @@ interface EditorProps {
   onVersions: (v: PlanVersion[]) => void;
   disabled: boolean;
   saveState: SaveState;
+  /** modelo que fez a legenda (v0.8), quando o vídeo acabou de ser transcrito */
+  asrModel?: string | null;
   onReplaceFile: (f: File) => void;
   /** avisos do app (projeto, transcrição, sem áudio…) */
   notices: ReactNode;
 }
 
-export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, onReplaceFile, notices }: EditorProps) {
+export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, notices }: EditorProps) {
   const plan = history.present;
   const [tab, setTab] = useState<TabId>('modelos');
   const [selection, setSelection] = useState<TimeRange | null>(null);
@@ -397,7 +399,12 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           <div role="tabpanel" id="panel-pedido" aria-labelledby="tab-pedido" hidden={tab !== 'pedido'}>
             <BriefPanel plan={plan} words={session.ctx.words} onBrief={(b) => apply((p) => applyBrief(p, session.ctx, b))} disabled={off} ai={ai} onAi={setAi} />
           </div>
-          <div role="tabpanel" id="panel-legendas" aria-labelledby="tab-legendas" hidden={tab !== 'legendas'}>
+          <div role="tabpanel" id="panel-legendas" aria-labelledby="tab-legendas" hidden={tab !== 'legendas'} className="stack">
+            {asrModel && (
+              <p className="asr-model" data-testid="asr-model">
+                <Captions size={14} aria-hidden /> Legenda feita com {asrModel}.
+              </p>
+            )}
             <Transcript words={session.ctx.words} captions={plan.captions} segments={plan.segments} time={time} playing={playing} onSeek={seek} onEdit={(id, text) => apply((p) => editCaptionText(p, id, text))} disabled={off} />
           </div>
           <div role="tabpanel" id="panel-gancho" aria-labelledby="tab-gancho" hidden={tab !== 'gancho'}>

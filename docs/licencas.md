@@ -30,6 +30,18 @@ Todas sob a **SIL Open Font License 1.1 (OFL)**, que permite usar, embutir e red
 - **Como regenerar:** `scripts/make-emoji-font.sh` (npm pack do pacote fixado + `pyftsubset` do fonttools, MIT). Não roda no build nem na CI.
 - **Rejeitado:** imagens PNG do pacote `emoji-datasource` (64 px no máximo, ficariam borradas no tamanho do vídeo).
 
+## Modelos de transcrição (Whisper)
+Não são empacotados no site: o navegador baixa sob demanda, pelo espelho (`/hf/…`, ADR-0006) ou direto do Hugging Face, e guarda no próprio cache. Arquivos sem modificação.
+
+| Modelo | Origem | Licença | Usado em |
+|---|---|---|---|
+| Whisper large-v3-turbo, ONNX com tempo por palavra (desde a v0.8.0) | `huggingface.co/onnx-community/whisper-large-v3-turbo_timestamped` (original: openai/whisper-large-v3-turbo, OpenAI) | **MIT** (cartão do modelo original; código e pesos do Whisper são MIT em github.com/openai/whisper) | Precisa, com placa de vídeo |
+| Whisper small, ONNX com tempo por palavra (desde a v0.8.0) | `huggingface.co/onnx-community/whisper-small_timestamped` (original: openai/whisper-small) | **Apache-2.0** no cartão do Hugging Face (pesos também publicados pela OpenAI sob MIT) | Precisa, sem placa de vídeo |
+| Whisper base, ONNX com tempo por palavra (desde a v0.1.0) | `huggingface.co/onnx-community/whisper-base_timestamped` (original: openai/whisper-base) | **Apache-2.0** no cartão do Hugging Face (MIT na OpenAI) | Rápida e reserva final |
+| Runtime ONNX (`onnxruntime-web`) | cdn.jsdelivr.net, versão fixada pelo `@huggingface/transformers` 4.3.1 | MIT | todos |
+
+As duas licenças permitem uso comercial e redistribuição. **Reconferir nas páginas dos modelos antes de divulgar**: o ambiente de desenvolvimento não alcança o Hugging Face (ver [ADR-0013](decisions/0013-legenda-precisa.md)).
+
 ## IA opcional no navegador (desde a v0.4.0)
 Só é baixada se a pessoa ligar "IA no navegador" no painel avançado; o resto do app não depende dela.
 

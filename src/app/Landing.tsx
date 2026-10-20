@@ -45,7 +45,7 @@ function Footer() {
  * Primeira tela: promessa, área para soltar o vídeo, nota de privacidade e exemplos de modelos
  * desenhados de verdade (mesma `drawFrame` do vídeo final).
  */
-export function Landing({ onFile, busy, pendingName, notices }: { onFile: (f: File) => void; busy: boolean; pendingName: string | null; notices: ReactNode }) {
+export function Landing({ onFile, busy, pendingName, notices, options }: { onFile: (f: File) => void; busy: boolean; pendingName: string | null; notices: ReactNode; options?: ReactNode }) {
   const [over, setOver] = useState(false);
   const examples = listTemplates().slice(0, 4);
   const drop = (e: DragEvent) => {
@@ -85,6 +85,8 @@ export function Landing({ onFile, busy, pendingName, notices }: { onFile: (f: Fi
               ou <u>clique para escolher</u> · vídeo seu falando, até 3 minutos (MP4, MOV ou WebM)
             </span>
           </label>
+
+          {options}
 
           <p className="privacy">
             <ShieldCheck size={16} aria-hidden /> Seu vídeo nunca sai deste aparelho. Tudo é feito aqui no navegador.

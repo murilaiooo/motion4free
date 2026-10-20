@@ -13,8 +13,22 @@ A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Mo
 - **Atalhos**: Espaço toca/pausa, J e L voltam/avançam 1 segundo, Ctrl+Z desfaz, Ctrl+Shift+Z refaz. Clicar na prévia também toca.
 - **Tema claro** opcional (botão do sol, no alto); o escuro continua o padrão.
 - **Celular e tablet**: prévia em cima, ferramentas numa barra embaixo, sem rolar para o lado.
+- A **Precisão da legenda** (Rápida/Precisa, da v0.8) fica logo abaixo da área de soltar o vídeo, em dois cartões; **"Legenda feita com …"** aparece no alto da aba Legendas.
 - Tudo o que existia continua lá (pedido por texto, IA opcional, gancho, trechos e travas, versões, cores de uma imagem, cortes, exportar, avisos com código e "Copiar detalhes"). Projetos salvos antes abrem normalmente.
 - Roteiro de teste refeito para o novo visual: [roteiro-de-teste.md](roteiro-de-teste.md).
+
+## v0.8.0 — 20/10/2026
+Legenda muito mais certa, principalmente em vídeos longos e gravados no celular.
+- **Modelo de legenda maior**: no modo **Precisa** (o padrão), o app usa o *Whisper large-v3-turbo*, um modelo bem maior que o anterior, na placa de vídeo do computador. Ele baixa **cerca de 1,4 GB na primeira vez** (depois fica guardado no navegador). Sem placa de vídeo compatível, usa o *Whisper small* no processador (cerca de 250 MB; demora alguns minutos num vídeo de 2–3 min).
+- **Escolha "Precisão da legenda"** embaixo da caixa do vídeo: **Precisa** (recomendada) ou **Rápida** (o modelo pequeno de antes, para computadores fracos ou pressa). Cada opção mostra o tamanho do download. A escolha fica lembrada.
+- **Nunca fica sem legenda por causa do modelo**: se o modelo grande não funcionar no seu computador (falta de memória, navegador antigo, internet caiu no meio do download), o app passa sozinho para o próximo e avisa com o código **M4F-307**, dizendo qual modelo fez a legenda. Embaixo do resumo aparece "Legenda feita com …".
+- **Menos palavras perdidas ou repetidas** nos pontos em que o app divide o áudio em pedaços: cada pedaço agora ouve um pouco do vizinho, e a palavra da emenda entra uma vez só.
+- **Sem frases inventadas**: o app tira frases que o modelo inventa no silêncio (como "Legendas pela comunidade Amara.org") e repetições em laço ("e aí e aí e aí e aí…"); trechos só de silêncio nem vão para o modelo. A fala é sempre tratada como português.
+- **Legenda mais junto da voz**: a última palavra antes de uma pausa não fica mais "pendurada" na tela durante a pausa, e a primeira depois da pausa não aparece antes da hora.
+- **Medir o acerto**: a página `?avaliar` (para teste) transcreve um vídeo seu, compara com o texto que você colar e mostra a porcentagem de acerto, os erros mais comuns e quanto tempo levou. Ver [ai/avaliar-legenda.md](ai/avaliar-legenda.md).
+- Ainda não medido num vídeo real: o ambiente de desenvolvimento não baixa os modelos. O teste do responsável é que vai dizer quanto melhorou.
+- Projetos salvos nas versões anteriores abrem normalmente (com a legenda que já tinham).
+- Novo código: M4F-307. Decisão técnica: [ADR-0013](decisions/0013-legenda-precisa.md).
 
 ## v0.7.0 — 20/10/2026
 Testamos o app inteiro do começo ao fim e caprichamos no movimento para ficar com cara de editor profissional.

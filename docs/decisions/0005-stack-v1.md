@@ -40,7 +40,7 @@ Uma função pura `drawFrame(ctx, plano, t, quadroDeOrigem)` desenha cada quadro
 Conferido: o Chromium de testes do Playwright não tem H.264; por isso o teste automático usa um vídeo VP9/Opus e valida o caminho de reserva, e o caminho H.264 é validado no teste manual no Chrome.
 
 ### Transcrição
-Whisper base multilíngue com timestamps por palavra (`onnx-community/whisper-base_timestamped`), idioma fixo português, janelas de 30 s. Roda em Web Worker; tenta WebGPU e cai para WASM quantizado. O modelo vem do Hugging Face e o runtime ONNX do CDN jsdelivr, ambos grátis e cacheados pelo navegador; nenhum dado do usuário é enviado. O ID do modelo é uma constante, trocável se o teste real mostrar problema.
+Whisper base multilíngue com timestamps por palavra (`onnx-community/whisper-base_timestamped`), idioma fixo português, janelas de 30 s. Roda em Web Worker; tenta WebGPU e cai para WASM quantizado. O modelo vem do Hugging Face e o runtime ONNX do CDN jsdelivr, ambos grátis e cacheados pelo navegador; nenhum dado do usuário é enviado. O ID do modelo é uma constante, trocável se o teste real mostrar problema. **Atualizado na v0.8.0 ([ADR-0013](0013-legenda-precisa.md)):** escada large-v3-turbo (WebGPU) → small (WASM) → base, janelas de até 28 s com 1 s de folga.
 
 ### Cortes
 Silêncio é medido pela energia do áudio (RMS em quadros de 20 ms, limiar −40 dBFS, mínimo 0,45 s). A transcrição só **protege**: nenhum corte pode cair dentro de uma palavra reconhecida, e há 120 ms de margem em cada emenda, com fade de 8 ms no áudio para não estalar.

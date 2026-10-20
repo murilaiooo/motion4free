@@ -13,6 +13,9 @@ import { Gallery } from './Gallery';
 import { Landing, Processing } from './Landing';
 import { Logo, type SaveState } from './TopBar';
 import { analyze, openWithAudio } from './pipeline';
+import { useAsrPrecision } from './asr-precision';
+import { AsrPrecisionOption } from './AsrPrecisionOption';
+import { Evaluate } from './Evaluate';
 import { clearProject, loadProject, saveProject, saveVideoCopy, storageAvailable } from './project-store';
 
 type Status = { kind: 'idle' } | { kind: 'working'; label: string; fraction: number } | { kind: 'ready' } | { kind: 'error'; error: AppError };
@@ -25,6 +28,8 @@ function peaksOf(audio: Session['audio']): Float32Array | null {
 }
 
 const GALLERY = typeof location !== 'undefined' && new URLSearchParams(location.search).has('galeria');
+/** `?avaliar`: página de desenvolvimento que mede o acerto da legenda num vídeo real (docs/ai/avaliar-legenda.md). */
+const EVALUATE = typeof location !== 'undefined' && new URLSearchParams(location.search).has('avaliar');
 
 export function App() {
   if (GALLERY) {
@@ -49,6 +54,7 @@ export function App() {
       </div>
     );
   }
+  if (EVALUATE) return <Evaluate />;
   return <EditorApp />;
 }
 
@@ -56,10 +62,16 @@ function EditorApp() {
   const transcriber = useMemo(
     () =>
       import.meta.env.VITE_FAKE_ASR === '1'
-        ? new FakeTranscriber(new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : new URLSearchParams(location.search).get('asr') === 'demo' ? FAKE_DEMO_CHUNKS : FAKE_CHUNKS, new URLSearchParams(location.search).get('asr') === 'falha')
+        ? new FakeTranscriber(
+            new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : new URLSearchParams(location.search).get('asr') === 'demo' ? FAKE_DEMO_CHUNKS : FAKE_CHUNKS,
+            new URLSearchParams(location.search).get('asr') === 'falha',
+            new URLSearchParams(location.search).get('asr') === 'reserva',
+          )
         : new WhisperTranscriber(),
     [],
   );
+  const precision = useAsrPrecision();
+  const [asrModel, setAsrModel] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [session, setSession] = useState<Session | null>(null);
   const [history, setHistory] = useState<History<EditPlan> | null>(null);
@@ -105,6 +117,7 @@ function EditorApp() {
   async function resume(project: SavedProject, file: Blob, copyExists: boolean) {
     setFileName(project.video.name);
     step('Abrindo o projeto salvo', 0);
+    setAsrModel(null);
     const { media, audio } = await openWithAudio(file, step);
     if (!sameVideo(project.video, { size: file.size, durationSec: media.durationSec })) {
       throw new AppError('VIDEO_DIFERENTE', `salvo: ${project.video.name}, ${project.video.size} bytes, ${project.video.durationSec.toFixed(2)} s; escolhido: ${file.size} bytes, ${media.durationSec.toFixed(2)} s`);
@@ -153,10 +166,12 @@ function EditorApp() {
       return;
     }
     setSession(null);
+    setAsrModel(null);
     setHistory(null);
     setNotices([]);
     try {
-      const a = await analyze(f, transcriber, step);
+      const a = await analyze(f, transcriber, step, { asrMode: precision.mode });
+      setAsrModel(a.asrModel);
       await clearProject();
       const h = createHistory(a.plan);
       setVersions([]);
@@ -187,6 +202,7 @@ function EditorApp() {
     await clearProject();
     setPending(null);
     setSession(null);
+    setAsrModel(null);
     setHistory(null);
     setNotices([]);
     setStatus({ kind: 'idle' });
@@ -255,6 +271,7 @@ function EditorApp() {
         onVersions={setVersions}
         disabled={busy}
         saveState={saveState}
+        asrModel={asrModel}
         onReplaceFile={(f) => void onFile(f)}
         notices={
           <>
@@ -273,6 +290,7 @@ function EditorApp() {
       onFile={(f) => void onFile(f)}
       busy={busy}
       pendingName={pending?.video.name ?? null}
+      options={!pending && <AsrPrecisionOption precision={precision} disabled={busy} />}
       notices={
         (pendingNotice || status.kind === 'error' || notices.length > 0) && (
           <div className="land-notices">

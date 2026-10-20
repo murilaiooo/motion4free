@@ -1,14 +1,13 @@
 /// <reference lib="webworker" />
 import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
+import { groupPieces, looksDegenerate, type AsrChunk, type WindowResult } from '../analysis/asr-merge';
+import type { AsrWindow } from '../analysis/asr-windows';
+import { ASR_CANDIDATES, whisperOptions, type AsrCandidateId } from '../core/asr-models';
 import { AppError, describeError, httpErrorFromUrl, networkErrorFromUrl, toAppError } from '../core/errors';
-import { HF_PREFIX, MODEL_ID, mirrorCdnUrl } from '../core/mirror';
+import { HF_PREFIX, mirrorCdnUrl } from '../core/mirror';
 import type { FromWorker, ToWorker } from './protocol';
-import type { AsrChunk } from './words';
-
 
 const SAMPLE_RATE = 16000;
-let asr: AutomaticSpeechRecognitionPipeline | null = null;
-let device = 'wasm';
 
 const post = (m: FromWorker) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(m);
 
@@ -52,14 +51,16 @@ const SOURCES: Source[] = [
   { name: 'direto', remoteHost: 'https://huggingface.co/', wasmPaths: directWasm },
 ];
 
-async function load(): Promise<AutomaticSpeechRecognitionPipeline> {
-  if (asr) return asr;
+/** Carrega um degrau da escada, tentando o espelho e depois o servidor original. */
+async function load(id: AsrCandidateId): Promise<AutomaticSpeechRecognitionPipeline> {
+  const c = ASR_CANDIDATES[id];
+  if (c.device === 'webgpu' && !('gpu' in navigator)) throw new AppError('MODELO_CARREGAR', `${id}: navegador sem WebGPU`);
   const files = new Map<string, number>();
   const progress_callback = (p: { status: string; file?: string; progress?: number }) => {
     if (p.status === 'progress' && p.file) {
       files.set(p.file, p.progress ?? 0);
       const avg = [...files.values()].reduce((a, b) => a + b, 0) / files.size / 100;
-      post({ type: 'progress', stage: 'download', fraction: avg });
+      post({ type: 'progress', stage: 'download', fraction: avg, model: id });
     }
   };
   const networkFailures: AppError[] = [];
@@ -67,66 +68,103 @@ async function load(): Promise<AutomaticSpeechRecognitionPipeline> {
     env.remoteHost = source.remoteHost;
     if (onnxWasm) onnxWasm.wasmPaths = source.wasmPaths;
     try {
-      asr = await loadFrom(progress_callback);
-      return asr;
+      return (await pipeline('automatic-speech-recognition', c.repo, {
+        device: c.device,
+        dtype: c.dtype as 'fp32',
+        progress_callback,
+      })) as AutomaticSpeechRecognitionPipeline;
     } catch (err) {
       // Falha de download: tenta a próxima origem. Qualquer outra falha é do modelo, não da rede.
       if (err instanceof AppError && (err.key === 'MODELO_REDE' || err.key === 'MODELO_HTTP')) {
         networkFailures.push(new AppError(err.key, `[${source.name}] ${err.detail}`));
         continue;
       }
-      throw err;
+      throw toAppError(err, 'MODELO_CARREGAR');
     }
   }
   const last = networkFailures[networkFailures.length - 1]!;
   throw new AppError(last.key, networkFailures.map((f) => f.detail).join(' | '));
 }
 
-async function loadFrom(progress_callback: (p: { status: string; file?: string; progress?: number }) => void): Promise<AutomaticSpeechRecognitionPipeline> {
-  device = 'gpu' in navigator ? 'webgpu' : 'wasm';
+/** Uma janela: o Whisper ouve `feed` (com folga); os tempos voltam relativos ao início de `feed`. */
+async function transcribeWindow(asr: AutomaticSpeechRecognitionPipeline, audio: Float32Array, w: AsrWindow): Promise<{ chunks: AsrChunk[]; retried: boolean }> {
+  const piece = audio.subarray(Math.floor(w.feed.start * SAMPLE_RATE), Math.ceil(w.feed.end * SAMPLE_RATE));
+  const run = async (retry: boolean) => {
+    const out = await asr(piece, whisperOptions(retry));
+    const result = Array.isArray(out) ? out[0]! : out;
+    return (result.chunks ?? []) as AsrChunk[];
+  };
+  const first = await run(false);
+  const sec = w.feed.end - w.feed.start;
+  const firstWords = groupPieces(first);
+  if (!looksDegenerate(firstWords, sec)) return { chunks: first, retried: false };
+  // Cara de laço ("e aí e aí e aí…"): mais uma tentativa proibindo repetição; fica a melhor das duas.
+  const second = await run(true);
+  const secondWords = groupPieces(second);
+  return { chunks: !looksDegenerate(secondWords, sec) || secondWords.length < firstWords.length ? second : first, retried: true };
+}
+
+async function dispose(asr: AutomaticSpeechRecognitionPipeline | null) {
   try {
-    return (await pipeline('automatic-speech-recognition', MODEL_ID, { device: device as 'webgpu', dtype: 'fp32', progress_callback })) as AutomaticSpeechRecognitionPipeline;
-  } catch (gpuErr) {
-    if (gpuErr instanceof AppError) throw gpuErr;
-    device = 'wasm';
-    try {
-      return (await pipeline('automatic-speech-recognition', MODEL_ID, { device: 'wasm', dtype: 'q8', progress_callback })) as AutomaticSpeechRecognitionPipeline;
-    } catch (wasmErr) {
-      if (wasmErr instanceof AppError) throw wasmErr;
-      throw new AppError('MODELO_CARREGAR', `webgpu: ${describeError(gpuErr)} | wasm: ${describeError(wasmErr)}`);
-    }
+    await asr?.dispose();
+  } catch {
+    // liberar memória é melhor esforço
   }
 }
 
 self.onmessage = async (e: MessageEvent<ToWorker>) => {
-  let model: AutomaticSpeechRecognitionPipeline;
-  try {
-    model = await load();
-  } catch (err) {
-    const app = toAppError(err, 'MODELO_CARREGAR');
-    post({ type: 'error', key: app.key, detail: app.detail });
-    return;
-  }
-  try {
-    const { audio, windows, language } = e.data;
-    const chunks: AsrChunk[] = [];
-    // Uma chamada por janela (≤ 30 s, cortada em silêncio): o Whisper nunca vê uma palavra partida na borda.
-    for (const [i, w] of windows.entries()) {
-      post({ type: 'progress', stage: 'transcribe', fraction: i / windows.length });
-      const piece = audio.subarray(Math.floor(w.start * SAMPLE_RATE), Math.ceil(w.end * SAMPLE_RATE));
-      if (piece.length < SAMPLE_RATE * 0.2) continue;
-      const out = await model(piece, { language, task: 'transcribe', return_timestamps: 'word' });
-      const result = Array.isArray(out) ? out[0]! : out;
-      for (const [j, c] of ((result.chunks ?? []) as AsrChunk[]).entries()) {
-        // A primeira palavra da janela é palavra nova mesmo sem espaço (chunksToWords cola pedaços sem espaço).
-        const text = j === 0 && !/^\s/.test(c.text) ? ` ${c.text}` : c.text;
-        const end = c.timestamp[1];
-        chunks.push({ text, timestamp: [c.timestamp[0] + w.start, end === null ? null : end + w.start] });
+  const { audio, windows, ladder } = e.data;
+  const results: WindowResult[] = [];
+  const failures: AppError[] = [];
+  let step = 0;
+  let asr: AutomaticSpeechRecognitionPipeline | null = null;
+  let retried = 0;
+
+  /** Desce um degrau da escada. Devolve false quando não há mais modelos. */
+  const fallBack = (err: unknown, fallbackKey: 'MODELO_CARREGAR' | 'TRANSCRICAO_FALHOU'): boolean => {
+    const app = toAppError(err, fallbackKey);
+    const from = ladder[step]!;
+    failures.push(new AppError(app.key, `${from}: ${app.detail}`));
+    step++;
+    const to = ladder[step];
+    if (to) post({ type: 'fallback', from, to, key: app.key, detail: `${from}: ${app.code} ${app.detail}`.slice(0, 600) });
+    return !!to;
+  };
+
+  let i = 0;
+  while (i < windows.length) {
+    const w = windows[i]!;
+    if (w.skip) {
+      results.push({ window: w, chunks: [] });
+      i++;
+      continue;
+    }
+    if (!asr) {
+      try {
+        asr = await load(ladder[step]!);
+      } catch (err) {
+        if (fallBack(err, 'MODELO_CARREGAR')) continue;
+        const last = failures[failures.length - 1]!;
+        post({ type: 'error', key: last.key, detail: failures.map((f) => f.detail).join(' | ') });
+        return;
       }
     }
-    post({ type: 'done', chunks, device });
-  } catch (err) {
-    const app = toAppError(err, 'TRANSCRICAO_FALHOU');
-    post({ type: 'error', key: app.key, detail: `${app.detail} [device=${device}]` });
+    post({ type: 'progress', stage: 'transcribe', fraction: i / windows.length, model: ladder[step]!, window: i + 1, windows: windows.length });
+    try {
+      const r = await transcribeWindow(asr, audio, w);
+      results.push({ window: w, chunks: r.chunks });
+      if (r.retried) retried++;
+      i++;
+    } catch (err) {
+      // Falha no meio (memória da placa de vídeo, modelo sem atenção cruzada…): continua desta janela com o próximo modelo.
+      await dispose(asr);
+      asr = null;
+      if (fallBack(err, 'TRANSCRICAO_FALHOU')) continue;
+      const last = failures[failures.length - 1]!;
+      post({ type: 'error', key: last.key, detail: `${failures.map((f) => f.detail).join(' | ')} [${describeError(err).slice(0, 80)}]` });
+      return;
+    }
   }
+  const model = ladder[Math.min(step, ladder.length - 1)]!;
+  post({ type: 'done', results, model, device: ASR_CANDIDATES[model].device, retried });
 };
