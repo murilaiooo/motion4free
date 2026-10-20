@@ -97,6 +97,8 @@ Basta responder no projeto, do jeito que for mais fácil. Ajuda muito dizer:
 
 ## Fase 5 — Ajuste por trecho e por conversa
 > Plano detalhado: [2026-10-20-fase5-trechos.md](2026-10-20-fase5-trechos.md) · decisão: [ADR-0010](../../decisions/0010-trechos-travas-versoes.md) · implementado na v0.5.0 (gate 12–18 s coberto por testes automáticos; reordenar o gancho ficou de fora, ver ADR). Roteiro consolidado das Fases 1–5: [roteiro-de-teste.md](../../roteiro-de-teste.md).
+
+> **v0.6 (iteração do feedback da v0.5):** IA como intérprete principal, espaço de parâmetros (cores, legenda, emojis, cortes) e "Ainda não sei fazer" — [plano](2026-10-20-fase6-ia-interprete.md) · [ADR-0011](../../decisions/0011-ia-interprete-e-look.md).
 **Você vai conseguir:** selecionar um trecho e pedir "mais calmo aqui", "troca essa animação", "trava esse pedaço"; o resto do vídeo não muda.
 
 **Entregas técnicas:** travas por trecho, revisão focal que recalcula só o trecho afetado, diff visual antes/depois, histórico por versão, referência visual (uma imagem sua) influenciando paleta e composição.

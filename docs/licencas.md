@@ -20,6 +20,16 @@ Todas sob a **SIL Open Font License 1.1 (OFL)**, que permite usar, embutir e red
 - **Carregamento:** `src/media/fonts.ts`, pela FontFace API, na página e dentro do Worker de exportação. Nenhuma fonte é baixada de servidor externo.
 - **Nomes reservados:** a OFL proíbe distribuir versões *modificadas* com o mesmo nome; o app usa os arquivos sem modificação.
 
+## Emojis (desde a v0.6.0)
+| Recurso | Origem (versão fixada) | Licença | O que vai no site |
+|---|---|---|---|
+| Noto Color Emoji (subconjunto) | pacote npm `@fontsource/noto-color-emoji@5.3.2`, arquivo `files/noto-color-emoji-emoji-400-normal.woff2` (fonte original: github.com/googlefonts/noto-emoji) | **SIL OFL 1.1**, Copyright 2021 Google Inc. (arquivo `LICENSE` do pacote conferido em 20/10/2026; sem "Reserved Font Name") | `src/assets/emoji/m4f-emoji.woff2` (~50 KB) com **só os 72 emojis** da lista `EMOJI_SET` (`src/core/emoji.ts`), formato COLRv1 (colorido e vetorial); licença ao lado em `src/assets/emoji/OFL.txt` e no site em `/licencas-fontes.txt` |
+
+- **Por que uma fonte própria:** o emoji do sistema muda de aparelho para aparelho e pode não existir dentro do Worker de exportação. Com a mesma fonte carregada na prévia e no Worker, o emoji sai **igual nos dois** (conferido no Chromium: mesmos pixels coloridos no canvas da página e no OffscreenCanvas do Worker).
+- **Modificação:** é um subconjunto (só os glifos usados, sem a tabela SVG), permitido pela OFL porque a licença acompanha o arquivo e a fonte não é vendida sozinha; como a licença não declara nome reservado, o arquivo pode manter o nome interno. No app ela é registrada como família `"M4F Emoji"`.
+- **Como regenerar:** `scripts/make-emoji-font.sh` (npm pack do pacote fixado + `pyftsubset` do fonttools, MIT). Não roda no build nem na CI.
+- **Rejeitado:** imagens PNG do pacote `emoji-datasource` (64 px no máximo, ficariam borradas no tamanho do vídeo).
+
 ## IA opcional no navegador (desde a v0.4.0)
 Só é baixada se a pessoa ligar "IA no navegador" no painel avançado; o resto do app não depende dela.
 
@@ -27,8 +37,12 @@ Só é baixada se a pessoa ligar "IA no navegador" no painel avançado; o resto 
 |---|---|---|---|
 | WebLLM (`@mlc-ai/web-llm`) | 0.2.85, registro npm (github.com/mlc-ai/web-llm) | Apache-2.0 (arquivo `LICENSE` do pacote conferido em 20/10/2026) | empacotado no site em arquivos separados (~6 MB), carregados por `import()` só quando ligada |
 | `loglevel` (dependência do WebLLM) | 1.9.x, registro npm | MIT | junto com o WebLLM |
-| Modelo Qwen2.5-0.5B-Instruct, quantizado q4f16 pela MLC | `huggingface.co/mlc-ai/Qwen2.5-0.5B-Instruct-q4f16_1-MLC` (pesos originais: Qwen/Qwen2.5-0.5B-Instruct, Alibaba Cloud) | Apache-2.0, declarada no cartão do modelo original. **Reconferir na página do modelo antes de divulgar**: o ambiente de desenvolvimento não alcança o Hugging Face | baixado sob demanda pelo espelho do site (`/hf/…`), arquivos sem modificação |
-| Biblioteca WebGPU do modelo (`Qwen2-0.5B-Instruct-q4f16_1_cs1k-webgpu.wasm`) | `github.com/mlc-ai/binary-mlc-llm-libs`, pasta `web-llm-models/v0_2_84/base` (a mesma da lista do WebLLM 0.2.85) | Apache-2.0 (repositório da MLC) | baixada sob demanda pelo espelho do site (`/gh/…`) |
+| Modelo "Leve": Qwen2.5-0.5B-Instruct, q4f16 pela MLC | `huggingface.co/mlc-ai/Qwen2.5-0.5B-Instruct-q4f16_1-MLC` (original: Qwen/Qwen2.5-0.5B-Instruct, Alibaba Cloud) | Apache-2.0 (cartão do modelo original) | sob demanda pelo espelho (`/hf/…`), sem modificação |
+| Modelo "Padrão" (desde a v0.6.0): Qwen2.5-1.5B-Instruct, q4f16 pela MLC | `huggingface.co/mlc-ai/Qwen2.5-1.5B-Instruct-q4f16_1-MLC` (original: Qwen/Qwen2.5-1.5B-Instruct) | Apache-2.0 (cartão do modelo original) | idem |
+| Modelo "Forte" (desde a v0.6.0): Qwen3-4B, q4f16 pela MLC | `huggingface.co/mlc-ai/Qwen3-4B-q4f16_1-MLC` (original: Qwen/Qwen3-4B) | Apache-2.0 (cartão do modelo original) | idem |
+| Bibliotecas WebGPU dos três modelos (`Qwen2-0.5B-…`, `Qwen2-1.5B-…`, `Qwen3-4B-q4f16_1_cs1k-webgpu.wasm`) | `github.com/mlc-ai/binary-mlc-llm-libs`, pasta `web-llm-models/v0_2_84/base` (a mesma da lista do WebLLM 0.2.85, conferida por teste) | Apache-2.0 (repositório da MLC) | sob demanda pelo espelho (`/gh/…`) |
+
+**Reconferir as licenças nas páginas dos modelos antes de divulgar**: o ambiente de desenvolvimento não alcança o Hugging Face. O **Qwen2.5-3B foi descartado de propósito**: ele usa a "Qwen Research License", que não permite uso comercial; o Qwen3-4B (Apache-2.0) ocupa o lugar de modelo "forte".
 
 O texto da licença Apache-2.0 acompanha o pacote npm (`node_modules/@mlc-ai/web-llm/LICENSE`) e é público em apache.org/licenses/LICENSE-2.0. A chave do Google Gemini é da própria pessoa e segue os termos do Google; o app não distribui nada do Google.
 

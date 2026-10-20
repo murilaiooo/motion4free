@@ -2,6 +2,18 @@
 
 A versão aparece no rodapé do app (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.6.0 — 20/10/2026
+O pedido por texto agora muda muito mais coisas, e a IA passa a ler o pedido inteiro.
+- **O seu pedido funciona**: *gancho diferenciado e criativo, legenda verde e amarela, emojis a cada 3 segundos* agora deixa a legenda verde com a palavra falada em amarelo, coloca emojis a cada uns 3 segundos e escolhe para abrir o vídeo uma frase sua diferente da mais óbvia. **Funciona sem IA.**
+- **Muito mais coisas que dá para pedir**: qualquer cor da legenda (por nome, como "rosa choque" ou "azul mais escuro", ou por código como #FF00AA), cor do contorno e do fundo, legenda maior ou menor, em cima, no meio ou embaixo, em maiúsculas ou minúsculas, outra fonte, legenda pulando, deslizando ou aparecendo palavra por palavra, quantas palavras por linha; cortes mais rápidos (sem pausas) ou mais calmos; tipo de transição; quanto movimento; ligar barra de progresso, zoom e destaques; gancho em forma de pergunta, de impacto ou criativo.
+- **Emojis**: a cada N segundos ou nas palavras importantes, escolhidos pelo que você está falando (💰 dinheiro, 💪 academia, 😴 dormir…), em cima, embaixo, dos lados ou longe da legenda, maiores ou menores, pulando, girando ou flutuando. Saem iguais na prévia e no vídeo final. "Sem emojis" continua valendo mais.
+- **"Apliquei" e "Ainda não sei fazer"**: no lugar de "Palavras que não usei", o site mostra o que mudou e, separado, o que você pediu e o app ainda não sabe fazer (por exemplo música de fundo, filtro preto e branco, efeitos 3D).
+- **IA mais esperta (opcional)**: a IA no navegador agora tem três tamanhos — **Padrão** (recomendado, baixa ~0,9 GB na primeira vez), **Leve** (para computadores mais fracos) e **Forte** (precisa de placa de vídeo boa). Ela lê o pedido inteiro, mostra uma frase-resumo e diz o que ainda não dá para fazer; se responder errado, o site pede para ela corrigir uma vez e, se continuar errado, usa as regras. Suas proibições continuam valendo mais que a IA. A chave do Google Gemini continua como opção.
+- **Pedidos num trecho** usam o mesmo entendimento: "legenda vermelha aqui", "emojis grandes aqui" mudam só aquele pedaço; pedaço travado continua protegido.
+- Projetos salvos nas versões anteriores abrem normalmente.
+- Novos códigos: M4F-805 (emojis não carregaram), M4F-1012 (IA respondeu errado duas vezes), M4F-1013 (falta memória de vídeo para o modelo de IA). Ver [erros.md](erros.md).
+- Roteiro de teste atualizado, com o pedido exato: [roteiro-de-teste.md](roteiro-de-teste.md).
+
 ## v0.5.0 — 20/10/2026
 Fase 5: ajuste por trecho.
 - **Mudar só um pedaço do vídeo**: na linha do tempo há uma faixa nova, "Trechos". Arraste nela para selecionar um pedaço (ou use o botão "selecione a partir de agora" e corrija início e fim). Abre um painel onde você escreve o que quer só ali: "mais calmo aqui", "sem animação aqui", "troca essa animação", "destaque isso" (palavra-chave e zoom com a sua própria fala), "sem zoom aqui", "destaque os números aqui"… **O resto do vídeo não muda**: cortes, legendas e animações fora do pedaço ficam exatamente iguais, e a legenda continua junto com a voz.

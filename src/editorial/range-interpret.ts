@@ -113,8 +113,11 @@ export function interpretRangePrompt(text: string): RangeRequest {
     r.accent = false;
     r.swap = false;
     r.emphasize = [];
-    if (r.look.emoji) delete r.look.emoji;
     r.notes.push('Você pediu "sem animação" e também um destaque ou troca: "sem animação" vale mais neste trecho.');
+  }
+  if (r.quiet && r.look.emoji) {
+    delete r.look.emoji;
+    r.notes.push('Você pediu "sem animação" e também emojis: "sem animação" vale mais neste trecho.');
   }
   r.understood = r.lock !== null || r.reset || r.swap || r.accent || r.quiet || !!r.tone || !!r.intensity || !!r.pace || r.forbid.length > 0 || r.emphasize.length > 0 || !lookIsEmpty(r.look);
   return r;

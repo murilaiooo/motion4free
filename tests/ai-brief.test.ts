@@ -321,3 +321,16 @@ describe('IA como intérprete principal: espaço de parâmetros inteiro (v0.6)',
     expect(r.proposal.tone).toBe('calmo');
   });
 });
+
+describe('cabe na janela de contexto do modelo local (4096 tokens)', () => {
+  it('sistema + exemplos + pedido + fala longa + correção ficam abaixo de ~3 400 tokens (≈ 3 caracteres por token)', async () => {
+    const { buildAiMessages, chatTurns, REPLY_MAX_TOKENS } = await import('../src/editorial/ai-brief');
+    const { findHooks } = await import('../src/editorial/hooks');
+    const { SAMPLE_TEXT, wordsFrom } = await import('./helpers/words');
+    const words = wordsFrom(`${SAMPLE_TEXT} ${SAMPLE_TEXT} ${SAMPLE_TEXT}`);
+    const m = buildAiMessages('x'.repeat(500), words, findHooks(words));
+    const withRepair = { ...m, repair: { reply: 'y'.repeat(5000), problem: 'z'.repeat(300) } };
+    const chars = chatTurns(withRepair).reduce((a, t) => a + t.content.length, 0);
+    expect(chars / 3 + REPLY_MAX_TOKENS).toBeLessThan(4096);
+  });
+});

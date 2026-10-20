@@ -152,7 +152,7 @@ export function chatTurns(m: AiMessages): { role: 'system' | 'user' | 'assistant
   const turns: { role: 'system' | 'user' | 'assistant'; content: string }[] = [{ role: 'system', content: m.system }];
   for (const e of m.examples) turns.push({ role: 'user', content: e.user }, { role: 'assistant', content: e.assistant });
   turns.push({ role: 'user', content: m.user });
-  if (m.repair) turns.push({ role: 'assistant', content: m.repair.reply.slice(0, 2000) }, { role: 'user', content: repairInstruction(m.repair.problem) });
+  if (m.repair) turns.push({ role: 'assistant', content: m.repair.reply.slice(0, 1200) }, { role: 'user', content: repairInstruction(m.repair.problem) });
   return turns;
 }
 
