@@ -61,3 +61,14 @@ export function rangeOut(segments: Segment[], range: { srcStart: number; srcEnd:
   }
   return start === null || end === null ? null : { start, end };
 }
+
+/** Como sourceToOutput, mas um instante cortado vai para a emenda mais próxima à frente (para arrastar na linha do tempo). */
+export function sourceToOutputClamped(segments: Segment[], src: number): number {
+  let offset = 0;
+  for (const s of segments) {
+    if (src < s.srcStart) return offset;
+    if (src < s.srcEnd) return offset + (src - s.srcStart);
+    offset += s.srcEnd - s.srcStart;
+  }
+  return offset;
+}

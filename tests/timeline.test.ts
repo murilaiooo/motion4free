@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { outputDuration, outputToSource, sourceToOutput, outputToSourceEnd, rangeOut } from '../src/engine/timeline';
+import { outputDuration, outputToSource, sourceToOutput, outputToSourceEnd, rangeOut, sourceToOutputClamped } from '../src/engine/timeline';
 
 const segs = [
   { srcStart: 1, srcEnd: 3 },
@@ -53,5 +53,17 @@ describe('trechos: ida e volta entre vídeo editado e original', () => {
       expect(out.start).toBeCloseTo(a, 9);
       expect(out.end).toBeCloseTo(b, 9);
     }
+  });
+});
+
+describe('sourceToOutputClamped', () => {
+  it('instante cortado vai para a emenda seguinte; depois do fim, o fim', () => {
+    const segs = [
+      { srcStart: 0, srcEnd: 2 },
+      { srcStart: 3, srcEnd: 5 },
+    ];
+    expect(sourceToOutputClamped(segs, 1)).toBe(1);
+    expect(sourceToOutputClamped(segs, 2.5)).toBe(2);
+    expect(sourceToOutputClamped(segs, 9)).toBe(4);
   });
 });

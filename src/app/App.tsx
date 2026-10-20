@@ -5,6 +5,7 @@ import { AppError, toAppError } from '../core/errors';
 import { makeProject, restoreHistory, sameVideo, type SavedProject } from '../core/project';
 import type { EditPlan } from '../core/types';
 import { createHistory, type History } from '../engine/history';
+import type { PlanVersion } from '../core/versions';
 import { APP_BUILT_AT, APP_VERSION, VERSION_LABEL } from '../version';
 import { Editor, type Session } from './Editor';
 import { ErrorBox } from './ErrorBox';
@@ -55,6 +56,8 @@ function EditorApp() {
   const [pending, setPending] = useState<SavedProject | null>(null); // projeto salvo esperando o vídeo
   const [notices, setNotices] = useState<AppError[]>([]);
   const [savedFor, setSavedFor] = useState<History<EditPlan> | null>(null);
+  const [versions, setVersions] = useState<PlanVersion[]>([]);
+  const [versionsSaved, setVersionsSaved] = useState<PlanVersion[]>([]);
   const [copy, setCopy] = useState<CopyState>('pending');
   const saveFailed = useRef(false);
 
@@ -107,6 +110,8 @@ function EditorApp() {
     });
     setHistory(h);
     setSavedFor(h);
+    setVersions(project.versions);
+    setVersionsSaved(project.versions);
     setPending(null);
     setStatus({ kind: 'ready' });
     if (copyExists) setCopy('done');
@@ -141,6 +146,8 @@ function EditorApp() {
       const a = await analyze(f, transcriber, step);
       await clearProject();
       const h = createHistory(a.plan);
+      setVersions([]);
+      setVersionsSaved([]);
       setSession({
         file: f,
         fileName: f.name,
@@ -174,7 +181,7 @@ function EditorApp() {
 
   // Salva automaticamente a cada mudança (com pequena espera para agrupar edições rápidas).
   useEffect(() => {
-    if (!session || !history || !storageAvailable() || history === savedFor) return;
+    if (!session || !history || !storageAvailable() || (history === savedFor && versions === versionsSaved)) return;
     const timer = setTimeout(() => {
       const project = makeProject({
         appVersion: APP_VERSION,
@@ -184,9 +191,13 @@ function EditorApp() {
         silences: session.silences,
         warnings: session.warnings.map((w) => ({ key: w.key, detail: w.detail })),
         history,
+        versions,
       });
       saveProject(project)
-        .then(() => setSavedFor(history))
+        .then(() => {
+          setSavedFor(history);
+          setVersionsSaved(versions);
+        })
         .catch((err) => {
           if (saveFailed.current) return;
           saveFailed.current = true;
@@ -194,10 +205,10 @@ function EditorApp() {
         });
     }, 300);
     return () => clearTimeout(timer);
-  }, [session, history, savedFor]);
+  }, [session, history, savedFor, versions, versionsSaved]);
 
   const busy = status.kind === 'working';
-  const saved = !!history && savedFor === history && copy !== 'pending';
+  const saved = !!history && savedFor === history && versionsSaved === versions && copy !== 'pending';
 
   return (
     <main className="app">
@@ -239,7 +250,7 @@ function EditorApp() {
           <p className="saved" data-testid={saved ? 'saved' : 'saving'}>
             {saved ? 'Projeto salvo neste navegador.' : storageAvailable() ? 'Salvando o projeto…' : ''}
           </p>
-          <Editor session={session} history={history} onHistory={setHistory} disabled={busy} />
+          <Editor session={session} history={history} onHistory={setHistory} versions={versions} onVersions={setVersions} disabled={busy} />
         </>
       )}
 
