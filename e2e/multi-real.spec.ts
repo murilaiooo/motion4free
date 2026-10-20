@@ -89,3 +89,32 @@ test('editor permite acrescentar clipe mantendo o primeiro e desfazer a inclusã
   await page.keyboard.press('Control+Shift+z');
   await expect(page.getByTestId('clip-c2')).toBeVisible();
 });
+
+
+test('salvar, reabrir, remover e desfazer conserva as fontes de todos os clipes', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/?asr=vazio');
+  await page.getByTestId('file-input').setInputFiles([RED, BLUE]);
+  await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
+  await page.getByTestId('clip-c2').getByRole('button', { name: 'Mover para cima' }).click();
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
+  await page.reload();
+  await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
+  expect(await page.locator('[data-testid^="clip-c"]').first().getAttribute('data-testid')).toBe('clip-c2');
+
+  await page.getByTestId('clip-c1').getByRole('button', { name: 'Remover' }).click();
+  await expect(page.getByTestId('clip-c1')).toHaveCount(0);
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
+  await page.reload();
+  await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByTestId('clip-c1')).toHaveCount(0);
+
+  await page.getByTestId('undo').click();
+  await expect(page.getByTestId('clip-c1')).toBeVisible();
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
+  await page.reload();
+  await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
+  await page.getByTestId('redo').click();
+  await expect(page.getByTestId('clip-c1')).toHaveCount(0);
+  await expect(page.getByTestId('clip-c2')).toBeVisible();
+});
