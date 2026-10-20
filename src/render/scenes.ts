@@ -278,7 +278,7 @@ export function drawQuote(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, { 
   const P = S.palette;
   const comp = composition(S);
   const spec = S.type.display;
-  const { lines, size } = fitLines(ctx, spec, applyCase(spec, scene.text), 82 * f.u * S.type.scale, f.safe.w * (comp === 'card' ? 0.78 : 0.88), 4);
+  const { lines, size } = fitLines(ctx, spec, applyCase(spec, scene.text), (comp === 'type' ? 96 : 82) * f.u * S.type.scale, f.safe.w * (comp === 'card' ? 0.78 : 0.88), 4);
   const cy = centerY(f);
   const { x, align } = anchor(f);
   const lineH = size * 1.14;
@@ -310,7 +310,7 @@ export function drawQuote(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, { 
   ctx.save();
   const markY = cy - blockH / 2 - markSize * 0.28;
   applyMotion(ctx, f, ph, { x: x - markSize / 2, y: markY - markSize / 2, w: markSize, h: markSize });
-  setFont(ctx, S.type.display, markSize);
+  setFont(ctx, S.type.emphasis, markSize);
   ctx.textAlign = align;
   ctx.textBaseline = 'middle';
   setShadow(ctx, f);
@@ -332,7 +332,7 @@ export function drawLowerThird(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstanc
   const lab = S.type.label;
   const y = f.safe.y + f.safe.h * (S.captions.position === 'bottom' ? 0.64 : 0.9);
   const x = f.safe.x + 12 * f.u + (comp === 'card' ? 28 * f.u : 0);
-  const size = fitSize(ctx, spec, applyCase(spec, scene.title), 72 * f.u * Math.min(1.1, S.type.scale), f.safe.w * 0.75);
+  const size = fitSize(ctx, spec, applyCase(spec, scene.title), (comp === 'type' ? 92 : 72) * f.u * Math.min(1.1, S.type.scale), f.safe.w * 0.75);
   const title = applyCase(spec, scene.title);
   const sub = scene.subtitle ? applyCase(lab, scene.subtitle) : '';
   const subSize = 32 * f.u;
@@ -344,7 +344,7 @@ export function drawLowerThird(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstanc
   const ph = phase(S, t, scene.start, scene.end);
   const phSub = phase(S, t, scene.start, scene.end, S.motion.staggerSec * 2);
   const titleY = y - h / 2 + size * 0.58;
-  const subY = titleY + size * 0.58 + subSize * 1.0;
+  const subY = titleY + size * 0.58 + subSize * (comp === 'sticker' ? 1.5 : 1.0);
   if (comp === 'card') {
     drawCard(ctx, f, { x: x - 40 * f.u, y: y - h / 2 - 24 * f.u, w: Math.max(titleW, subW) + 80 * f.u, h: h + 48 * f.u }, t, scene.start, scene.end);
   }
@@ -384,8 +384,14 @@ export function drawLowerThird(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstanc
     setFont(ctx, lab, subSize);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = comp === 'card' ? P.accent : P.text;
-    if (comp !== 'card') setShadow(ctx, f);
+    if (comp === 'sticker') {
+      const pad = subSize * 0.45;
+      fillBox(ctx, { x: x - pad, y: subY - subSize * 0.8, w: subW + 2 * pad, h: subSize * 1.6 }, S.shape.radius * subSize * 1.6, P.shadow);
+      ctx.fillStyle = P.text;
+    } else {
+      ctx.fillStyle = comp === 'card' ? P.accent : P.text;
+      if (comp === 'type') setShadow(ctx, f);
+    }
     ctx.fillText(sub, x, subY);
     ctx.restore();
   }

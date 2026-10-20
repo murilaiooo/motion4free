@@ -47,6 +47,20 @@ export function layoutLines(widths: number[], space: number, maxW: number): numb
   return lines;
 }
 
+/** Linhas com larguras parecidas (evita uma palavra sozinha na última linha), mesmo número de linhas. */
+export function balanceLines(widths: number[], space: number, maxW: number, lines: number[][]): number[][] {
+  if (lines.length < 2) return lines;
+  let lo = Math.max(...widths);
+  let hi = maxW;
+  for (let i = 0; i < 20; i++) {
+    const mid = (lo + hi) / 2;
+    if (layoutLines(widths, space, mid).length <= lines.length) hi = mid;
+    else lo = mid;
+  }
+  const best = layoutLines(widths, space, hi);
+  return best.length === lines.length ? best : lines;
+}
+
 /**
  * Legenda no estilo Reels: grande, em negrito, com a palavra falada em destaque (caixa, cor,
  * sublinhado ou "revelação") e palavras-chave na fonte/cor de ênfase.
@@ -72,7 +86,8 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   let space = 0;
   for (let attempt = 0; attempt < 6; attempt++) {
     setFont(ctx, spec, size);
-    space = ctx.measureText(' ').width + size * 0.06;
+    // com caixa na palavra falada, o espaço precisa caber o respiro da caixa
+    space = ctx.measureText(' ').width + size * (C.highlight === 'box' ? 0.18 : 0.06);
     widths = shown.map((s, i) => {
       if (isKw[i]) setFont(ctx, em, size * emScale);
       else setFont(ctx, spec, size);
@@ -82,6 +97,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     if (lines.length <= C.maxLines && Math.max(...widths) <= maxW) break;
     size *= 0.88;
   }
+  lines = balanceLines(widths, space, maxW, lines);
 
   const lineH = size * 1.2;
   const blockH = lines.length * lineH;
@@ -140,7 +156,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
       setFont(ctx, font, fsize);
       const boxed = C.highlight === 'box' && isActive;
       if (boxed) {
-        const padX = size * 0.16;
+        const padX = size * 0.12;
         const h = size * 1.14;
         setShadow(ctx, f, 'hard');
         fillBox(ctx, { x: wx - w / 2 - padX, y: y - h / 2, w: w + 2 * padX, h }, style.shape.radius * h, isKw[i] ? P.accent2 : P.accent);

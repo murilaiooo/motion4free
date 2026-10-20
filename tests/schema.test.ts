@@ -72,3 +72,11 @@ describe('migração v1 → v2', () => {
     expect(migratePlan(valid)).toBe(valid);
   });
 });
+
+describe('plano de demonstração da galeria', () => {
+  it('é válido em todos os estilos', async () => {
+    const { PRESETS } = await import('../src/core/presets');
+    const { galleryPlan } = await import('../src/editorial/sample');
+    for (const s of PRESETS) expect(parseEditPlan(galleryPlan(s)).ok, s.id).toBe(true);
+  });
+});
