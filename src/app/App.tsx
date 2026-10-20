@@ -27,7 +27,8 @@ import {
 import { dirSize } from '../core/storage-fs';
 import { cachedRepos, spaceCheck } from '../core/storage-report';
 import type { EditPlan } from '../core/types';
-import { createHistory, type History } from '../engine/history';
+import { createHistory, pushHistory, type History } from '../engine/history';
+import { appendClipsToPlan } from '../editorial/clip-append';
 import { placeWords, placeRanges, unplaceWords, unplaceRanges, totalDuration } from '../engine/clips';
 import type { PlanVersion } from '../core/versions';
 import type { OpenedMedia } from '../media/input';
@@ -501,6 +502,81 @@ function EditorApp() {
     }
   }
 
+  /** Acrescentar clipes no projeto aberto sem substituir as edições existentes. */
+  async function onAddClips(files: File[]): Promise<void> {
+    if (!session || !history || !files.length) return;
+    const initialSession = session;
+    const initialHistory = history;
+    if (initialHistory.present.clips.length + files.length > 30) {
+      notify(new AppError('CLIPES_DEMAIS', `${initialHistory.present.clips.length + files.length}/30`));
+      return;
+    }
+    try {
+      const existingClips = initialHistory.present.clips;
+      const currentIds = [...existingClips.map(c => c.id), ...Array.from(session.clipSources?.keys() ?? [])];
+      const firstNumber = 1 + Math.max(0, ...currentIds.map(id => Number(id.slice(1)) || 0));
+      const { openClips, buildClipRefs, combineAudios } = await import('../media/multi');
+      const opened = await openClips(files, transcriber, step, precision.mode, firstNumber);
+      const extraRefs = buildClipRefs(opened.clips);
+      const oldWords = initialSession.clipWords ?? unplaceWords(existingClips, initialSession.ctx.words);
+      const oldSilences = initialSession.clipSilences ?? unplaceRanges(existingClips, initialSession.silences);
+      const allWords = { ...oldWords, ...opened.wordsByClip };
+      const allSilences = { ...oldSilences, ...opened.silencesByClip };
+      const nextPlan = appendClipsToPlan(initialHistory.present, extraRefs, allWords, allSilences);
+      const sources = new Map(initialSession.clipSources ?? [
+        [existingClips[0]!.id, {
+          id: existingClips[0]!.id,
+          video: initialSession.media.video,
+          width: initialSession.media.width,
+          height: initialSession.media.height,
+        }],
+      ]);
+      const audios = new Map(initialSession.clipAudios ?? (
+        initialSession.audio ? [[existingClips[0]!.id, initialSession.audio]] : []
+      ));
+      for (const c of opened.clips) {
+        sources.set(c.id, { id: c.id, video: c.media.video, width: c.media.width, height: c.media.height });
+        if (c.audio) audios.set(c.id, c.audio);
+      }
+      const combined = combineAudios(nextPlan.clips, Object.fromEntries(audios));
+      setSession({
+        ...initialSession,
+        clipSources: sources,
+        clipAudios: audios,
+        clipWords: allWords,
+        clipSilences: allSilences,
+        audio: combined,
+        peaks: peaksOf(combined),
+        originalVideo: initialSession.originalVideo ?? {
+          name: initialSession.fileName, size: initialSession.file.size,
+          durationSec: initialSession.media.durationSec,
+        },
+        openedClips: [...(initialSession.openedClips ?? []), ...opened.clips],
+        ctx: { durationSec: totalDuration(nextPlan.clips), words: placeWords(nextPlan.clips, allWords) },
+        silences: placeRanges(nextPlan.clips, allSilences),
+      });
+      setHistory(pushHistory(initialHistory, nextPlan));
+      setCopy('pending');
+      if (fs && projectId) {
+        const id = projectId;
+        void enqueue(async () => {
+          const { saveClipVideo } = await import('../core/project-library');
+          for (const c of opened.clips) await saveClipVideo(fs, id, c.id, c.file);
+        }).then(() => setCopy('done')).catch((err) => {
+          setCopy('failed');
+          notify(new AppError('SALVAR_FALHOU', `Novos clipes: ${describeError(err)}`));
+        });
+      } else {
+        setCopy('failed');
+        notify(new AppError('SALVAR_FALHOU', 'Armazenamento local indisponível para novos clipes.'));
+      }
+      setStatus({ kind: 'ready' });
+    } catch (err) {
+      notify(toAppError(err, 'ABRIR_FALHOU'));
+      setStatus({ kind: 'ready' });
+    }
+  }
+
   /** Grava agora o que ainda não foi salvo (antes de fechar ou trocar de projeto). */
   async function saveNow(): Promise<void> {
     if (!fs || !session || !history || !projectId || (history === savedFor && versions === versionsSaved)) return;
@@ -673,6 +749,7 @@ function EditorApp() {
           saveState={saveState}
           asrModel={asrModel}
           onReplaceFile={(f: File|File[]) => void onFile(f as any)}
+          onAddClips={(files: File[]) => void onAddClips(files)}
           projectMenu={
             <ProjectMenu
               name={projectName || nameFromFile(session.fileName)}
