@@ -20,15 +20,28 @@ export function drawTint(ctx: Ctx2D, f: Frame): void {
   ctx.fillRect(0, 0, f.w, f.h);
 }
 
-/** Bordas escurecidas (o olho vai para o centro). */
+/**
+ * Bordas escurecidas (o olho vai para o centro). Quatro faixas com degradê linear nas bordas em vez de um
+ * degradê radial na tela inteira: parecido no olho e bem mais barato sem GPU (medido na galeria).
+ */
 export function drawVignette(ctx: Ctx2D, f: Frame): void {
   const k = f.style.decor.vignette;
   if (k <= 0) return;
-  const g = ctx.createRadialGradient(f.w / 2, f.h * 0.45, f.h * 0.26, f.w / 2, f.h * 0.45, f.h * 0.78);
-  g.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  g.addColorStop(1, `rgba(0, 0, 0, ${a3(0.85 * k)})`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, f.w, f.h);
+  const dark = `rgba(0, 0, 0, ${a3(0.7 * k)})`;
+  const clear = 'rgba(0, 0, 0, 0)';
+  const band = (x0: number, y0: number, x1: number, y1: number, rx: number, ry: number, rw: number, rh: number) => {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, dark);
+    g.addColorStop(1, clear);
+    ctx.fillStyle = g;
+    ctx.fillRect(rx, ry, rw, rh);
+  };
+  const sw = Math.round(f.w * 0.2);
+  const th = Math.round(f.h * 0.14);
+  band(0, 0, sw, 0, 0, 0, sw, f.h);
+  band(f.w, 0, f.w - sw, 0, f.w - sw, 0, sw, f.h);
+  band(0, 0, 0, th, 0, 0, f.w, th);
+  band(0, f.h, 0, f.h - th, 0, f.h - th, f.w, th);
 }
 
 /** Altura (px) de cada faixa de cinema. */
