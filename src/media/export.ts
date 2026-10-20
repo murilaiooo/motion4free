@@ -10,7 +10,7 @@ import { ensureEmojiFont, ensureFonts } from './fonts';
 import { planUsesEmoji } from '../core/emoji';
 import type { OpenedMedia } from './input';
 import { CLIP_CROSSFADE_SEC, spliceAudio } from './splice';
-import { ClipFrames, EXPORT_MAX_SIDE, type ClipSource } from './sources';
+import { ClipFrames, EXPORT_MAX_SIDE, decodeSize, type ClipSource } from './sources';
 import { clipLayout, outputToClip } from '../engine/clips';
 
 export interface ExportOptions {
@@ -72,7 +72,8 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   if (audioSource) output.addAudioTrack(audioSource);
   await output.start();
 
-  const sink = new CanvasSink(media.video, { width: plan.output.width, height: plan.output.height, fit: 'cover', poolSize: 2 });
+  const srcSize = decodeSize(media.width, media.height, EXPORT_MAX_SIDE);
+  const sink = new CanvasSink(media.video, { ...srcSize, fit: 'fill', poolSize: 2 });
   for (let f = 0; f < frames; f++) {
     const t = f / fps;
     const { outputToSource } = await import('../engine/timeline');
