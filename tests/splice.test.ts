@@ -10,9 +10,18 @@ describe('spliceAudio', () => {
 
   it('aplica fade nas emendas', () => {
     const ch = new Float32Array(100).fill(1);
-    const [out] = spliceAudio([ch], 100, [{ srcStart: 0, srcEnd: 0.5 }, { srcStart: 0.5, srcEnd: 1 }], 0.05);
+    const [out] = spliceAudio([ch], 100, [{ srcStart: 0, srcEnd: 0.5 }, { srcStart: 0.55, srcEnd: 1 }], 0.05);
     expect(out![0]).toBe(0);
     expect(out![49]).toBe(0);
     expect(out![25]).toBe(1);
+  });
+
+  it('pedaços encostados (divisão na agulha) tocam sem fade no meio', () => {
+    const ch = new Float32Array(100).fill(1);
+    const [out] = spliceAudio([ch], 100, [{ srcStart: 0, srcEnd: 0.5 }, { srcStart: 0.5, srcEnd: 1 }], 0.05);
+    expect(out!.length).toBe(100);
+    expect(out![49]).toBe(1);
+    expect(out![50]).toBe(1);
+    expect(out![0]).toBe(0);
   });
 });
