@@ -11,7 +11,7 @@ import type { Rect } from './layout';
 import { easeInOutQuint, easeOutExpo, springIn, wiggle } from './motion';
 import { alphaOf, composition, makeFrame, withAlpha, type Frame } from './kit';
 import { drawOverlay, drawProgress } from './scenes';
-import { drawLetterbox, drawScanlines, drawTag, drawTicker, drawTint, drawVignette, tickerText } from './decor';
+import { drawHandle, drawLetterbox, drawScanlines, drawTag, drawTicker, drawTint, drawVignette, tickerText } from './decor';
 
 export function activeAt<T extends { start: number; end: number }>(items: T[], t: number): T[] {
   return items.filter((i) => t >= i.start && t < i.end);
@@ -177,6 +177,7 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
   for (const kind of OVERLAY_ORDER) for (const s of active) if (s.kind === kind) drawOverlay(ctx, f, s, t);
   if (style.decor.ticker) drawTicker(ctx, f, t, tickerText(plan));
   drawTag(ctx, f, t);
+  drawHandle(ctx, f);
 
   // a citação já mostra a frase falada, e o título com a mesma frase também: a legenda some
   const caption = activeAt(plan.captions, t)[0];

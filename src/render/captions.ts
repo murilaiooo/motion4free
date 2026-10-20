@@ -73,7 +73,7 @@ export function captionColors(style: StyleDNA): { text: string; highlight: strin
   return {
     text: C.text ?? P.text,
     highlight: C.highlight ?? P.accent,
-    keyword: C.highlight ?? P.accent2,
+    keyword: style.brand?.keyword ?? C.highlight ?? P.accent2,
     stroke: C.stroke ?? (alphaOf(P.shadow) > 0 ? P.shadow : '#000000'),
     box: C.box ?? P.panel,
   };

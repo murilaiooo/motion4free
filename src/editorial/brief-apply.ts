@@ -109,11 +109,15 @@ export function styleForBrief(preset: StyleDNA, brief: CreativeBrief): StyleDNA 
 /** Opções do seletor de cenas vindas do pedido. */
 export function sceneOptionsFor(brief: CreativeBrief): SceneOptions {
   const forbid = forbiddenKinds(brief);
+  // título escrito pela pessoa vale mais que o gancho escolhido (os dois são texto dela, nunca da IA)
+  const title = brief.look.title ?? brief.hook?.text ?? null;
   return {
     forbid,
     emphasize: new Set(brief.emphasize),
-    title: brief.hook && !forbid.has('kinetic-title') ? brief.hook.text : null,
+    title: title && !forbid.has('kinetic-title') ? title : null,
     emojiPrefer: brief.look.emoji?.prefer ?? [],
+    // chamada pedida (texto ou "com chamada final") aparece mesmo em vídeo curto
+    cta: !forbid.has('end-cta') && (!!brief.look.cta || brief.look.scenes?.chamada === true),
   };
 }
 
@@ -192,6 +196,10 @@ export function applyLook(base: StyleDNA, look: Look, forbidList: readonly Prohi
   const noEffects = forbid.has('efeitos');
   if (look.transition && !noEffects && !forbid.has('transicoes')) s.transition = look.transition === 'zoom' && forbid.has('zoom') ? 'dip' : look.transition;
   if (look.motion !== undefined) s.motion.intensity = r3(noEffects ? Math.min(look.motion, 0.15) : clamp(look.motion, 0, 1));
+
+  if (c.keyword) s.brand = { handle: s.brand?.handle ?? null, keyword: c.keyword };
+  if (look.handle) s.brand = { keyword: s.brand?.keyword ?? null, handle: look.handle };
+  if (look.cta) s.cta = look.cta.slice(0, 32);
 
   const on = look.scenes ?? {};
   if (on.barra && !forbid.has('barra') && !forbid.has('textos') && s.progress === 'none') s.progress = 'bar';

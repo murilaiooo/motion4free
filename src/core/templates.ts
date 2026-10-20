@@ -101,11 +101,11 @@ const t = (style: StyleDNA, background: string, description: string, tags: Templ
 });
 
 export const TEMPLATES: readonly Template[] = [
-  t(POP, '#1A1A1A', 'Energético: letras grandes, palavra falada em destaque amarelo, cortes com flash e muitas animações.', ['energetico', 'humor', 'lifestyle']),
+  t(POP, '#1A1A1A', 'Energético: letras grandes, palavra falada em destaque amarelo, cortes com flash e muitas animações.', ['energetico', 'humor', 'lifestyle'], { aliases: ['capcut', 'padrao', 'classico'] }),
   t(NEON, '#0D0D0D', 'Limpo e atual: letras brancas grossas, poucas palavras por vez e a palavra falada acendendo em verde.', ['energetico', 'lifestyle'], { aliases: ['karaoke'] }),
   t(EDITORIAL, '#14110E', 'Elegante: letra de revista, legenda que acende palavra por palavra, movimento lento e poucas animações.', ['elegante', 'historias'], { aliases: ['revista'] }),
   t(DOCUMENTAL, '#121417', 'Sóbrio: painéis escuros à esquerda, letra técnica, quase sem movimento.', ['educacao', 'noticias', 'negocios'], { aliases: ['documentario'] }),
-  t(IMPACTO, '#141414', 'Vendas e negócios: cada palavra num bloco branco, a palavra falada em vermelho, tudo entrando rápido.', ['vendas', 'negocios', 'energetico'], { aliases: ['vendas', 'blocos', 'caixa por palavra'] }),
+  t(IMPACTO, '#141414', 'Vendas e negócios: cada palavra num bloco branco, a palavra falada em vermelho, tudo entrando rápido.', ['vendas', 'negocios', 'energetico'], { aliases: ['vendas', 'blocos', 'caixa por palavra', 'hormozi', 'alex hormozi'] }),
   t(MINIMAL, '#1E1F22', 'Minimalista: tudo em letras minúsculas, legenda discreta que acende devagar, sem transições.', ['minimalista', 'lifestyle', 'elegante'], { aliases: ['minimalista', 'clean', 'limpo'], hints: ['minimalista', 'minimalismo', 'minimo', 'clean', 'limpo', 'limpa'] }),
   t(PODCAST, '#17120F', 'Conversa e entrevista: selo de podcast no canto, legenda em pílulas escuras e nome de quem fala em destaque.', ['podcast', 'entrevista', 'negocios'], { aliases: ['entrevista', 'videocast', 'bate papo'], words: ['podcast', 'videocast'], hints: ['entrevista', 'bate papo', 'conversa'] }),
   t(TUTORIAL, '#0F1A2E', 'Passo a passo: letras arredondadas, pílulas brancas, passos numerados em círculos e a palavra falada sublinhada.', ['tutorial', 'educacao'], { aliases: ['passo a passo', 'aula', 'didatico'], hints: ['tutorial', 'passo a passo', 'aula', 'didatico', 'didatica'] }),
@@ -114,7 +114,7 @@ export const TEMPLATES: readonly Template[] = [
   t(RETRO, '#1A0B2E', 'Retrô dos anos 90: letra de computador antigo, linhas de TV, cores separadas e "REC" com o tempo.', ['retro', 'humor', 'games'], { aliases: ['anos 90', 'anos 80', 'vhs', 'fita', 'vintage', 'nostalgia'], words: ['retro', 'vhs', 'vintage', 'anos 80', 'anos 90', 'nostalgico', 'nostalgica', 'fita antiga'] }),
   t(TURBO, '#16072E', 'Games e muita energia: títulos que caem quicando, legenda inclinada com a palavra em degradê.', ['games', 'energetico', 'humor'], { aliases: ['gamer', 'games', 'game', 'jogo', 'jogos', 'gaming'], words: ['gamer', 'gaming', 'games', 'estilo game'], hints: ['jogo', 'jogos', 'game'] }),
   t(DATILOGRAFIA, '#2B2620', 'Máquina de escrever: a legenda vai sendo digitada numa tira de papel, com cursor piscando.', ['historias', 'elegante', 'educacao'], { aliases: ['maquina de escrever', 'datilografado', 'maquina'], words: ['datilografia', 'datilografado'] }),
-  t(MARCA_TEXTO, '#1D1D1B', 'Escrito à mão: letra de caderno, palavra falada riscada de marca-texto e títulos com traço de caneta.', ['educacao', 'humor', 'lifestyle'], { aliases: ['marca texto', 'caneta', 'escrito a mao', 'manuscrito', 'caderno'], words: ['escrito a mao', 'manuscrito', 'letra de mao'] }),
+  t(MARCA_TEXTO, '#1D1D1B', 'Escrito à mão: letra de caderno, palavra falada riscada de marca-texto e títulos com traço de caneta.', ['educacao', 'humor', 'lifestyle'], { aliases: ['marca texto', 'caneta', 'escrito a mao', 'manuscrito', 'caderno'], words: ['escrito a mao', 'escrita a mao', 'manuscrito', 'letra de mao'] }),
   t(LUXO, '#0A0A0A', 'Luxo: preto e dourado, título em itálico dentro de uma moldura fina, legenda em maiúsculas espaçadas.', ['elegante', 'vendas', 'lifestyle'], { aliases: ['luxuoso', 'luxuosa', 'premium', 'dourado', 'alto padrao'], words: ['luxo', 'luxuoso', 'luxuosa', 'alto padrao'], hints: ['premium'] }),
 ];
 
