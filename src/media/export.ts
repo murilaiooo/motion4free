@@ -1,4 +1,4 @@
-import { AudioBufferSource, BufferTarget, CanvasSink, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH } from 'mediabunny';
+import { AudioSample, AudioSampleSource, BufferTarget, CanvasSink, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH } from 'mediabunny';
 import { toAppError } from '../core/errors';
 import type { EditPlan } from '../core/types';
 import { outputDuration, outputToSource } from '../engine/timeline';
@@ -46,7 +46,7 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
   const videoSource = new CanvasSource(canvas, { codec: codecs.video, bitrate: QUALITY_HIGH });
   output.addVideoTrack(videoSource, { frameRate: fps });
-  const audioSource = audio ? new AudioBufferSource({ codec: 'aac', bitrate: 128_000 }) : null;
+  const audioSource = audio ? new AudioSampleSource({ codec: 'aac', bitrate: 128_000 }) : null;
   if (audioSource) output.addAudioTrack(audioSource);
   await output.start();
 
@@ -66,9 +66,13 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   if (audio && audioSource) {
     const trimmed = trimSegments(plan.segments, duration);
     const spliced = spliceAudio(audio.channels, audio.sampleRate, trimmed);
-    const buffer = new AudioBuffer({ length: spliced[0]!.length, numberOfChannels: spliced.length, sampleRate: audio.sampleRate });
-    spliced.forEach((ch, c) => buffer.copyToChannel(ch as Float32Array<ArrayBuffer>, c));
-    await audioSource.add(buffer);
+    // AudioSample (e não AudioBuffer): funciona também dentro do Worker, onde não existe Web Audio.
+    const len = spliced[0]!.length;
+    const planar = new Float32Array(len * spliced.length);
+    spliced.forEach((ch, c) => planar.set(ch, c * len));
+    const sample = new AudioSample({ data: planar, format: 'f32-planar', numberOfChannels: spliced.length, sampleRate: audio.sampleRate, timestamp: 0 });
+    await audioSource.add(sample);
+    sample.close();
   }
 
   await output.finalize();
