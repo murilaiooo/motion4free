@@ -336,6 +336,7 @@ export function lockRange(plan: EditPlan, r: RangeEdit): RangeEdit {
       outStart: out.start,
       scenes: plan.scenes.filter((s) => s.kind !== 'progress-bar' && overlaps(s, out)),
       captions: plan.captions.filter((c) => overlaps(c, out)),
+      captionEdits: { placement: plan.edits.captionPlacement, look: plan.edits.captionLook },
     },
   };
 }

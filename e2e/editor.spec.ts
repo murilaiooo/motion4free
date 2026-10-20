@@ -98,9 +98,10 @@ test('sem a cópia do vídeo, pede o arquivo de novo (M4F-604) e continua o proj
   await editCaption(page, 'c2', 'Dica reaberta.');
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 30_000 });
   await page.evaluate(async () => {
+    // v0.11: cada projeto numa pasta motion4free/projects/<id>/
     const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle('motion4free-projeto');
-    await dir.removeEntry('video.bin');
+    const projects = await (await root.getDirectoryHandle('motion4free')).getDirectoryHandle('projects');
+    for await (const [, handle] of (projects as unknown as { entries(): AsyncIterable<[string, FileSystemDirectoryHandle]> }).entries()) await handle.removeEntry('video.bin');
   });
 
   await page.reload();

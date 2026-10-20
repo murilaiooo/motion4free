@@ -2,9 +2,13 @@ import { z } from 'zod';
 import { EMPHASES, EMPTY_BRIEF, LEVELS, PACES, PROHIBITIONS, TONES, briefSchema, briefV1Schema, migrateBrief } from './brief';
 import { EMOJI_SET } from './emoji';
 import { lookSchema } from './look';
+import { EMPTY_EDITS, editsSchema, placementSchema, textLookSchema } from './edits';
 import { DEFAULT_STYLE } from './presets';
 import { migrateStyle, styleSchema, styleV1Schema } from './style';
-import type { EditPlan } from './types';
+import type { EditPlan, Framing } from './types';
+
+/** Recorte das versões até a v0.13: preenche a tela seguindo o rosto quando possível (smart). */
+const LEGACY_FRAMING: Framing = { mode: 'smart', fill: 'blur', zoom: 1, x: 0, y: 0 };
 
 const time = z.number().finite().nonnegative();
 const line = (max: number) => z.string().min(1).max(max);
@@ -65,12 +69,24 @@ const rangeFields = {
 };
 const rangeOk = (r: { srcStart: number; srcEnd: number }) => r.srcEnd > r.srcStart;
 
+const lockedV5 = z.object({ outStart: time, scenes: z.array(scene).max(200), captions: z.array(caption).max(200) });
+const captionEditsSnapshot = z.object({ placement: placementSchema.nullable(), look: textLookSchema });
+
 const range = z
   .object({
     ...rangeFields,
     look: lookSchema.nullable(),
     style: styleSchema.nullable(),
-    locked: z.object({ outStart: time, scenes: z.array(scene).max(200), captions: z.array(caption).max(200) }).nullable(),
+    locked: lockedV5.extend({ captionEdits: captionEditsSnapshot }).nullable(),
+  })
+  .refine(rangeOk, { message: 'trecho com fim antes do início' });
+
+const rangeV5 = z
+  .object({
+    ...rangeFields,
+    look: lookSchema.nullable(),
+    style: styleSchema.nullable(),
+    locked: lockedV5.nullable(),
   })
   .refine(rangeOk, { message: 'trecho com fim antes do início' });
 
@@ -84,8 +100,25 @@ const rangeV4 = z
 
 const reference = z.object({ colors: z.array(color).min(1).max(6) }).nullable();
 
-export const editPlanSchema = z.object({
-  version: z.literal(5),
+export const framingSchema = z.object({
+  mode: z.enum(['fill', 'fit', 'smart']),
+  fill: z.enum(['blur', 'color']),
+  zoom: z.number().min(1).max(3),
+  x: z.number().min(-1).max(1),
+  y: z.number().min(-1).max(1),
+});
+
+/** Limite de clipes por projeto (v0.14; ver ADR-0019). */
+export const MAX_CLIPS = 30;
+
+const clipRef = z.object({
+  id: z.string().regex(/^c[0-9]{1,3}$/),
+  name: z.string().max(200),
+  duration: z.number().finite().positive(),
+  framing: framingSchema.nullable(),
+});
+
+const planV5Fields = {
   output,
   style: styleSchema,
   brief: briefSchema,
@@ -94,7 +127,63 @@ export const editPlanSchema = z.object({
   scenes: z.array(scene),
   ranges: z.array(range).max(50),
   reference,
+};
+
+const planV5FieldsBase = {
+  output,
+  style: styleSchema,
+  brief: briefSchema,
+  segments: z.array(segment).min(1),
+  captions: z.array(caption),
+  scenes: z.array(scene),
+  ranges: z.array(rangeV5).max(50),
+  reference,
+};
+
+export const editPlanSchema = z
+  .object({
+    version: z.literal(6),
+    ...planV5Fields,
+    clips: z
+      .array(clipRef)
+      .min(1)
+      .max(MAX_CLIPS)
+      .refine((cs) => new Set(cs.map((c) => c.id)).size === cs.length, { message: 'clipes com o mesmo id' }),
+    framing: framingSchema,
+    edits: editsSchema,
+  })
+  .refine((p) => p.segments.every((s) => s.srcEnd <= p.clips.reduce((a, c) => a + c.duration, 0) + 0.01), { message: 'trecho depois do fim dos clipes' });
+
+/** Formato da v0.6 a v0.13 com edição manual (v6 editor) mas sem múltiplos clipes — mantido para migração. */
+export const editPlanV6EditorSchema = z.object({
+  version: z.literal(6),
+  output,
+  style: styleSchema,
+  brief: briefSchema,
+  segments: z.array(segment).min(1),
+  captions: z.array(caption),
+  scenes: z.array(scene),
+  ranges: z.array(range).max(50),
+  reference,
+  edits: editsSchema,
 });
+
+/** Formato da v0.14 com múltiplos clipes mas sem edição manual — mantido para migração. */
+export const editPlanV6MultiSchema = z
+  .object({
+    version: z.literal(6),
+    ...planV5FieldsBase,
+    clips: z
+      .array(clipRef)
+      .min(1)
+      .max(MAX_CLIPS)
+      .refine((cs) => new Set(cs.map((c) => c.id)).size === cs.length, { message: 'clipes com o mesmo id' }),
+    framing: framingSchema,
+  })
+  .refine((p) => p.segments.every((s) => s.srcEnd <= p.clips.reduce((a, c) => a + c.duration, 0) + 0.01), { message: 'trecho depois do fim dos clipes' });
+
+/** Formato da v0.6 a v0.12 (sem edição manual). Mantido para abrir projetos antigos. */
+export const editPlanV5Schema = z.object({ version: z.literal(5), ...planV5FieldsBase });
 
 /** Formato da Fase 5 (trechos; estilo v1, pedido v1, sem emojis). Mantido para abrir projetos antigos. */
 export const editPlanV4Schema = z.object({
@@ -133,6 +222,9 @@ export const editPlanV1Schema = z.object({
  * - v3 → v4: sem trechos ajustados e sem cores de referência (nada muda no vídeo).
  * - v4 → v5: estilo v2 (emojis desligados, cores próprias da legenda vazias, entrada 'auto'),
  *   pedido v2 (look vazio) e trechos sem look (nada muda no vídeo).
+ * - v5 → v6: clipe único + edição manual vazia + trava com snapshot de legenda (nada muda no vídeo).
+ * - v6 editor (só edits) → v6 unificado: ganha clipe único e enquadramento padrão
+ * - v6 multi (só clips/framing) → v6 unificado: ganha edição manual vazia
  */
 export function migratePlan(input: unknown): unknown {
   let current = input;
@@ -163,6 +255,49 @@ export function migratePlan(input: unknown): unknown {
       ranges: p.ranges.map((r) => ({ ...r, look: null, style: r.style ? migrateStyle(r.style) : null })),
     };
   }
+  const v5 = editPlanV5Schema.safeParse(current);
+  if (v5.success) {
+    const p = v5.data as any;
+    const end = Math.max(1, ...p.segments.map((s: any) => s.srcEnd), ...p.ranges.map((r: any) => r.srcEnd), 1);
+    current = {
+      ...p,
+      version: 6,
+      clips: [{ id: 'c1', name: '', duration: end, framing: null }],
+      framing: { ...LEGACY_FRAMING },
+      edits: EMPTY_EDITS,
+      ranges: p.ranges.map((r: any) => ({ ...r, locked: r.locked ? { ...r.locked, captionEdits: { placement: null, look: {} } } : null })),
+    };
+  }
+  // já é v6 unificado? devolve a mesma referência (teste de identidade)
+  const alreadyValid = editPlanSchema.safeParse(current);
+  if (alreadyValid.success) return current;
+  // v6 editor sem clips/framing -> unificado (só se realmente falta)
+  if (current && typeof current === 'object' && (current as any).version === 6 && !('clips' in (current as any) ) ) {
+    const v6e = editPlanV6EditorSchema.safeParse(current);
+    if (v6e.success) {
+      const p = v6e.data as any;
+      const end = Math.max(1, ...p.segments.map((s: any) => s.srcEnd), ...p.ranges.map((r: any) => r.srcEnd), 1);
+      current = {
+        ...p,
+        version: 6,
+        clips: [{ id: 'c1', name: '', duration: end, framing: null }],
+        framing: { ...LEGACY_FRAMING },
+      };
+    }
+  }
+  // v6 multi sem edits -> unificado (só se realmente falta)
+  if (current && typeof current === 'object' && (current as any).version === 6 && !('edits' in (current as any))) {
+    const v6m = editPlanV6MultiSchema.safeParse(current);
+    if (v6m.success) {
+      const p = v6m.data as any;
+      current = {
+        ...p,
+        version: 6,
+        edits: EMPTY_EDITS,
+        ranges: p.ranges.map((r: any) => ({ ...r, locked: r.locked ? { ...r.locked, captionEdits: { placement: null, look: {} } } : null })),
+      };
+    }
+  }
   return current;
 }
 
@@ -176,7 +311,14 @@ const DEFAULT_STYLE_V1 = {
 const { look: _look, hookStyle: _hs, unsupported: _u, summary: _s, ...emptyV1Rest } = EMPTY_BRIEF;
 const EMPTY_BRIEF_V1 = { ...emptyV1Rest, version: 1 as const };
 
-/** Aceita plano v1 a v5 e entrega sempre v5 validado (usado no projeto salvo). */
+/** Projeto antigo (um vídeo): o clipe migrado passa a ter a duração real do vídeo salvo. */
+export function fixClipDuration(plan: EditPlan, durationSec: number): EditPlan {
+  if (plan.clips.length !== 1 || Math.abs(plan.clips[0]!.duration - durationSec) < 1e-6) return plan;
+  const end = Math.max(...plan.segments.map((s) => s.srcEnd));
+  return { ...plan, clips: [{ ...plan.clips[0]!, duration: Math.max(durationSec, end) }] };
+}
+
+/** Aceita plano v1 a v6 e entrega sempre v6 validado (usado no projeto salvo). */
 export const anyPlanSchema = z.preprocess(migratePlan, editPlanSchema);
 
 export type ParseResult = { ok: true; plan: EditPlan } | { ok: false; errors: string[] };

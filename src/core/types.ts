@@ -2,6 +2,7 @@ import type { CreativeBrief, Emphasis, Level, Pace, Prohibition, Tone } from './
 import type { StyleDNA } from './style';
 import type { Emoji } from './emoji';
 import type { Look } from './look';
+import type { ManualEdits, Placement, TextLook } from './edits';
 
 /** Tempo sempre em segundos (number). "src" = tempo no vídeo original; "out" = tempo no vídeo editado. */
 
@@ -78,6 +79,8 @@ export interface RangeLock {
   outStart: number;
   scenes: SceneInstance[];
   captions: Caption[];
+  /** posição e aparência de todas as legendas no momento da trava (v6); o trecho travado não segue mudanças gerais */
+  captionEdits: { placement: Placement | null; look: TextLook };
 }
 
 /**
@@ -116,9 +119,42 @@ export interface ReferencePalette {
   colors: string[];
 }
 
+/**
+ * Enquadramento do vídeo de origem no formato de saída (v0.14).
+ * - `fill`: preenche a tela cortando o que sobra (centro, mais o deslocamento x/y);
+ * - `fit`: mostra o quadro inteiro, com fundo desfocado (`blur`) ou de cor (`color`) no que sobra;
+ * - `smart`: preenche e o recorte acompanha o rosto de quem fala (sem rosto = centro).
+ * `zoom` (1–3) aproxima; `x`/`y` (−1 a 1) deslocam o recorte dentro do que dá para mostrar.
+ */
+export type FramingMode = 'fill' | 'fit' | 'smart';
+export interface Framing {
+  mode: FramingMode;
+  fill: 'blur' | 'color';
+  zoom: number;
+  x: number;
+  y: number;
+}
+
+/**
+ * Clipe de origem (v0.14). Os clipes ficam um depois do outro, na ordem da lista, num "original"
+ * virtual: o clipe i ocupa [soma das durações anteriores, + duração). Trechos, palavras, cortes e
+ * trechos ajustados usam esse tempo, então todo o motor continua valendo com vários vídeos.
+ */
+export interface ClipRef {
+  id: string;
+  name: string;
+  duration: number;
+  /** enquadramento só deste clipe; null = o do vídeo */
+  framing: Framing | null;
+}
+
 export interface EditPlan {
-  version: 5;
+  version: 6;
   output: OutputProfile;
+  /** clipes na ordem da montagem (pelo menos um) */
+  clips: ClipRef[];
+  /** enquadramento padrão de todos os clipes */
+  framing: Framing;
   style: StyleDNA;
   /** o pedido por texto já entendido (vazio = nenhum pedido) */
   brief: CreativeBrief;
@@ -128,6 +164,11 @@ export interface EditPlan {
   /** trechos ajustados, em ordem e sem sobreposição */
   ranges: RangeEdit[];
   reference: ReferencePalette | null;
+  /** o que a pessoa mexeu à mão no editor (v6, ADR-0018): posições, aparência, elementos, enquadramento */
+  edits: ManualEdits;
 }
 
 export const REELS_PROFILE: OutputProfile = { width: 1080, height: 1920, fps: 30 };
+
+/** Enquadramento padrão: preenche e segue o rosto (sem rosto detectado, fica no centro). */
+export const DEFAULT_FRAMING: Framing = { mode: 'smart', fill: 'blur', zoom: 1, x: 0, y: 0 };

@@ -5,7 +5,7 @@ import type { Ctx2D } from './ctx';
 import { clamp01, easeOutBounce, easeOutCubic, progress } from './easing';
 import { easeInQuad, easeOutExpo, mix, springIn, stagger, wiggle } from './motion';
 import { chromaBehind } from './decor';
-import type { Rect } from './layout';
+import { isTall, unitFor, type Rect } from './layout';
 import { onBox } from '../core/color';
 import { alphaOf, applyCase, captionFrac, clearShadow, fillBox, setFont, setShadow, type Frame } from './kit';
 
@@ -73,7 +73,7 @@ export function captionColors(style: StyleDNA): { text: string; highlight: strin
   return {
     text: C.text ?? P.text,
     highlight: C.highlight ?? P.accent,
-    keyword: C.highlight ?? P.accent2,
+    keyword: style.brand?.keyword ?? C.highlight ?? P.accent2,
     stroke: C.stroke ?? (alphaOf(P.shadow) > 0 ? P.shadow : '#000000'),
     box: C.box ?? P.panel,
   };
@@ -134,6 +134,8 @@ export const REELS_BUTTONS_X = 0.87;
  * botões da direita (v0.7); em cima, usa a área segura inteira.
  */
 export function captionMaxWidth(f: Pick<Frame, 'w' | 'h' | 'safe' | 'style'>): number {
+  // fora do 9:16 (v0.14): legenda compacta no meio, do tamanho de uma legenda de Reels, mesmo com a tela larga
+  if (!isTall(f.w, f.h)) return Math.min(f.safe.w * 0.94, 1000 * unitFor(f.w, f.h));
   const full = f.safe.w * 0.94;
   if (captionCenterFrac(f.style) < 0.45) return full;
   return Math.min(full, 2 * (f.w * REELS_BUTTONS_X - f.w / 2) - 12 * (f.w / 1080));
@@ -142,6 +144,16 @@ export function captionMaxWidth(f: Pick<Frame, 'w' | 'h' | 'safe' | 'style'>): n
 export interface CaptionOpts {
   /** a legenda sai animando no fim (há uma pausa antes da próxima) */
   exit?: boolean;
+  /** posição escolhida à mão (v0.13): centro normalizado do bloco, tamanho e giro (graus) */
+  place?: { x: number; y: number; scale: number; rotate: number } | null;
+  /** alinhamento das linhas dentro do bloco (padrão: centro) */
+  align?: 'left' | 'center' | 'right';
+  /** largura máxima da linha em px (padrão: a do modelo) */
+  maxW?: number;
+  /** false = sem sombra atrás das letras */
+  shadow?: boolean;
+  /** marca o começo do desenho da legenda já transformada (medida das caixas, v0.13) */
+  onBegin?: () => void;
 }
 
 /** Entrada de cada palavra em sequência (pop/rise): atraso da palavra i. */
@@ -171,9 +183,11 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   const active = activeWord(starts, t);
   const isKw = tokens.map((tk) => keywords.has(normalizeToken(tk)));
   const emScale = em.family !== spec.family ? 1.16 : 1;
-  const maxW = captionMaxWidth(f);
+  const maxW = opts.maxW ?? captionMaxWidth(f);
+  const place = opts.place ?? null;
+  const align = opts.align ?? 'center';
 
-  let size = C.size * f.w;
+  let size = C.size * 1080 * u;
   let widths: number[] = [];
   let lines: number[][] = [];
   let space = 0;
@@ -196,17 +210,17 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
 
   const lineH = size * 1.2;
   const blockH = lines.length * lineH;
-  const top = captionTop(style, safe, blockH);
-  const cx = f.w / 2;
+  const top = place ? place.y * f.h - blockH / 2 : captionTop(style, safe, blockH);
+  const cx = place ? place.x * f.w : f.w / 2;
 
   // posição de cada palavra (centro x, linha)
   const wordX: number[] = [];
   const wordLine: number[] = [];
-  const lineWidths: number[] = [];
+  const lineWidths = lines.map((line) => line.reduce((acc, i) => acc + widths[i]!, 0) + space * (line.length - 1));
+  const blockW = Math.max(...lineWidths);
   lines.forEach((line, li) => {
-    const lineW = line.reduce((acc, i) => acc + widths[i]!, 0) + space * (line.length - 1);
-    lineWidths.push(lineW);
-    let x = cx - lineW / 2;
+    const lineW = lineWidths[li]!;
+    let x = align === 'left' ? cx - blockW / 2 : align === 'right' ? cx + blockW / 2 - lineW : cx - lineW / 2;
     for (const i of line) {
       wordX[i] = x + widths[i]! / 2;
       wordLine[i] = li;
@@ -214,9 +228,16 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     }
   });
   const lineY = (li: number) => top + lineH * (li + 0.5);
-  const blockW = Math.max(...lineWidths);
 
   ctx.save();
+  if (place && (place.scale !== 1 || place.rotate !== 0)) {
+    const cy = top + blockH / 2;
+    ctx.translate(cx, cy);
+    if (place.rotate) ctx.rotate((place.rotate * Math.PI) / 180);
+    if (place.scale !== 1) ctx.scale(place.scale, place.scale);
+    ctx.translate(-cx, -cy);
+  }
+  opts.onBegin?.();
   const jx = captionJitter(style, t) * u;
   if (jx !== 0) ctx.translate(jx, 0);
   // saída curta quando há uma pausa antes da próxima legenda
@@ -302,7 +323,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
       const padY = size * 0.14;
       const boxH = lineH - 2 + padY;
       const lw = lineWidths[li]!;
-      const left = cx - lw / 2;
+      const left = align === 'left' ? cx - blockW / 2 : align === 'right' ? cx + blockW / 2 - lw : cx - lw / 2;
       let w = lw;
       if (typing) {
         const shownIdx = line.filter((i) => i <= active);
@@ -404,7 +425,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
         setFont(ctx, fontOf(i), sizeOf(i));
         ctx.lineWidth = C.stroke * u;
         ctx.strokeStyle = K.stroke;
-        setTextShadow(ctx, f);
+        if (opts.shadow !== false) setTextShadow(ctx, f);
         ctx.strokeText(shown[i]!, xOf(i), lineY(wordLine[i]!));
         clearShadow(ctx);
       });
@@ -437,7 +458,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
         ctx.fillStyle = K.highlight;
         ctx.fillRect(xOf(i) - widths[i]! / 2, y + size * 0.52, widths[i]! * grow, Math.max(2, size * 0.08));
       }
-      if (C.stroke === 0 && plain && C.box === 'none') setShadow(ctx, f, 'soft', 0.9);
+      if (C.stroke === 0 && plain && C.box === 'none' && opts.shadow !== false) setShadow(ctx, f, 'soft', 0.9);
       if (plain) chromaBehind(ctx, f, shown[i]!, xOf(i), y);
       ctx.fillStyle = color;
       ctx.fillText(shown[i]!, xOf(i), y);
@@ -448,7 +469,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   if (style.decor.cursor && typing) {
     const last = Math.min(active, tokens.length - 1);
     const li = last >= 0 ? wordLine[last]! : 0;
-    const x = last >= 0 ? xOf(last) + widths[last]! / 2 + size * 0.14 : cx - lineWidths[0]! / 2;
+    const x = last >= 0 ? xOf(last) + widths[last]! / 2 + size * 0.14 : (wordX[lines[0]![0]!] ?? cx) - widths[lines[0]![0]!]! / 2;
     const since = last >= 0 ? t - starts[last]! : t - caption.start;
     const on = since < 0.45 || Math.floor(since * 2.4) % 2 === 0;
     if (on) {
@@ -457,6 +478,10 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     }
   }
   ctx.restore();
+  if (place && (place.scale !== 1 || place.rotate !== 0)) {
+    const s = place.scale;
+    return { x: cx - (blockW * s) / 2, y: top + blockH / 2 - (blockH * s) / 2, w: blockW * s, h: blockH * s };
+  }
   return { x: cx - blockW / 2, y: top, w: blockW, h: blockH };
 }
 

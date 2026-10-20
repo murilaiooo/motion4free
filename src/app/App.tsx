@@ -1,22 +1,53 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FAKE_CHUNKS, FAKE_DEMO_CHUNKS, FakeTranscriber, WhisperTranscriber } from '../asr/transcriber';
 import { waveformPeaks } from '../analysis/waveform';
-import { AppError, toAppError } from '../core/errors';
+import { ASR_CANDIDATES, asrLadder } from '../core/asr-models';
+import { MB, formatBytes } from '../core/bytes';
+import { AppError, describeError, toAppError } from '../core/errors';
 import { makeProject, restoreHistory, sameVideo, type SavedProject } from '../core/project';
+import {
+  PROJECTS_DIR,
+  THUMB,
+  deleteProject,
+  duplicateProject,
+  getCurrent,
+  listProjects,
+  loadProject,
+  migrateLegacy,
+  nameFromFile,
+  newProjectId,
+  readMeta,
+  renameProject,
+  saveProjectData,
+  saveThumb,
+  saveVideo,
+  setCurrent,
+  type ProjectSummary,
+} from '../core/project-library';
+import { dirSize } from '../core/storage-fs';
+import { cachedRepos, spaceCheck } from '../core/storage-report';
 import type { EditPlan } from '../core/types';
 import { createHistory, type History } from '../engine/history';
 import type { PlanVersion } from '../core/versions';
+import type { OpenedMedia } from '../media/input';
+import { makeThumbnail } from '../media/thumbnail';
 import { APP_VERSION, VERSION_LABEL } from '../version';
+import { DeleteProjectDialog, type DeleteTarget } from './DeleteProjectDialog';
 import { Editor, type Session } from './Editor';
 import { ErrorBox } from './ErrorBox';
 import { Gallery } from './Gallery';
 import { Landing, Processing } from './Landing';
+import { ProjectMenu } from './ProjectMenu';
+import { ProjectsList } from './Projects';
+import { StorageScreen } from './Storage';
 import { Logo, type SaveState } from './TopBar';
 import { analyze, openWithAudio } from './pipeline';
 import { useAsrPrecision } from './asr-precision';
 import { AsrPrecisionOption } from './AsrPrecisionOption';
 import { Evaluate } from './Evaluate';
-import { clearProject, loadProject, saveProject, saveVideoCopy, storageAvailable } from './project-store';
+import { projectFs, storage, storageAvailable } from './project-store';
+
+const fs = projectFs;
 
 type Status = { kind: 'idle' } | { kind: 'working'; label: string; fraction: number } | { kind: 'ready' } | { kind: 'error'; error: AppError };
 type CopyState = 'pending' | 'done' | 'failed';
@@ -58,6 +89,21 @@ export function App() {
   return <EditorApp />;
 }
 
+/**
+ * Abertura do app: migra o projeto único da v0.10 (uma vez) e diz qual projeto estava aberto.
+ * Fica fora do componente para não rodar duas vezes (React StrictMode monta efeitos duas vezes).
+ */
+let startup: Promise<{ current: string | null; problem: AppError | null }> | null = null;
+function startOnce() {
+  startup ??= (async () => {
+    if (!fs) return { current: null, problem: new AppError('PROJETOS_INDISPONIVEIS', 'navigator.storage.getDirectory ausente') };
+    const mig = await migrateLegacy(fs, newProjectId(Date.now()), new Date().toISOString()).catch((err) => ({ kind: 'failed' as const, detail: describeError(err) }));
+    const current = await getCurrent(fs).catch(() => null);
+    return { current, problem: mig.kind === 'failed' ? new AppError('MIGRACAO_FALHOU', mig.detail) : null };
+  })();
+  return startup;
+}
+
 function EditorApp() {
   const transcriber = useMemo(
     () =>
@@ -75,46 +121,105 @@ function EditorApp() {
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [session, setSession] = useState<Session | null>(null);
   const [history, setHistory] = useState<History<EditPlan> | null>(null);
-  const [pending, setPending] = useState<SavedProject | null>(null); // projeto salvo esperando o vídeo
+  const [pending, setPending] = useState<{ id: string; project: SavedProject } | null>(null); // projeto salvo esperando o vídeo
   const [notices, setNotices] = useState<AppError[]>([]);
   const [savedFor, setSavedFor] = useState<History<EditPlan> | null>(null);
   const [versions, setVersions] = useState<PlanVersion[]>([]);
   const [versionsSaved, setVersionsSaved] = useState<PlanVersion[]>([]);
   const [copy, setCopy] = useState<CopyState>('pending');
   const [fileName, setFileName] = useState<string | null>(null);
+  // v0.11: vários projetos
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState('');
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [storageOpen, setStorageOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [spaceWarn, setSpaceWarn] = useState<{ file: File; error: AppError } | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
   const saveFailed = useRef(false);
+  /** gravações no OPFS em fila: salvar, copiar vídeo, renomear e apagar nunca se atropelam */
+  const queue = useRef<Promise<unknown>>(Promise.resolve());
+
+  function enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    const run = queue.current.then(fn, fn);
+    queue.current = run.catch(() => undefined);
+    return run;
+  }
 
   const step = (label: string, fraction: number) => setStatus({ kind: 'working', label, fraction });
   const fail = (err: unknown) => setStatus({ kind: 'error', error: toAppError(err) });
   const notify = (e: AppError) => setNotices((list) => (list.some((n) => n.code === e.code) ? list : [...list, e]));
 
-  // Ao abrir o app: continua o projeto salvo, se houver.
+  async function refreshProjects() {
+    if (!fs) return;
+    try {
+      setProjects(await enqueue(() => listProjects(fs)));
+    } catch (err) {
+      notify(new AppError('LISTA_FALHOU', describeError(err)));
+    }
+  }
+
+  // Ao abrir o app: migra o projeto da v0.10, mostra a lista e continua o projeto aberto por último.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const loaded = await loadProject().catch((err) => ({ kind: 'corrupt' as const, detail: String(err) }));
-      if (cancelled || loaded.kind === 'none') return;
-      if (loaded.kind === 'corrupt') {
-        notify(new AppError('PROJETO_CORROMPIDO', loaded.detail));
-        await clearProject();
-        return;
-      }
-      if (!loaded.video) {
-        setPending(loaded.project);
-        return;
-      }
-      try {
-        await resume(loaded.project, loaded.video, true);
-      } catch (err) {
-        if (!cancelled) fail(err);
-      }
+      const { current, problem } = await startOnce();
+      if (cancelled) return;
+      if (problem) notify(problem);
+      await refreshProjects();
+      if (current && !cancelled) await openProject(current);
     })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  async function resume(project: SavedProject, file: Blob, copyExists: boolean) {
+  function resetSession() {
+    setPending(null);
+    setSession(null);
+    setHistory(null);
+    setSavedFor(null);
+    setVersions([]);
+    setVersionsSaved([]);
+    setAsrModel(null);
+    setNotices([]);
+    setSpaceWarn(null);
+    setProjectId(null);
+    setProjectName('');
+    setStatus({ kind: 'idle' });
+  }
+
+  async function openProject(id: string) {
+    if (!fs) return;
+    setFlash(null);
+    setStatus({ kind: 'idle' });
+    const loaded = await enqueue(() => loadProject(fs, id)).catch((err) => ({ kind: 'corrupt' as const, detail: describeError(err) }));
+    if (loaded.kind === 'none') {
+      await enqueue(() => setCurrent(fs, null)).catch(() => undefined);
+      await refreshProjects();
+      return;
+    }
+    if (loaded.kind === 'corrupt') {
+      notify(new AppError('PROJETO_CORROMPIDO', loaded.detail));
+      await enqueue(() => setCurrent(fs, null)).catch(() => undefined);
+      return;
+    }
+    const meta = await readMeta(fs, id).catch(() => null);
+    setProjectId(id);
+    setProjectName(meta?.name ?? nameFromFile(loaded.project.video.name));
+    await enqueue(() => setCurrent(fs, id)).catch(() => undefined);
+    if (!loaded.video) {
+      setPending({ id, project: loaded.project });
+      return;
+    }
+    try {
+      await resume(id, loaded.project, loaded.video, true);
+    } catch (err) {
+      fail(err);
+    }
+  }
+
+  async function resume(id: string, project: SavedProject, file: Blob, copyExists: boolean) {
     setFileName(project.video.name);
     step('Abrindo o projeto salvo', 0);
     setAsrModel(null);
@@ -140,12 +245,15 @@ function EditorApp() {
     setPending(null);
     setStatus({ kind: 'ready' });
     if (copyExists) setCopy('done');
-    else storeCopy(file);
+    else storeCopy(id, file);
+    // projeto migrado da v0.10 ainda sem miniatura
+    if (fs && !(await fs.readFile([...PROJECTS_DIR, id, THUMB]).catch(() => null))) storeThumb(id, media, h.present);
   }
 
-  function storeCopy(file: Blob) {
+  function storeCopy(id: string, file: Blob) {
+    if (!fs) return;
     setCopy('pending');
-    saveVideoCopy(file)
+    enqueue(() => saveVideo(fs, id, file))
       .then(() => setCopy('done'))
       .catch((err) => {
         // sem a cópia o projeto continua salvo; ao reabrir o app pede o vídeo de novo (M4F-604)
@@ -154,26 +262,67 @@ function EditorApp() {
       });
   }
 
-  async function onFile(f: File) {
+  function storeThumb(id: string, media: OpenedMedia, plan: EditPlan): Promise<void> {
+    if (!fs) return Promise.resolve();
+    return makeThumbnail(media, plan)
+      .then((b) => (b ? enqueue(() => saveThumb(fs, id, b)) : undefined))
+      .catch((err) => console.warn('Miniatura do projeto não foi salva', err));
+  }
+
+  /** Cabe o vídeo (e o modelo de legenda, se ainda não foi baixado)? Senão, aviso M4F-606 antes de começar. */
+  async function checkSpace(f: File): Promise<AppError | null> {
+    const est = (await storage.quota?.estimate().catch(() => null)) ?? null;
+    if (!est) return null;
+    const cand = ASR_CANDIDATES[asrLadder(precision.mode, precision.capability)[0]!];
+    const cached = await cachedRepos(storage.caches).catch(() => new Set<string>());
+    const model = cached.has(cand.repo) ? 0 : cand.downloadMB * MB;
+    const check = spaceCheck(est, f.size + model);
+    if (check.ok) return null;
+    return new AppError(
+      'ESPACO_INSUFICIENTE',
+      `livre para o app: ${formatBytes(check.free ?? 0)}; precisa de cerca de ${formatBytes(check.needed)} (cópia do vídeo ${formatBytes(f.size)}${model ? ` + modelo de legenda ${cand.label} ${formatBytes(model)}` : ''})`,
+    );
+  }
+
+  async function onFile(f: File, force = false) {
     setStatus({ kind: 'idle' });
-    setFileName(f.name);
+    setFlash(null);
     if (pending) {
+      setFileName(f.name);
       try {
-        await resume(pending, f, false);
+        await resume(pending.id, pending.project, f, false);
       } catch (err) {
         fail(err);
       }
       return;
     }
+    if (!force) {
+      const warn = await checkSpace(f);
+      if (warn) {
+        setSpaceWarn({ file: f, error: warn });
+        return;
+      }
+    }
+    setSpaceWarn(null);
+    // trocar de vídeo no editor: o projeto atual fica salvo (com a miniatura atualizada)
+    if (session && history && projectId) {
+      await saveNow();
+      void storeThumb(projectId, session.media, history.present);
+    }
+    setFileName(f.name);
     setSession(null);
     setAsrModel(null);
     setHistory(null);
     setNotices([]);
+    setProjectId(null);
     try {
       const a = await analyze(f, transcriber, step, { asrMode: precision.mode });
       setAsrModel(a.asrModel);
-      await clearProject();
+      const id = newProjectId(Date.now());
       const h = createHistory(a.plan);
+      setProjectId(id);
+      setProjectName(nameFromFile(f.name));
+      setSavedFor(null);
       setVersions([]);
       setVersionsSaved([]);
       setSession({
@@ -188,8 +337,11 @@ function EditorApp() {
       });
       setHistory(h);
       setStatus({ kind: 'ready' });
-      if (storageAvailable()) storeCopy(f);
-      else {
+      if (storageAvailable() && fs) {
+        void enqueue(() => setCurrent(fs, id)).catch(() => undefined);
+        storeCopy(id, f);
+        void storeThumb(id, a.media, a.plan);
+      } else {
         setCopy('failed');
         notify(new AppError('SALVAR_FALHOU', 'navigator.storage.getDirectory indisponível'));
       }
@@ -198,43 +350,102 @@ function EditorApp() {
     }
   }
 
-  async function startOver() {
-    await clearProject();
-    setPending(null);
-    setSession(null);
-    setAsrModel(null);
-    setHistory(null);
-    setNotices([]);
-    setStatus({ kind: 'idle' });
+  /** Grava agora o que ainda não foi salvo (antes de fechar ou trocar de projeto). */
+  async function saveNow(): Promise<void> {
+    if (!fs || !session || !history || !projectId || (history === savedFor && versions === versionsSaved)) return;
+    const project = makeProject({
+      appVersion: APP_VERSION,
+      savedAt: new Date().toISOString(),
+      video: { name: session.fileName, size: session.file.size, durationSec: session.ctx.durationSec },
+      words: session.ctx.words,
+      silences: session.silences,
+      warnings: session.warnings.map((w) => ({ key: w.key, detail: w.detail })),
+      history,
+      versions,
+    });
+    const id = projectId;
+    const name = projectName || nameFromFile(session.fileName);
+    try {
+      await enqueue(() => saveProjectData(fs, id, project, name, project.savedAt));
+      setSavedFor(history);
+      setVersionsSaved(versions);
+    } catch (err) {
+      if (saveFailed.current) return;
+      saveFailed.current = true;
+      notify(toAppError(err, 'SALVAR_FALHOU'));
+    }
   }
 
   // Salva automaticamente a cada mudança (com pequena espera para agrupar edições rápidas).
   useEffect(() => {
-    if (!session || !history || !storageAvailable() || (history === savedFor && versions === versionsSaved)) return;
-    const timer = setTimeout(() => {
-      const project = makeProject({
-        appVersion: APP_VERSION,
-        savedAt: new Date().toISOString(),
-        video: { name: session.fileName, size: session.file.size, durationSec: session.ctx.durationSec },
-        words: session.ctx.words,
-        silences: session.silences,
-        warnings: session.warnings.map((w) => ({ key: w.key, detail: w.detail })),
-        history,
-        versions,
-      });
-      saveProject(project)
-        .then(() => {
-          setSavedFor(history);
-          setVersionsSaved(versions);
-        })
-        .catch((err) => {
-          if (saveFailed.current) return;
-          saveFailed.current = true;
-          notify(toAppError(err, 'SALVAR_FALHOU'));
-        });
-    }, 300);
+    if (!session || !history || !projectId || !storageAvailable() || (history === savedFor && versions === versionsSaved)) return;
+    const timer = setTimeout(() => void saveNow(), 300);
     return () => clearTimeout(timer);
-  }, [session, history, savedFor, versions, versionsSaved]);
+  }, [session, history, savedFor, versions, versionsSaved, projectId]);
+
+  /** "Fechar projeto": volta para Meus projetos; o projeto continua salvo. */
+  async function closeProject() {
+    if (session && history && projectId) {
+      await saveNow();
+      await storeThumb(projectId, session.media, history.present);
+    }
+    if (fs) await enqueue(() => setCurrent(fs, null)).catch(() => undefined);
+    resetSession();
+    await refreshProjects();
+  }
+
+  async function askDelete(target: DeleteTarget) {
+    setDeleteTarget(target);
+    if (target.sizeBytes === null && fs) {
+      const size = await enqueue(() => dirSize(fs, [...PROJECTS_DIR, target.id])).catch(() => null);
+      setDeleteTarget((t) => (t && t.id === target.id ? { ...t, sizeBytes: size } : t));
+    }
+  }
+
+  async function confirmDelete(target: DeleteTarget) {
+    if (!fs) return;
+    try {
+      const freed = await enqueue(() => deleteProject(fs, target.id));
+      if (target.id === projectId) resetSession();
+      setFlash(`Projeto "${target.name}" apagado. Liberou ${formatBytes(freed)}. O vídeo original continua no seu computador.`);
+    } catch (err) {
+      notify(new AppError('APAGAR_FALHOU', `${target.name}: ${describeError(err)}`));
+    }
+    setDeleteTarget(null);
+    await refreshProjects();
+  }
+
+  async function rename(id: string, name: string) {
+    if (!fs) return;
+    try {
+      const meta = await enqueue(() => renameProject(fs, id, name));
+      if (meta && id === projectId) setProjectName(meta.name);
+    } catch (err) {
+      notify(toAppError(err, 'SALVAR_FALHOU'));
+    }
+    await refreshProjects();
+  }
+
+  async function duplicate(id: string) {
+    if (!fs) return;
+    const source = projects.find((p) => p.id === id);
+    try {
+      const est = await storage.quota?.estimate().catch(() => null);
+      const check = spaceCheck(est ?? null, source?.sizeBytes ?? 0);
+      if (!check.ok) throw new Error(`livre ${formatBytes(check.free ?? 0)}; a cópia precisa de ${formatBytes(check.needed)}`);
+      const copy = await enqueue(() => duplicateProject(fs, id, newProjectId(Date.now()), new Date().toISOString()));
+      if (copy) setFlash(`Projeto duplicado: "${copy.name}".`);
+    } catch (err) {
+      notify(new AppError('DUPLICAR_FALHOU', describeError(err)));
+    }
+    await refreshProjects();
+  }
+
+  /** Algo foi apagado pela tela Armazenamento. */
+  async function storageChanged(deletedProject: string | null, everything: boolean) {
+    if (everything || (deletedProject && deletedProject === projectId)) resetSession();
+    await refreshProjects();
+  }
 
   const busy = status.kind === 'working';
   const saved = !!history && savedFor === history && versionsSaved === versions && copy !== 'pending';
@@ -243,11 +454,11 @@ function EditorApp() {
   const pendingNotice = pending && (
     <div className="notice warning" role="status" data-testid="warning-M4F-604">
       <p>
-        <b className="code">Aviso M4F-604</b>: Para continuar o projeto salvo, escolha de novo o vídeo original (<b>{pending.video.name}</b>). Suas edições estão guardadas.
+        <b className="code">Aviso M4F-604</b>: Para continuar o projeto salvo, escolha de novo o vídeo original (<b>{pending.project.video.name}</b>). Suas edições estão guardadas.
       </p>
       <div className="notice-row">
-        <button className="sm" onClick={startOver} data-testid="start-over">
-          Começar outro vídeo
+        <button className="sm" onClick={() => void closeProject()} data-testid="start-over">
+          Voltar para Meus projetos
         </button>
       </div>
     </div>
@@ -258,47 +469,115 @@ function EditorApp() {
       {notices.map((n) => (
         <ErrorBox key={n.code} error={n} kind="warning" />
       ))}
+      {spaceWarn && (
+        <div className="space-warn" data-testid="space-warning" style={{ display: 'grid', gap: 'var(--s-2)' }}>
+          <ErrorBox error={spaceWarn.error} kind="warning" />
+          <div className="notice-row">
+            <button className="sm primary" onClick={() => void onFile(spaceWarn.file, true)} data-testid="space-continue">
+              Continuar mesmo assim
+            </button>
+            <button className="sm" onClick={() => setStorageOpen(true)} data-testid="space-storage">
+              Liberar espaço (Armazenamento)
+            </button>
+            <button className="sm ghost" onClick={() => setSpaceWarn(null)} data-testid="space-cancel">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const overlays = (
+    <>
+      {storageOpen && (
+        <StorageScreen
+          deps={storage}
+          currentProjectId={projectId}
+          onClose={() => setStorageOpen(false)}
+          onProjectDeleted={(id) => void storageChanged(id, false)}
+          onEverythingDeleted={() => void storageChanged(null, true)}
+        />
+      )}
+      {deleteTarget && <DeleteProjectDialog target={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={() => confirmDelete(deleteTarget)} />}
     </>
   );
 
   if (session && history) {
     return (
-      <Editor
-        session={session}
-        history={history}
-        onHistory={setHistory}
-        versions={versions}
-        onVersions={setVersions}
-        disabled={busy}
-        saveState={saveState}
-        asrModel={asrModel}
-        onReplaceFile={(f) => void onFile(f)}
-        notices={
-          <>
-            {appNotices}
-            {session.warnings.map((w) => (
-              <ErrorBox key={w.code} error={w} kind="warning" />
-            ))}
-          </>
-        }
-      />
+      <>
+        <Editor
+          session={session}
+          history={history}
+          onHistory={setHistory}
+          versions={versions}
+          onVersions={setVersions}
+          disabled={busy}
+          saveState={saveState}
+          asrModel={asrModel}
+          onReplaceFile={(f) => void onFile(f)}
+          projectMenu={
+            <ProjectMenu
+              name={projectName || nameFromFile(session.fileName)}
+              busy={busy}
+              canSave={!!fs && !!projectId}
+              onRename={(n) => projectId && void rename(projectId, n)}
+              onReplaceFile={(f) => void onFile(f)}
+              onClose={() => void closeProject()}
+              onDelete={() => projectId && void askDelete({ id: projectId, name: projectName || nameFromFile(session.fileName), videoName: session.fileName, sizeBytes: null })}
+              onStorage={() => setStorageOpen(true)}
+            />
+          }
+          notices={
+            <>
+              {appNotices}
+              {session.warnings.map((w) => (
+                <ErrorBox key={w.code} error={w} kind="warning" />
+              ))}
+            </>
+          }
+        />
+        {overlays}
+      </>
     );
   }
   if (status.kind === 'working') return <Processing label={status.label} fraction={status.fraction} fileName={fileName} />;
   return (
-    <Landing
-      onFile={(f) => void onFile(f)}
-      busy={busy}
-      pendingName={pending?.video.name ?? null}
-      options={!pending && <AsrPrecisionOption precision={precision} disabled={busy} />}
-      notices={
-        (pendingNotice || status.kind === 'error' || notices.length > 0) && (
-          <div className="land-notices">
-            {pendingNotice}
-            {appNotices}
-          </div>
-        )
-      }
-    />
+    <>
+      <Landing
+        onFile={(f) => void onFile(f)}
+        busy={busy}
+        pendingName={pending?.project.video.name ?? null}
+        options={!pending && <AsrPrecisionOption precision={precision} disabled={busy} />}
+        onStorage={() => setStorageOpen(true)}
+        projects={
+          projects.length > 0 && (
+            <ProjectsList
+              projects={projects}
+              busy={busy}
+              onOpen={(id) => void openProject(id)}
+              onRename={(id, n) => void rename(id, n)}
+              onDuplicate={(id) => void duplicate(id)}
+              onDelete={(p) => void askDelete({ id: p.id, name: p.name, videoName: p.video.name, sizeBytes: p.sizeBytes })}
+              onStorage={() => setStorageOpen(true)}
+            />
+          )
+        }
+        notices={
+          (pendingNotice || flash || status.kind === 'error' || notices.length > 0 || spaceWarn) && (
+            <div className="land-notices">
+              {flash && (
+                <p className="m4f-callout ok" role="status" data-testid="flash">
+                  {flash}
+                </p>
+              )}
+              {pendingNotice}
+              {appNotices}
+            </div>
+          )
+        }
+      />
+      {overlays}
+    </>
   );
 }

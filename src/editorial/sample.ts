@@ -1,3 +1,4 @@
+import { EMPTY_EDITS } from '../core/edits';
 import { EMPTY_BRIEF } from '../core/brief';
 import type { StyleDNA } from '../core/style';
 import type { Caption, EditPlan } from '../core/types';
@@ -22,9 +23,12 @@ function cap(id: string, text: string, start: number, end: number, wordStarts: n
 
 export function galleryPlan(style: StyleDNA): EditPlan {
   return {
-    version: 5,
+    version: 6,
+    clips: [{ id: 'c1', name: '', duration: 28, framing: null }],
+    framing: { mode: 'fill', fill: 'blur', zoom: 1, x: 0, y: 0 },
     ranges: [],
     reference: null,
+    edits: EMPTY_EDITS,
     output: { width: 1080, height: 1920, fps: 30 },
     style,
     brief: EMPTY_BRIEF,

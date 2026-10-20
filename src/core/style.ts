@@ -167,6 +167,9 @@ export const DECOR_OFF = {
   gradient: false,
 } as const;
 
+/** Marca desligada (v0.12): sem @ no canto, palavra-chave na cor do estilo. */
+export const BRAND_OFF = { handle: null, keyword: null } as const;
+
 /** Emojis desligados: o que os estilos e os planos antigos (v1) usam. */
 export const EMOJI_OFF = { mode: 'off', everySec: 3, position: 'auto', size: 0.14, animation: 'pop' } as const;
 /** Cores próprias da legenda desligadas (null = cor do estilo). */
@@ -287,6 +290,13 @@ export const styleSchema = z.object({
       gradient: z.boolean(),
     })
     .default(() => ({ ...DECOR_OFF })),
+  /** marca da pessoa (v0.12): @ no canto e cor das palavras-chave; ausente (estilos do registro e projetos antigos) = nada */
+  brand: z
+    .object({
+      handle: z.string().regex(/^@[a-z0-9._]{2,30}$/).nullable(),
+      keyword: color.nullable(),
+    })
+    .optional(),
 });
 
 export type StyleDNA = z.infer<typeof styleSchema>;
@@ -296,7 +306,7 @@ export const styleV1Schema = styleSchema.extend({
   version: z.literal(1),
   type: z.object({ display: fontV1, text: fontV1, emphasis: fontV1, label: fontV1, scale: z.number().min(0.6).max(1.6) }),
   captions: styleSchema.shape.captions.omit({ y: true, enter: true, wordsPerLine: true, colors: true }).extend({ position: z.enum(['bottom', 'middle']), size: z.number().min(0.04).max(0.12) }),
-}).omit({ emoji: true, decor: true });
+}).omit({ emoji: true, decor: true, brand: true });
 export type StyleV1 = z.infer<typeof styleV1Schema>;
 
 /** v1 → v2: os campos novos começam com o comportamento antigo (nada muda na tela). */

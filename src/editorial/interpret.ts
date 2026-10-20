@@ -17,6 +17,7 @@ import { STOPWORDS } from './detect';
 import { TEMPLATES } from '../core/templates';
 import { lookIsEmpty } from '../core/look';
 import { parseLookRules } from './look-rules';
+import { findNiche } from './extra-rules';
 import { stripAccents, tokenize, type Token } from './tokens';
 
 export { stripAccents, tokenize } from './tokens';
@@ -277,6 +278,12 @@ export function interpretPrompt(text: string): Interpretation {
   const templatePicks = templatePass(toks, used);
   const lookRules = parseLookRules(prompt, toks, used);
   conflicts.push(...lookRules.notes);
+  {
+    const beforeLook = [...used];
+    const lookUsed = (i: number) => used[i] === true && !beforeLook[i];
+    const nicheHit = findNiche(toks, lookUsed);
+    if (nicheHit) conflicts.push(...nicheHit.notes);
+  }
 
   // 1) proibições (antes de tudo: "sem pressa" é tom, não proibição; o léxico de tom é testado primeiro só nessa posição)
   for (let i = 0; i < toks.length; i++) {

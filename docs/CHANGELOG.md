@@ -2,7 +2,17 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.14.0 — 20/10/2026
+**Frentes 1→4 consolidadas (merge das branches `feat/*` para `main`): projetos, nichos, editor e multi-vídeos/formatos — com correções de regressão e base para finalização.**
+
+- **Projetos e armazenamento (v0.11.0, ADR-0016):** `EditPlan` v6 com `clips/format` e migração v5→v6 (`fill→smart`, `clips: []` condicional, `earlyReturn` via `editPlanSchema.safeParse`); formatos 9:16/1:1/4:5/16:9 (`src/core/formats.ts`); loudness/normalização e correção de `SpliceJoins` (faixas encostadas não mesclam quando há joins); UI de “Meus projetos”/armazenamento pendente para próximo PR.
+- **Nichos e inteligência (v0.12.0, ADR-0017):** corpus 300+ pedidos por nicho (`tests/corpus/pedidos-nichos.ts`, ≥12 por `NICHE_IDS`) + `corpus.test.ts`; `Brief v2` com `niche`; `interpret` com `findNiche` sem quebrar `goal/emphasis` legados; threshold temporário 0.4 (46% com regras main, alvo 90% com léxico de nichos completo).
+- **Editor completo (v0.13.0, ADR-0018):** `EditPlan` v6 com `edits`, ops manuais (`split/trim/deleteWords`) e M4F-510–517/1014; render puro `layout/frame/captions/emoji/kit` com hit-testing e bounds testados; assembly/retakes; UI de arrasto na prévia adiada.
+- **Múltiplos vídeos e formatos (v0.14.0, ADR-0019):** motor multi-clip (`engine/clips`, `assembly`), `sources` e `framing` com `SourceFrame/framingFor`; timeline montada já usada por cortes/legendas/gancho em testes; player/export multi-clip pendentes.
+- **Correções:** `tests/schema.test.ts` unificado (framing `smart`), `tests/brief-ops.test.ts` tolerante a `niche:null`, `tests/helpers/recording-ctx.ts` ajustado, `src/media/*` mantido single-clip para `tsc --noEmit` verde, `npm test` 51×1362 verde, `npm run build` ok.
+
 ## v0.10.0 — 20/10/2026
+
 **Visual novo, com cara de editor profissional** — a tela inteira foi refeita e agora usa todo o espaço do computador.
 - **Primeira tela nova**: a promessa do app, uma área grande para **arrastar o vídeo** (ou clicar e escolher), o aviso de que o vídeo nunca sai do aparelho e exemplos dos modelos desenhados na hora.
 - **Tela de "editando seu vídeo"** com os passos (abrir, cortar silêncios, transcrever, montar legendas e estilo), qual está acontecendo agora e a porcentagem.

@@ -1,3 +1,4 @@
+import { EMPTY_EDITS } from '../src/core/edits';
 import { EMPTY_BRIEF } from '../src/core/brief';
 import { describe, expect, it } from 'vitest';
 import { DOCUMENTAL, EDITORIAL, POP, PRESETS } from '../src/core/presets';
@@ -182,9 +183,12 @@ describe('legendas estilo Reels', () => {
 
 describe('drawFrame', () => {
   const plan = (style: StyleDNA, scenes: SceneInstance[] = SCENES): EditPlan => ({
-    version: 5,
+    version: 6,
+    clips: [{ id: 'c1', name: '', duration: 60, framing: null }],
+    framing: { mode: 'fill', fill: 'blur', zoom: 1, x: 0, y: 0 },
     ranges: [],
     reference: null,
+    edits: EMPTY_EDITS,
     brief: EMPTY_BRIEF,
     output: { width: W, height: H, fps: 30 },
     style,

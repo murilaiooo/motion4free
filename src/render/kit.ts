@@ -1,7 +1,7 @@
 import { cssFont, type FontSpec, type StyleDNA } from '../core/style';
 import type { Ctx2D } from './ctx';
 import { clamp01, easeInCubic, easeOutBounce, progress } from './easing';
-import { reelsSafeArea, type Rect } from './layout';
+import { safeAreaFor, unitFor, type Rect } from './layout';
 import { cubicBezier, easeOutExpo, springIn, type SpringSpec } from './motion';
 
 /** Ferramentas de desenho compartilhadas pelas cenas. Tudo puro: depende só dos argumentos. */
@@ -9,7 +9,7 @@ import { cubicBezier, easeOutExpo, springIn, type SpringSpec } from './motion';
 export interface Frame {
   w: number;
   h: number;
-  /** unidade: 1 px num quadro de 1080 de largura */
+  /** unidade: 1 px num quadro cujo lado curto tem 1080 px (v0.14: igual em todo formato) */
   u: number;
   safe: Rect;
   style: StyleDNA;
@@ -21,10 +21,11 @@ export interface Frame {
 export const TICKER_H = 66;
 
 export function makeFrame(w: number, h: number, style: StyleDNA): Frame {
-  const safe = reelsSafeArea(w, h);
+  const safe = safeAreaFor(w, h);
+  const u = unitFor(w, h);
   // a faixa de manchetes ocupa o pé da área segura: legenda e cenas ficam acima dela
-  if (style.decor.ticker) safe.h -= (TICKER_H + 18) * (w / 1080);
-  return { w, h, u: w / 1080, safe, style, overlayY: overlayYFor(style) };
+  if (style.decor.ticker) safe.h -= (TICKER_H + 18) * u;
+  return { w, h, u, safe, style, overlayY: overlayYFor(style) };
 }
 
 /** Centro vertical aproximado da legenda, em fração da área segura. */

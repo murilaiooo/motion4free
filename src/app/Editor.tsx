@@ -111,9 +111,11 @@ interface EditorProps {
   onReplaceFile: (f: File) => void;
   /** avisos do app (projeto, transcrição, sem áudio…) */
   notices: ReactNode;
+  /** menu do projeto na barra do topo (v0.11: renomear, fechar, apagar, armazenamento) */
+  projectMenu?: ReactNode;
 }
 
-export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, notices }: EditorProps) {
+export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, notices, projectMenu }: EditorProps) {
   const plan = history.present;
   const [tab, setTab] = useState<TabId>('modelos');
   const [selection, setSelection] = useState<TimeRange | null>(null);
@@ -368,6 +370,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         onExport={() => void onExport()}
         exporting={exporting}
         exportDisabled={disabled || off}
+        menu={projectMenu}
       />
 
       <nav className="rail" role="tablist" aria-label="Ferramentas" aria-orientation="vertical" onKeyDown={onTabKey}>

@@ -26,6 +26,13 @@ export const EMOJI_SCALE = { min: 0.5, max: 2 } as const;
 
 const hex = z.string().regex(/^#[0-9A-F]{6}$/);
 
+/** Texto curto vindo do pedido: letras, números, espaço e pontuação simples (nada de < > { }). */
+export const CTA_MAX = 32;
+export const TITLE_MAX = 60;
+export const CTA_RE = /^[\p{L}\p{N} .,!?:;'"“”‘’@#%&$+\-/()]{2,32}$/u;
+export const TITLE_RE = /^[\p{L}\p{N} .,!?:;'"“”‘’@#%&$+\-/()]{2,60}$/u;
+export const HANDLE_RE = /^@[a-z0-9._]{2,30}$/;
+
 export const lookCaptionsSchema = z
   .object({
     text: hex,
@@ -47,6 +54,10 @@ export const lookCaptionsSchema = z
     highlightMode: z.enum(HIGHLIGHT_MODES),
     /** contorno: 0 = sem contorno */
     strokeWidth: z.number().min(0).max(24),
+    /** cor das palavras-chave dentro da legenda (v0.12) */
+    keyword: hex,
+    /** legenda e título longe do rosto (v0.12): true = posição escolhida pelo rosto; false = a do estilo */
+    avoidFace: z.boolean(),
   })
   .partial();
 
@@ -73,6 +84,12 @@ export const lookSchema = z
     /** intensidade exata das animações (0 = quase parado, 1 = muito movimento) */
     motion: z.number().min(0).max(1),
     scenes: z.partialRecord(z.enum(SCENE_TOGGLES), z.boolean()),
+    /** texto da chamada final (v0.12): frase fixa do app ou texto que a pessoa escreveu no pedido */
+    cta: z.string().regex(CTA_RE),
+    /** @ da pessoa, pequeno no canto (marca-d'água de texto, v0.12) */
+    handle: z.string().regex(HANDLE_RE),
+    /** título de abertura escrito pela pessoa (entre aspas ou depois de "título:"; v0.12) */
+    title: z.string().regex(TITLE_RE),
   })
   .partial();
 
@@ -171,6 +188,21 @@ const CAPTION_READERS: Record<keyof LookCaptions, FieldReader> = {
   wordsAtOnce: range(1, 8, true),
   highlightMode: enumOf(HIGHLIGHT_MODES),
   strokeWidth: range(0, 24),
+  keyword: colorReader,
+  avoidFace: (v) => (typeof v === 'boolean' ? v : undefined),
+};
+
+/** Texto curto (chamada final, título): espaços juntados, sem controle; só passa se casar com o padrão. */
+export function cleanShortText(v: unknown, re: RegExp): string | undefined {
+  if (typeof v !== 'string') return undefined;
+  const s = v.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim();
+  return re.test(s) ? s : undefined;
+}
+const handleReader: FieldReader = (v) => {
+  if (typeof v !== 'string') return undefined;
+  const s = v.trim().toLowerCase();
+  const h = s.startsWith('@') ? s : `@${s}`;
+  return HANDLE_RE.test(h) ? h : undefined;
 };
 
 const EMOJI_READERS: Record<keyof LookEmoji, FieldReader> = {
@@ -230,6 +262,9 @@ export function sanitizeLook(raw: unknown): { look: Look; dropped: string[] } {
     ['cuts', enumOf(CUT_LEVELS, { leve: 'suave', forte: 'agressivo', rapido: 'agressivo' })],
     ['transition', enumOf(TRANSITIONS)],
     ['motion', range(0, 1)],
+    ['cta', (v: unknown) => cleanShortText(v, CTA_RE)],
+    ['handle', handleReader],
+    ['title', (v: unknown) => cleanShortText(v, TITLE_RE)],
   ] as const) {
     if (o[key] === undefined || o[key] === null) continue;
     const v = reader(o[key]);

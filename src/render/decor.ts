@@ -226,3 +226,25 @@ export function chromaBehind(ctx: Ctx2D, f: Frame, text: string, x: number, y: n
   ctx.globalAlpha = a;
   ctx.fillStyle = fill;
 }
+
+/**
+ * @ da pessoa (v0.12): pequeno, no canto de cima à direita da área segura, sempre visível (marca-d'água de texto).
+ * Com a legenda em cima, desce para logo acima da área dos botões, à esquerda, para não brigar com ela.
+ */
+export function drawHandle(ctx: Ctx2D, f: Frame): void {
+  const handle = f.style.brand?.handle;
+  if (!handle) return;
+  const size = 30 * f.u;
+  const top = captionFrac(f.style) < 0.3;
+  ctx.save();
+  setFont(ctx, f.style.type.label, size);
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = top ? 'left' : 'right';
+  setShadow(ctx, f, 'soft', 0.9);
+  ctx.fillStyle = withAlpha('#FFFFFF', 0.82);
+  const x = top ? f.safe.x + 4 * f.u : f.safe.x + f.safe.w - 4 * f.u;
+  const y = top ? f.safe.y + f.safe.h - size * 0.6 : tagY(f);
+  ctx.fillText(handle, x, y);
+  clearShadow(ctx);
+  ctx.restore();
+}
