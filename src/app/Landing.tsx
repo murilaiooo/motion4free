@@ -89,7 +89,7 @@ export function Landing({ onFile, busy, pendingName, pendingClipCount, notices, 
             <span className="drop-icon" aria-hidden>
               {pendingName ? <FileVideo size={26} /> : <Upload size={26} />}
             </span>
-            <span className="drop-title">{pendingName ? (pendingClipCount ? `Selecione os ${pendingClipCount} vídeos originais novamente` : `Escolha de novo o vídeo original (${pendingName})`) : 'Arraste seu vídeo aqui'}</span>
+            <span className="drop-title">{pendingName ? (pendingClipCount ? (pendingClipCount === 1 ? 'Selecione novamente o vídeo original deste projeto' : `Selecione novamente os ${pendingClipCount} vídeos originais`) : `Escolha de novo o vídeo original (${pendingName})`) : 'Arraste seu vídeo aqui'}</span>
             <span className="drop-sub">
               ou <u>clique para escolher</u> · até 30 clipes, cada um até 3 minutos (MP4, MOV ou WebM)
             </span>
