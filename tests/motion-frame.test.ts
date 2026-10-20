@@ -1,3 +1,4 @@
+import { EMPTY_EDITS } from '../src/core/edits';
 import { describe, expect, it } from 'vitest';
 import { EMPTY_BRIEF } from '../src/core/brief';
 import { DOCUMENTAL, EDITORIAL, NEON, POP, PRESETS } from '../src/core/presets';
@@ -14,9 +15,10 @@ const H = 1920;
 
 function plan(style: StyleDNA, over: Partial<EditPlan> = {}): EditPlan {
   return {
-    version: 5,
+    version: 6,
     ranges: [],
     reference: null,
+    edits: EMPTY_EDITS,
     brief: EMPTY_BRIEF,
     output: { width: W, height: H, fps: 30 },
     style,

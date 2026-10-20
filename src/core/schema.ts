@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { EMPHASES, EMPTY_BRIEF, LEVELS, PACES, PROHIBITIONS, TONES, briefSchema, briefV1Schema, migrateBrief } from './brief';
 import { EMOJI_SET } from './emoji';
 import { lookSchema } from './look';
+import { EMPTY_EDITS, editsSchema, placementSchema, textLookSchema } from './edits';
 import { DEFAULT_STYLE } from './presets';
 import { migrateStyle, styleSchema, styleV1Schema } from './style';
 import type { EditPlan } from './types';
@@ -65,12 +66,24 @@ const rangeFields = {
 };
 const rangeOk = (r: { srcStart: number; srcEnd: number }) => r.srcEnd > r.srcStart;
 
+const lockedV5 = z.object({ outStart: time, scenes: z.array(scene).max(200), captions: z.array(caption).max(200) });
+const captionEditsSnapshot = z.object({ placement: placementSchema.nullable(), look: textLookSchema });
+
 const range = z
   .object({
     ...rangeFields,
     look: lookSchema.nullable(),
     style: styleSchema.nullable(),
-    locked: z.object({ outStart: time, scenes: z.array(scene).max(200), captions: z.array(caption).max(200) }).nullable(),
+    locked: lockedV5.extend({ captionEdits: captionEditsSnapshot }).nullable(),
+  })
+  .refine(rangeOk, { message: 'trecho com fim antes do início' });
+
+const rangeV5 = z
+  .object({
+    ...rangeFields,
+    look: lookSchema.nullable(),
+    style: styleSchema.nullable(),
+    locked: lockedV5.nullable(),
   })
   .refine(rangeOk, { message: 'trecho com fim antes do início' });
 
@@ -85,7 +98,7 @@ const rangeV4 = z
 const reference = z.object({ colors: z.array(color).min(1).max(6) }).nullable();
 
 export const editPlanSchema = z.object({
-  version: z.literal(5),
+  version: z.literal(6),
   output,
   style: styleSchema,
   brief: briefSchema,
@@ -94,7 +107,11 @@ export const editPlanSchema = z.object({
   scenes: z.array(scene),
   ranges: z.array(range).max(50),
   reference,
+  edits: editsSchema,
 });
+
+/** Formato da v0.6 a v0.12 (sem edição manual). Mantido para abrir projetos antigos. */
+export const editPlanV5Schema = editPlanSchema.omit({ edits: true }).extend({ version: z.literal(5), ranges: z.array(rangeV5).max(50) });
 
 /** Formato da Fase 5 (trechos; estilo v1, pedido v1, sem emojis). Mantido para abrir projetos antigos. */
 export const editPlanV4Schema = z.object({
@@ -133,6 +150,8 @@ export const editPlanV1Schema = z.object({
  * - v3 → v4: sem trechos ajustados e sem cores de referência (nada muda no vídeo).
  * - v4 → v5: estilo v2 (emojis desligados, cores próprias da legenda vazias, entrada 'auto'),
  *   pedido v2 (look vazio) e trechos sem look (nada muda no vídeo).
+ * - v5 → v6: sem edições manuais (posições, aparência, elementos, enquadramento); trava guarda a
+ *   posição/aparência geral da legenda vazia (nada muda no vídeo).
  */
 export function migratePlan(input: unknown): unknown {
   let current = input;
@@ -163,6 +182,16 @@ export function migratePlan(input: unknown): unknown {
       ranges: p.ranges.map((r) => ({ ...r, look: null, style: r.style ? migrateStyle(r.style) : null })),
     };
   }
+  const v5 = editPlanV5Schema.safeParse(current);
+  if (v5.success) {
+    const p = v5.data;
+    current = {
+      ...p,
+      version: 6,
+      ranges: p.ranges.map((r) => ({ ...r, locked: r.locked ? { ...r.locked, captionEdits: { placement: null, look: {} } } : null })),
+      edits: EMPTY_EDITS,
+    };
+  }
   return current;
 }
 
@@ -176,7 +205,7 @@ const DEFAULT_STYLE_V1 = {
 const { look: _look, hookStyle: _hs, unsupported: _u, summary: _s, ...emptyV1Rest } = EMPTY_BRIEF;
 const EMPTY_BRIEF_V1 = { ...emptyV1Rest, version: 1 as const };
 
-/** Aceita plano v1 a v5 e entrega sempre v5 validado (usado no projeto salvo). */
+/** Aceita plano v1 a v6 e entrega sempre v6 validado (usado no projeto salvo). */
 export const anyPlanSchema = z.preprocess(migratePlan, editPlanSchema);
 
 export type ParseResult = { ok: true; plan: EditPlan } | { ok: false; errors: string[] };

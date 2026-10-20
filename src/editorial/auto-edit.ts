@@ -1,3 +1,4 @@
+import { EMPTY_EDITS } from '../core/edits';
 import { EMPTY_BRIEF } from '../core/brief';
 import { DEFAULT_STYLE } from '../core/presets';
 import type { StyleDNA } from '../core/style';
@@ -16,5 +17,5 @@ export function autoEdit(durationSec: number, silences: TimeRange[], words: Word
   const segments = planKeepSegments(durationSec, silences, words);
   const captions = buildCaptions(words, segments, captionOptionsFor(style));
   const scenes = proposeScenes(words, segments, style);
-  return { version: 5, output: REELS_PROFILE, style, brief: EMPTY_BRIEF, segments, captions, scenes, ranges: [], reference: null };
+  return { version: 6, output: REELS_PROFILE, style, brief: EMPTY_BRIEF, segments, captions, scenes, ranges: [], reference: null, edits: EMPTY_EDITS };
 }

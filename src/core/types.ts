@@ -2,6 +2,7 @@ import type { CreativeBrief, Emphasis, Level, Pace, Prohibition, Tone } from './
 import type { StyleDNA } from './style';
 import type { Emoji } from './emoji';
 import type { Look } from './look';
+import type { ManualEdits, Placement, TextLook } from './edits';
 
 /** Tempo sempre em segundos (number). "src" = tempo no vídeo original; "out" = tempo no vídeo editado. */
 
@@ -78,6 +79,8 @@ export interface RangeLock {
   outStart: number;
   scenes: SceneInstance[];
   captions: Caption[];
+  /** posição e aparência de todas as legendas no momento da trava (v6); o trecho travado não segue mudanças gerais */
+  captionEdits: { placement: Placement | null; look: TextLook };
 }
 
 /**
@@ -117,7 +120,7 @@ export interface ReferencePalette {
 }
 
 export interface EditPlan {
-  version: 5;
+  version: 6;
   output: OutputProfile;
   style: StyleDNA;
   /** o pedido por texto já entendido (vazio = nenhum pedido) */
@@ -128,6 +131,8 @@ export interface EditPlan {
   /** trechos ajustados, em ordem e sem sobreposição */
   ranges: RangeEdit[];
   reference: ReferencePalette | null;
+  /** o que a pessoa mexeu à mão no editor (v6, ADR-0018): posições, aparência, elementos, enquadramento */
+  edits: ManualEdits;
 }
 
 export const REELS_PROFILE: OutputProfile = { width: 1080, height: 1920, fps: 30 };
