@@ -1,12 +1,23 @@
-# Roteiro de teste — Motion4Free v0.10.0 (novo visual + 15 modelos + legenda precisa + tudo das versões anteriores)
+# Roteiro de teste — Motion4Free v0.15.0
 
 Para quem vai testar. Não precisa instalar nada nem usar terminal. Leva uns 30 a 40 minutos.
 
 **Antes de começar**
 - Use o **Chrome ou o Edge do computador**, atualizados, com a janela **maximizada**. No fim, abra também no **celular**.
-- Abra o **link de prévia** que veio na mensagem do PR (ou o endereço do Motion4Free). Confira no rodapé da primeira tela se está escrito **Motion4Free v0.10.0**.
+- Abra o **link de prévia** que veio na mensagem do PR (ou o endereço do Motion4Free). Confira no rodapé da primeira tela se está escrito **Motion4Free v0.15.0**.
 - Separe **um vídeo seu falando**, de 30 a 90 segundos, com algumas pausas (pode ser gravado no celular). Se der, separe também uma **foto ou logo bem colorida**.
 - Nada do vídeo sai do seu computador: tudo acontece dentro do navegador.
+
+## Verificação dos novos fluxos multi-clipe (v0.15)
+1. Importe dois vídeos com áudio diferente. Confira ambos na lista **Clipes**, a duração da montagem e o som de cada parte.
+2. Troque a ordem pelas setas ou arraste os clipes. Confira se imagem, legenda e áudio continuam juntos.
+3. Adicione um terceiro vídeo no botão **Adicionar**. Confirme que seus textos e cortes anteriores continuam iguais.
+4. Use **Desfazer** e **Refazer**, feche o projeto e abra novamente em **Meus projetos**. Os arquivos e a ordem devem continuar recuperáveis.
+5. Remova um clipe, salve, reabra e use **Desfazer**. O vídeo removido precisa voltar sem pedir novo upload.
+6. Mude de 9:16 para 16:9, 1:1 e 4:5. Confira enquadramento na prévia e em um MP4 exportado.
+7. Se algum arquivo não for salvo por falta de espaço, o app deve mostrar aviso em vez de dizer **Salvo**.
+
+O teste automatizado gera arquivos próprios de vídeo e usa FFprobe/FFmpeg para conferir áudio e imagem; ele não avalia se o motion design é profissional. Se um passo falhar, anote o código M4F exibido.
 
 ## Como a tela está organizada (novo na v0.10)
 - **No alto**: o nome do vídeo, se está salvo, as setas de **desfazer/refazer**, **Trocar vídeo**, o botão do sol (tema claro) e o botão amarelo **Exportar**.

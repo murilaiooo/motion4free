@@ -15,3 +15,11 @@ ffmpeg -y -loglevel error \
   -f lavfi -i "testsrc2=size=1280x720:rate=30:duration=1" \
   -f lavfi -i "sine=frequency=220:sample_rate=48000:duration=1" \
   -c:v libvpx-vp9 -b:v 1M -deadline realtime -c:a libopus -shortest e2e/fixtures/curto.webm
+
+# Vídeos multi-clipe reais: cores e tons diferentes para provar imagem, ordem e sincronização do áudio no MP4.
+ffmpeg -y -loglevel error -f lavfi -i "color=c=red:size=180x320:rate=15:duration=1.4" \
+  -f lavfi -i "sine=frequency=440:sample_rate=48000:duration=1.4" \
+  -c:v libvpx-vp9 -b:v 220k -deadline realtime -cpu-used 8 -c:a libopus -shortest e2e/fixtures/clip-red.webm
+ffmpeg -y -loglevel error -f lavfi -i "color=c=blue:size=320x180:rate=15:duration=1.4" \
+  -f lavfi -i "sine=frequency=880:sample_rate=48000:duration=1.4" \
+  -c:v libvpx-vp9 -b:v 220k -deadline realtime -cpu-used 8 -c:a libopus -shortest e2e/fixtures/clip-blue.webm

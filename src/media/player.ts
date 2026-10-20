@@ -5,9 +5,9 @@ import { outputDuration, outputToSource } from '../engine/timeline';
 import { drawFrame, type SourceFrame } from '../render/frame';
 import type { DecodedAudio } from './audio';
 import type { OpenedMedia } from './input';
-import { spliceAudio } from './splice';
-import { ClipFrames, EXPORT_MAX_SIDE, PREVIEW_MAX_SIDE, type ClipSource } from './sources';
-import { outputToClip } from '../engine/clips';
+import { CLIP_CROSSFADE_SEC, spliceAudio } from './splice';
+import { ClipFrames, PREVIEW_MAX_SIDE, decodeSize, type ClipSource } from './sources';
+import { clipLayout, outputToClip } from '../engine/clips';
 
 interface TimedFrame {
   t: number; // out
@@ -47,7 +47,7 @@ export class PlanPlayer {
 
   constructor(
     media: OpenedMedia | null,
-    private readonly audio: DecodedAudio | null,
+    private audio: DecodedAudio | null,
     canvas: HTMLCanvasElement,
     private plan: EditPlan,
     scale = 0.5,
@@ -63,7 +63,7 @@ export class PlanPlayer {
     this.ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
     // Determine mode: multi if plan has >1 clip and we have sources
-    const multi = clipSources && clipSources.size > 0 && plan.clips.length > 1;
+    const multi = clipSources && clipSources.size > 0;
     if (multi) {
       this.sources = clipSources!;
       this.clipFrames = new ClipFrames(clipSources!, { maxSide: PREVIEW_MAX_SIDE, poolSize: 2 });
@@ -72,7 +72,8 @@ export class PlanPlayer {
     } else if (media) {
       this.sources = null;
       this.clipFrames = null;
-      this.sinkSingle = new CanvasSink(media.video, { width: w, height: h, fit: 'cover', poolSize: 4 });
+      const srcSize = decodeSize(media.width, media.height, PREVIEW_MAX_SIDE);
+      this.sinkSingle = new CanvasSink(media.video, { ...srcSize, fit: 'fill', poolSize: 4 });
       this.clipLayouts = null;
     } else {
       throw new Error('PlanPlayer: need media or clipSources');
@@ -103,13 +104,20 @@ export class PlanPlayer {
     return Math.min(this.duration, this.startT + (this.clock() - this.startClock));
   }
 
-  setPlan(plan: EditPlan): void {
-    if (plan === this.plan) return;
-    const sameAudio = plan.segments === this.plan.segments;
+  setPlan(plan: EditPlan, audio: DecodedAudio | null = this.audio): void {
+    if (plan === this.plan && audio === this.audio) return;
+    const sameAudio = plan.segments === this.plan.segments && plan.clips === this.plan.clips && audio === this.audio;
+    const outputChanged = plan.output.width !== this.plan.output.width || plan.output.height !== this.plan.output.height;
     this.plan = plan;
+    this.audio = audio;
     if (!sameAudio) this.audioBuffer = null;
-    // Rebuild layouts if multi
-    if (this.clipFrames && plan.clips.length > 1) {
+    if (outputChanged) {
+      this.canvas.width = even(plan.output.width * this.scale);
+      this.canvas.height = even(plan.output.height * this.scale);
+      this.ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+    }
+    // Mesmo com apenas c2, a origem continua sendo ClipFrames, não o c1.
+    if (this.clipFrames) {
       this.clipLayouts?.clear();
       let acc = 0;
       for (const c of plan.clips) {
@@ -118,10 +126,10 @@ export class PlanPlayer {
       }
     }
     const t = Math.min(this.currentTime, this.duration);
-    if (this.playing && !sameAudio) this.restart(t);
+    if (this.playing && (!sameAudio || outputChanged)) this.restart(t);
     else if (!this.playing) {
       this.pausedAt = t;
-      if (sameAudio) this.draw(t);
+      if (sameAudio && !outputChanged) this.draw(t);
       else void this.renderStill(t);
     }
   }
@@ -213,7 +221,8 @@ export class PlanPlayer {
 
   private buildAudio(ctx: AudioContext): AudioBuffer {
     const audio = this.audio!;
-    const spliced = spliceAudio(audio.channels, audio.sampleRate, this.plan.segments);
+    const joins = this.clipFrames ? { clips: clipLayout(this.plan.clips).map(c => ({ start: c.start, end: c.end })), crossfadeSec: CLIP_CROSSFADE_SEC } : undefined;
+    const spliced = spliceAudio(audio.channels, audio.sampleRate, this.plan.segments, 0.008, joins);
     const buffer = ctx.createBuffer(spliced.length, Math.max(1, spliced[0]!.length), audio.sampleRate);
     spliced.forEach((ch, c) => buffer.copyToChannel(ch as Float32Array<ArrayBuffer>, c));
     return buffer;

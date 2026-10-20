@@ -2,6 +2,17 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.15.0 — 20/10/2026
+**Integração do editor multi-clipe, preservando os projetos e as edições existentes.**
+
+- Adição, reordenação, remoção e recuperação de clipes com IDs estáveis; arquivos do histórico de desfazer/refazer e versões permanecem recuperáveis ao reabrir.
+- Transcrição, silêncio, áudio, waveform, legendas e cenas acompanham a nova ordem, sem reaproveitar timestamps de outros arquivos.
+- Edição manual continua ancorada à fonte; operações que atravessariam clipes incompatíveis são recusadas com erro, sem perda silenciosa.
+- Gravação local OPFS de todos os arquivos, indicador de salvamento fiel, recuperação dos originais por identificação e controle de até 30 clipes / 10 minutos totais.
+- Player e MP4 com fontes múltiplas, quatro perfis (9:16, 4:5, 1:1, 16:9), transição de áudio curta (40 ms) e decodificação com proporção nativa.
+- Teste E2E com dois vídeos diferentes, validando MP4 via FFprobe, cores da sequência e frequências do áudio via FFmpeg. Testes de regressão de reordenação, remoção, inclusão e histórico.
+- O corpus de interpretação alcançou 349/363 (96,1%); holdout separado 12/16 (75%). **Esses números não medem qualidade artística.** Avaliação humana de motion design, modelos de IA em hardware real e publicação Cloudflare precisam de verificação própria.
+
 ## v0.14.0 — 20/10/2026
 **Frentes 1→4 consolidadas (merge das branches `feat/*` para `main`): projetos, nichos, editor e multi-vídeos/formatos — com correções de regressão e base para finalização.**
 

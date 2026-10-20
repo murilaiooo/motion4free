@@ -156,3 +156,30 @@ export function withinOneClip(clips: readonly Pick<ClipRef, 'id' | 'duration'>[]
   const b = clipAt(clips, Math.max(r.srcStart, r.srcEnd - 1e-3));
   return !!a && !!b && a.id === b.id;
 }
+
+
+/** Recupera tempos locais da transcrição salva para que desfazer/reordenar nunca use a ordem antiga. */
+export function unplaceWords(clips: readonly Pick<ClipRef, 'id' | 'duration'>[], words: readonly Word[]): Record<string, Word[]> {
+  const byClip: Record<string, Word[]> = Object.fromEntries(clips.map((c) => [c.id, []]));
+  for (const w of words) {
+    const at = clipAt(clips, Math.min(w.start, Math.max(0, totalDuration(clips) - 1e-4)));
+    if (!at) continue;
+    const start = Math.max(0, Math.round(at.local * 1000) / 1000);
+    const end = Math.min(clips[at.index]!.duration, Math.round((w.end - clipLayout(clips)[at.index]!.start) * 1000) / 1000);
+    if (end > start) byClip[at.id]!.push({ ...w, start, end });
+  }
+  return byClip;
+}
+
+/** Recupera intervalos por clipe, partindo silêncios que eventualmente atravessam emendas. */
+export function unplaceRanges(clips: readonly Pick<ClipRef, 'id' | 'duration'>[], ranges: readonly TimeRange[]): Record<string, TimeRange[]> {
+  const byClip: Record<string, TimeRange[]> = Object.fromEntries(clips.map((c) => [c.id, []]));
+  for (const l of clipLayout(clips)) {
+    for (const r of ranges) {
+      const a = Math.max(r.start, l.start);
+      const b = Math.min(r.end, l.end);
+      if (b > a) byClip[l.id]!.push({ start: r3(a - l.start), end: r3(b - l.start) });
+    }
+  }
+  return byClip;
+}

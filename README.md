@@ -1,11 +1,11 @@
 # Motion4Free
 
 **Editor de Reels com motion design personalizado que roda no navegador, sem instalação e sem custo.**
-A spec v1 está aprovada e o plano de execução está pronto. A Fase 1 (primeiro MP4 gerado no navegador) é a próxima entrega; ainda não existe versão publicada.
+A versão em desenvolvimento é a v0.15.0, com importação de até 30 clipes, edição manual, presets, pedidos por texto e exportação de MP4 no navegador. O status de publicação precisa ser confirmado no GitHub Actions/Cloudflare.
 
 > **Visão:** transforme uma gravação sua falando em um Reels bem editado, por linguagem natural ou estilos prontos, preservando a voz, o significado e a privacidade. A IA atua como diretora que escolhe e ajusta um sistema de motion design curado; o motor compõe, valida e renderiza localmente sem executar código vindo do modelo.
 
-## Como vai funcionar
+## Como funciona
 1. A pessoa abre o site no Chrome ou Edge e escolhe um vídeo. O vídeo **não sai do computador**.
 2. Escreve o que quer e/ou escolhe um estilo pronto.
 3. O site transcreve, corta silêncios sem comer palavras, escolhe o gancho, cria legendas e anima no estilo pedido.
@@ -23,9 +23,9 @@ Sem GPU ou sem IA disponível, o site continua cortando, legendando, animando po
 | [Spec v1 consolidada](docs/superpowers/specs/2026-10-20-motion4free-v1-design.md) | **Aprovada** (20/10/2026) |
 | [Stack (ADR-0005)](docs/decisions/0005-stack-v1.md) | **Decidida**: TypeScript, Vite, React, Mediabunny, Transformers.js |
 | [Plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md) | Pronto, 6 fases com gates |
-| [Plano detalhado da Fase 1](docs/superpowers/plans/2026-10-20-fase1-primeiro-mp4.md) | Pronto e validado em protótipo (28 testes + MP4 real) |
-| Site publicado | Não implantado (Cloudflare, ao fim da Fase 1) |
-| Avaliação de qualidade criativa | Não executada (gate da Fase 3) |
+| [Plano detalhado da Fase 1](docs/superpowers/plans/2026-10-20-fase1-primeiro-mp4.md) | Fase inicial implementada; evolução no [CHANGELOG](docs/CHANGELOG.md) |
+| Site publicado | [Versão de produção](https://motion4free.murdokmurilo1.workers.dev), verificar atualização após merge e build da Cloudflare |
+| Avaliação de qualidade criativa | Pendente de comparação com vídeos reais por pessoas; testes técnicos de MP4 não substituem esse gate |
 
 ## Como o trabalho acontece
 O agente decide a parte técnica, implementa com testes e abre um PR por entrega. Cada PR ganha um link de prévia e um **roteiro de teste**; o responsável pelo produto testa com vídeos reais e dá feedback. Detalhes no [plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md).

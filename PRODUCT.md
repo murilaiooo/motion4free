@@ -1,6 +1,6 @@
 # Motion4Free — definição de produto
 
-**Spec v1 aprovada (20/10/2026); implementação começa pela Fase 1. Sem versão publicada ainda.**
+**Spec v1 aprovada em 20/10/2026. Código candidato à v0.15.0: fluxo de edição, multi-clipes e exportação com testes automatizados; qualidade artística e publicação dependem de validação.**
 
 - **Propósito:** criar um editor de vídeo com qualidade comparável a um motion designer experiente, usando software open source, IA criativa no fluxo de edição e custo monetário obrigatório zero para desenvolvedor e usuário.
 - **Público inicial:** criadores que transformam fala e vídeos pessoais em Reels/Shorts visualmente sofisticados.
@@ -15,4 +15,4 @@
 - [Roadmap](docs/roadmap.md), [risco](docs/risks.md) e [benchmarks](docs/ai/evaluation.md)
 
 ## Status
-Spec v1 aprovada e [plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md) em execução. O Vibe Coding Toolkit está integrado de forma **modular** aos processos de desenvolvimento e documentação, não instalado como motor de vídeo. Veja [setup](docs/setup.md).
+Spec v1 aprovada e [plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md) em execução. Consulte o [CHANGELOG](docs/CHANGELOG.md) para recursos implementados e limites de verificação. O Vibe Coding Toolkit está integrado de forma **modular** aos processos de desenvolvimento e documentação, não instalado como motor de vídeo. Veja [setup](docs/setup.md).

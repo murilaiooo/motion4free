@@ -9,9 +9,9 @@ import { chooseCodecs } from './codecs';
 import { ensureEmojiFont, ensureFonts } from './fonts';
 import { planUsesEmoji } from '../core/emoji';
 import type { OpenedMedia } from './input';
-import { spliceAudio } from './splice';
-import { ClipFrames, EXPORT_MAX_SIDE, type ClipSource } from './sources';
-import { outputToClip } from '../engine/clips';
+import { CLIP_CROSSFADE_SEC, spliceAudio } from './splice';
+import { ClipFrames, EXPORT_MAX_SIDE, decodeSize, type ClipSource } from './sources';
+import { clipLayout, outputToClip } from '../engine/clips';
 
 export interface ExportOptions {
   maxDurationSec?: number;
@@ -72,7 +72,8 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   if (audioSource) output.addAudioTrack(audioSource);
   await output.start();
 
-  const sink = new CanvasSink(media.video, { width: plan.output.width, height: plan.output.height, fit: 'cover', poolSize: 2 });
+  const srcSize = decodeSize(media.width, media.height, EXPORT_MAX_SIDE);
+  const sink = new CanvasSink(media.video, { ...srcSize, fit: 'fill', poolSize: 2 });
   for (let f = 0; f < frames; f++) {
     const t = f / fps;
     const { outputToSource } = await import('../engine/timeline');
@@ -151,7 +152,8 @@ async function exportPlanUnsafeMulti(
 
   if (audio && audioSource) {
     const trimmed = trimSegments(plan.segments, duration);
-    const spliced = spliceAudio(audio.channels, audio.sampleRate, trimmed);
+    const joins = { clips: clipLayout(plan.clips).map(c => ({ start: c.start, end: c.end })), crossfadeSec: CLIP_CROSSFADE_SEC };
+    const spliced = spliceAudio(audio.channels, audio.sampleRate, trimmed, 0.008, joins);
     const len = spliced[0]!.length;
     const planar = new Float32Array(len * spliced.length);
     spliced.forEach((ch, c) => planar.set(ch, c * len));
