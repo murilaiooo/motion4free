@@ -1,7 +1,10 @@
 import { AppError } from '../core/errors';
 import type { Caption, EditPlan, Segment, TimeRange, Word } from '../core/types';
 import { outputDuration } from '../engine/timeline';
-import { buildCaptions } from './captions';
+import { presetById } from '../core/presets';
+import type { StyleDNA } from '../core/style';
+import { buildCaptions, captionOptionsFor } from './captions';
+import { proposeScenes } from './selector';
 
 /**
  * Operações de edição da Fase 2. Todas são puras: recebem um plano e devolvem outro
@@ -46,20 +49,43 @@ export function segmentsFromCuts(cuts: TimeRange[], durationSec: number): Segmen
   return segments;
 }
 
+/** Legendas pelas palavras, no tamanho do estilo; texto corrigido volta quando o grupo de palavras é o mesmo. */
+function rebuildCaptions(plan: EditPlan, ctx: EditContext, segments: Segment[], style: StyleDNA): Caption[] {
+  const edited = new Map(plan.captions.map((c) => [c.wordIds.join('|'), c.text]));
+  return buildCaptions(ctx.words, segments, captionOptionsFor(style)).map((c) => {
+    const text = edited.get(c.wordIds.join('|'));
+    return text === undefined ? c : { ...c, text };
+  });
+}
+
 /**
- * Troca os trechos mantidos e reconstrói as legendas pelas palavras.
+ * Cenas são derivadas (palavras + trechos + estilo) enquanto não há edição manual de cenas.
+ * Sem palavras (transcrição falhou ou projeto antigo sem cenas novas), mantém as cenas que existem, recortadas.
+ */
+function rebuildScenes(plan: EditPlan, ctx: EditContext, segments: Segment[], style: StyleDNA): EditPlan['scenes'] {
+  if (ctx.words.length > 0) return proposeScenes(ctx.words, segments, style);
+  const total = outputDuration(segments);
+  return plan.scenes.map((s) => ({ ...s, end: Math.min(s.end, total) })).filter((s) => s.end > s.start);
+}
+
+/**
+ * Troca os trechos mantidos e reconstrói legendas e cenas pelas palavras.
  * Legenda cujo grupo de palavras não mudou mantém o texto editado.
  */
 export function withSegments(plan: EditPlan, ctx: EditContext, segments: Segment[]): EditPlan {
   if (segments.length === 0) throw new AppError('CORTE_TOTAL');
-  const edited = new Map(plan.captions.map((c) => [c.wordIds.join('|'), c.text]));
-  const captions: Caption[] = buildCaptions(ctx.words, segments).map((c) => {
-    const text = edited.get(c.wordIds.join('|'));
-    return text === undefined ? c : { ...c, text };
-  });
-  const total = outputDuration(segments);
-  const scenes = plan.scenes.map((s) => ({ ...s, end: Math.min(s.end, total) })).filter((s) => s.end > s.start);
-  return { ...plan, segments, captions, scenes };
+  return { ...plan, segments, captions: rebuildCaptions(plan, ctx, segments, plan.style), scenes: rebuildScenes(plan, ctx, segments, plan.style) };
+}
+
+/**
+ * Troca o estilo (preset): legendas reagrupadas no tamanho do novo estilo e cenas propostas de novo
+ * com o ritmo dele. Mesmo estilo = mesmo objeto (não cria entrada no histórico). Estilo desconhecido = M4F-802.
+ */
+export function applyStyle(plan: EditPlan, ctx: EditContext, styleId: string): EditPlan {
+  if (plan.style.id === styleId) return plan;
+  const style = presetById(styleId);
+  if (!style) throw new AppError('ESTILO_DESCONHECIDO', styleId);
+  return { ...plan, style, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style) };
 }
 
 /**

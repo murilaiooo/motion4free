@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildCaptions } from '../src/editorial/captions';
+import { DOCUMENTAL, POP } from '../src/core/presets';
+import { buildCaptions, captionOptionsFor } from '../src/editorial/captions';
 
 const w = (id: string, text: string, start: number, end: number) => ({ id, text, start, end });
 
@@ -24,5 +25,19 @@ describe('buildCaptions', () => {
     ]);
     expect(caps.flatMap((c) => c.wordIds)).toEqual(['1', '3']);
     expect(caps[1]!.start).toBeCloseTo(1.1, 5);
+  });
+});
+
+describe('legendas por estilo e tempo de cada palavra', () => {
+  const words = [w('1', 'Isso', 0, 0.3), w('2', 'muda', 0.3, 0.6), w('3', 'tudo', 0.6, 0.9), w('4', 'na', 0.9, 1.0), w('5', 'sua', 1.0, 1.2), w('6', 'vida', 1.2, 1.5)];
+  it('guarda o início de cada palavra no tempo editado', () => {
+    const caps = buildCaptions(words.slice(0, 3), [{ srcStart: 0, srcEnd: 2 }]);
+    expect(caps[0]!.wordStarts).toEqual([0, 0.3, 0.6]);
+  });
+  it('limite de palavras por legenda vem do estilo', () => {
+    const caps = buildCaptions(words, [{ srcStart: 0, srcEnd: 2 }], captionOptionsFor(POP));
+    expect(caps.map((c) => c.text)).toEqual(['Isso muda tudo', 'na sua vida']);
+    const long = buildCaptions(words, [{ srcStart: 0, srcEnd: 2 }], captionOptionsFor(DOCUMENTAL));
+    expect(long.map((c) => c.text)).toEqual(['Isso muda tudo na sua vida']);
   });
 });
