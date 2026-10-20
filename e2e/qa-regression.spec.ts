@@ -87,3 +87,20 @@ test('QA: trocas de formato são guardadas, sobrevivem ao reiniciar e ao desfaze
   await page.getByTestId('redo').click();
   await expect(page.getByTestId('format-select')).toHaveValue('horizontal');
 });
+
+
+test('QA: um arquivo corrompido entre arquivos válidos não cancela o projeto nem altera a mídia original', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/?asr=vazio');
+  const invalid = { name: 'defeituoso.mp4', mimeType: 'video/mp4', buffer: Buffer.from('isto nao e um video') };
+  await page.getByTestId('file-input').setInputFiles([invalid, RED, BLUE]);
+  await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByTestId('clip-c2')).toBeVisible();
+  await expect(page.getByTestId('clip-c3')).toHaveCount(0);
+  await expect(page.getByTestId('warning-M4F-108')).toBeVisible();
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
+  await page.reload();
+  await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
+  await expect(page.getByTestId('clip-c2')).toBeVisible();
+  await expect(page.getByTestId('warning-M4F-615')).toHaveCount(0);
+});
