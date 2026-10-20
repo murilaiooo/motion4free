@@ -156,8 +156,12 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, canva
         e.stopPropagation();
         e.preventDefault();
       } else {
-        // No element hit: deselect and let event bubble to canvas for playback
+        // No element hit: deselect and forward to canvas for play/pause (overlay covers canvas)
         if (selected) onSelect(null);
+        const canvas = canvasRef.current;
+        if (canvas) {
+          canvas.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY }));
+        }
         return;
       }
     },
