@@ -65,7 +65,7 @@ export async function openClips(
         if (transcriber) {
           onStep?.(`Transcrevendo clipe ${i+1}/${files.length}`, 0);
           const r = await transcriber.transcribe(mono.slice(), media.durationSec, planAsr(silences, media.durationSec), onStep ?? (()=>{}), asrMode as any);
-          words = toWords(cleanTranscript(r.words, silences));
+          words = toWords(cleanTranscript(r.words, silences)).map((w) => ({ ...w, id: `${id}:${w.id}` })); // IDs únicos entre clipes
           asrModel = r.model;
         }
       } catch (e) {
