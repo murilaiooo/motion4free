@@ -1,5 +1,6 @@
 import { AppError } from '../core/errors';
 import type { Emphasis, Level, Pace, Prohibition, Tone } from '../core/brief';
+import { lookIsEmpty, rangeLook, type Look } from '../core/look';
 import { interpretPrompt, stripAccents } from './interpret';
 
 /**
@@ -21,6 +22,10 @@ export interface RangeRequest {
   pace: Pace | null;
   forbid: Prohibition[];
   emphasize: Emphasis[];
+  /** cores, tamanho, posição, emojis etc. só deste trecho (sem os campos do vídeo inteiro) */
+  look: Look;
+  /** o que foi pedido e o app ainda não sabe fazer */
+  unsupported: string[];
   notes: string[];
   ignored: string[];
   understood: boolean;
@@ -71,11 +76,13 @@ export function interpretRangePrompt(text: string): RangeRequest {
     pace: null,
     forbid: [],
     emphasize: [],
+    look: {},
+    unsupported: [],
     notes: [],
     ignored: [],
     understood: false,
   };
-  let rest = ` ${stripAccents(prompt.toLowerCase()).replace(/[^\p{L}\p{N}%$,.;!? ]+/gu, ' ')} `;
+  let rest = ` ${stripAccents(prompt.toLowerCase()).replace(/[^\p{L}\p{N}%$#,.;!? ]+/gu, ' ')} `;
   for (const rule of RULES) {
     rest = rest.replace(rule.re, () => {
       rule.apply(r);
@@ -91,11 +98,15 @@ export function interpretRangePrompt(text: string): RangeRequest {
       r.pace = brief.pace;
       r.forbid = brief.forbid;
       r.emphasize = brief.emphasize;
+      const { look, removed } = rangeLook(brief.look);
+      r.look = look;
       r.notes.push(...brief.notes.conflicts);
-      if (brief.preset || brief.goal || brief.audience || brief.wantsHook) {
-        r.notes.push('Estilo, objetivo, público e gancho valem para o vídeo inteiro: use o pedido geral ("O que você quer?").');
+      if (brief.preset || brief.goal || brief.audience || brief.wantsHook || removed.length > 0) {
+        const extra = removed.length ? `, ${removed.join(', ')}` : '';
+        r.notes.push(`Estilo, objetivo, público, gancho${extra} valem para o vídeo inteiro: use o pedido geral ("O que você quer?").`);
       }
     }
+    r.unsupported = brief.unsupported;
     r.ignored = brief.notes.ignored;
   }
   if (r.quiet && (r.accent || r.swap || r.emphasize.length > 0)) {
@@ -104,6 +115,10 @@ export function interpretRangePrompt(text: string): RangeRequest {
     r.emphasize = [];
     r.notes.push('Você pediu "sem animação" e também um destaque ou troca: "sem animação" vale mais neste trecho.');
   }
-  r.understood = r.lock !== null || r.reset || r.swap || r.accent || r.quiet || !!r.tone || !!r.intensity || !!r.pace || r.forbid.length > 0 || r.emphasize.length > 0;
+  if (r.quiet && r.look.emoji) {
+    delete r.look.emoji;
+    r.notes.push('Você pediu "sem animação" e também emojis: "sem animação" vale mais neste trecho.');
+  }
+  r.understood = r.lock !== null || r.reset || r.swap || r.accent || r.quiet || !!r.tone || !!r.intensity || !!r.pace || r.forbid.length > 0 || r.emphasize.length > 0 || !lookIsEmpty(r.look);
   return r;
 }

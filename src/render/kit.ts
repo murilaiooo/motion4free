@@ -103,7 +103,7 @@ export function setFont(ctx: Ctx2D, spec: Pick<FontSpec, 'family' | 'weight' | '
   ctx.letterSpacing = `${Math.round(spec.tracking * size * 100) / 100}px`;
 }
 
-export const applyCase = (spec: Pick<FontSpec, 'case'>, text: string) => (spec.case === 'upper' ? text.toLocaleUpperCase('pt-BR') : text);
+export const applyCase = (spec: Pick<FontSpec, 'case'>, text: string) => (spec.case === 'upper' ? text.toLocaleUpperCase('pt-BR') : spec.case === 'lower' ? text.toLocaleLowerCase('pt-BR') : text);
 
 /** Sombra do estilo: suave (desfocada) ou dura (deslocada, estilo adesivo). */
 export function setShadow(ctx: Ctx2D, f: Frame, kind: StyleDNA['shape']['shadow'] = f.style.shape.shadow, strength = 1): void {

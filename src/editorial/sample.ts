@@ -22,7 +22,7 @@ function cap(id: string, text: string, start: number, end: number, wordStarts: n
 
 export function galleryPlan(style: StyleDNA): EditPlan {
   return {
-    version: 4,
+    version: 5,
     ranges: [],
     reference: null,
     output: { width: 1080, height: 1920, fps: 30 },

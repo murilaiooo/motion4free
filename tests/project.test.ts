@@ -52,7 +52,7 @@ describe('projeto salvo', () => {
 });
 
 describe('projeto salvo na Fase 2 (plano v1)', () => {
-  it('abre com os planos migrados para v4, histórico inteiro', () => {
+  it('abre com os planos migrados para v5, histórico inteiro', () => {
     const v1 = {
       version: 1,
       output: { width: 1080, height: 1920, fps: 30 },
@@ -74,11 +74,11 @@ describe('projeto salvo na Fase 2 (plano v1)', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const h = restoreHistory(r.project);
-    expect(h.present.version).toBe(4);
+    expect(h.present.version).toBe(5);
     expect(h.present.brief.prompt).toBe('');
     expect(h.present.style.id).toBe('pop');
     expect(h.present.captions[0]!.text).toBe('Oi!');
-    expect(h.past[0]!.version).toBe(4);
+    expect(h.past[0]!.version).toBe(5);
     expect(h.past[0]!.captions[0]!.text).toBe('Olá.');
   });
 });
@@ -89,15 +89,20 @@ describe('projeto salvo na Fase 3 (plano v2)', () => {
     for (const p of [current.history.present, ...current.history.past]) {
       delete p.brief;
       p.version = 2;
+      // estilo como era salvo na Fase 3 (v1: sem emojis e sem cores próprias da legenda)
+      const style = p.style as Record<string, unknown> & { captions: Record<string, unknown> };
+      delete style.emoji;
+      for (const k of ['y', 'enter', 'wordsPerLine', 'colors']) delete style.captions[k];
+      style.version = 1;
     }
     const r = parseProject(current);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const h = restoreHistory(r.project);
-    expect(h.present.version).toBe(4);
+    expect(h.present.version).toBe(5);
     expect(h.present.brief.forbid).toEqual([]);
     expect(h.present.captions[0]!.text).toBe('Oi!');
-    expect(h.past[0]!.version).toBe(4);
+    expect(h.past[0]!.version).toBe(5);
   });
 });
 

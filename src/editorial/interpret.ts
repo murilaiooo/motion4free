@@ -3,6 +3,7 @@ import {
   BRIEF_VERSION,
   LABELS,
   PROMPT_MAX,
+  UNSUPPORTED_MAX,
   type CreativeBrief,
   type Emphasis,
   type Goal,
@@ -13,6 +14,11 @@ import {
   type Tone,
 } from '../core/brief';
 import { STOPWORDS } from './detect';
+import { lookIsEmpty } from '../core/look';
+import { parseLookRules } from './look-rules';
+import { stripAccents, tokenize, type Token } from './tokens';
+
+export { stripAccents, tokenize } from './tokens';
 
 /**
  * Intérprete do pedido por regras (português). Sempre disponível, sem rede e sem IA.
@@ -34,21 +40,10 @@ export interface Interpretation {
   brief: CreativeBrief;
   /** entendeu pelo menos um pedido */
   understood: boolean;
+  /** pedidos conhecidos que o app ainda não faz (sem as palavras soltas que sobraram) */
+  knownUnsupported: string[];
 }
 
-interface Token {
-  raw: string;
-  norm: string;
-}
-
-export function stripAccents(s: string): string {
-  return s.normalize('NFD').replace(/\p{M}+/gu, '');
-}
-
-export function tokenize(text: string): Token[] {
-  const raws = text.toLowerCase().match(/[\p{L}\p{N}%$]+|[,.;!?]/gu) ?? [];
-  return raws.map((raw) => ({ raw, norm: stripAccents(raw) }));
-}
 
 type Effect =
   | { f: 'preset'; v: PresetId; strong: boolean }
@@ -208,6 +203,11 @@ export function interpretPrompt(text: string): Interpretation {
   const emphasize: Emphasis[] = [];
   let mentionedCaptionsOff = false;
 
+  // 0) look (cores, legenda, emojis, cortes, gancho criativo...): antes das proibições, porque
+  //    "legenda sem animação" e "sem fundo" são da legenda; "sem emojis" fica para as proibições
+  const lookRules = parseLookRules(prompt, toks, used);
+  conflicts.push(...lookRules.notes);
+
   // 1) proibições (antes de tudo: "sem pressa" é tom, não proibição; o léxico de tom é testado primeiro só nessa posição)
   for (let i = 0; i < toks.length; i++) {
     if (used[i]) continue;
@@ -309,7 +309,7 @@ export function interpretPrompt(text: string): Interpretation {
   let pace: Pick<Pace> = null;
   let tone: Tone | null = null;
   let goal: Goal | null = null;
-  let wantsHook = false;
+  let wantsHook = lookRules.wantsHook;
   const setPick = <T extends string>(cur: Pick<T>, v: T, strong: boolean, word: string, label: (x: T) => string, what: string): Pick<T> => {
     if (!cur || (strong && !cur.strong)) {
       if (cur && cur.v !== v) conflicts.push(`${what}: "${word}" vale mais que "${cur.word}"; ficou ${label(v)}.`);
@@ -376,11 +376,32 @@ export function interpretPrompt(text: string): Interpretation {
   }
   if (mentionedCaptionsOff) conflicts.push('A legenda não pode ser desligada nesta versão; ela continua no vídeo.');
 
+  // proibição sempre vence o look: "sem emojis" desliga emojis pedidos; "sem barra" vence "com barra"
+  const look = lookRules.look;
+  if (forbid.includes('emojis') && look.emoji && look.emoji.mode !== 'off') {
+    delete look.emoji;
+    conflicts.push('Você pediu emojis e também "sem emojis": a proibição vale mais.');
+  }
+  if (look.scenes) {
+    for (const k of Object.keys(look.scenes) as (keyof NonNullable<typeof look.scenes>)[]) {
+      if (look.scenes[k] && (forbid.includes(k) || forbid.includes('textos'))) {
+        delete look.scenes[k];
+        conflicts.push(`Você pediu e proibiu ${LABELS.prohibition[k].split(' (')[0]}: a proibição vale mais.`);
+      }
+    }
+    if (Object.keys(look.scenes).length === 0) delete look.scenes;
+  }
+  if (look.transition && look.transition !== 'none' && forbid.some((p) => p === 'efeitos' || p === 'transicoes')) {
+    delete look.transition;
+    conflicts.push('Você escolheu uma transição, mas também pediu sem transições/efeitos: a proibição vale mais.');
+  }
+
   const ignored: string[] = [];
   toks.forEach((t, i) => {
-    if (used[i] || t.norm.length < 3 || /^[,.;!?]$/.test(t.norm) || STOP_NORM.has(t.norm) || FILLER.has(t.norm)) return;
+    if (used[i] || !meaningful(t)) return;
     if (!ignored.includes(t.raw) && ignored.length < 12) ignored.push(t.raw.slice(0, 40));
   });
+  const unsupported = [...lookRules.unsupported, ...leftoverPhrases(toks, used)].filter((x, i, all) => all.indexOf(x) === i).slice(0, UNSUPPORTED_MAX);
 
   const finalPreset = preset as Pick<PresetId>;
   const finalIntensity = intensity as Pick<Level>;
@@ -401,7 +422,34 @@ export function interpretPrompt(text: string): Interpretation {
     hook: null,
     locked: [],
     notes: { conflicts: conflicts.slice(0, 10).map((c) => c.slice(0, 200)), ignored },
+    look,
+    hookStyle: lookRules.hookStyle,
+    unsupported: unsupported.map((u) => u.slice(0, 60)),
+    summary: '',
   };
-  const understood = !!(goal || audience || tone || brief.intensity || brief.pace || brief.preset || forbid.length || emphasize.length || wantsHook || mentionedCaptionsOff);
-  return { brief, understood };
+  const understood = !!(goal || audience || tone || brief.intensity || brief.pace || brief.preset || forbid.length || emphasize.length || wantsHook || mentionedCaptionsOff || !lookIsEmpty(look) || lookRules.hookStyle);
+  return { brief, understood, knownUnsupported: lookRules.unsupported.slice(0, UNSUPPORTED_MAX) };
+}
+
+const meaningful = (t: Token) => t.norm.length >= 3 && !/^[,.;!?]$/.test(t.norm) && !STOP_NORM.has(t.norm) && !FILLER.has(t.norm);
+
+/**
+ * Palavras que sobraram, agrupadas em pedaços ("música de fundo", "transição 3d") para a lista
+ * "Ainda não sei fazer". Palavras de ligação no começo e no fim do pedaço saem.
+ */
+export function leftoverPhrases(toks: Token[], used: boolean[]): string[] {
+  const out: string[] = [];
+  let run: Token[] = [];
+  const flush = () => {
+    while (run.length && !meaningful(run[0]!)) run.shift();
+    while (run.length && !meaningful(run.at(-1)!)) run.pop();
+    if (run.some(meaningful)) out.push(run.map((t) => t.raw).join(' ').slice(0, 60));
+    run = [];
+  };
+  toks.forEach((t, i) => {
+    if (used[i] || /^[,.;!?]$/.test(t.norm)) flush();
+    else run.push(t);
+  });
+  flush();
+  return out;
 }

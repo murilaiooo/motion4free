@@ -31,7 +31,7 @@ function runWorker(file: Blob, audio: DecodedAudio | null, plan: EditPlan, onPro
       if (m.type === 'progress') onProgress(m.fraction);
       if (m.type === 'done') {
         worker.terminate();
-        resolve({ blob: new Blob([m.buffer], { type: 'video/mp4' }), degraded: m.degraded, codec: m.codec, fontWarning: m.fontWarning });
+        resolve({ blob: new Blob([m.buffer], { type: 'video/mp4' }), degraded: m.degraded, codec: m.codec, fontWarning: m.fontWarning, emojiWarning: m.emojiWarning });
       }
       if (m.type === 'error') {
         worker.terminate();

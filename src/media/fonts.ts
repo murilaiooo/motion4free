@@ -1,4 +1,6 @@
+import { EMOJI_FONT_FAMILY } from '../core/emoji';
 import { fontsOf, type FontSpec, type StyleDNA } from '../core/style';
+import emojiFont from '../assets/emoji/m4f-emoji.woff2?url';
 import interB from '@fontsource/inter/files/inter-latin-500-normal.woff2?url';
 import interSB from '@fontsource/inter/files/inter-latin-600-normal.woff2?url';
 import interBold from '@fontsource/inter/files/inter-latin-700-normal.woff2?url';
@@ -83,4 +85,26 @@ export async function ensureFonts(style: StyleDNA | StyleDNA[]): Promise<FontsRe
   const results = await Promise.allSettled(specs.map(load));
   const failed = results.map((r, i) => (r.status === 'rejected' ? `${specs[i]!.family} ${specs[i]!.weight}: ${String(r.reason)}` : '')).filter(Boolean);
   return { ok: failed.length === 0, detail: failed.join('; ') };
+}
+
+let emojiLoading: Promise<void> | null = null;
+
+/**
+ * Fonte dos emojis (subconjunto da Noto Color Emoji, OFL-1.1, colorida e vetorial): a mesma no player e
+ * no Worker de exportação, para o emoji sair igual nos dois. Só é baixada (~50 KB) quando há emojis.
+ * Nunca rejeita: falha vira aviso M4F-805.
+ */
+export async function ensureEmojiFont(): Promise<FontsResult> {
+  emojiLoading ??= (async () => {
+    const face = new FontFace(EMOJI_FONT_FAMILY, `url(${new URL(emojiFont, location.href).href})`);
+    await face.load();
+    fontSet().add(face);
+  })();
+  try {
+    await emojiLoading;
+    return { ok: true, detail: '' };
+  } catch (err) {
+    emojiLoading = null;
+    return { ok: false, detail: String(err) };
+  }
 }

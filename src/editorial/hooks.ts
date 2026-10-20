@@ -1,4 +1,5 @@
 import type { Hook } from '../core/brief';
+import type { HookStyle } from '../core/look';
 import type { Word } from '../core/types';
 import { isQuestion, keywordScore, parseNumberAt } from './detect';
 
@@ -76,4 +77,23 @@ export function findHooks(words: Word[], max = 5): HookCandidate[] {
     candidates.push({ text, wordIds: s.words.map((w) => w.id), score: Math.round(score * 100) / 100, start: s.words[0]!.start, reasons });
   });
   return candidates.sort((a, b) => b.score - a.score || a.start - b.start).slice(0, max);
+}
+
+/**
+ * Escolhe o gancho pelo estilo pedido, sempre entre os candidatos (frases faladas):
+ * - auto/null: o de maior pontuação;
+ * - pergunta / número / impacto: o melhor com essa característica (senão o melhor geral);
+ * - criativo ("diferente", "diferenciado"): o melhor que NÃO é o óbvio — de preferência uma frase com
+ *   outra característica que a do primeiro colocado, fora do começo do vídeo; com um só candidato, ele.
+ */
+export function pickHook(cands: HookCandidate[], style: HookStyle | null): HookCandidate | null {
+  const best = cands[0] ?? null;
+  if (!best || !style || style === 'auto') return best;
+  const has = (r: string) => cands.find((c) => c.reasons.includes(r)) ?? best;
+  if (style === 'pergunta') return has('pergunta');
+  if (style === 'numero') return has('número');
+  if (style === 'impacto') return cands.find((c) => c.reasons.includes('exclamação') || c.reasons.includes('palavra forte')) ?? best;
+  const rest = cands.slice(1);
+  const kind = (c: HookCandidate) => c.reasons.filter((r) => r !== 'começo do vídeo').sort().join('|');
+  return rest.find((c) => kind(c) !== kind(best) && !c.reasons.includes('começo do vídeo')) ?? rest.find((c) => kind(c) !== kind(best)) ?? rest[0] ?? best;
 }

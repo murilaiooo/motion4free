@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { LABELS } from '../core/brief';
+import { LABELS, describeLook } from '../core/brief';
 import { AppError, toAppError } from '../core/errors';
-import type { RangeEdit, TimeRange } from '../core/types';
-import { interpretRangePrompt, RANGE_PROMPT_MAX, type RangeRequest } from '../editorial/range-interpret';
+import type { RangeEdit, TimeRange, Word } from '../core/types';
+import { RANGE_PROMPT_MAX, type RangeRequest } from '../editorial/range-interpret';
+import { interpretRangeLayered } from '../editorial/range-ai';
+import { prepareAi, type AiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
 
-const EXAMPLES = ['mais calmo aqui', 'sem animação aqui', 'troca essa animação', 'destaque isso', 'trava esse pedaço'];
+const EXAMPLES = ['mais calmo aqui', 'sem animação aqui', 'troca essa animação', 'destaque isso', 'trava esse pedaço', 'legenda vermelha aqui'];
 
 const fmt = (s: number) => `${s.toFixed(2).replace('.', ',')} s`;
 
@@ -20,6 +22,7 @@ function summarize(r: RangeEdit): string[] {
   if (r.forbid.length) out.push(`Sem: ${r.forbid.map((p) => LABELS.prohibition[p]).join(', ')}`);
   if (r.emphasize.length) out.push(`Destacar ${r.emphasize.map((e) => LABELS.emphasis[e]).join(', ')}`);
   if (r.accent) out.push('Destaque (palavra-chave e zoom)');
+  if (r.look) out.push(...describeLook(r.look));
   if (r.variant > 0) out.push(`Animação trocada ${r.variant === 1 ? '1 vez' : `${r.variant} vezes`}`);
   return out;
 }
@@ -36,25 +39,40 @@ interface Props {
   onClose: () => void;
   onSeek: (t: number) => void;
   disabled: boolean;
+  /** escolha de IA (a mesma do pedido geral) */
+  ai: AiSettings;
+  /** palavras faladas no trecho (só vão para a IA, se escolhida) */
+  words: Word[];
 }
 
 /** Painel do trecho: limites, pedido em português e o que o trecho tem. Tudo entra no desfazer. */
-export function RangePanel({ selection, range, total, onSelection, onRequest, onClose, onSeek, disabled }: Props) {
+export function RangePanel({ selection, range, total, onSelection, onRequest, onClose, onSeek, disabled, ai, words }: Props) {
   const [text, setText] = useState('');
   const [error, setError] = useState<AppError | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
+  const [warning, setWarning] = useState<AppError | null>(null);
+  const [notDone, setNotDone] = useState<string[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
   useEffect(() => {
     setError(null);
     setNotes([]);
+    setWarning(null);
+    setNotDone([]);
   }, [range?.id, selection.start, selection.end]);
 
-  function send(t: string) {
+  async function send(t: string) {
     setError(null);
     setNotes([]);
+    setWarning(null);
+    setNotDone([]);
+    setBusy('Entendendo o pedido…');
     try {
-      const req = interpretRangePrompt(t);
+      const prepared = await prepareAi(ai, setBusy);
+      const { req, warning: w } = await interpretRangeLayered(t, words, prepared.ai);
+      setWarning(w ?? prepared.warning);
+      setNotDone(req.unsupported);
       if (!req.understood) {
-        setError(new AppError('TRECHO_NAO_ENTENDIDO', req.ignored.join(', ')));
+        setError(new AppError('TRECHO_NAO_ENTENDIDO', [...req.unsupported, ...req.ignored].slice(0, 8).join(', ')));
         return;
       }
       const err = onRequest(req);
@@ -65,8 +83,11 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
       }
     } catch (e) {
       setError(toAppError(e));
+    } finally {
+      setBusy(null);
     }
   }
+  const off = disabled || busy !== null;
 
   const setEdge = (which: 'start' | 'end', v: number) => {
     if (!Number.isFinite(v)) return;
@@ -104,23 +125,23 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
       <p className="hint">O que mudar neste trecho? Exemplos (toque para usar):</p>
       <div className="examples">
         {EXAMPLES.map((e) => (
-          <button key={e} type="button" className="example" onClick={() => send(e)} disabled={disabled} data-testid={`range-example-${e.split(' ')[0]}`}>
+          <button key={e} type="button" className="example" onClick={() => void send(e)} disabled={off} data-testid={`range-example-${e.split(' ')[0]}`}>
             {e}
           </button>
         ))}
       </div>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={RANGE_PROMPT_MAX} rows={2} placeholder="Ex.: mais calmo aqui, sem zoom" aria-label="O que mudar neste trecho?" data-testid="range-input" disabled={disabled} />
+      <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={RANGE_PROMPT_MAX} rows={2} placeholder="Ex.: mais calmo aqui, sem zoom" aria-label="O que mudar neste trecho?" data-testid="range-input" disabled={off} />
       <div className="actions">
-        <button className="primary" onClick={() => send(text)} disabled={disabled} data-testid="range-apply">
+        <button className="primary" onClick={() => void send(text)} disabled={off} data-testid="range-apply">
           Aplicar no trecho
         </button>
         {range && (
-          <button onClick={() => send(range.locked ? 'destrava' : 'trava')} disabled={disabled} data-testid="range-lock">
+          <button onClick={() => void send(range.locked ? 'destrava' : 'trava')} disabled={off} data-testid="range-lock">
             {range.locked ? 'Destravar' : 'Travar este trecho'}
           </button>
         )}
         {range && (
-          <button onClick={() => send(range.locked ? 'destrava e volta ao normal' : 'volta ao normal')} disabled={disabled} data-testid="range-reset">
+          <button onClick={() => void send(range.locked ? 'destrava e volta ao normal' : 'volta ao normal')} disabled={off} data-testid="range-reset">
             Voltar ao normal
           </button>
         )}
@@ -135,6 +156,17 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
           ))}
         </ul>
       )}
+      {busy && (
+        <p className="status" role="status">
+          {busy}
+        </p>
+      )}
+      {notDone.length > 0 && (
+        <p className="hint" data-testid="range-unsupported">
+          <b>Ainda não sei fazer:</b> {notDone.join('; ')}
+        </p>
+      )}
+      {warning && <ErrorBox error={warning} kind="warning" />}
       {error && <ErrorBox error={error} kind={error.key === 'TRECHO_NAO_ENTENDIDO' || error.key === 'TRECHO_SEM_ALTERNATIVA' ? 'warning' : 'error'} />}
     </section>
   );

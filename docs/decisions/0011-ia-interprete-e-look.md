@@ -1,0 +1,39 @@
+# ADR-0011 — IA como intérprete principal, espaço de parâmetros ("look"), emojis e ritmo de cortes (v0.6.0)
+
+**Data:** 2026-10-20
+**Status:** ACEITA. Complementa o [ADR-0009](0009-pedido-e-ia.md) (pedido e IA opcional) e o [ADR-0010](0010-trechos-travas-versoes.md) (trechos). Stack do [ADR-0005](0005-stack-v1.md) sem troca de peça; dependências novas: nenhuma em tempo de execução (um arquivo de fonte OFL incluído no site).
+
+## Contexto
+Feedback do responsável na v0.5: o pedido "gancho diferenciado e criativo, legenda verde e amarela, emojis a cada 3 segundos" não fazia nada, e a tela mostrava "Palavras que não usei". As regras só conheciam estilo, tom, ritmo, proibições e destaques; a IA opcional só completava campos que as regras deixavam vazios, nos mesmos campos. Faltava (1) um espaço de parâmetros que cubra o que as pessoas pedem (cores, tamanho, posição, emojis, cortes…), (2) a IA lendo o pedido inteiro e (3) dizer com clareza o que foi aplicado e o que o app ainda não sabe fazer.
+
+## Decisão
+1. **"Look": um espaço de parâmetros fechado e validado** (`src/core/look.ts`, zod). Cores livres em `#RRGGBB` (texto, destaque, contorno, caixa da legenda; cor de destaque do vídeo), escala e posição da legenda (em cima/meio/embaixo/altura livre), caixa das letras, fonte (só as OFL que acompanham o app), animação de entrada, palavras por linha e por legenda, tipo de destaque, espessura do contorno; emojis (modo desligado/a cada N s/nas palavras importantes, intervalo 1–30 s, posição, tamanho, animação, emojis preferidos da lista); ritmo dos cortes (suave/normal/agressivo), transição, intensidade de animação e cenas ligadas. Vai no `CreativeBrief` v2 junto com `hookStyle`, `unsupported` e `summary`. **`EditPlan` v5** (StyleDNA v2 com `captions.colors/position/y/enter/wordsPerLine` e o bloco `emoji`; trecho com `look`); v1–v4 migram sem mudança visível.
+2. **O desenho respeita cada campo**, na mesma função pura usada pela prévia e pela exportação (`drawFrame` → `drawCaption`/`drawEmoji`). Há um teste de unidade por campo (cores, posição, caixa das letras, fonte, cada entrada, palavras por linha, posições/tamanho/animações dos emojis, determinismo).
+3. **A IA é a intérprete principal; as regras conferem.** Com IA ligada, ela lê o pedido inteiro e devolve JSON com o espaço todo, `unsupported` (o que pediram e o app não faz) e `summary` (frase curta em português). Política de junção:
+   - campo que as regras **também** leram do texto: vale o das regras (são literais e protegem contra injeção na transcrição); a divergência vira nota;
+   - campo que só a IA leu: entra;
+   - **proibições só se somam e sempre vencem** (inclusive sobre o look da IA: "sem emojis" tira emojis pedidos pela IA);
+   - gancho só por **índice** de uma frase candidata da própria fala (nunca texto da IA);
+   - `unsupported` = lista da IA ∪ itens conhecidos das regras.
+4. **Validação campo a campo.** `parseAiReply` extrai o primeiro objeto JSON equilibrado (ignora cercas de código e blocos `<think>`), valida cada campo e **descarta só o inválido** (`dropped`), não a resposta inteira. Resposta sem JSON ou sem nenhum campo válido ganha **uma** nova tentativa com o erro explicado; se falhar de novo, M4F-1012 e o pedido segue pelas regras. Sem `response_format` no WebLLM (o modo JSON quebra na 0.2.85, ver v0.4.1): prompt de sistema estrito com o esquema, limites, regras de cor e aviso de injeção + 3 exemplos (few-shot). O texto da IA nunca é executado; `summary` e `unsupported` são limpos (sem `<>`, sem controle, com tamanho máximo) e só mostrados.
+5. **Regras mais largas** (`src/editorial/look-rules.ts`): leem o pedido do responsável inteiro sem IA (cores por nome PT/EN, compostas e "mais escuro/claro", códigos `#hex`, "cores da bandeira", erros comuns como "legeda"; tamanho, posição, caixa, fonte, entradas, palavras por linha; emojis "a cada N segundos/Ns/de N em N/três segundos", "nas palavras importantes", "emoji de fogo"; cortes, transição, intensidade %, cenas ligadas; tipos de gancho). Um léxico de coisas que o app **não** faz (música, voz, filtro, logo, GIF, tradução, b-roll, 3D, enquadrar rosto, velocidade, degradê, thumbnail, "viralizar"…) alimenta "Ainda não sei fazer". Bateria de 63 pedidos reais em `tests/look-rules.test.ts`.
+6. **Tela**: "Apliquei: …" (o que mudou, com as cores em código), "Ainda não sei fazer: …" (sempre visível depois de aplicar; "nada deste pedido" quando entendeu tudo) e, com IA, a frase-resumo dela. "Palavras que não usei" saiu.
+7. **Modelos locais** (registro em `src/core/llm-models.ts`, espelho em `src/core/mirror.ts`, teste confere id/biblioteca/memória contra a lista do WebLLM instalado):
+   - **Leve:** Qwen2.5-0.5B-Instruct (~0,9 GB de memória de vídeo, ~300 MB de download);
+   - **Padrão (novo):** Qwen2.5-1.5B-Instruct (~1,6 GB; ~0,9 GB) — entende bem melhor o JSON e o português;
+   - **Forte:** Qwen3-4B (~3,4 GB; ~2,3 GB), com o modo "pensar" desligado (`enable_thinking: false`).
+   Todos Apache-2.0. **Qwen2.5-3B rejeitado**: "Qwen Research License" (sem uso comercial). Trocar de modelo descarrega o anterior. Erro de memória/GPU perdida vira **M4F-1013** (sugere o leve). O pedido inteiro (sistema + exemplos + fala ≤ 1500 caracteres + correção) cabe em 4096 tokens com 500 de resposta (teste). A chave própria do Gemini continua, com os mesmos turnos (exemplos como `user`/`model`), só texto, chave só no navegador.
+8. **Pedido de trecho pelo mesmo intérprete** (`src/editorial/range-ai.ts`), escopo "trecho": só tom, intensidade, ritmo, proibições, destaques e o look do trecho (sem cortes e sem palavras por legenda, que são do vídeo inteiro; o prompt diz isso e o validador remove). Travar/destravar/voltar ao normal são só das regras (comandos, não vão à IA). Trecho travado continua recusando mudanças (M4F-504). "Sem animação aqui" tira emojis do trecho.
+9. **Emojis**: lista fechada de 72 (`EMOJI_SET`), escolhidos pelo sentido das palavras próximas (tabela PT de radicais, `%`→📈, dinheiro→💰, pergunta→🤔; senão os preferidos ou uma lista neutra), sem repetir dois seguidos e sem sobrepor. Desenhados com **um subconjunto da Noto Color Emoji (OFL-1.1, COLRv1, ~50 KB)** incluído no site e carregado na página e no Worker de exportação: mesmo arquivo, mesmo desenho (conferido no Chromium). Só é baixado quando o vídeo tem emoji. Falha → M4F-805. Imagens PNG (`emoji-datasource`, 64 px) rejeitadas por ficarem borradas. Detalhes em [licencas.md](../licencas.md).
+10. **Ritmo dos cortes** (`retimeCuts`, puro): "agressivo" corta pausas ≥ 0,3 s entre palavras (margem de 0,06 s) e o silêncio no começo/fim; "suave" devolve cortes < 0,8 s; nunca corta dentro de palavra, nunca mexe em trecho travado, nunca devolve lista vazia. Aplicado quando o nível muda no pedido; legendas são refeitas a partir das palavras (continuam sincronizadas).
+
+## Não entra (e por quê)
+- **Música, efeitos sonoros, voz, tradução, b-roll, filtros de cor no vídeo, 3D, reenquadrar o rosto, mudar velocidade**: exigem novas peças de mídia/IA e benchmarks; aparecem em "Ainda não sei fazer".
+- **Emojis livres** (qualquer emoji ou figurinha): a fonte incluída tem só os 72 da lista, para o desenho ser igual em toda parte e o arquivo ficar pequeno.
+- **Gancho reescrito pela IA**: continua só frase da própria fala (sem texto inventado, ADR-0009).
+- **Teste real da IA no navegador**: o ambiente de desenvolvimento não alcança o Hugging Face; os modelos são conferidos contra a lista oficial do WebLLM e a lógica com IA falsa em testes. O roteiro pede o teste no aparelho do responsável.
+
+## Consequências
+- O pedido do responsável funciona **sem IA**; com IA, frases fora das regras também.
+- Quatro códigos novos: M4F-805, M4F-1012, M4F-1013 (e textos de M4F-1003/1006/1007 atualizados).
+- Projetos antigos abrem (migração v4→v5).

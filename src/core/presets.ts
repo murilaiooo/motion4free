@@ -1,4 +1,4 @@
-import type { StyleDNA } from './style';
+import { CAPTION_COLORS_DEFAULT, EMOJI_OFF, type StyleDNA } from './style';
 
 /**
  * Três estilos iniciais com personalidades opostas. Diferem em tipografia, movimento,
@@ -8,7 +8,7 @@ import type { StyleDNA } from './style';
  * - Documental: sóbrio. Sans técnica, painéis escuros alinhados à esquerda, revelação em cortina, quase nenhum movimento.
  */
 export const EDITORIAL: StyleDNA = {
-  version: 1,
+  version: 2,
   id: 'editorial',
   name: 'Editorial',
   palette: {
@@ -32,7 +32,8 @@ export const EDITORIAL: StyleDNA = {
   rhythm: { overlaysPer10s: 0.7, minGapSec: 2.5, keywordEverySec: 6, zoomEverySec: 14, titleSec: 2.6, sceneSec: 2.6 },
   shape: { radius: 0, stroke: 3, shadow: 'soft', panel: 'none' },
   layout: { align: 'center', overlayY: 0.3 },
-  captions: { position: 'bottom', size: 0.07, maxChars: 26, maxWords: 5, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 0, upcomingAlpha: 0.5, activeScale: 1 },
+  captions: { position: 'bottom', size: 0.07, maxChars: 26, maxWords: 5, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 0, upcomingAlpha: 0.5, activeScale: 1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  emoji: { ...EMOJI_OFF },
   transition: 'zoom',
   progress: 'line',
   zoomScale: 1.06,
@@ -40,7 +41,7 @@ export const EDITORIAL: StyleDNA = {
 };
 
 export const POP: StyleDNA = {
-  version: 1,
+  version: 2,
   id: 'pop',
   name: 'Pop',
   palette: {
@@ -64,7 +65,8 @@ export const POP: StyleDNA = {
   rhythm: { overlaysPer10s: 1.8, minGapSec: 0.8, keywordEverySec: 2.5, zoomEverySec: 5, titleSec: 1.8, sceneSec: 1.9 },
   shape: { radius: 0.22, stroke: 10, shadow: 'hard', panel: 'box' },
   layout: { align: 'center', overlayY: 0.26 },
-  captions: { position: 'middle', size: 0.088, maxChars: 20, maxWords: 3, maxLines: 2, highlight: 'box', box: 'none', stroke: 12, upcomingAlpha: 1, activeScale: 1.1 },
+  captions: { position: 'middle', size: 0.088, maxChars: 20, maxWords: 3, maxLines: 2, highlight: 'box', box: 'none', stroke: 12, upcomingAlpha: 1, activeScale: 1.1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  emoji: { ...EMOJI_OFF },
   transition: 'flash',
   progress: 'bar',
   zoomScale: 1.14,
@@ -72,7 +74,7 @@ export const POP: StyleDNA = {
 };
 
 export const DOCUMENTAL: StyleDNA = {
-  version: 1,
+  version: 2,
   id: 'documental',
   name: 'Documental',
   palette: {
@@ -96,7 +98,8 @@ export const DOCUMENTAL: StyleDNA = {
   rhythm: { overlaysPer10s: 0.5, minGapSec: 3.5, keywordEverySec: 10, zoomEverySec: 16, titleSec: 3.2, sceneSec: 3.2 },
   shape: { radius: 0.06, stroke: 0, shadow: 'none', panel: 'box' },
   layout: { align: 'left', overlayY: 0.56 },
-  captions: { position: 'bottom', size: 0.064, maxChars: 30, maxWords: 7, maxLines: 2, highlight: 'color', box: 'line', stroke: 0, upcomingAlpha: 1, activeScale: 1 },
+  captions: { position: 'bottom', size: 0.064, maxChars: 30, maxWords: 7, maxLines: 2, highlight: 'color', box: 'line', stroke: 0, upcomingAlpha: 1, activeScale: 1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  emoji: { ...EMOJI_OFF },
   transition: 'dip',
   progress: 'none',
   zoomScale: 1.04,

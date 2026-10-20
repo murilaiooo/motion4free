@@ -4,7 +4,8 @@ import { presetById } from '../core/presets';
 import type { StyleDNA } from '../core/style';
 import type { Caption, EditPlan, RangeEdit, SceneInstance, SceneKind, TimeRange, Word } from '../core/types';
 import { outputDuration, outputToSource, outputToSourceEnd, rangeOut, sourceToOutput } from '../engine/timeline';
-import { sceneOptionsFor, styleForBrief } from './brief-apply';
+import { applyLook, effectiveForbid, sceneOptionsFor, styleForBrief } from './brief-apply';
+import { lookIsEmpty, mergeLook, type Look } from '../core/look';
 import { buildCaptions, captionOptionsFor } from './captions';
 import { keywordScore } from './detect';
 import type { RangeRequest } from './range-interpret';
@@ -32,10 +33,10 @@ export type RangeTarget = { id: string } | TimeRange;
 type Draft = SceneInstance extends infer S ? (S extends SceneInstance ? Omit<S, 'id'> : never) : never;
 
 export function rangeHasOverrides(r: RangeEdit): boolean {
-  return !!(r.tone || r.intensity || r.pace || r.forbid.length || r.emphasize.length || r.quiet || r.accent || r.variant > 0);
+  return !!(r.tone || r.intensity || r.pace || r.forbid.length || r.emphasize.length || r.quiet || r.accent || r.variant > 0 || !lookIsEmpty(r.look));
 }
 
-const styleOverrides = (r: RangeEdit) => !!(r.tone || r.intensity || r.pace || r.forbid.length || r.emphasize.length);
+const styleOverrides = (r: RangeEdit) => !!(r.tone || r.intensity || r.pace || r.forbid.length || r.emphasize.length || !lookIsEmpty(r.look));
 
 /** Pedido geral + pedido do trecho (o do trecho vale mais; proibições e destaques somam). */
 export function rangeBrief(plan: EditPlan, r: RangeEdit): CreativeBrief {
@@ -47,6 +48,7 @@ export function rangeBrief(plan: EditPlan, r: RangeEdit): CreativeBrief {
     pace: r.pace ?? b.pace,
     forbid: [...new Set([...b.forbid, ...r.forbid])],
     emphasize: [...new Set([...b.emphasize, ...r.emphasize])].filter((e) => !r.forbid.some((p) => (p === 'numeros' && e === 'numeros') || (p === 'destaques' && e === 'palavras') || p === 'textos')),
+    look: r.look ? mergeLook(b.look, r.look) : b.look,
   };
 }
 
@@ -55,7 +57,8 @@ export function styleForRange(plan: EditPlan, r: RangeEdit): StyleDNA | null {
   if (!styleOverrides(r)) return null;
   const preset = presetById(plan.style.id);
   if (!preset) return null;
-  return applyReference(styleForBrief(preset, rangeBrief(plan, r)), plan.reference);
+  const brief = rangeBrief(plan, r);
+  return applyLook(applyReference(styleForBrief(preset, brief), plan.reference), brief.look, effectiveForbid(brief));
 }
 
 /** Estilo usado para desenhar o instante `t`: o do trecho que contém `t`, se tiver; senão o do vídeo. */
@@ -317,6 +320,7 @@ export function newRange(plan: EditPlan, sel: TimeRange): RangeEdit {
     quiet: false,
     accent: false,
     variant: 0,
+    look: null,
     style: null,
     locked: null,
   };
@@ -348,11 +352,18 @@ const insideKey = (plan: EditPlan, out: TimeRange) =>
  * Aplica um pedido de trecho já entendido. `rebuild` refaz o vídeo inteiro (usado ao tirar uma trava
  * ou voltar o trecho ao normal, para ele seguir de novo o resto do vídeo).
  */
+/** Look do trecho: o novo pedido vale mais campo a campo; "sem animação" tira os emojis do trecho. */
+function mergedRangeLook(prev: Look | null, add: Look, quiet: boolean): Look | null {
+  const merged = mergeLook(prev ?? {}, add);
+  if (quiet && merged.emoji) delete merged.emoji;
+  return lookIsEmpty(merged) ? null : merged;
+}
+
 export function applyRangeRequest(plan: EditPlan, words: Word[], target: RangeTarget, req: RangeRequest, rebuild: (p: EditPlan) => EditPlan): { plan: EditPlan; rangeId: string | null } {
   const existing = 'id' in target ? plan.ranges.find((r) => r.id === target.id) : undefined;
   if ('id' in target && !existing) return { plan, rangeId: null };
   let r = existing ?? newRange(plan, target as TimeRange);
-  const changes = req.reset || req.swap || req.accent || req.quiet || !!req.tone || !!req.intensity || !!req.pace || req.forbid.length > 0 || req.emphasize.length > 0;
+  const changes = req.reset || req.swap || req.accent || req.quiet || !!req.tone || !!req.intensity || !!req.pace || req.forbid.length > 0 || req.emphasize.length > 0 || !lookIsEmpty(req.look);
 
   if (r.locked) {
     if (req.lock !== false) {
@@ -379,6 +390,7 @@ export function applyRangeRequest(plan: EditPlan, words: Word[], target: RangeTa
     quiet: req.quiet ? true : req.accent || req.swap || req.emphasize.length > 0 ? false : r.quiet,
     accent: req.quiet ? false : req.accent || r.accent,
     variant: req.quiet ? 0 : req.swap ? Math.min(999, r.variant + 1) : r.variant,
+    look: mergedRangeLook(r.look, req.look, req.quiet),
   };
 
   const ranges = [...plan.ranges.filter((x) => x.id !== r.id), r].sort((a, b) => a.srcStart - b.srcStart);
