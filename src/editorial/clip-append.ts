@@ -18,6 +18,7 @@ export function appendClipsToPlan(
   if (!more.length) return plan;
   const all = [...plan.clips, ...more];
   if (all.length > 30) throw new AppError('CLIPES_DEMAIS', `${all.length}/30`);
+  if (totalDuration(all) > 600) throw new AppError('CLIPES_LONGOS', `${totalDuration(all).toFixed(1)} s > 600 s`);
   if (new Set(all.map(c => c.id)).size !== all.length) throw new AppError('CLIPES_AUSENTES', 'Identificadores duplicados.');
   const oldSourceEnd = totalDuration(plan.clips);
   const oldOutEnd = outputDuration(plan.segments);
