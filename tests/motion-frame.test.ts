@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_BRIEF } from '../src/core/brief';
-import { DOCUMENTAL, EDITORIAL, POP, PRESETS } from '../src/core/presets';
+import { DOCUMENTAL, EDITORIAL, NEON, POP, PRESETS } from '../src/core/presets';
 import type { StyleDNA } from '../src/core/style';
 import type { Caption, EditPlan, RangeEdit, SceneInstance } from '../src/core/types';
 import { captionMaxWidth, drawCaption, REELS_BUTTONS_X } from '../src/render/captions';
@@ -217,6 +217,18 @@ describe('acabamento (v0.7)', () => {
     const fills = frame(p, 1.5).calls.filter((c) => c.op === 'fill').map((c) => c.fillStyle);
     expect(fills).toContain(POP.palette.panel);
     expect(fills).toContain(POP.palette.text);
+  });
+
+  it('a palavra falada que cresce empurra as vizinhas (letras nunca encavalam)', () => {
+    const c = cap('c1', 'mais dicas', 0, 2, [0, 0.5]);
+    const gap = (style: StyleDNA) => {
+      const rc = new RecordingContext();
+      drawCaption(rc.asCtx(), makeFrame(W, H, style), c, 1.2, new Set());
+      const xs = rc.calls.filter((x) => x.op === 'fillText').map(screenX);
+      return xs[1]! - xs[0]!;
+    };
+    const flat = { ...NEON, captions: { ...NEON.captions, activeScale: 1 } };
+    expect(gap(NEON)).toBeGreaterThan(gap(flat) + 10);
   });
 
   it('palavra-chave falada cresce mais que uma palavra comum', () => {

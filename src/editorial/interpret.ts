@@ -78,6 +78,7 @@ const TONE_CALM: Effect[] = [
 /** Léxico (sem acentos). Frases mais longas têm prioridade sobre as curtas. */
 const LEXICON: Entry[] = [
   ...entry('pop|estilo pop', [{ f: 'preset', v: 'pop', strong: true }]),
+  ...entry('estilo neon|o neon|preset neon', [{ f: 'preset', v: 'neon', strong: true }]),
   ...entry('editorial|estilo editorial|estilo revista|revista', [{ f: 'preset', v: 'editorial', strong: true }]),
   ...entry('documental|estilo documental|documentario', [{ f: 'preset', v: 'documental', strong: true }, { f: 'tone', v: 'serio' }]),
   ...entry('animado|animada|energetico|energetica|energia|agitado|agitada|vibrante|empolgante|eletrico|eletrica|impactante|chamativo|chamativa|intenso|intensa|explosivo', TONE_ENERGETIC, 'up'),

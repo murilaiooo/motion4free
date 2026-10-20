@@ -72,7 +72,7 @@ export function systemPrompt(scope: AiScope = 'video'): string {
     'Você é o intérprete de pedidos de um editor de vídeos curtos (Reels) no navegador.',
     'Converta o pedido da pessoa (português do Brasil) em UM objeto JSON. Responda SOMENTE com o JSON: sem texto antes ou depois, sem comentários, sem ```.',
     'Campos (todos opcionais; omita o que o pedido não diz):',
-    `"preset": ${list(PRESET_IDS)} (pop = energético; editorial = elegante; documental = sério)`,
+    `"preset": ${list(PRESET_IDS)} (pop = energético com caixas amarelas; neon = legenda limpa com a palavra falada em verde; editorial = elegante; documental = sério)`,
     `"tone": ${list(TONES)}`,
     `"intensity": ${list(LEVELS)} (quanto movimento)`,
     `"pace": ${list(PACES)} (ritmo das animações)`,

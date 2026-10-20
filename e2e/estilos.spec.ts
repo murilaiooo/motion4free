@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
-const STYLES = ['pop', 'editorial', 'documental'] as const;
+const STYLES = ['pop', 'neon', 'editorial', 'documental'] as const;
 const SHOTS = ['abertura', 'numero', 'lista', 'pergunta', 'nome', 'legenda', 'chamada'] as const;
 
 async function openVideo(page: Page) {
@@ -79,20 +79,20 @@ test.describe('galeria de estilos', () => {
     const same = await page.evaluate(() => {
       const g = window.m4fGallery!;
       const results: boolean[] = [];
-      for (const s of ['pop', 'editorial', 'documental']) {
+      for (const s of ['pop', 'neon', 'editorial', 'documental']) {
         const first = g.render(s, 8.3, 270);
         for (const t of [26.9, 0.4, 12.0, 4.4, 22.0]) g.render(s, t, 270);
         results.push(g.render(s, 8.3, 270) === first);
       }
       return results;
     });
-    expect(same).toEqual([true, true, true]);
+    expect(same).toEqual([true, true, true, true]);
   });
 
-  test('os 3 estilos desenham quadros diferentes entre si', async ({ page }) => {
+  test('os estilos desenham quadros diferentes entre si', async ({ page }) => {
     for (const t of [1.3, 4.6, 12.2, 22.1]) {
-      const frames = await page.evaluate((tt) => ['pop', 'editorial', 'documental'].map((s) => window.m4fGallery!.render(s, tt, 270)), t);
-      expect(new Set(frames).size).toBe(3);
+      const frames = await page.evaluate((tt) => ['pop', 'neon', 'editorial', 'documental'].map((s) => window.m4fGallery!.render(s, tt, 270)), t);
+      expect(new Set(frames).size).toBe(4);
     }
   });
 

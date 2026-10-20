@@ -1,7 +1,7 @@
 import { CAPTION_COLORS_DEFAULT, EMOJI_OFF, type StyleDNA } from './style';
 
 /**
- * Três estilos iniciais com personalidades opostas. Diferem em tipografia, movimento,
+ * Estilos iniciais com personalidades opostas. Diferem em tipografia, movimento,
  * ritmo e layout, não só em cor:
  * - Editorial: revista. Serifa elegante, legenda limpa que "acende" palavra a palavra, movimento lento, poucas cenas.
  * - Pop: energia de Reels. Letra condensada gigante, legenda em maiúsculas no meio da tela com a palavra falada em caixa amarela, cortes com flash, muitas cenas.
@@ -106,7 +106,45 @@ export const DOCUMENTAL: StyleDNA = {
   cta: 'Continue acompanhando',
 };
 
-export const PRESETS: readonly StyleDNA[] = [POP, EDITORIAL, DOCUMENTAL];
+/**
+ * Neon (v0.7): a legenda "karaokê" limpa dos Reels de hoje. Sem caixas: letras brancas grossas em
+ * maiúsculas e minúsculas, poucas palavras por vez, a palavra falada acende em verde neon e cresce com
+ * mola; títulos só tipografia com faixa de leitura; zoom de corte. Contrasta com o Pop (caixas amarelas).
+ */
+export const NEON: StyleDNA = {
+  version: 2,
+  id: 'neon',
+  name: 'Neon',
+  palette: {
+    text: '#FFFFFF',
+    muted: '#FFFFFFB3',
+    accent: '#39FF14',
+    accent2: '#39FF14',
+    panel: '#111111E6',
+    onPanel: '#FFFFFF',
+    scrim: '#0000008C',
+    shadow: '#000000CC',
+  },
+  type: {
+    display: { family: 'Montserrat', weight: 900, style: 'normal', case: 'upper', tracking: -0.03 },
+    text: { family: 'Inter', weight: 800, style: 'normal', case: 'none', tracking: -0.02 },
+    emphasis: { family: 'Inter', weight: 800, style: 'normal', case: 'none', tracking: -0.02 },
+    label: { family: 'IBM Plex Mono', weight: 600, style: 'normal', case: 'upper', tracking: 0.12 },
+    scale: 1.15,
+  },
+  motion: { enter: 'pop', ease: 'snappy', inSec: 0.3, outSec: 0.2, intensity: 0.75, staggerSec: 0.04 },
+  rhythm: { overlaysPer10s: 1.2, minGapSec: 1.5, keywordEverySec: 3, zoomEverySec: 6, titleSec: 2.2, sceneSec: 2.2 },
+  shape: { radius: 0.5, stroke: 0, shadow: 'soft', panel: 'none' },
+  layout: { align: 'center', overlayY: 0.22 },
+  captions: { position: 'middle', size: 0.084, maxChars: 16, maxWords: 2, maxLines: 2, highlight: 'color', box: 'none', stroke: 9, upcomingAlpha: 1, activeScale: 1.14, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  emoji: { ...EMOJI_OFF },
+  transition: 'zoom',
+  progress: 'line',
+  zoomScale: 1.1,
+  cta: 'Segue pra mais',
+};
+
+export const PRESETS: readonly StyleDNA[] = [POP, NEON, EDITORIAL, DOCUMENTAL];
 /** Estilo dos projetos novos e dos projetos antigos (v1) ao abrir. */
 export const DEFAULT_STYLE = POP;
 

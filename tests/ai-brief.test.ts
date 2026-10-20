@@ -35,7 +35,7 @@ describe('parseAiReply: só IDs permitidos', () => {
   });
 
   it('descarta valores fora da lista (sem virar código, cena ou estilo novo)', () => {
-    const r = parseAiReply('{"preset":"neon","tone":"<script>","forbid":["zoom","tudo"],"emphasize":["numeros","eval()"],"intensity":"MAX","scenes":[{"kind":"eval"}]}', 3);
+    const r = parseAiReply('{"preset":"tiktok","tone":"<script>","forbid":["zoom","tudo"],"emphasize":["numeros","eval()"],"intensity":"MAX","scenes":[{"kind":"eval"}]}', 3);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.proposal.preset).toBeUndefined();
@@ -43,7 +43,7 @@ describe('parseAiReply: só IDs permitidos', () => {
     expect(r.proposal.intensity).toBeUndefined();
     expect(r.proposal.forbid).toEqual(['zoom']);
     expect(r.proposal.emphasize).toEqual(['numeros']);
-    expect(r.proposal.dropped).toEqual(expect.arrayContaining(['preset=neon', 'forbid=tudo', 'emphasize=eval()']));
+    expect(r.proposal.dropped).toEqual(expect.arrayContaining(['preset=tiktok', 'forbid=tudo', 'emphasize=eval()']));
     expect(r.proposal).not.toHaveProperty('scenes');
   });
 
@@ -306,7 +306,7 @@ describe('IA como intérprete principal: espaço de parâmetros inteiro (v0.6)',
 
   it('resposta só com campos inválidos conta como inválida e pede correção', async () => {
     let n = 0;
-    const r = await askAi({ complete: async () => (++n === 1 ? '{"captions":{"scale":99},"preset":"neon"}' : '{"tone":"calmo"}'), source: 'ia-local' }, buildAiMessages('x', words, hooks), hooks.length);
+    const r = await askAi({ complete: async () => (++n === 1 ? '{"captions":{"scale":99},"preset":"tiktok"}' : '{"tone":"calmo"}'), source: 'ia-local' }, buildAiMessages('x', words, hooks), hooks.length);
     expect(n).toBe(2);
     expect(r.ok && r.repaired).toBe(true);
   });

@@ -66,7 +66,7 @@ describe('cenas: funções puras do tempo, em todos os estilos', () => {
     for (const scene of SCENES) {
       const fonts = PRESETS.map((s) => new Set(draw(s, scene, mid(scene)).calls.filter((c) => c.op === 'fillText').map((c) => c.font.replace(/^.*?px /, ''))));
       const keys = fonts.map((f) => [...f].sort().join('|'));
-      expect(new Set(keys).size, scene.kind).toBe(3);
+      expect(new Set(keys).size, scene.kind).toBe(PRESETS.length);
       const xs = PRESETS.map((s) => {
         const c = draw(s, scene, mid(scene)).calls.find((c) => c.op === 'fillText')!;
         return `${c.textAlign}@${Math.round((c.m[0]! * (c.args[1] as number) + c.m[4]!) / 10)}`;

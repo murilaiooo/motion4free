@@ -252,6 +252,16 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     if (i === active - 1) return 1 + gain * (1 - easeOutCubic(progress(t, starts[active]!, 0.1)));
     return 1;
   };
+  // a palavra que cresce empurra as vizinhas da mesma linha (a linha "respira" sem encavalar letras)
+  const growth = tokens.map((_, i) => (activeScaleOf(i) - 1) * widths[i]!);
+  const xOf = (i: number) => {
+    let dx = 0;
+    for (const j of lines[wordLine[i]!]!) {
+      if (j < i) dx += growth[j]! / 2;
+      else if (j > i) dx -= growth[j]! / 2;
+    }
+    return wordX[i]! + dx;
+  };
   const withWord = (i: number, draw: () => void) => {
     const we = wordEnter(i);
     if (we.alpha <= 0) return;
@@ -260,9 +270,9 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     ctx.save();
     ctx.globalAlpha *= we.alpha;
     if (sc !== 1) {
-      ctx.translate(wordX[i]!, y);
+      ctx.translate(xOf(i), y);
       ctx.scale(sc, sc);
-      ctx.translate(-wordX[i]!, -y);
+      ctx.translate(-xOf(i), -y);
     }
     draw();
     ctx.restore();
@@ -287,7 +297,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     const we = wordEnter(i);
     const padX = size * 0.12;
     const h = size * 1.14;
-    const rectOf = (k: number) => ({ x: wordX[k]! - widths[k]! / 2 - padX, w: widths[k]! + 2 * padX });
+    const rectOf = (k: number) => ({ x: xOf(k) - widths[k]! / 2 - padX, w: widths[k]! + 2 * padX });
     let r = rectOf(i);
     let grow = 1;
     const prev = i - 1;
@@ -331,7 +341,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
         ctx.lineWidth = C.stroke * u;
         ctx.strokeStyle = K.stroke;
         setTextShadow(ctx, f);
-        ctx.strokeText(shown[i]!, wordX[i]!, lineY(wordLine[i]!));
+        ctx.strokeText(shown[i]!, xOf(i), lineY(wordLine[i]!));
         clearShadow(ctx);
       });
     }
@@ -348,11 +358,11 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
       if (C.highlight === 'underline' && i === active) {
         const grow = easeOutExpo(progress(t, starts[i]!, 0.18));
         ctx.fillStyle = K.highlight;
-        ctx.fillRect(wordX[i]! - widths[i]! / 2, y + size * 0.52, widths[i]! * grow, Math.max(2, size * 0.08));
+        ctx.fillRect(xOf(i) - widths[i]! / 2, y + size * 0.52, widths[i]! * grow, Math.max(2, size * 0.08));
       }
       if (C.stroke === 0 && !boxed(i) && C.box === 'none') setShadow(ctx, f, 'soft', 0.9);
       ctx.fillStyle = color;
-      ctx.fillText(shown[i]!, wordX[i]!, y);
+      ctx.fillText(shown[i]!, xOf(i), y);
       clearShadow(ctx);
     });
   }

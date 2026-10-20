@@ -99,6 +99,9 @@ const CASES: [string, Expect][] = [
   // v0.7 (teste ponta a ponta): o exemplo da tela, com vírgula entre a legenda e a cor
   ['legenda grande em cima, amarela com contorno preto', { look: { captions: { scale: 1.25, position: 'top', text: AMARELO, stroke: '#000000' } }, allUnderstood: true }],
   ['legenda em cima, verde com contorno branco', { look: { captions: { position: 'top', text: VERDE, stroke: '#FFFFFF' } }, allUnderstood: true }],
+  // v0.7: estilo Neon só pelo nome do estilo; "verde neon" continua sendo cor
+  ['estilo neon', { preset: 'neon', allUnderstood: true }],
+  ['legenda verde neon', { preset: null, look: { captions: { text: '#39FF14' } }, allUnderstood: true }],
   // o que o app ainda não faz
   ['quero musica de fundo e legenda amarela', { look: { captions: { text: AMARELO } }, unsupported: ['música ou efeitos sonoros'] }],
   ['legenda verde e música de fundo', { look: { captions: { text: VERDE } }, unsupported: ['música ou efeitos sonoros'], exactUnsupported: ['música ou efeitos sonoros'] }],
