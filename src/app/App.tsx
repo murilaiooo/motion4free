@@ -767,8 +767,8 @@ function EditorApp() {
           notices={
             <>
               {appNotices}
-              {session.warnings.map((w) => (
-                <ErrorBox key={w.code} error={w} kind="warning" />
+              {session.warnings.map((w, index) => (
+                <ErrorBox key={`${w.code}-${index}`} error={w} kind="warning" />
               ))}
             </>
           }
