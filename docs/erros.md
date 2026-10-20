@@ -11,10 +11,11 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 9xx
 | M4F-104 | Nesta versão de teste o vídeo pode ter no máximo 3 minutos. | Corte o vídeo para até 3 minutos. |
 | M4F-105 | Não foi possível abrir o vídeo. | Falha inesperada ao ler o arquivo; ver detalhe. |
 | M4F-201 | Não foi possível ler o áudio do vídeo. | O áudio do vídeo não pôde ser decodificado. |
-| M4F-301 | Não foi possível baixar o modelo de transcrição. | Download do modelo ou do runtime falhou. O detalhe diz o servidor (huggingface.co, cdn.jsdelivr.net, cas-bridge…). Causas comuns: bloqueador de anúncios, firewall, rede instável. |
+| M4F-301 | Não foi possível baixar o modelo de transcrição. | Falha de rede ao baixar o modelo ou o runtime. Desde a v0.1.3 o app tenta primeiro o espelho no próprio site (`[site]`) e depois os servidores originais (`[direto]`: huggingface.co, cdn.jsdelivr.net); o detalhe lista as duas tentativas. Causas comuns: firewall, antivírus, rede instável. |
 | M4F-302 | O modelo de transcrição baixou, mas não conseguiu iniciar neste navegador. | Modelo baixado, mas WebGPU e WASM falharam ao iniciar. Ver detalhe. |
 | M4F-303 | A transcrição da fala falhou. | Erro durante a transcrição em si. |
 | M4F-304 | O processo de transcrição parou inesperadamente. | O Worker de transcrição travou (memória, script não carregou). |
+| M4F-305 | O servidor do modelo de transcrição respondeu com erro. | O servidor respondeu 401, 403, 429 ou 5xx. O detalhe traz o status e o servidor; `HTTP 502` no espelho do site significa que a Cloudflare não alcançou o Hugging Face. |
 | M4F-401 | Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador. | Nenhum codificador de vídeo disponível. |
 | M4F-402 | A geração do vídeo falhou. | Falha durante a geração do MP4; ver detalhe. |
 | M4F-999 | Erro inesperado. | Erro não previsto; ver detalhe. |

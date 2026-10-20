@@ -1,5 +1,5 @@
 // A Cloudflare aceita no máximo 25 MiB por arquivo. O runtime ONNX já é
-// carregado do CDN jsdelivr pelo Transformers.js, então a cópia local é removida.
+// carregado do jsdelivr (pelo espelho /cdn/ do site, ADR-0006), então a cópia local é removida.
 import { readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 

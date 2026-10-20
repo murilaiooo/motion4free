@@ -1,9 +1,13 @@
-// Hospedagem na Cloudflare (Workers com arquivos estáticos). O site é só o build do Vite em ./dist.
+// Hospedagem na Cloudflare (Workers com arquivos estáticos). O site é o build do Vite em ./dist.
+// worker/index.ts só atende /hf/* e /cdn/*: espelho do modelo de transcrição no próprio site (ADR-0006).
 {
   "name": "motion4free",
   "compatibility_date": "2026-10-01",
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/hf/*", "/cdn/*"]
   }
 }

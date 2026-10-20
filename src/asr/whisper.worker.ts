@@ -1,33 +1,58 @@
 /// <reference lib="webworker" />
 import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
-import { AppError, describeError, networkErrorFromUrl, toAppError } from '../core/errors';
+import { AppError, describeError, httpErrorFromUrl, networkErrorFromUrl, toAppError } from '../core/errors';
+import { HF_PREFIX, MODEL_ID, mirrorCdnUrl } from '../core/mirror';
 import type { FromWorker, ToWorker } from './protocol';
 import type { AsrChunk } from './words';
 
-/** Modelo multilíngue pequeno; baixado uma vez e guardado no cache do navegador. */
-export const MODEL_ID = 'onnx-community/whisper-base_timestamped';
 
 let asr: AutomaticSpeechRecognitionPipeline | null = null;
 let device = 'wasm';
 
 const post = (m: FromWorker) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(m);
 
-/** Toda falha de rede vira M4F-301 com o servidor que falhou (modelo no Hugging Face ou runtime no jsdelivr). */
+/**
+ * Toda falha de rede vira M4F-301 com o servidor que falhou; resposta de erro do servidor
+ * (401/403/429/5xx) vira M4F-305. 404 passa: o Transformers.js usa 404 para arquivos opcionais.
+ */
 const rawFetch = self.fetch.bind(self);
 const trackedFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  let res: Response;
   try {
-    return await rawFetch(input, init);
+    res = await rawFetch(input, init);
   } catch (err) {
     throw networkErrorFromUrl(url, err);
   }
+  if (res.status >= 500 || res.status === 401 || res.status === 403 || res.status === 429) throw httpErrorFromUrl(url, res.status);
+  return res;
 };
 self.fetch = trackedFetch;
 env.fetch = trackedFetch;
 
+/**
+ * De onde baixar: primeiro o espelho no próprio site (funciona para quem alcança o app),
+ * depois os servidores originais. No `npm run dev` não há espelho, então vai direto.
+ */
+interface Source {
+  name: string;
+  remoteHost: string;
+  wasmPaths: unknown;
+}
+const onnxWasm = env.backends.onnx.wasm as { wasmPaths?: unknown } | undefined;
+const directWasm = onnxWasm?.wasmPaths;
+const origin = self.location.origin;
+const mirroredWasm =
+  directWasm && typeof directWasm === 'object'
+    ? Object.fromEntries(Object.entries(directWasm as Record<string, string>).map(([k, v]) => [k, mirrorCdnUrl(v, origin)]))
+    : directWasm;
+const SOURCES: Source[] = [
+  ...(import.meta.env.DEV ? [] : [{ name: 'site', remoteHost: `${origin}${HF_PREFIX}`, wasmPaths: mirroredWasm }]),
+  { name: 'direto', remoteHost: 'https://huggingface.co/', wasmPaths: directWasm },
+];
+
 async function load(): Promise<AutomaticSpeechRecognitionPipeline> {
   if (asr) return asr;
-  device = 'gpu' in navigator ? 'webgpu' : 'wasm';
   const files = new Map<string, number>();
   const progress_callback = (p: { status: string; file?: string; progress?: number }) => {
     if (p.status === 'progress' && p.file) {
@@ -36,19 +61,40 @@ async function load(): Promise<AutomaticSpeechRecognitionPipeline> {
       post({ type: 'progress', stage: 'download', fraction: avg });
     }
   };
+  const networkFailures: AppError[] = [];
+  for (const source of SOURCES) {
+    env.remoteHost = source.remoteHost;
+    if (onnxWasm) onnxWasm.wasmPaths = source.wasmPaths;
+    try {
+      asr = await loadFrom(progress_callback);
+      return asr;
+    } catch (err) {
+      // Falha de download: tenta a próxima origem. Qualquer outra falha é do modelo, não da rede.
+      if (err instanceof AppError && (err.key === 'MODELO_REDE' || err.key === 'MODELO_HTTP')) {
+        networkFailures.push(new AppError(err.key, `[${source.name}] ${err.detail}`));
+        continue;
+      }
+      throw err;
+    }
+  }
+  const last = networkFailures[networkFailures.length - 1]!;
+  throw new AppError(last.key, networkFailures.map((f) => f.detail).join(' | '));
+}
+
+async function loadFrom(progress_callback: (p: { status: string; file?: string; progress?: number }) => void): Promise<AutomaticSpeechRecognitionPipeline> {
+  device = 'gpu' in navigator ? 'webgpu' : 'wasm';
   try {
-    asr = (await pipeline('automatic-speech-recognition', MODEL_ID, { device: device as 'webgpu', dtype: 'fp32', progress_callback })) as AutomaticSpeechRecognitionPipeline;
+    return (await pipeline('automatic-speech-recognition', MODEL_ID, { device: device as 'webgpu', dtype: 'fp32', progress_callback })) as AutomaticSpeechRecognitionPipeline;
   } catch (gpuErr) {
     if (gpuErr instanceof AppError) throw gpuErr;
     device = 'wasm';
     try {
-      asr = (await pipeline('automatic-speech-recognition', MODEL_ID, { device: 'wasm', dtype: 'q8', progress_callback })) as AutomaticSpeechRecognitionPipeline;
+      return (await pipeline('automatic-speech-recognition', MODEL_ID, { device: 'wasm', dtype: 'q8', progress_callback })) as AutomaticSpeechRecognitionPipeline;
     } catch (wasmErr) {
       if (wasmErr instanceof AppError) throw wasmErr;
       throw new AppError('MODELO_CARREGAR', `webgpu: ${describeError(gpuErr)} | wasm: ${describeError(wasmErr)}`);
     }
   }
-  return asr;
 }
 
 self.onmessage = async (e: MessageEvent<ToWorker>) => {

@@ -14,6 +14,7 @@ export const ERRORS = {
   MODELO_CARREGAR: { code: 'M4F-302', title: 'O modelo de transcrição baixou, mas não conseguiu iniciar neste navegador.' },
   TRANSCRICAO_FALHOU: { code: 'M4F-303', title: 'A transcrição da fala falhou.' },
   WORKER_FALHOU: { code: 'M4F-304', title: 'O processo de transcrição parou inesperadamente.' },
+  MODELO_HTTP: { code: 'M4F-305', title: 'O servidor do modelo de transcrição respondeu com erro.' },
   SEM_ENCODER: { code: 'M4F-401', title: 'Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador.' },
   EXPORTACAO_FALHOU: { code: 'M4F-402', title: 'A geração do vídeo falhou.' },
   DESCONHECIDO: { code: 'M4F-999', title: 'Erro inesperado.' },
@@ -57,6 +58,17 @@ export function networkErrorFromUrl(url: string, cause: unknown): AppError {
     // mantém a URL crua
   }
   return new AppError('MODELO_REDE', `servidor ${host}: ${describeError(cause)} — ${url.slice(0, 160)}`);
+}
+
+/** Resposta de erro (401/403/429/5xx) do servidor do modelo ou do runtime. */
+export function httpErrorFromUrl(url: string, status: number): AppError {
+  let host = url;
+  try {
+    host = new URL(url).host;
+  } catch {
+    // mantém a URL crua
+  }
+  return new AppError('MODELO_HTTP', `servidor ${host}: HTTP ${status} — ${url.slice(0, 160)}`);
 }
 
 /** Texto para copiar e colar no feedback. */
