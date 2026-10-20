@@ -67,3 +67,22 @@ h2 { font-size: 18px; margin: 24px 0 4px; }
 .gallery h2 { margin: 0; }
 .gallery-row { display: flex; gap: 8px; overflow-x: auto; }
 .gallery-row canvas { width: 160px; aspect-ratio: 9 / 16; border-radius: 8px; flex: none; }
+
+.brief { display: grid; gap: 8px; }
+.brief h2, .brief h3 { margin: 0; }
+.brief h3 { font-size: 16px; margin-top: 8px; }
+.brief textarea { font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid color-mix(in srgb, CanvasText 30%, transparent); background: transparent; color: inherit; resize: vertical; }
+.examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.example { font-size: 13px; padding: 6px 10px; border-radius: 999px; }
+.brief-summary { border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); border-radius: 10px; padding: 10px 14px; }
+.brief-summary p { margin: 0 0 4px; }
+.brief-summary ul { margin: 0 0 6px; padding-left: 20px; }
+.brief-notes { font-size: 14px; opacity: 0.85; }
+.hooks { display: grid; gap: 6px; }
+.hook { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; font-size: 15px; cursor: pointer; }
+.hook small { display: block; }
+.ai-options { border-top: 1px solid color-mix(in srgb, CanvasText 15%, transparent); padding-top: 8px; display: grid; gap: 8px; }
+.ai-options summary { cursor: pointer; font-size: 14px; opacity: 0.8; }
+.ai-options[open] { gap: 8px; }
+.key-box { display: grid; gap: 6px; }
+.key-box input { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid color-mix(in srgb, CanvasText 30%, transparent); background: transparent; color: inherit; }
