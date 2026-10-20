@@ -8,6 +8,10 @@ import { sceneOptionsFor, styleForBrief } from './brief-apply';
 import { buildCaptions, captionOptionsFor } from './captions';
 import { findHooks } from './hooks';
 import { proposeScenes } from './selector';
+import type { RangeRequest } from './range-interpret';
+import { applyRangeRequest, assertCaptionEditable, assertSegmentsKeepLocks, reapplyRanges, type RangeTarget } from './ranges';
+import { applyReference } from './reference';
+import type { ReferencePalette } from '../core/types';
 
 /**
  * Operações de edição da Fase 2. Todas são puras: recebem um plano e devolvem outro
@@ -77,7 +81,31 @@ function rebuildScenes(plan: EditPlan, ctx: EditContext, segments: Segment[], st
  */
 export function withSegments(plan: EditPlan, ctx: EditContext, segments: Segment[]): EditPlan {
   if (segments.length === 0) throw new AppError('CORTE_TOTAL');
-  return { ...plan, segments, captions: rebuildCaptions(plan, ctx, segments, plan.style), scenes: rebuildScenes(plan, ctx, segments, plan.style) };
+  assertSegmentsKeepLocks(plan, segments);
+  return reapplyRanges({ ...plan, segments, captions: rebuildCaptions(plan, ctx, segments, plan.style), scenes: rebuildScenes(plan, ctx, segments, plan.style) }, ctx.words);
+}
+
+/** Estilo do vídeo: preset ajustado pelo pedido e pelas cores da imagem de referência. */
+export function planStyle(preset: StyleDNA, brief: CreativeBrief, reference: ReferencePalette | null): StyleDNA {
+  return applyReference(styleForBrief(preset, brief), reference);
+}
+
+/** Refaz legendas e cenas do vídeo inteiro com o estilo e o pedido atuais (trechos reaplicados por cima). */
+export function rebuildAll(plan: EditPlan, ctx: EditContext): EditPlan {
+  return reapplyRanges({ ...plan, captions: rebuildCaptions(plan, ctx, plan.segments, plan.style), scenes: rebuildScenes(plan, ctx, plan.segments, plan.style) }, ctx.words);
+}
+
+/** Cores de uma imagem de referência (null = voltar às cores do estilo). Mesmas cores = mesmo objeto. */
+export function applyReferencePalette(plan: EditPlan, ctx: EditContext, reference: ReferencePalette | null): EditPlan {
+  if (JSON.stringify(plan.reference) === JSON.stringify(reference)) return plan;
+  const preset = presetById(plan.style.id);
+  if (!preset) throw new AppError('ESTILO_DESCONHECIDO', plan.style.id);
+  return rebuildAll({ ...plan, reference, style: planStyle(preset, plan.brief, reference) }, ctx);
+}
+
+/** Pedido para um trecho (revisão focal). Devolve o plano e o trecho afetado (null = trecho removido). */
+export function applyRange(plan: EditPlan, ctx: EditContext, target: RangeTarget, req: RangeRequest): { plan: EditPlan; rangeId: string | null } {
+  return applyRangeRequest(plan, ctx.words, target, req, (p) => rebuildAll(p, ctx));
 }
 
 /**
@@ -90,8 +118,8 @@ export function applyStyle(plan: EditPlan, ctx: EditContext, styleId: string): E
   if (!preset) throw new AppError('ESTILO_DESCONHECIDO', styleId);
   // a escolha manual vira o estilo do pedido; os outros ajustes do pedido (calmo, proibições...) continuam valendo
   const brief = plan.brief.preset ? { ...plan.brief, preset: preset.id as CreativeBrief['preset'] } : plan.brief;
-  const style = styleForBrief(preset, brief);
-  return { ...plan, style, brief, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style, brief) };
+  const style = planStyle(preset, brief, plan.reference);
+  return reapplyRanges({ ...plan, style, brief, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style, brief) }, ctx.words);
 }
 
 /**
@@ -109,8 +137,8 @@ export function applyBrief(plan: EditPlan, ctx: EditContext, incoming: CreativeB
     hook = best ? { text: best.text, wordIds: best.wordIds } : null;
   }
   const brief: CreativeBrief = { ...incoming, hook, locked: plan.brief.locked };
-  const style = styleForBrief(preset, brief);
-  return { ...plan, style, brief, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style, brief) };
+  const style = planStyle(preset, brief, plan.reference);
+  return reapplyRanges({ ...plan, style, brief, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style, brief) }, ctx.words);
 }
 
 /** Escolhe (ou tira, com null) o gancho de abertura. Mesmo gancho = mesmo objeto. */
@@ -118,7 +146,7 @@ export function applyHook(plan: EditPlan, ctx: EditContext, hook: Hook | null): 
   const same = (a: Hook | null, b: Hook | null) => (a === null && b === null) || (!!a && !!b && a.wordIds.join('|') === b.wordIds.join('|') && a.text === b.text);
   if (same(plan.brief.hook, hook)) return plan;
   const brief: CreativeBrief = { ...plan.brief, hook, wantsHook: hook === null ? false : plan.brief.wantsHook };
-  return { ...plan, brief, scenes: rebuildScenes(plan, ctx, plan.segments, plan.style, brief) };
+  return reapplyRanges({ ...plan, brief, scenes: rebuildScenes(plan, ctx, plan.segments, plan.style, brief) }, ctx.words);
 }
 
 /**
@@ -161,5 +189,6 @@ export function editCaptionText(plan: EditPlan, captionId: string, text: string)
   if (clean.length > MAX_CAPTION_CHARS) throw new AppError('LEGENDA_LONGA', `${clean.length} caracteres`);
   const target = plan.captions.find((c) => c.id === captionId);
   if (!target || target.text === clean) return plan;
+  assertCaptionEditable(plan, captionId);
   return { ...plan, captions: plan.captions.map((c) => (c.id === captionId ? { ...c, text: clean } : c)) };
 }
