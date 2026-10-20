@@ -4,7 +4,7 @@ import { waveformPeaks } from '../analysis/waveform';
 import { ASR_CANDIDATES, asrLadder } from '../core/asr-models';
 import { MB, formatBytes } from '../core/bytes';
 import { AppError, describeError, toAppError } from '../core/errors';
-import { makeProject, restoreHistory, sameVideo, type SavedProject } from '../core/project';
+import { makeProject, referencedClips, restoreHistory, sameVideo, type SavedProject } from '../core/project';
 import {
   PROJECTS_DIR,
   THUMB,
@@ -211,7 +211,7 @@ function EditorApp() {
     setProjectId(id);
     setProjectName(meta?.name ?? nameFromFile(loaded.project.video.name));
     await enqueue(() => setCurrent(fs, id)).catch(() => undefined);
-    const savedClips = loaded.project.history.present.clips;
+    const savedClips = referencedClips(loaded.project);
     const usesClipStorage = savedClips.length > 1 || (savedClips.length === 1 && savedClips[0]!.id !== 'c1');
     if (!loaded.video) {
       if (usesClipStorage) {
@@ -245,14 +245,14 @@ function EditorApp() {
     const { combineAudios } = await import('../media/multi');
     const h = restoreHistory(project);
     const clips: import('../media/multi').OpenedClip[] = [];
+    const allRefs = referencedClips(project);
     const clipSources = new Map<string, import('../media/sources').ClipSource>();
     const audiosByClip: Record<string, import('../media/audio').DecodedAudio | null> = {};
     const audioWarnings: AppError[] = [];
-    let totalDur = 0;
-    for (const [index, c] of h.present.clips.entries()) {
+    for (const [index, c] of allRefs.entries()) {
       const blob = clipMap.get(c.id);
       if (!blob) throw new AppError('CLIPES_AUSENTES', c.id);
-      step(`Abrindo clipe ${index + 1}/${h.present.clips.length}`, index / h.present.clips.length);
+      step(`Abrindo clipe ${index + 1}/${allRefs.length}`, index / allRefs.length);
       const media = await openMedia(blob);
       const audio = media.audio
         ? await decodeAudio(media.audio, media.durationSec).catch((err): null => {
@@ -263,20 +263,22 @@ function EditorApp() {
       audiosByClip[c.id] = audio;
       clips.push({ id: c.id, file: blob, name: c.name, media, durationSec: media.durationSec, words: [], silences: [], audio });
       clipSources.set(c.id, { id: c.id, video: media.video, width: media.width, height: media.height });
-      totalDur += media.durationSec;
     }
     // O áudio deve ser reconstituído para o preview e o MP4, não apenas os quadros.
     const combinedAudio = combineAudios(h.present.clips, audiosByClip);
-    const clipWords = unplaceWords(h.present.clips, project.words);
-    const clipSilences = unplaceRanges(h.present.clips, project.silences);
+    const oldWords = unplaceWords(h.present.clips, project.words);
+    const oldSilences = unplaceRanges(h.present.clips, project.silences);
+    const clipWords = Object.fromEntries(allRefs.map(c => [c.id, project.clipAnnotations?.[c.id]?.words ?? oldWords[c.id] ?? []]));
+    const clipSilences = Object.fromEntries(allRefs.map(c => [c.id, project.clipAnnotations?.[c.id]?.silences ?? oldSilences[c.id] ?? []]));
+    const totalDur = totalDuration(h.present.clips);
     setFileName(project.video.name);
     setSession({
       file: clipMap.get(h.present.clips[0]!.id)!,
       fileName: project.video.name,
-      media: clips[0]!.media,
+      media: clips.find(c => c.id === h.present.clips[0]!.id)!.media,
       audio: combinedAudio,
-      ctx: { durationSec: totalDur, words: project.words },
-      silences: project.silences,
+      ctx: { durationSec: totalDur, words: placeWords(h.present.clips, clipWords) },
+      silences: placeRanges(h.present.clips, clipSilences),
       warnings: [...project.warnings.map((w) => new AppError(w.key, w.detail)), ...audioWarnings],
       peaks: peaksOf(combinedAudio),
       clipSources,
@@ -385,7 +387,7 @@ function EditorApp() {
     const files = Array.isArray(f) ? f : [f];
     const primary = files[0]!;
     if (pending) {
-      const savedClips = pending.project.history.present.clips;
+      const savedClips = referencedClips(pending.project);
       const relinkClips = savedClips.length > 1 || (savedClips.length === 1 && savedClips[0]!.id !== 'c1');
       setFileName(primary.name);
       try {
@@ -588,6 +590,9 @@ function EditorApp() {
       video: session.originalVideo ?? { name: session.fileName, size: session.file.size, durationSec: session.media.durationSec },
       words: session.clipWords ? placeWords(history.present.clips, session.clipWords) : session.ctx.words,
       silences: session.clipSilences ? placeRanges(history.present.clips, session.clipSilences) : session.silences,
+      clipAnnotations: session.clipWords
+        ? Object.fromEntries(Object.entries(session.clipWords).map(([id, words]) => [id, { words, silences: session.clipSilences?.[id] ?? [] }]))
+        : undefined,
       warnings: session.warnings.map((w) => ({ key: w.key, detail: w.detail })),
       history,
       versions,
@@ -680,7 +685,7 @@ function EditorApp() {
   const saved = !!history && savedFor === history && versionsSaved === versions && copy === 'done';
   const saveState: SaveState = saved ? 'saved' : storageAvailable() && copy !== 'failed' ? 'saving' : 'off';
 
-  const pendingClips = pending?.project.history.present.clips ?? [];
+  const pendingClips = pending ? referencedClips(pending.project) : [];
   const pendingMulti = pendingClips.length > 1 || (pendingClips.length === 1 && pendingClips[0]!.id !== 'c1');
   const pendingNotice = pending && (
     <div className="notice warning" role="status" data-testid={pendingMulti ? 'warning-M4F-615' : 'warning-M4F-604'}>
