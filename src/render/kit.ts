@@ -2,6 +2,7 @@ import { cssFont, type FontSpec, type StyleDNA } from '../core/style';
 import type { Ctx2D } from './ctx';
 import { clamp01, easeInCubic, progress } from './easing';
 import { reelsSafeArea, type Rect } from './layout';
+import { cubicBezier, easeOutExpo, springIn, type SpringSpec } from './motion';
 
 /** Ferramentas de desenho compartilhadas pelas cenas. Tudo puro: depende só dos argumentos. */
 
@@ -12,10 +13,35 @@ export interface Frame {
   u: number;
   safe: Rect;
   style: StyleDNA;
+  /** centro vertical das cenas (fração da área segura), já afastado da legenda */
+  overlayY: number;
 }
 
 export function makeFrame(w: number, h: number, style: StyleDNA): Frame {
-  return { w, h, u: w / 1080, safe: reelsSafeArea(w, h), style };
+  return { w, h, u: w / 1080, safe: reelsSafeArea(w, h), style, overlayY: overlayYFor(style) };
+}
+
+/** Centro vertical aproximado da legenda, em fração da área segura. */
+export function captionFrac(style: StyleDNA): number {
+  const C = style.captions;
+  return { bottom: 0.92, middle: 0.7, center: 0.5, top: 0.1, custom: C.y }[C.position];
+}
+
+/**
+ * Centro das cenas (título, número, lista…) longe da legenda: se a legenda foi pedida em cima ou no meio
+ * e cairia em cima da cena, a cena desce (ou sobe) para o outro lado da tela (v0.7).
+ */
+export function overlayYFor(style: StyleDNA): number {
+  const o = style.layout.overlayY;
+  const c = captionFrac(style);
+  if (Math.abs(o - c) >= 0.36) return o;
+  return c < 0.5 ? Math.min(0.78, c + 0.5) : Math.max(0.22, c - 0.45);
+}
+
+const SMOOTH = cubicBezier(0.76, 0, 0.24, 1);
+/** Mola da personalidade "snappy": quanto mais intenso, mais sobra. */
+export function snappySpring(style: StyleDNA): SpringSpec {
+  return { freq: 1.25, zeta: 0.55 - 0.15 * style.motion.intensity };
 }
 
 /** Cor #RRGGBB(AA) com a opacidade multiplicada por `a`. */
@@ -35,14 +61,14 @@ export function ease(style: StyleDNA, x: number): number {
   const t = clamp01(x);
   switch (style.motion.ease) {
     case 'smooth':
-      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      // in-out forte (cortina de documentário): sai devagar, cruza rápido, pousa devagar
+      return SMOOTH(t);
     case 'gentle':
-      return 1 - Math.pow(1 - t, 5);
-    case 'snappy': {
-      const c1 = 1.2 + 1.4 * style.motion.intensity;
-      const c3 = c1 + 1;
-      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-    }
+      // exponencial: arranca e pousa longo (revista)
+      return easeOutExpo(t);
+    case 'snappy':
+      // mola de verdade: passa do ponto e volta, termina exatamente em 1
+      return springIn(t, snappySpring(style));
   }
 }
 
@@ -63,7 +89,7 @@ export function phase(style: StyleDNA, t: number, start: number, end: number, de
   const outSec = Math.min(style.motion.outSec, len * 0.35);
   const inRaw = progress(t, start + delay, inSec);
   const out = easeInCubic(progress(t, end - outSec, outSec));
-  const fade = style.motion.enter === 'pop' ? clamp01(inRaw * 3) : style.motion.enter === 'wipe' ? clamp01(inRaw * 4) : inRaw;
+  const fade = style.motion.enter === 'pop' ? clamp01(inRaw * 4) : style.motion.enter === 'wipe' ? clamp01(inRaw * 4) : clamp01(inRaw * 2.5);
   return { p: ease(style, inRaw), inRaw, out, alpha: fade * (1 - out) };
 }
 
@@ -77,11 +103,17 @@ export function applyMotion(ctx: Ctx2D, f: Frame, ph: Phase, box: Rect): void {
   const cx = box.x + box.w / 2;
   const cy = box.y + box.h / 2;
   if (m.enter === 'rise') {
-    const dist = (40 + 80 * m.intensity) * f.u;
-    ctx.translate(0, (1 - ph.p) * dist - ph.out * dist * 0.4);
+    // revelação por máscara: o texto sobe de trás de uma linha invisível e sai subindo (tipografia cinética)
+    const padX = 80 * f.u;
+    const padY = box.h * 0.32;
+    ctx.beginPath();
+    ctx.rect(box.x - padX, box.y - padY, box.w + 2 * padX, box.h + 2 * padY);
+    ctx.clip();
+    const travel = box.h * (0.85 + 0.25 * m.intensity);
+    ctx.translate(0, (1 - ph.p) * travel - ph.out * travel * 0.7);
   } else if (m.enter === 'pop') {
-    const s = (0.55 + 0.45 * ph.p) * (1 - 0.12 * ph.out);
-    const rot = (1 - clamp01(ph.p)) * -0.08 * m.intensity;
+    const s = (0.5 + 0.5 * ph.p) * (1 - 0.18 * ph.out);
+    const rot = (1 - ph.p) * -0.1 * m.intensity;
     ctx.translate(cx, cy);
     ctx.rotate(rot);
     ctx.scale(s, s);

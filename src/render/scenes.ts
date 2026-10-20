@@ -5,6 +5,8 @@ import { clamp01, progress } from './easing';
 import { applyCase, applyMotion, clearShadow, composition, ease, fillBox, fitSize, hairline, phase, setFont, setShadow, withAlpha, type Frame } from './kit';
 import type { Rect } from './layout';
 import { wrapText } from './layout';
+import { easeOutExpo } from './motion';
+import { onBox } from '../core/color';
 
 /**
  * Cenas de sobreposição. Cada uma é função pura de (cena, t, estilo): nada guarda estado entre quadros.
@@ -17,7 +19,7 @@ function anchor(f: Frame): { x: number; align: Align } {
   return f.style.layout.align === 'left' ? { x: f.safe.x + 24 * f.u, align: 'left' } : { x: f.w / 2, align: 'center' };
 }
 
-const centerY = (f: Frame) => f.safe.y + f.safe.h * f.style.layout.overlayY;
+const centerY = (f: Frame) => f.safe.y + f.safe.h * f.overlayY;
 
 /** Quebra e reduz o texto até caber em maxLines linhas de largura maxW. */
 function fitLines(ctx: Ctx2D, spec: FontSpec, text: string, size: number, maxW: number, maxLines: number): { lines: string[]; size: number } {
@@ -39,7 +41,7 @@ function lineBox(x: number, align: Align, y: number, w: number, h: number, padX:
 }
 
 /** Bloco de linhas de texto com a entrada do estilo em cada linha (título, citação, chamada final). */
-function drawLines(ctx: Ctx2D, f: Frame, lines: string[], spec: FontSpec, size: number, cy: number, start: number, end: number, t: number, colors: { text: string; box: string }, opts: { boxed: boolean; lineGap?: number; tilt?: number } = { boxed: false }): Rect {
+function drawLines(ctx: Ctx2D, f: Frame, lines: string[], spec: FontSpec, size: number, cy: number, start: number, end: number, t: number, colors: { text: string; box: string }, opts: { boxed: boolean; lineGap?: number; tilt?: number; alt?: { text: string; box: string } } = { boxed: false }): Rect {
   const { x, align } = anchor(f);
   const lineH = size * (opts.lineGap ?? 1.12);
   const top = cy - (lines.length * lineH) / 2;
@@ -64,14 +66,16 @@ function drawLines(ctx: Ctx2D, f: Frame, lines: string[], spec: FontSpec, size: 
     setFont(ctx, spec, size);
     ctx.textAlign = align;
     ctx.textBaseline = 'middle';
+    // duas cores alternadas por linha (ganchos em adesivo): a segunda linha "responde" à primeira
+    const c = opts.alt && i % 2 === 1 ? opts.alt : colors;
     if (opts.boxed) {
       setShadow(ctx, f);
-      fillBox(ctx, box, f.style.shape.radius * box.h, colors.box);
+      fillBox(ctx, box, f.style.shape.radius * box.h, c.box);
       clearShadow(ctx);
     } else {
       setShadow(ctx, f);
     }
-    ctx.fillStyle = colors.text;
+    ctx.fillStyle = c.text;
     ctx.fillText(line, x, y + size * 0.04);
     ctx.restore();
   });
@@ -115,7 +119,8 @@ export function drawKineticTitle(ctx: Ctx2D, f: Frame, scene: Extract<SceneInsta
     return;
   }
   if (comp === 'sticker') {
-    drawLines(ctx, f, lines, spec, size, cy, scene.start, scene.end, t, { text: S.palette.onPanel, box: S.palette.panel }, { boxed: true, lineGap: 1.3, tilt: -0.035 * S.motion.intensity });
+    const altBox = S.palette.text;
+    drawLines(ctx, f, lines, spec, size, cy, scene.start, scene.end, t, { text: S.palette.onPanel, box: S.palette.panel }, { boxed: true, lineGap: 1.3, tilt: -0.035 * S.motion.intensity, alt: lines.length > 1 ? { box: altBox, text: onBox(altBox, S.palette.onPanel) } : undefined });
     return;
   }
   const block = drawLines(ctx, f, lines, spec, size, cy, scene.start, scene.end, t, { text: S.palette.text, box: '' }, { boxed: false, lineGap: 1.02 });
@@ -149,7 +154,7 @@ export function drawBigNumber(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance
   const size = fitSize(ctx, spec, scene.value, 330 * f.u * S.type.scale, f.safe.w * (comp === 'card' ? 0.75 : 0.9));
   const labelSize = 44 * f.u;
   const label = applyCase(lab, scene.label);
-  const counting = S.motion.intensity >= 0.2 ? ease(S, progress(t, scene.start, Math.max(0.6, S.motion.inSec * 2))) : 1;
+  const counting = S.motion.intensity >= 0.2 ? easeOutExpo(progress(t, scene.start, Math.max(0.7, S.motion.inSec * 2.4))) : 1;
   const shown = countUp(scene.value, counting);
   setFont(ctx, spec, size);
   const numW = ctx.measureText(scene.value).width;
@@ -454,7 +459,18 @@ export function drawProgress(ctx: Ctx2D, f: Frame, t: number, total: number): vo
   } else {
     const th = 16 * f.u;
     fillBox(ctx, { x, y, w, h: th }, th / 2, withAlpha('#000000', 0.4));
-    if (k > 0) fillBox(ctx, { x, y, w: Math.max(th, w * k), h: th }, th / 2, S.palette.accent);
+    if (k > 0) {
+      const head = x + Math.max(th, w * k);
+      fillBox(ctx, { x, y, w: head - x, h: th }, th / 2, S.palette.accent);
+      // ponta com brilho: o olho acompanha o avanço
+      ctx.shadowColor = withAlpha(S.palette.accent, 0.9);
+      ctx.shadowBlur = 18 * f.u;
+      ctx.fillStyle = S.palette.accent;
+      ctx.beginPath();
+      ctx.arc(head - th / 2, y + th / 2, th * 0.72, 0, Math.PI * 2);
+      ctx.fill();
+      clearShadow(ctx);
+    }
   }
   ctx.restore();
 }
