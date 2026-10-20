@@ -6,6 +6,7 @@ import type { FromWorker, ToWorker } from './protocol';
 import type { AsrChunk } from './words';
 
 
+const SAMPLE_RATE = 16000;
 let asr: AutomaticSpeechRecognitionPipeline | null = null;
 let device = 'wasm';
 
@@ -107,16 +108,23 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
     return;
   }
   try {
-    post({ type: 'progress', stage: 'transcribe', fraction: 0 });
-    const out = await model(e.data.audio, {
-      language: e.data.language,
-      task: 'transcribe',
-      return_timestamps: 'word',
-      chunk_length_s: 30,
-      stride_length_s: 5,
-    });
-    const result = Array.isArray(out) ? out[0]! : out;
-    post({ type: 'done', chunks: (result.chunks ?? []) as AsrChunk[], device });
+    const { audio, windows, language } = e.data;
+    const chunks: AsrChunk[] = [];
+    // Uma chamada por janela (≤ 30 s, cortada em silêncio): o Whisper nunca vê uma palavra partida na borda.
+    for (const [i, w] of windows.entries()) {
+      post({ type: 'progress', stage: 'transcribe', fraction: i / windows.length });
+      const piece = audio.subarray(Math.floor(w.start * SAMPLE_RATE), Math.ceil(w.end * SAMPLE_RATE));
+      if (piece.length < SAMPLE_RATE * 0.2) continue;
+      const out = await model(piece, { language, task: 'transcribe', return_timestamps: 'word' });
+      const result = Array.isArray(out) ? out[0]! : out;
+      for (const [j, c] of ((result.chunks ?? []) as AsrChunk[]).entries()) {
+        // A primeira palavra da janela é palavra nova mesmo sem espaço (chunksToWords cola pedaços sem espaço).
+        const text = j === 0 && !/^\s/.test(c.text) ? ` ${c.text}` : c.text;
+        const end = c.timestamp[1];
+        chunks.push({ text, timestamp: [c.timestamp[0] + w.start, end === null ? null : end + w.start] });
+      }
+    }
+    post({ type: 'done', chunks, device });
   } catch (err) {
     const app = toAppError(err, 'TRANSCRICAO_FALHOU');
     post({ type: 'error', key: app.key, detail: `${app.detail} [device=${device}]` });
