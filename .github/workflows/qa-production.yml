@@ -1,0 +1,33 @@
+name: QA production smoke
+on:
+  pull_request:
+    paths:
+      - 'e2e/qa-production.spec.ts'
+      - '.github/workflows/qa-production.yml'
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  public-site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Validate real public site
+        env:
+          PRODUCTION_SMOKE: '1'
+        run: npx playwright test e2e/qa-production.spec.ts --workers=1 --retries=1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: public-site-qa
+          path: test-results/
+          retention-days: 7
