@@ -1,5 +1,7 @@
 # Motion4Free — design spec (Superpowers)
 
+> **Substituída** em 20/10/2026 pela [spec v1 consolidada](2026-10-20-motion4free-v1-design.md), que é a fonte de decisão. Este documento fica como histórico.
+
 **Data:** 2026-10-18. **Status:** DRAFT PARA REVISÃO — **requer incorporação do [adendo premium](2026-10-18-premium-personalization-amendment.md)** antes de aprovação. Este documento registra uma proposta arquitetural; não representa implementação ou aprovação de início do código.
 
 ## Atualização indispensável em revisão

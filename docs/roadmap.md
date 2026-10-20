@@ -1,5 +1,7 @@
 # Roadmap de execução orientado a provas
 
+> **Atualizado em 20/10/2026:** o roadmap em vigor é o [plano mestre](superpowers/plans/2026-10-20-plano-mestre.md), com 6 fases, roteiros de teste e gates. O conteúdo abaixo fica como histórico das propostas anteriores.
+
 **Estado:** proposta, sujeita à revisão da especificação. A ordem protege custo zero e evita desenvolver UI completa antes de comprovar vídeo real.
 
 ## Fase 0 — Fundamentos e desenho

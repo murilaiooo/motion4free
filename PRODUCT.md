@@ -1,6 +1,6 @@
 # Motion4Free — definição de produto
 
-**Produto em fase de arquitetura, sem código de app em produção.**
+**Spec v1 aprovada (20/10/2026); implementação começa pela Fase 1. Sem versão publicada ainda.**
 
 - **Propósito:** criar um editor de vídeo com qualidade comparável a um motion designer experiente, usando software open source, IA criativa no fluxo de edição e custo monetário obrigatório zero para desenvolvedor e usuário.
 - **Público inicial:** criadores que transformam fala e vídeos pessoais em Reels/Shorts visualmente sofisticados.
@@ -15,4 +15,4 @@
 - [Roadmap](docs/roadmap.md), [risco](docs/risks.md) e [benchmarks](docs/ai/evaluation.md)
 
 ## Status
-Design e gates Superpowers **em revisão**, sem aprovação de implementação. O Vibe Coding Toolkit está integrado de forma **modular** aos processos de desenvolvimento e documentação, não instalado como motor de vídeo. Veja [setup](docs/setup.md).
+Spec v1 aprovada e [plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md) em execução. O Vibe Coding Toolkit está integrado de forma **modular** aos processos de desenvolvimento e documentação, não instalado como motor de vídeo. Veja [setup](docs/setup.md).

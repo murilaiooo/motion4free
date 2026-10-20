@@ -1,8 +1,14 @@
 # Índice da documentação
 
-> **Estado:** documentação inicial consolidada em 18/10/2026. Motion4Free é um projeto em fase de concepção; nenhuma implementação de editor, benchmark ou custo zero em escala está comprovada.
+> **Estado:** spec v1 aprovada e plano de execução pronto em 20/10/2026. A implementação começa pela Fase 1; nenhum benchmark de qualidade ou custo em escala foi executado ainda.
 
-## Comece aqui
+## Comece aqui (em vigor desde 20/10/2026)
+- [Spec v1 consolidada e aprovada](superpowers/specs/2026-10-20-motion4free-v1-design.md): o que é o produto, arquitetura, decisões e fases.
+- [Plano mestre](superpowers/plans/2026-10-20-plano-mestre.md): 6 fases, roteiro de teste e gate de cada uma.
+- [Plano detalhado da Fase 1 — primeiro MP4](superpowers/plans/2026-10-20-fase1-primeiro-mp4.md): tarefas com código e testes.
+- [ADR-0005: stack v1 e forma de decidir](decisions/0005-stack-v1.md).
+
+## Contexto e histórico
 - [Visão do produto](vision.md): público, problema, proposta de valor e princípios.
 - [Requisitos e limites](requirements.md): funções, não objetivos, critérios de aceitação.
 - [Fluxo do usuário](product/user-flow.md): exemplo de edição de Reels de ponta a ponta.
@@ -40,6 +46,7 @@
 - [ADR-0001: browser-first](decisions/0001-browser-first.md)
 - [ADR-0002: decisões IA local-first](decisions/0002-ai-local-first.md)
 - [ADR-0003: biblioteca semântica](decisions/0003-semantic-motion.md)
+- [ADR-0005: stack v1 e forma de decidir](decisions/0005-stack-v1.md)
 - [Contribuição](../CONTRIBUTING.md) · [Segurança](../SECURITY.md)
 
 ### Convenções

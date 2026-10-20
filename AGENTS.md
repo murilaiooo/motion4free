@@ -1,7 +1,10 @@
 # Instruções para agentes — Motion4Free
 
 ## Fonte de verdade
-Ler primeiro `README.md`, `docs/INDEX.md`, `docs/superpowers/specs/2026-10-18-motion4free-design.md`, `docs/requirements.md` e os ADRs. `docs/roadmap.md` estabelece gates; não tratar propostas como código existente.
+Ler primeiro `docs/superpowers/specs/2026-10-20-motion4free-v1-design.md` (spec v1 aprovada), `docs/superpowers/plans/2026-10-20-plano-mestre.md` (fases e gates), o plano detalhado da fase em andamento em `docs/superpowers/plans/` e os ADRs, em especial `docs/decisions/0005-stack-v1.md`. Documentos de 18–19/10 são contexto e pesquisa; onde conflitarem com a spec v1, vale a spec v1.
+
+## Quem decide
+O responsável pelo produto (murilo) não é técnico e delegou as decisões técnicas ao agente (20/10/2026). O agente decide, registra em ADR quando relevante e segue. Não pedir ao responsável escolhas técnicas. Cada entrega termina com um roteiro de teste simples (sem terminal, sem instalação) e o feedback do teste orienta a próxima iteração.
 
 ## Regras essenciais
 - Um repositório e uma pasta de projeto; não abrir ou modificar projetos não relacionados.
@@ -20,17 +23,17 @@ Ler primeiro `README.md`, `docs/INDEX.md`, `docs/superpowers/specs/2026-10-18-mo
 - Toolkit upstream disponível como **submódulo Git versionado** em `tooling/vibe-coding-toolkit` (inicializar com `git submodule update --init --recursive`). Leia [docs/setup.md](docs/setup.md) para matriz de cobertura e limites.
 - `CLAUDE.md` apenas importa `AGENTS.md`; não duplicar nem sobrescrever estas regras com o template genérico do upstream.
 - Kit é fonte de **prompts, referências, qualidade e harness**; não é dependência do editor nem licença para instalar apps globais, migrar para Next.js/Drizzle ou ativar serviços pagos.
-- Avaliar capabilities por necessidade; preservar stack ainda não escolhida. Comandos `npm`/`pnpm`/`build` não existem nesta fase. Qualidade real de vídeo exige benchmarks e revisão humana, além de checks técnicos.
+- Avaliar capabilities por necessidade. A stack está fixada no ADR-0005; trocar uma peça exige novo ADR. Qualidade real de vídeo exige benchmarks e revisão humana, além de checks técnicos.
 
 ## Processos Superpowers
-Este repositório está em **fase de especificação para revisão**. Não executar trabalho de produto antes de aprovar spec, plano e modo de execução. Seguir `@Superpowers`: brainstorming → design/spec → review → writing-plans → implementação/TDD → verificação.
+Spec v1 aprovada; execução por fases conforme o plano mestre. Cada fase: plano detalhado (`writing-plans`) → implementação tarefa a tarefa com TDD → PR com CI verde → roteiro de teste para o responsável → gate. Não começar uma fase antes do gate da anterior passar.
 Documentar decisões arquiteturais em ADR, atualizar docs com testes e exemplos reproduzíveis.
 
 ## Critérios para mudanças futuras
 Uma mudança em motor de corte exige casos de fala, sync e áudio. Motion exige teste de frames/seek e licenças. IA exige validação semântica, custo e regressão. Export exige arquivo real e inspeção, não apenas sucesso da UI.
 
 ## Estrutura
-Todo código futuro deverá ficar dentro deste repositório, com nomes humanos para papéis/agentes se houver painel de agentes, e identificações de executor separadas. Não assumir stack já definida.
+App na raiz: `src/` (código), `tests/` (unidade, Vitest), `e2e/` (ponta a ponta, Playwright), `scripts/`. Camadas puras (`src/core`, `engine`, `analysis`, `editorial`, `render`) não usam APIs de navegador e sempre têm teste; `src/media`, `asr` e `app` tocam o navegador e são cobertas pelo teste de ponta a ponta. Comandos (a partir da Fase 1): `npm test`, `npm run typecheck`, `npm run build`, `npm run fixture && npm run e2e`.
 
 ## Manual de instruções dos repositórios upstream
 Antes de escolher, integrar ou portar código de terceiros, consultar `docs/research/upstream-implementation/INDEX.md` e `05-integration-matrix.md`. Cada upstream tem instruções específicas, limites do navegador, licenças e provas de integração. Não tratar repositório público como licença universal, não copiar código/asset sem permissão correspondente e não afirmar testes que não rodaram.
