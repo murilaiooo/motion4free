@@ -1,4 +1,5 @@
 import { AudioBufferSource, BufferTarget, CanvasSink, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH } from 'mediabunny';
+import { toAppError } from '../core/errors';
 import type { EditPlan } from '../core/types';
 import { outputDuration, outputToSource } from '../engine/timeline';
 import { drawFrame } from '../render/frame';
@@ -22,6 +23,14 @@ export interface ExportResult {
 }
 
 export async function exportPlan(media: OpenedMedia, audio: DecodedAudio | null, plan: EditPlan, opts: ExportOptions = {}): Promise<ExportResult> {
+  try {
+    return await exportPlanUnsafe(media, audio, plan, opts);
+  } catch (err) {
+    throw toAppError(err, 'EXPORTACAO_FALHOU');
+  }
+}
+
+async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, plan: EditPlan, opts: ExportOptions): Promise<ExportResult> {
   const scale = opts.scale ?? 1;
   const width = even(plan.output.width * scale);
   const height = even(plan.output.height * scale);

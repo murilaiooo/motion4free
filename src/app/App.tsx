@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
 import { FAKE_CHUNKS, FakeTranscriber, WhisperTranscriber } from '../asr/transcriber';
+import { toAppError, type AppError } from '../core/errors';
+import { APP_BUILT_AT, VERSION_LABEL } from '../version';
+import { ErrorBox } from './ErrorBox';
 import { outputDuration } from '../engine/timeline';
 import { exportPlan } from '../media/export';
 import { analyze, type Analysis } from './pipeline';
@@ -8,7 +11,7 @@ type Status =
   | { kind: 'idle' }
   | { kind: 'working'; label: string; fraction: number }
   | { kind: 'ready' }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; error: AppError };
 
 interface Result {
   url: string;
@@ -18,14 +21,20 @@ interface Result {
 }
 
 export function App() {
-  const transcriber = useMemo(() => (import.meta.env.VITE_FAKE_ASR === '1' ? new FakeTranscriber(FAKE_CHUNKS) : new WhisperTranscriber()), []);
+  const transcriber = useMemo(
+    () =>
+      import.meta.env.VITE_FAKE_ASR === '1'
+        ? new FakeTranscriber(FAKE_CHUNKS, new URLSearchParams(location.search).get('asr') === 'falha')
+        : new WhisperTranscriber(),
+    [],
+  );
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
   const step = (label: string, fraction: number) => setStatus({ kind: 'working', label, fraction });
-  const fail = (err: unknown) => setStatus({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
+  const fail = (err: unknown) => setStatus({ kind: 'error', error: toAppError(err) });
 
   async function onFile(f: File) {
     setFile(f);
@@ -77,11 +86,8 @@ export function App() {
           <progress value={status.fraction} max={1} />
         </div>
       )}
-      {status.kind === 'error' && (
-        <p className="error" role="alert">
-          Algo deu errado: {status.message}
-        </p>
-      )}
+      {status.kind === 'error' && <ErrorBox error={status.error} kind="error" />}
+      {analysis?.warnings.map((w) => <ErrorBox key={w.code} error={w} kind="warning" />)}
 
       {analysis && plan && (
         <section className="summary" data-testid="summary">
@@ -109,6 +115,9 @@ export function App() {
           </a>
         </section>
       )}
+      <footer className="version" data-testid="version" title={`Gerado em ${APP_BUILT_AT}`}>
+        Motion4Free {VERSION_LABEL}
+      </footer>
     </main>
   );
 }

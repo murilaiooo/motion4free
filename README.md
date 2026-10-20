@@ -34,6 +34,7 @@ O agente decide a parte técnica, implementa com testes e abre um PR por entrega
 - **Decisão e execução:** [spec v1](docs/superpowers/specs/2026-10-20-motion4free-v1-design.md) · [plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md) · [Fase 1](docs/superpowers/plans/2026-10-20-fase1-primeiro-mp4.md) · [ADRs](docs/decisions/)
 - **Contexto:** [índice completo](docs/INDEX.md) · [visão](docs/vision.md) · [requisitos](docs/requirements.md) · [riscos](docs/risks.md) · [arquitetura (histórico)](docs/architecture.md)
 - **Pesquisa:** [auditoria premium F01–F21](docs/reviews/2026-10-18-premium-creative-audit.md) · [manuais dos repositórios upstream](docs/research/upstream-implementation/INDEX.md) · [atualização do Editonny](docs/research/updates/2026-10-19-editonny-guide.md)
+- **Acompanhamento:** [histórico de versões](docs/CHANGELOG.md) · [catálogo de erros](docs/erros.md)
 - **Colaboração:** [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
 
 ## Referências principais

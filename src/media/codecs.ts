@@ -1,3 +1,4 @@
+import { AppError } from '../core/errors';
 import { canEncodeAudio, canEncodeVideo, type VideoCodec } from 'mediabunny';
 
 export interface CodecChoice {
@@ -18,5 +19,5 @@ export async function chooseCodecs(width: number, height: number): Promise<Codec
   for (const video of ['avc', 'vp9', 'av1'] as const) {
     if (await canEncodeVideo(video, { width, height })) return { video, degraded: video !== 'avc' };
   }
-  throw new Error('Este navegador não consegue gerar vídeo. Use o Chrome ou o Edge atualizados no computador.');
+  throw new AppError('SEM_ENCODER', `${width}x${height}: nenhum de avc, vp9, av1`);
 }
