@@ -14,19 +14,20 @@ interface Props {
   onRemove: (id: string) => void;
   onAdd: (files: File[]) => void;
   max?: number;
+  disabled?: boolean;
 }
 
-export function ClipList({ clips, onReorder, onRemove, onAdd, max = 30 }: Props) {
+export function ClipList({ clips, onReorder, onRemove, onAdd, max = 30, disabled = false }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const move = (from: number, to: number) => {
-    if (to < 0 || to >= clips.length) return;
+    if (disabled || to < 0 || to >= clips.length) return;
     const next = [...clips];
     const [item] = next.splice(from, 1);
     next.splice(to, 0, item!);
     onReorder(next);
   };
   const drop = (id: string) => {
-    if (!dragId || dragId === id) return;
+    if (disabled || !dragId || dragId === id) return;
     const from = clips.findIndex(c => c.id === dragId);
     const to = clips.findIndex(c => c.id === id);
     if (from < 0 || to < 0) return;
@@ -39,7 +40,7 @@ export function ClipList({ clips, onReorder, onRemove, onAdd, max = 30 }: Props)
         <h3>Clipes ({clips.length}/{max})</h3>
         <label className="sm ghost" style={{ cursor: 'pointer', border: '1px dashed var(--border)', padding: '4px 8px', borderRadius: 6 }}>
           <Plus size={14} /> Adicionar
-          <input type="file" accept="video/*" multiple hidden disabled={clips.length >= max} onChange={(e) => {
+          <input type="file" accept="video/*" multiple hidden disabled={disabled || clips.length >= max} onChange={(e) => {
             const files = e.target.files ? Array.from(e.target.files) : [];
             if (files.length) onAdd(files);
             e.currentTarget.value = '';
@@ -50,7 +51,7 @@ export function ClipList({ clips, onReorder, onRemove, onAdd, max = 30 }: Props)
       <ol className="clips">
         {clips.map((c, i) => (
           <li key={c.id} className={`clip-item ${dragId === c.id ? 'dragging' : ''}`} data-testid={`clip-${c.id}`}
-            draggable
+            draggable={!disabled}
             onDragStart={(e) => {
               e.dataTransfer.effectAllowed = 'move';
               e.dataTransfer.setData('text/plain', c.id);
@@ -65,9 +66,9 @@ export function ClipList({ clips, onReorder, onRemove, onAdd, max = 30 }: Props)
             <span className="clip-name" title={c.name}>{c.name}</span>
             {c.duration != null && <span className="clip-dur tnum">{c.duration.toFixed(1)}s</span>}
             <span className="clip-actions">
-              <button className="icon sm ghost" onClick={() => move(i, i - 1)} disabled={i === 0} aria-label="Mover para cima"><ArrowUp size={14} /></button>
-              <button className="icon sm ghost" onClick={() => move(i, i + 1)} disabled={i === clips.length - 1} aria-label="Mover para baixo"><ArrowDown size={14} /></button>
-              <button className="icon sm ghost danger" onClick={() => onRemove(c.id)} disabled={clips.length <= 1} aria-label="Remover"><Trash2 size={14} /></button>
+              <button className="icon sm ghost" onClick={() => move(i, i - 1)} disabled={disabled || i === 0} aria-label="Mover para cima"><ArrowUp size={14} /></button>
+              <button className="icon sm ghost" onClick={() => move(i, i + 1)} disabled={disabled || i === clips.length - 1} aria-label="Mover para baixo"><ArrowDown size={14} /></button>
+              <button className="icon sm ghost danger" onClick={() => onRemove(c.id)} disabled={disabled || clips.length <= 1} aria-label="Remover"><Trash2 size={14} /></button>
             </span>
           </li>
         ))}
