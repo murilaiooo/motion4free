@@ -61,6 +61,31 @@ export function openingTitle(words: Pick<Word, 'text'>[], maxWords = 4): string 
   return text.length > 0 ? text.slice(0, 60) : null;
 }
 
+/**
+ * Abertura que é só cumprimento ("Oi.", "Fala, galera!", "Oi gente, tudo bem?") vira um título grande genérico
+ * que todo vídeo teria igual. Pula o cumprimento e usa o começo da frase que vem depois; se a fala inteira
+ * do começo for só isso, não há título (o gancho, o nome ou a primeira cena forte abrem o vídeo).
+ */
+const GREETING = new Set(
+  'oi ola olá opa salve hey hello hi e ai aí eai fala falaa galera pessoal gente turma bom boa dia tarde noite tudo bem bom beleza blz como vai vão voces vocês vc vcs sejam seja bem-vindos bem-vindo bem-vinda bem-vindas então entao né ne tá ta ok'.split(' '),
+);
+/** Palavras que só fazem sentido como cumprimento quando vêm junto de um cumprimento claro. */
+const GREETING_CORE = new Set('oi ola olá opa salve hey hello hi eai fala galera pessoal gente bem-vindos bem-vindo bem-vinda bem-vindas'.split(' '));
+
+export function openingTitleSkippingGreeting(words: Pick<Word, 'text'>[], maxWords = 4): string | null {
+  const norm = (t: string) => t.trim().toLowerCase().replace(/[^\p{L}\p{N}-]+/gu, '');
+  let i = 0;
+  let sawCore = false;
+  while (i < words.length && GREETING.has(norm(words[i]!.text))) {
+    if (GREETING_CORE.has(norm(words[i]!.text))) sawCore = true;
+    i++;
+  }
+  // "Bom, hoje..." ou "Então, ..." sem cumprimento de verdade: o título fica como era
+  if (!sawCore) return openingTitle(words, maxWords);
+  const rest = openingTitle(words.slice(i), maxWords);
+  return rest && rest.split(/\s+/).length >= 2 ? capitalize(rest) : null;
+}
+
 interface Placed {
   raw: string;
   start: number;
@@ -216,7 +241,7 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   }
 
   // título de abertura: não quando a fala abre com apresentação ou com um número
-  const title = openingTitle(ws.map((w) => ({ text: w.raw })));
+  const title = openingTitleSkippingGreeting(ws.map((w) => ({ text: w.raw })));
   const opensWithNumber = numbers.some((n) => n.scene.start < 1);
   const opensWithName = !!nameAt && nameAt.start < 3;
   const opensWithQuestion = sentences.length > 0 && isQuestion(sentences[0]!.map((k) => tokens[k]!));
