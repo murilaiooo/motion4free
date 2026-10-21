@@ -174,7 +174,7 @@
 .viewer { grid-row: 3; }
 .transport { grid-row: 4; }
 .viewer { container-type: size; min-height: 0; display: grid; place-items: center; padding: var(--s-3) var(--s-4); }
-.canvas-box { position: relative; width: min(100cqw, 100cqh * 9 / 16); aspect-ratio: 9 / 16; border-radius: var(--r-lg); overflow: hidden; background: #000; box-shadow: var(--shadow-3), 0 0 0 1px var(--line); }
+.canvas-box { --ar: calc(9 / 16); position: relative; width: min(100cqw, 100cqh * var(--ar)); aspect-ratio: var(--ar); border-radius: var(--r-lg); overflow: hidden; background: #000; box-shadow: var(--shadow-3), 0 0 0 1px var(--line); }
 .canvas-box canvas { display: block; width: 100%; height: 100%; cursor: pointer; }
 .safe-zone { position: absolute; border: 1.5px dashed rgba(255, 255, 255, 0.85); border-radius: 6px; box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35); pointer-events: none; }
 .safe-zone span { position: absolute; top: 6px; left: 8px; font-size: var(--fs-2xs); font-weight: 650; color: #fff; text-shadow: 0 1px 2px #000; }

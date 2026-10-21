@@ -2,6 +2,11 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.19.1 — 21/10/2026
+**Prévia no formato escolhido.** Implementado; não testado.
+
+- Trocar o formato de saída (4:5, 1:1, 16:9) não mudava a forma da prévia: a moldura ficava sempre 9:16 e o vídeo e as letras apareciam esticados. A moldura agora segue a proporção do formato. O vídeo exportado já saía no tamanho certo; era só a prévia.
+
 ## v0.19.0 — 21/10/2026
 **Menu da esquerda reorganizado, no padrão de CapCut e Canva.** Implementado; os testes automáticos e manuais desta versão ainda não foram executados.
 
