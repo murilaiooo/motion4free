@@ -159,6 +159,6 @@ Para manutenção futura, comparar [upstream pinned](https://github.com/Fujiwara
 
 ## 8. Prioridades práticas
 
-**P0: entendimento contextual + QA de corte.** P1: UX de curadoria, ranking comparativo e diversidade. P2: tracking/speaker-aware, legendas e acabamento visual. P3: B-roll seguro, feedback de performance voluntário, export de pacotes de publicação. Cada fase exige testes antes de alterar a geração do usuário. A especificação executável está em [Spec de clipes contextuais](../../superpowers/specs/2026-10-21-contextual-longform-clips.md) e a decomposição em [Plano de implementação](../../superpowers/plans/2026-10-21-contextual-longform-clips.md).
+**P0: entendimento contextual + QA de corte.** P1: UX de curadoria, ranking comparativo e diversidade. P2: tracking/speaker-aware, legendas e acabamento visual. P3: B-roll seguro, feedback de performance voluntário, export de pacotes de publicação. Cada fase exige testes antes de alterar a geração do usuário. A especificação executável está em [Spec de clipes contextuais](../superpowers/specs/2026-10-21-contextual-longform-clips.md) e a decomposição em [Plano de implementação](../superpowers/plans/2026-10-21-contextual-longform-clips.md).
 
 **Prova de conclusão não é “gerou MP4”.** É reproduzir o clipe sem o vídeo original e um humano conseguir responder: “do que se trata?”, “por que isso importa?” e “qual foi a conclusão?”, com zero distorção factual confirmada. Nenhuma garantia de viralização.
