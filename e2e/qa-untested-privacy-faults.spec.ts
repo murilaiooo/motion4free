@@ -68,11 +68,17 @@ test('falha real no write de video.bin: não mostra falso Salvo e solicita origi
       const projects = await app.getDirectoryHandle('projects');
       const folder = await projects.getDirectoryHandle(id);
       const file = await (await folder.getFileHandle('project.json')).getFile();
-      return file.size > 100;
+      const meta = await (await folder.getFileHandle('meta.json')).getFile();
+      return file.size > 100 && meta.size > 100;
     } catch { return false; }
   }, null, { timeout: 45_000 });
   await page.reload();
-  // Projeto persistido, vídeo ausente: oferecer seleção dos originais em vez de inventar "Salvo".
+  // Não confundir ausência da cópia do vídeo com corrupção do plano.
+  await expect(page.getByText('Projeto que não abre')).toHaveCount(0, { timeout: 45_000 });
+  // A retomada automática pode ser desativada se o navegador descartar a preferência "atual".
+  if (await page.getByRole('button', { name: 'Abrir', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Abrir', exact: true }).first().click();
+  }
   await expect(page.locator('body')).toContainText(/Selecione novamente o vídeo original|Para continuar o projeto salvo.*vídeo original/i, { timeout: 90_000 });
 });
 
