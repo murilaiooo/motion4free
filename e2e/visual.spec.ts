@@ -15,11 +15,13 @@ const seconds = async (page: Page) => Number((await page.getByTestId('player-tim
 
 test('primeira tela: promessa, área para soltar o vídeo, privacidade e exemplos de modelos desenhados', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('sem enviar seu vídeo');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Comece com uma ideia.');
   await expect(page.getByText('Escolher vídeos').first()).toBeVisible();
-  await expect(page.getByText('Seu vídeo nunca sai deste aparelho')).toBeVisible();
+  await expect(page.getByText('O vídeo não sai do aparelho')).toBeVisible();
   const thumbs = page.locator('.lp-reel canvas');
-  await expect(thumbs.first()).toHaveAttribute('data-ready', '1', { timeout: 30_000 });
+  // Miniaturas são renderizadas sob demanda: observe apenas após entrarem na viewport.
+  await thumbs.first().scrollIntoViewIfNeeded();
+  await expect(thumbs.first()).toHaveAttribute('data-ready', '1', { timeout: 12_000 });
   // o quadro de exemplo não é vazio (drawFrame desenhou)
   const lit = await thumbs.first().evaluate((c: HTMLCanvasElement) => {
     const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
@@ -52,12 +54,17 @@ test('todas as ferramentas ficam a um clique (e pelas setas do teclado)', async 
   // setas trocam de aba
   await page.getByRole('tab', { name: 'Cores', exact: true }).focus();
   await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('tab', { name: 'Versões', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Versões', exact: true })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('tab', { name: 'Modelos', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', { name: 'Modelos', exact: true })).toBeFocused();
   // prévia, detalhes, linha do tempo e "O que mudou" ficam visíveis ao mesmo tempo no computador
   await expect(page.getByTestId('player-canvas')).toBeVisible();
   await expect(page.getByTestId('timeline')).toBeVisible();
-  await expect(page.getByTestId('changes')).toBeVisible();
+  // Inspector pode ser recolhido automaticamente em larguras compactas; o painel permanece disponível.
+  await expect(page.getByTestId('changes')).toHaveCount(1);
+  await expect(page.getByTestId('workspace-menu')).toBeVisible();
   await expect(page.getByTestId('version')).toHaveText(/^Motion4Free v\d+\.\d+\.\d+ · \w+$/);
 });
 
@@ -77,8 +84,10 @@ test('transcrição: clicar numa palavra leva a prévia até ela; a palavra fala
 
 test('galeria de modelos: filtro por etiqueta, cartão escolhido marcado e desfazer', async ({ page }) => {
   await openVideo(page);
-  await expect(page.getByTestId('style-pop')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('style-editorial')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.tpl-card.selected .tpl-check')).toHaveCount(1);
+  await page.getByTestId('style-pop').click();
+  await expect(page.getByTestId('style-pop')).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Elegante', exact: true }).click();
   await expect(page.getByTestId('style-editorial')).toBeVisible();
   await expect(page.getByTestId('style-pop')).toHaveCount(0);
