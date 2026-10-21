@@ -46,9 +46,20 @@ export interface ProjectSummary extends ProjectMeta {
   /** a cópia do vídeo existe e está completa */
   hasVideo: boolean;
   thumb: Blob | null;
-  /** meta.json ou project.json não abre: aparece na lista só para poder apagar */
+  /**
+   * Situação da pasta (v0.16):
+   * - `ok`: abre normalmente (sem a cópia do vídeo, o app pede o arquivo original de novo);
+   * - `interrupted`: o app foi fechado antes do primeiro salvamento; só há cópia do vídeo/miniatura, nenhuma edição;
+   * - `damaged`: os dados do projeto existem mas não abrem (arquivo cortado, JSON inválido, versão incompatível).
+   */
+  status: ProjectStatus;
+  /** não dá para abrir (`interrupted` ou `damaged`): aparece na lista para a pessoa decidir apagar */
   broken: boolean;
+  /** por que não abre, para o "Copiar detalhes" (vazio quando abre) */
+  problem: string;
 }
+
+export type ProjectStatus = 'ok' | 'interrupted' | 'damaged';
 
 export type LoadResult = { kind: 'none' } | { kind: 'corrupt'; detail: string } | { kind: 'ok'; project: SavedProject; video: File | Blob | null };
 
@@ -114,8 +125,42 @@ async function readJson(fs: Fs, path: string[]): Promise<unknown | undefined> {
 
 export async function readMeta(fs: Fs, id: string): Promise<ProjectMeta | null> {
   const r = metaSchema.safeParse(await readJson(fs, [...dir(id), META]));
-  return r.success && r.data.id === id ? (r.data as ProjectMeta) : null;
+  if (r.success && r.data.id === id) return r.data as ProjectMeta;
+  // meta.json ausente ou estragado (o app fechou entre gravar project.json e meta.json):
+  // os dados completos estão em project.json, então o resumo é refeito a partir dele.
+  const inspected = await inspectProjectData(fs, id);
+  return inspected.kind === 'ok' && isProjectId(id) ? recoveredMeta(id, inspected.project) : null;
 }
+
+/** Resumo refeito a partir de project.json (o nome volta a ser o do arquivo, a criação vira o último salvamento). */
+function recoveredMeta(id: string, project: SavedProject): ProjectMeta {
+  return metaFor(project, { id, name: nameFromFile(project.video.name), createdAt: project.savedAt });
+}
+
+type DataInspection = { kind: 'missing' } | { kind: 'damaged'; detail: string } | { kind: 'ok'; project: SavedProject };
+
+/** Lê e valida project.json, separando "não existe" de "existe mas não abre". */
+async function inspectProjectData(fs: Fs, id: string): Promise<DataInspection> {
+  const blob = await fs.readFile([...dir(id), PROJECT]);
+  if (!blob) return { kind: 'missing' };
+  let json: unknown;
+  try {
+    json = JSON.parse(await blob.text());
+  } catch (err) {
+    return { kind: 'damaged', detail: `JSON inválido (${blob.size} bytes): ${String(err)}` };
+  }
+  const parsed = parseProject(json);
+  return parsed.ok ? { kind: 'ok', project: parsed.project } : { kind: 'damaged', detail: parsed.errors.join('; ') };
+}
+
+/** Projeto com vídeos em `video/<clipId>.bin` (vários clipes, ou um clipe que não é o c1 original). */
+export function usesClipStorage(project: Pick<SavedProject, 'history' | 'versions'>): boolean {
+  const clips = referencedClips(project);
+  return clips.length > 1 || (clips.length === 1 && clips[0]!.id !== 'c1');
+}
+
+/** Cópia utilizável: existe e não está vazia (gravação que falhou no começo deixa um arquivo de 0 bytes). */
+const usable = (b: Blob | null): b is Blob => !!b && b.size > 0;
 
 export async function getCurrent(fs: Fs): Promise<string | null> {
   const json = (await readJson(fs, STATE)) as { current?: unknown } | null | undefined;
@@ -148,100 +193,85 @@ export async function loadClipVideo(fs: Fs, id: string, clipId: string): Promise
   return (await fs.readFile([...dir(id), VIDEO_DIR, `${clipId}.bin`])) ?? null;
 }
 
-export async function listClipVideos(fs: Fs, id: string): Promise<string[]> {
-  const entries = await fs.list([...dir(id), VIDEO_DIR]);
-  if (!entries) return [];
-  return entries.filter(e => e.kind === 'file' && e.name.endsWith('.bin')).map(e => e.name.replace('.bin',''));
-}
-
-
 export async function saveThumb(fs: Fs, id: string, thumb: Blob): Promise<void> {
   await fs.writeFile([...dir(id), THUMB], thumb);
 }
 
 export async function loadProject(fs: Fs, id: string): Promise<LoadResult> {
-  const blob = await fs.readFile([...dir(id), PROJECT]);
-  if (!blob) return { kind: 'none' };
-  let json: unknown;
-  try {
-    json = JSON.parse(await blob.text());
-  } catch (err) {
-    return { kind: 'corrupt', detail: `JSON inválido: ${String(err)}` };
-  }
-  const parsed = parseProject(json);
-  if (!parsed.ok) return { kind: 'corrupt', detail: parsed.errors.join('; ') };
-  // multi-clip: if plan has >1 clip, verify each clip file; else single
-  const clips = referencedClips(parsed.project);
-  if (clips.length > 1 || (clips.length === 1 && clips[0]!.id !== 'c1')) {
-    // Um único clipe restante (ex.: c2 após remover c1) também precisa do seu próprio blob.
-    // But we still check existence for hasVideo flag in listProjects
-    return { kind: 'ok', project: parsed.project, video: null };
-  }
+  const data = await inspectProjectData(fs, id);
+  if (data.kind === 'missing') return { kind: 'none' };
+  if (data.kind === 'damaged') return { kind: 'corrupt', detail: data.detail };
+  // multi-clip: cada clipe tem o seu arquivo; quem confere é loadProjectVideos
+  if (usesClipStorage(data.project)) return { kind: 'ok', project: data.project, video: null };
   const f = await fs.readFile([...dir(id), VIDEO]);
-  const video = f && f.size === parsed.project.video.size ? f : null;
-  return { kind: 'ok', project: parsed.project, video };
+  const video = f && f.size === data.project.video.size ? f : null;
+  return { kind: 'ok', project: data.project, video };
 }
 
 export async function loadProjectVideos(fs: Fs, id: string, project: SavedProject): Promise<Map<string, Blob> | null> {
+  if (!usesClipStorage(project)) return null;
   const clips = referencedClips(project);
-  if (clips.length === 0 || (clips.length === 1 && clips[0]!.id === 'c1')) return null;
   const map = new Map<string, Blob>();
   const primary = await fs.readFile([...dir(id), VIDEO]);
   for (const c of clips) {
-    let blob = await loadClipVideo(fs, id, c.id);
+    let blob: Blob | null = await loadClipVideo(fs, id, c.id);
     // video.bin sempre contém o c1 original, mesmo depois de reordenar clipes.
-    if (!blob && c.id === 'c1' && primary?.size === project.video.size) blob = primary;
-    if (!blob) return null;
+    if (!usable(blob) && c.id === 'c1' && primary?.size === project.video.size) blob = primary;
+    if (!usable(blob)) return null;
     map.set(c.id, blob);
   }
   return map;
 }
 
+/** Resumo de uma pasta de projeto para a lista; nunca descarta nada, só classifica. */
+async function summarize(fs: Fs, id: string): Promise<ProjectSummary> {
+  const sizeBytes = await dirSize(fs, dir(id));
+  const thumb = await fs.readFile([...dir(id), THUMB]).catch(() => null);
+  const data = await inspectProjectData(fs, id);
+  const stored = metaSchema.safeParse(await readJson(fs, [...dir(id), META]));
+  const storedMeta = stored.success && stored.data.id === id ? (stored.data as ProjectMeta) : null;
+  if (data.kind === 'ok') {
+    const meta = storedMeta ?? recoveredMeta(id, data.project);
+    return { ...meta, sizeBytes, hasVideo: await hasVideoCopy(fs, id, data.project), thumb, status: 'ok', broken: false, problem: '' };
+  }
+  const placeholder = {
+    format: 1 as const,
+    id,
+    createdAt: '',
+    updatedAt: '',
+    video: { name: '', size: 0, durationSec: 0 },
+    editedSec: 0,
+    templateId: '',
+  };
+  if (data.kind === 'missing' && !storedMeta) {
+    // Só há a cópia do vídeo e/ou a miniatura: a importação parou antes do primeiro salvamento.
+    return { ...placeholder, name: 'Importação interrompida', sizeBytes, hasVideo: false, thumb, status: 'interrupted', broken: true, problem: 'project.json e meta.json ausentes' };
+  }
+  const detail = data.kind === 'damaged' ? data.detail : 'project.json ausente';
+  return { ...(storedMeta ?? { ...placeholder, name: 'Projeto que não abre' }), sizeBytes, hasVideo: false, thumb, status: 'damaged', broken: true, problem: detail };
+}
 
-/** Todos os projetos, do editado por último ao mais antigo. */
+async function hasVideoCopy(fs: Fs, id: string, project: SavedProject): Promise<boolean> {
+  if (!usesClipStorage(project)) {
+    const video = await fs.readFile([...dir(id), VIDEO]);
+    return !!video && video.size === project.video.size;
+  }
+  return (await loadProjectVideos(fs, id, project)) !== null;
+}
+
+/** Todos os projetos, do editado por último ao mais antigo. Uma pasta ilegível não esconde as outras. */
 export async function listProjects(fs: Fs): Promise<ProjectSummary[]> {
   const entries = (await fs.list(PROJECTS_DIR)) ?? [];
   const out: ProjectSummary[] = [];
   for (const e of entries) {
     if (e.kind !== 'dir') continue;
-    const id = e.name;
-    const sizeBytes = await dirSize(fs, dir(id));
-    const meta = await readMeta(fs, id);
-    const video = await fs.readFile([...dir(id), VIDEO]);
-    const clipList = await listClipVideos(fs, id);
-    const projBlob = await fs.readFile([...dir(id), PROJECT]);
-    let expectedClips: { id: string }[] | null = null;
     try {
-      const json: unknown = projBlob ? JSON.parse(await projBlob.text()) : null;
-      const valid = parseProject(json);
-      if (valid.ok) {
-        const clips = referencedClips(valid.project);
-        if (clips.length > 1 || (clips.length === 1 && clips[0]?.id !== 'c1')) expectedClips = clips;
-      }
-    } catch { /* projeto corrompido: identificado abaixo */ }
-    // Confere os IDs, não a quantidade: arquivos de clipes removidos podem continuar no OPFS.
-    // video.bin é o c1 original (não o primeiro clipe da ordem atual).
-    const hasVideo = expectedClips
-      ? expectedClips.every((c) => clipList.includes(c.id) || (c.id === 'c1' && !!video && video.size === meta?.video.size))
-      : !!video && !!meta && video.size === meta.video.size;
-    const thumb = await fs.readFile([...dir(id), THUMB]);
-    if (meta) {
-      const hasProject = !!(await fs.readFile([...dir(id), PROJECT]));
-      out.push({ ...meta, sizeBytes, hasVideo, thumb, broken: !hasProject });
-    } else {
+      out.push(await summarize(fs, e.name));
+    } catch (err) {
       out.push({
-        format: 1,
-        id,
-        name: 'Projeto que não abre',
-        createdAt: '',
-        updatedAt: '',
-        video: { name: '', size: 0, durationSec: 0 },
-        editedSec: 0,
-        templateId: '',
-        sizeBytes,
-        hasVideo: false,
-        thumb,
-        broken: true,
+        format: 1, id: e.name, name: 'Projeto que não abre', createdAt: '', updatedAt: '',
+        video: { name: '', size: 0, durationSec: 0 }, editedSec: 0, templateId: '',
+        sizeBytes: 0, hasVideo: false, thumb: null, status: 'damaged', broken: true, problem: `leitura falhou: ${String(err)}`,
       });
     }
   }

@@ -55,6 +55,8 @@ type Status = { kind: 'idle' } | { kind: 'working'; label: string; fraction: num
 type CopyState = 'pending' | 'done' | 'failed';
 
 const PEAK_COLUMNS = 1200;
+/** Lista vazia única: projeto novo começa com "versões salvas" === "versões" (comparação por identidade). */
+const noVersions: PlanVersion[] = [];
 
 function peaksOf(audio: Session['audio']): Float32Array | null {
   return audio ? waveformPeaks(audio.channels[0]!, PEAK_COLUMNS, true) : null;
@@ -139,6 +141,8 @@ function EditorApp() {
   const [spaceWarn, setSpaceWarn] = useState<{ files: File[]; error: AppError } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const saveFailed = useRef(false);
+  /** A análise e a inclusão de clipes são uma operação única; duas chamadas não podem usar o mesmo histórico inicial. */
+  const addingClips = useRef(false);
   /** gravações no OPFS em fila: salvar, copiar vídeo, renomear e apagar nunca se atropelam */
   const queue = useRef<Promise<unknown>>(Promise.resolve());
 
@@ -198,6 +202,8 @@ function EditorApp() {
     setStatus({ kind: 'idle' });
     const loaded = await enqueue(() => loadProject(fs, id)).catch((err) => ({ kind: 'corrupt' as const, detail: describeError(err) }));
     if (loaded.kind === 'none') {
+      // a pasta existe mas a primeira gravação das edições não aconteceu (aba fechada no meio da importação)
+      notify(new AppError('IMPORTACAO_INTERROMPIDA', id));
       await enqueue(() => setCurrent(fs, null)).catch(() => undefined);
       await refreshProjects();
       return;
@@ -455,8 +461,8 @@ function EditorApp() {
       const h = createHistory(a.plan);
       setProjectId(id);
       setSavedFor(null);
-      setVersions([]);
-      setVersionsSaved([]);
+      setVersions(noVersions);
+      setVersionsSaved(noVersions);
       const multi = (a as any).__multi as { clips: import('../media/multi').OpenedClip[]; refs: import('../core/types').ClipRef[]; wordsByClip: Record<string, import('../core/types').Word[]>; silencesByClip: Record<string, import('../core/types').TimeRange[]> } | undefined;
       // O arquivo inicialmente escolhido pode ser inválido; o projeto pertence ao primeiro válido.
       const canonicalBlob = multi?.clips[0]?.file ?? primary;
@@ -471,7 +477,7 @@ function EditorApp() {
           clipSources.set(c.id, { id: c.id, video: c.media.video, width: c.media.width, height: c.media.height });
         }
       }
-      setSession({
+      const opened: Session = {
         file: canonicalBlob,
         fileName: canonicalName,
         media: a.media,
@@ -486,17 +492,34 @@ function EditorApp() {
         clipSilences: multi?.silencesByClip,
         clipAudios: multi ? new Map(multi.clips.filter((c) => c.audio !== null).map((c): [string, import('../media/audio').DecodedAudio] => [c.id, c.audio!])) : null,
         originalVideo: { name: canonicalName, size: canonicalBlob.size, durationSec: a.media.durationSec },
-      } as any);
+      } as any;
+      setSession(opened);
       setHistory(h);
       setStatus({ kind: 'ready' });
       if (storageAvailable() && fs) {
-        void enqueue(() => setCurrent(fs, id)).catch(() => undefined);
-        if (multi && multi.clips.length > 1) {
-          storeMultiCopies(id, multi.clips);
-        } else {
-          void storeCopy(id, canonicalBlob);
-        }
-        void storeThumb(id, a.media, a.plan);
+        // Ordem que sobrevive a fechar a aba no meio (v0.16): primeiro as edições (project.json + meta.json, poucos KB),
+        // depois "aberto por último", e só então a cópia do vídeo, que pode levar vários segundos ou não caber.
+        // Antes a cópia ia primeiro: fechar a aba durante ela deixava uma pasta sem dados ("Projeto que não abre").
+        const first = snapshot(opened, h, noVersions);
+        saveFailed.current = false;
+        void enqueue(() => saveProjectData(fs, id, first, nameFromFile(canonicalName), first.savedAt)).then(
+          () => {
+            setSavedFor((cur) => cur ?? h);
+            void enqueue(() => setCurrent(fs, id)).catch(() => undefined);
+            if (multi && multi.clips.length > 1) {
+              storeMultiCopies(id, multi.clips);
+            } else {
+              void storeCopy(id, canonicalBlob);
+            }
+            void storeThumb(id, a.media, a.plan);
+          },
+          (err) => {
+            // sem os dados do projeto, uma cópia do vídeo só ocuparia espaço
+            saveFailed.current = true;
+            setCopy('failed');
+            notify(toAppError(err, 'SALVAR_FALHOU'));
+          },
+        );
       } else {
         setCopy('failed');
         notify(new AppError('SALVAR_FALHOU', 'navigator.storage.getDirectory indisponível'));
@@ -508,11 +531,15 @@ function EditorApp() {
 
   /** Acrescentar clipes no projeto aberto sem substituir as edições existentes. */
   async function onAddClips(files: File[]): Promise<void> {
-    if (!session || !history || !files.length) return;
+    if (!session || !history || !files.length || addingClips.current) return;
+    addingClips.current = true;
+    step('Adicionando clipes ao projeto', 0);
     const initialSession = session;
     const initialHistory = history;
     if (initialHistory.present.clips.length + files.length > 30) {
       notify(new AppError('CLIPES_DEMAIS', `${initialHistory.present.clips.length + files.length}/30`));
+      addingClips.current = false;
+      setStatus({ kind: 'ready' });
       return;
     }
     try {
@@ -582,25 +609,32 @@ function EditorApp() {
     } catch (err) {
       notify(toAppError(err, 'ABRIR_FALHOU'));
       setStatus({ kind: 'ready' });
+    } finally {
+      addingClips.current = false;
     }
+  }
+
+  /** Tudo o que vai para project.json, a partir do que está aberto no editor. */
+  function snapshot(s: Session, h: History<EditPlan>, v: PlanVersion[]): SavedProject {
+    return makeProject({
+      appVersion: APP_VERSION,
+      savedAt: new Date().toISOString(),
+      video: s.originalVideo ?? { name: s.fileName, size: s.file.size, durationSec: s.media.durationSec },
+      words: s.clipWords ? placeWords(h.present.clips, s.clipWords) : s.ctx.words,
+      silences: s.clipSilences ? placeRanges(h.present.clips, s.clipSilences) : s.silences,
+      clipAnnotations: s.clipWords
+        ? Object.fromEntries(Object.entries(s.clipWords).map(([id, words]) => [id, { words, silences: s.clipSilences?.[id] ?? [] }]))
+        : undefined,
+      warnings: s.warnings.map((w) => ({ key: w.key, detail: w.detail })),
+      history: h,
+      versions: v,
+    });
   }
 
   /** Grava agora o que ainda não foi salvo (antes de fechar ou trocar de projeto). */
   async function saveNow(): Promise<void> {
     if (!fs || !session || !history || !projectId || (history === savedFor && versions === versionsSaved)) return;
-    const project = makeProject({
-      appVersion: APP_VERSION,
-      savedAt: new Date().toISOString(),
-      video: session.originalVideo ?? { name: session.fileName, size: session.file.size, durationSec: session.media.durationSec },
-      words: session.clipWords ? placeWords(history.present.clips, session.clipWords) : session.ctx.words,
-      silences: session.clipSilences ? placeRanges(history.present.clips, session.clipSilences) : session.silences,
-      clipAnnotations: session.clipWords
-        ? Object.fromEntries(Object.entries(session.clipWords).map(([id, words]) => [id, { words, silences: session.clipSilences?.[id] ?? [] }]))
-        : undefined,
-      warnings: session.warnings.map((w) => ({ key: w.key, detail: w.detail })),
-      history,
-      versions,
-    });
+    const project = snapshot(session, history, versions);
     const id = projectId;
     const name = projectName || nameFromFile(session.fileName);
     try {

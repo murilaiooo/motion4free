@@ -117,11 +117,12 @@ describe('biblioteca de projetos', () => {
     expect(await listProjects(fs)).toEqual([]);
   });
 
-  it('pasta sem meta.json aparece como "não abre" para poder apagar', async () => {
+  it('pasta só com a cópia do vídeo aparece como "Importação interrompida" para poder apagar', async () => {
     const fs = new MemoryFs();
     await fs.writeFile(['motion4free', 'projects', 'p-eeee', 'video.bin'], video(5));
     const [p] = await listProjects(fs);
     expect(p!.broken).toBe(true);
+    expect(p!.status).toBe('interrupted');
     expect(p!.sizeBytes).toBe(5);
   });
 });

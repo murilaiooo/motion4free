@@ -70,9 +70,14 @@ function ProjectCard({ p, busy, onOpen, onRename, onDuplicate, onDelete }: { p: 
             {p.name}
           </button>
         )}
-        {p.broken ? (
-          <p className="proj-meta warn">
-            <TriangleAlert size={13} aria-hidden /> Este projeto não abre (arquivo incompleto). Você pode apagá-lo.
+        {p.status === 'interrupted' ? (
+          <p className="proj-meta warn" data-testid="project-interrupted" title={p.problem}>
+            <TriangleAlert size={13} aria-hidden /> A importação parou antes do primeiro salvamento, então não há edições aqui. O vídeo original continua no seu
+            computador: apague para liberar espaço e abra o vídeo de novo.
+          </p>
+        ) : p.broken ? (
+          <p className="proj-meta warn" data-testid="project-damaged" title={p.problem}>
+            <TriangleAlert size={13} aria-hidden /> Os dados deste projeto estão danificados e ele não abre (M4F-602). Você pode apagá-lo.
           </p>
         ) : (
           <p className="proj-meta">

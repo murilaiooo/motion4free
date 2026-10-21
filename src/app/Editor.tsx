@@ -580,6 +580,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <div className="card" style={{display:'grid',gap:10,marginBottom:12}} data-testid="clip-and-format">
           <FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off || disabled} />
           <ClipList
+            disabled={off || disabled}
             clips={plan.clips.map(c => ({ id:c.id, name:c.name || c.id, duration:c.duration, file: new File([], c.name) }))}
             onReorder={(next) => {
               const ordered = next.map(n => plan.clips.find(c => c.id === n.id)!).filter(Boolean);
