@@ -139,6 +139,8 @@ function EditorApp() {
   const [spaceWarn, setSpaceWarn] = useState<{ files: File[]; error: AppError } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const saveFailed = useRef(false);
+  /** A análise e a inclusão de clipes são uma operação única; duas chamadas não podem usar o mesmo histórico inicial. */
+  const addingClips = useRef(false);
   /** gravações no OPFS em fila: salvar, copiar vídeo, renomear e apagar nunca se atropelam */
   const queue = useRef<Promise<unknown>>(Promise.resolve());
 
@@ -508,11 +510,15 @@ function EditorApp() {
 
   /** Acrescentar clipes no projeto aberto sem substituir as edições existentes. */
   async function onAddClips(files: File[]): Promise<void> {
-    if (!session || !history || !files.length) return;
+    if (!session || !history || !files.length || addingClips.current) return;
+    addingClips.current = true;
+    step('Adicionando clipes ao projeto', 0);
     const initialSession = session;
     const initialHistory = history;
     if (initialHistory.present.clips.length + files.length > 30) {
       notify(new AppError('CLIPES_DEMAIS', `${initialHistory.present.clips.length + files.length}/30`));
+      addingClips.current = false;
+      setStatus({ kind: 'ready' });
       return;
     }
     try {
@@ -582,6 +588,8 @@ function EditorApp() {
     } catch (err) {
       notify(toAppError(err, 'ABRIR_FALHOU'));
       setStatus({ kind: 'ready' });
+    } finally {
+      addingClips.current = false;
     }
   }
 
