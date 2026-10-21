@@ -56,9 +56,24 @@ test('falha real no write de video.bin: não mostra falso Salvo e solicita origi
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('warning-M4F-601')).toBeVisible({ timeout: 40_000 });
   await expect(page.getByTestId('saved')).toHaveCount(0);
+  // Espere a transação do projeto terminar: a falha da cópia do vídeo é independente
+  // do save de project.json. Reload instantâneo durante autosave não é teste de recuperação.
+  await page.waitForFunction(async () => {
+    try {
+      const root = await navigator.storage.getDirectory();
+      const app = await root.getDirectoryHandle('motion4free');
+      const state = await (await app.getFileHandle('state.json')).getFile();
+      const id: unknown = JSON.parse(await state.text()).current;
+      if (typeof id !== 'string') return false;
+      const projects = await app.getDirectoryHandle('projects');
+      const folder = await projects.getDirectoryHandle(id);
+      const file = await (await folder.getFileHandle('project.json')).getFile();
+      return file.size > 100;
+    } catch { return false; }
+  }, null, { timeout: 45_000 });
   await page.reload();
-  // Dados do projeto permanecem, mas o arquivo original não foi persistido.
-  await expect(page.getByText('Escolha de novo o vídeo original', { exact: false })).toBeVisible({ timeout: 90_000 });
+  // Projeto persistido, vídeo ausente: oferecer seleção dos originais em vez de inventar "Salvo".
+  await expect(page.locator('body')).toContainText(/Selecione novamente o vídeo original|Para continuar o projeto salvo.*vídeo original/i, { timeout: 90_000 });
 });
 
 
