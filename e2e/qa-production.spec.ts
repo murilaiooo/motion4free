@@ -10,7 +10,7 @@ test('QA de produção: domínio público carrega a versão publicada e a interf
   expect(response?.status()).toBe(200);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('sem enviar seu vídeo', { timeout: 60_000 });
   await expect(page.getByTestId('file-input')).toBeAttached();
-  await expect(page.getByTestId('version')).toHaveText(/^Motion4Free v\\d+\\.\\d+\\.\\d+ · [a-f0-9]{7}$/, { timeout: 60_000 });
+  await expect(page.getByTestId('version')).toHaveText(/^Motion4Free v\d+\.\d+\.\d+ · [a-f0-9]{7}$/, { timeout: 60_000 });
   // No push da main a Cloudflare pode terminar depois do Actions. Verifique com retry, nunca aceite versão antiga.
   await expect(async () => {
     await page.goto(`${url}?qa=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
