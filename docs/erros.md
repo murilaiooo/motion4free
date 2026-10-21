@@ -185,3 +185,5 @@ O limite local não substitui os limites da conta de API. Não há fallback para
 | M4F-113 | Análise de rostos cancelada. A edição e o enquadramento anterior foram preservados. | análise cancelada; nenhuma alteração parcial de enquadramento aplicada. |
 | M4F-114 | Há quadros demais para esta análise de rostos. Escolha um clipe menor ou use o enquadramento manual. | mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual. |
 | M4F-529 | O pedido foi cancelado ou a edição/seleção mudou enquanto ele era preparado. Preservei o estado atual; envie um novo pedido para continuar. | pedido cancelado ou plano/seleção mudou. Nenhum resultado atrasado é aplicado; enviar novo pedido ao estado atual. |
+| M4F-806 | Grafo da POC fora dos limites. | Schema fechado, IDs únicos e tempos limitados. |
+| M4F-807 | Adaptador Three indisponível na POC. | Falha no módulo fixo ou WebGL; Canvas permanece. |
