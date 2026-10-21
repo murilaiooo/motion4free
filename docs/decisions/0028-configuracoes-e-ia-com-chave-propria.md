@@ -35,3 +35,9 @@ O responsável pediu um painel de Configurações e uma mesa de edição só com
 - Mistral, Hugging Face e servidores locais (Ollama/LM Studio).
 - Prova real de CORS por serviço no site publicado: não houve chave nem rede para isso no ambiente de desenvolvimento. Se um serviço bloquear o navegador, o app mostra M4F-1208 e a pessoa pode usar outro; nunca haverá proxy.
 - Política de segurança de conteúdo (CSP) do site.
+
+## Incremento de 21/10/2026 — implementação sem testes
+
+O PR de identidade de conta foi preservado. O consentimento de exemplo é complementado por confirmação do corpo completo de cada envio, inclusive reparo e teste de conexão, mantido só em memória. Revogação de chave/consentimento cancela requisições e a UI não reaproveita resultado de outro modelo/conta. O timeout cobre o corpo HTTP. Corpos de erro não são copiados para diagnóstico. Operações assíncronas do cofre usam revisão e snapshot de ciphertext para não ressuscitar chave depois de lock/delete.
+
+Estado: IMPLEMENTED — NOT TESTED / AWAITING QA. Roteiro detalhado em [handoff #73](../reviews/2026-10-21-issue73-implementation-handoff.md). Nenhuma evidência anterior verifica este incremento. Modelos por tarefa, orçamento e roteamento ficam vinculados à #9; CSP e CORS reais permanecem gates de QA, sem afirmação de compatibilidade.
