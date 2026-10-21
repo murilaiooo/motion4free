@@ -2,6 +2,16 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.19.0 — 21/10/2026
+**Menu da esquerda reorganizado, no padrão de CapCut e Canva.** Implementado; os testes automáticos e manuais desta versão ainda não foram executados.
+
+- **Ícones do trilho:** Modelos, Texto, Elementos, Legendas, Mídia, IA, Cores e Versões. Cada aba faz uma coisa só.
+- **Texto (novo):** Título, Texto, Chamada e Pergunta prontos; um clique coloca na agulha e já deixa escolhido para arrastar. Antes não havia como adicionar texto pela tela.
+- **Elementos (novo):** formas (seta, círculo, retângulo) e emojis em grade, um clique para adicionar.
+- **Legendas:** posição (em cima, no meio, embaixo), tamanho, cores de texto, destaque e contorno para todas as legendas, e o texto falado logo abaixo.
+- **Mídia:** clipes, formato (vertical/horizontal) e enquadramento juntos, fora do painel da direita.
+- **IA:** pedido em texto; gancho e "mudar só um pedaço" em seções recolhíveis na mesma aba (eram as abas Pedido, Gancho e Trechos). Ver [ADR-0022](decisions/0022-menu-lateral.md).
+
 ## v0.18.0 — 21/10/2026
 **Camadas, onda de áudio real e mover itens na prévia de forma fluida.** Implementado; os testes automáticos e manuais desta versão ainda não foram executados.
 
