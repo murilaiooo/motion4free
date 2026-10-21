@@ -1,0 +1,25 @@
+name: External ASR mirror QA
+on:
+  pull_request:
+    paths:
+      - 'e2e/qa-untested-model-remote.spec.ts'
+      - '.github/workflows/qa-remote-models.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  remote-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify remote model files and POST rejection, without fake ASR
+        env:
+          QA_REMOTE_MODELS: '1'
+        run: npx playwright test e2e/qa-untested-model-remote.spec.ts --workers=1
