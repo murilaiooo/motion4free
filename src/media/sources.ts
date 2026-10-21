@@ -37,7 +37,7 @@ export class ClipFrames {
 
   constructor(
     private readonly sources: ReadonlyMap<string, ClipSource>,
-    private readonly opts: { maxSide: number; poolSize: number },
+    private readonly opts: { maxSide: number; poolSize: number; legacySingle?: boolean },
     private readonly tracks: Readonly<Record<string, FaceTrack | null | undefined>> = {},
   ) {}
 
@@ -70,6 +70,8 @@ export class ClipFrames {
     const height = image.height;
     return {
       kind: 'clip',
+      legacySingle: this.opts.legacySingle,
+      hasFaceTrack: !!this.tracks[id],
       image,
       width,
       height,

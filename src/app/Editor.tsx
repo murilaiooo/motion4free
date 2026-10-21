@@ -71,6 +71,7 @@ export interface Session {
   warnings: AppError[];
   peaks: Float32Array | null;
   /** multi-clip: mapa de fontes por clipId e áudio combinado */
+  faceTracks?: import('../media/face-analysis').FaceTracks;
   clipSources?: Map<string, import('../media/sources').ClipSource> | null;
   clipAudios?: Map<string, DecodedAudio> | null;
   openedClips?: import('../media/multi').OpenedClip[] | null;
@@ -157,6 +158,7 @@ interface EditorProps {
   session: Session;
   history: EditHistory<EditPlan>;
   onHistory: (h: EditHistory<EditPlan>) => void;
+  onFaceTracks: (tracks: import('../media/face-analysis').FaceTracks) => void;
   versions: PlanVersion[];
   onVersions: (v: PlanVersion[]) => void;
   disabled: boolean;
@@ -179,8 +181,14 @@ interface EditorProps {
   musicLoading?: boolean;
 }
 
-export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, noticeCount = 0, projectMenu, initialReview = false, music = null, onPickMusic, musicLoading = false }: EditorProps) {
+export function Editor({ session, history, onHistory, onFaceTracks, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, noticeCount = 0, projectMenu, initialReview = false, music = null, onPickMusic, musicLoading = false }: EditorProps) {
   const plan = history.present;
+  const latestFaceContext = useRef({ history, session, onFaceTracks, onHistory });
+  latestFaceContext.current = { history, session, onFaceTracks, onHistory };
+  const [faceProgress, setFaceProgress] = useState<number | null>(null);
+  const [faceError, setFaceError] = useState<AppError | null>(null);
+  const faceAbort = useRef<AbortController | null>(null);
+  useEffect(() => () => { faceAbort.current?.abort(); }, [session.media]);
   const [reviewOpen, setReviewOpen] = useState(initialReview);
   const [directionDraft, setDirectionDraft] = useState<CreativeSetup | null>(null);
   const [tab, setTab] = useState<TabId>('modelos');
@@ -264,7 +272,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
   // Um player por vídeo aberto; o plano é trocado sem recriar.
   useEffect(() => {
-    const player = new PlanPlayer(session.media, shownAudio, canvasRef.current!, shownRef.current, 0.5, session.clipSources ?? undefined);
+    const player = new PlanPlayer(session.media, shownAudio, canvasRef.current!, shownRef.current, 0.5, session.clipSources ?? undefined, session.faceTracks);
     player.onTime = (t, p) => {
       setTime(t);
       setPlaying(p);
@@ -530,6 +538,39 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     }
   };
 
+  async function trackFaces(target: string | null): Promise<void> {
+    if (faceAbort.current) return;
+    const ctrl = new AbortController();
+    faceAbort.current = ctrl;
+    setFaceProgress(0); setFaceError(null);
+    try {
+      const { analyzeFaces } = await import('../media/face-analysis');
+      const available = session.clipSources ?? new Map([[plan.clips[0]!.id, { id: plan.clips[0]!.id, video: session.media.video, width: session.media.width, height: session.media.height }]]);
+      const refs = plan.clips.filter((clip) => !target || clip.id === target);
+      const ids = new Set(refs.map((clip) => clip.id));
+      const sources = new Map([...available].filter(([id]) => ids.has(id)));
+      const result = await analyzeFaces(sources, new Map(refs.map((clip) => [clip.id, clip.duration])), ctrl.signal, setFaceProgress);
+      if (ctrl.signal.aborted) return;
+      const latest = latestFaceContext.current;
+      if (latest.session.media !== session.media) return;
+      const tracks = { ...latest.session.faceTracks };
+      for (const id of ids) delete tracks[id];
+      Object.assign(tracks, result.tracks);
+      if (result.withoutFaces.length) setFaceError(new AppError('ROSTOS_AUSENTES', result.withoutFaces.join(', ')));
+      const current = latest.history.present;
+      const nextHistory = commitEdit(latest.history, { ...current, clips: current.clips.map((clip) => {
+        if (!ids.has(clip.id)) return clip;
+        return { ...clip, framing: { ...(clip.framing ?? current.framing), mode: result.tracks[clip.id] ? 'smart' as const : 'fill' as const } };
+      }) });
+      latest.onFaceTracks(tracks);
+      latest.onHistory(nextHistory);
+    } catch (err) {
+      if (!ctrl.signal.aborted) setFaceError(toAppError(err, 'ROSTOS_FALHOU'));
+    } finally {
+      if (faceAbort.current === ctrl) { faceAbort.current = null; setFaceProgress(null); }
+    }
+  }
+
   const doUndo = useCallback(() => onHistory(undo(history)), [history, onHistory]);
   const doRedo = useCallback(() => onHistory(redo(history)), [history, onHistory]);
   const seek = useCallback((t: number) => playerRef.current?.seek(t), []);
@@ -634,8 +675,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       const available = multiSources ? new Set(multiSources.keys()) : new Set([plan.clips[0]!.id]);
       buildExportPreflight(plan, available, multiAudio !== null || (!!music && !!plan.music));
       const out = isMulti
-        ? await (await import('../media/export')).exportPlanMulti(multiSources!, multiAudio, plan, { music, onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
-        : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f), music);
+        ? await (await import('../media/export')).exportPlanMulti(multiSources!, multiAudio, plan, { music, faceTracks: session.faceTracks, onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
+        : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f), music, session.faceTracks);
       if (result) URL.revokeObjectURL(result.url);
       const base = session.fileName.replace(/\.[^.]+$/, '');
       setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, codec: out.codec, where: out.where, style: plan.style.name, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning });
@@ -801,7 +842,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
               onAdd={onAddClips}
             />
             <FormatSelector plan={plan} onChange={(n) => apply(() => n)} disabled={off || disabled} />
-            <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} disabled={off || disabled} />
+            <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} hasFaceTracks={!!session.faceTracks && Object.keys(session.faceTracks).length > 0} onTrackFaces={(target) => void trackFaces(target)} faceProgress={faceProgress} onCancelFaces={() => faceAbort.current?.abort()} disabled={off || disabled || faceProgress !== null} />
+            {faceError && <ErrorBox error={faceError} kind="warning" onDismiss={() => setFaceError(null)} />}
             <MaskPanel plan={plan} onApply={apply} disabled={off || disabled} />
           </div>
           <div role="tabpanel" id="panel-audio" aria-labelledby="tab-audio" hidden={tab !== 'audio'} className="stack">

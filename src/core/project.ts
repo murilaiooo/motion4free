@@ -31,6 +31,7 @@ export interface SavedProject {
   words: Word[];
   silences: TimeRange[];
   /** Anotações locais de todos os arquivos, inclusive dos clipes guardados no histórico de desfazer. */
+  faceTracks?: Record<string, import('../render/framing').FaceTrack>;
   clipAnnotations?: Record<string, { words: Word[]; silences: TimeRange[] }>;
   warnings: SavedWarning[];
   history: { past: EditPlan[]; present: EditPlan; future: EditPlan[] };
@@ -53,6 +54,11 @@ const projectSchema = z.object({
     words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
     silences: z.array(z.object({ start: time, end: time })),
   })).optional(),
+  faceTracks: z.record(z.string(), z.object({
+    step: z.number().finite().min(0.05).max(5),
+    xs: z.array(z.number().finite().min(0).max(1)).min(1).max(54001),
+    ys: z.array(z.number().finite().min(0).max(1)).min(1).max(54001),
+  }).refine((track) => track.xs.length === track.ys.length)).optional(),
   warnings: z.array(z.object({ key: errorKey, detail: z.string() })),
   // planos v1 (Fase 2) são migrados para v2 ao abrir
   history: z.object({ past: z.array(anyPlanSchema), present: anyPlanSchema, future: z.array(anyPlanSchema) }),

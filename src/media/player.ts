@@ -1,3 +1,4 @@
+import type { FaceTracks } from './face-analysis';
 import { CanvasSink } from 'mediabunny';
 import { toAppError, type AppError } from '../core/errors';
 import type { EditPlan, Segment } from '../core/types';
@@ -55,6 +56,7 @@ export class PlanPlayer {
     private plan: EditPlan,
     scale = 0.5,
     clipSources?: Map<string, ClipSource>,
+    faceTracks: FaceTracks = {},
   ) {
     this.canvas = canvas;
     this.scale = scale;
@@ -65,11 +67,16 @@ export class PlanPlayer {
     this.ctx = canvas.getContext('2d')!;
     this.ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
+    const legacySingle = !clipSources?.size;
+    if (legacySingle && media && Object.keys(faceTracks).length) {
+      const id = plan.clips[0]?.id ?? 'c1';
+      clipSources = new Map([[id, { id, video: media.video, width: media.width, height: media.height }]]);
+    }
     // Determine mode: multi if plan has >1 clip and we have sources
     const multi = clipSources && clipSources.size > 0;
     if (multi) {
       this.sources = clipSources!;
-      this.clipFrames = new ClipFrames(clipSources!, { maxSide: PREVIEW_MAX_SIDE, poolSize: 2 });
+      this.clipFrames = new ClipFrames(clipSources!, { maxSide: PREVIEW_MAX_SIDE, poolSize: 2, legacySingle }, faceTracks);
       this.sinkSingle = null;
       this.clipLayouts = this.buildLayouts(plan);
     } else if (media) {

@@ -369,6 +369,7 @@ function EditorApp() {
       warnings: [...project.warnings.map((w) => new AppError(w.key, w.detail)), ...audioWarnings],
       peaks: peaksOf(combinedAudio),
       clipSources,
+      faceTracks: project.faceTracks,
       clipWords,
       clipSilences,
       clipAudios: new Map(Object.entries(audiosByClip).filter((item): item is [string, import('../media/audio').DecodedAudio] => item[1] !== null)),
@@ -401,6 +402,7 @@ function EditorApp() {
       audio,
       ctx: { durationSec: media.durationSec, words: project.words },
       silences: project.silences,
+      faceTracks: project.faceTracks,
       warnings: project.warnings.map((w) => new AppError(w.key, w.detail)),
       peaks: peaksOf(audio),
     });
@@ -769,6 +771,7 @@ function EditorApp() {
       video: s.originalVideo ?? { name: s.fileName, size: s.file.size, durationSec: s.media.durationSec },
       words: s.clipWords ? placeWords(h.present.clips, s.clipWords) : s.ctx.words,
       silences: s.clipSilences ? placeRanges(h.present.clips, s.clipSilences) : s.silences,
+      faceTracks: s.faceTracks,
       clipAnnotations: s.clipWords
         ? Object.fromEntries(Object.entries(s.clipWords).map(([id, words]) => [id, { words, silences: s.clipSilences?.[id] ?? [] }]))
         : undefined,
@@ -937,6 +940,7 @@ function EditorApp() {
           session={session}
           history={history}
           onHistory={setHistory}
+          onFaceTracks={(tracks) => { setSession((current) => current ? { ...current, faceTracks: tracks } : current); setSavedFor(null); }}
           versions={versions}
           onVersions={setVersions}
           disabled={busy}

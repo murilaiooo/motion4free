@@ -117,17 +117,18 @@ export const NO_FACE: Focus = { x: 0.5, y: 0.42 };
  */
 export function smoothTrack(samples: readonly FaceSample[], durationSec: number, opts: TrackOptions = DEFAULT_TRACK): FaceTrack {
   const n = Math.max(1, Math.floor(durationSec / opts.step) + 1);
-  const sorted = [...samples].filter((s) => Number.isFinite(s.x) && Number.isFinite(s.y)).sort((a, b) => a.t - b.t);
+  const sorted = [...samples].filter((s) => Number.isFinite(s.t) && s.t >= 0 && s.t <= durationSec && Number.isFinite(s.x) && Number.isFinite(s.y)).sort((a, b) => a.t - b.t);
   if (sorted.length === 0) return { step: opts.step, xs: Array(n).fill(NO_FACE.x), ys: Array(n).fill(NO_FACE.y) };
   // 1. amostragem com retenção
   const raw: Focus[] = [];
   let j = 0;
-  let last: Focus = { x: sorted[0]!.x, y: sorted[0]!.y };
+  let last: Focus = NO_FACE;
   for (let i = 0; i < n; i++) {
     const t = i * opts.step;
     while (j + 1 < sorted.length && Math.abs(sorted[j + 1]!.t - t) <= Math.abs(sorted[j]!.t - t)) j++;
     const s = sorted[j]!;
     if (Math.abs(s.t - t) <= opts.holdSec) last = { x: clamp(s.x, 0, 1), y: clamp(s.y, 0, 1) };
+    else last = NO_FACE;
     raw.push(last);
   }
   // 2. zona morta
@@ -169,7 +170,8 @@ const r4 = (x: number) => Math.round(x * 10000) / 10000;
 /** Foco no instante `t` (tempo local do clipe), interpolado entre as amostras. */
 export function trackAt(track: FaceTrack | null | undefined, t: number): Focus {
   if (!track || track.xs.length === 0) return NO_FACE;
-  const f = Math.max(0, t / track.step);
+  if (!(track.step > 0) || track.xs.length !== track.ys.length) return NO_FACE;
+  const f = Math.min(track.xs.length - 1, Math.max(0, (Number.isFinite(t) ? t : 0) / track.step));
   const i = Math.min(track.xs.length - 1, Math.floor(f));
   const k = Math.min(track.xs.length - 1, i + 1);
   const a = f - i;

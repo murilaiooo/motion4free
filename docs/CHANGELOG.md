@@ -2,6 +2,14 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.28.0 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#54 — Análise local de rostos ligada ao enquadramento.** A aba Mídia permite analisar um ou todos os clipes com MediaPipe/BlazeFace em Worker local. Os quadros não saem do computador; só runtime/modelo públicos são baixados. O caminho suavizado é guardado por ID de clipe e usado no mesmo relógio da prévia, seek e exportação (incluindo Worker de exportação e reserva).
+
+- Progresso e cancelamento; falha preserva o enquadramento anterior, e ausência de rosto usa enquadramento central com aviso próprio. Controles manuais substituem o acompanhamento; a ativação é uma edição com desfazer/refazer.
+- Projeto antigo continua abrindo sem nova análise. A volta ao modo manual preserva a moldura de vídeo único. Uma análise concluída usa o histórico atual, preservando edições feitas enquanto o Worker trabalhava.
+- Limite de 12.000 amostras, um quadro de até 640 px por vez, amostragem a cada 0,5 s. Qualidade, CPU/memória e compatibilidade ainda não medidas; QA independente obrigatória. Nenhum teste/build/typecheck/lint foi executado.
+
 ## v0.27.5 — 21/10/2026
 
 **Conexão de provedores sem catálogo de outra conta nem sucesso de fachada (#73, entrega parcial).** Conectar/substituir/remover uma chave invalida o catálogo daquela conta e a escolha antiga de modelo, sem guardar identificador derivado da chave em armazenamento. Uma resposta atrasada de outra chave é descartada; requisições pendentes são canceladas ao trocar de provedor. Os catálogos ficam por até 30 minutos na memória desta aba, separados por revisão opaca da credencial.

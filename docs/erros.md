@@ -138,3 +138,10 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 | M4F-1215 | A senha do cofre precisa ter pelo menos 8 caracteres. | Senha curta demais ao criar o cofre. |
 | M4F-1216 | O cofre de chaves deste navegador está danificado e não pode ser aberto. Apague o cofre em Privacidade e segurança e conecte as chaves de novo. | O conteúdo guardado em "m4f-cofre" não está no formato esperado. |
 | M4F-1217 | O serviço aceitou o teste, mas não enviou uma resposta de texto. Não foi possível confirmar que este modelo funciona. | HTTP 200 sem conteúdo de texto útil. A listagem e a autenticação não comprovam a geração; experimente outro modelo ou peça novamente com mais tokens. |
+
+## Análise local de rostos (#54, não testada)
+
+- M4F-308: detector/runtime/decodificação indisponível. Preserva enquadramento; escolher manual ou tentar novamente.
+- M4F-309: nenhum rosto confiável em um ou mais clipes; enquadramento central, ajustável manualmente.
+- M4F-310: análise cancelada; nenhuma alteração parcial de enquadramento aplicada.
+- M4F-311: mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual.

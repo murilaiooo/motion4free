@@ -9,9 +9,9 @@ const post = (m: FromExportWorker, transfer: Transferable[] = []) => (self as un
 
 self.onmessage = async (e: MessageEvent<ToExportWorker>) => {
   try {
-    const { file, plan, audio, music } = e.data;
+    const { file, plan, audio, music, faceTracks } = e.data;
     const media = await openMedia(file);
-    const out = await exportPlan(media, audio, plan, { music, onProgress: (fraction) => post({ type: 'progress', fraction }) });
+    const out = await exportPlan(media, audio, plan, { music, faceTracks, onProgress: (fraction) => post({ type: 'progress', fraction }) });
     const buffer = await out.blob.arrayBuffer();
     post({ type: 'done', buffer, degraded: out.degraded, codec: out.codec, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning }, [buffer]);
   } catch (err) {
