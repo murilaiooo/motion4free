@@ -12,7 +12,7 @@ const node = z.object({
   depth: number.min(1).max(300).optional(), spin: number.min(-1).max(1).optional(),
 }).strict().refine(n => n.end > n.start && (n.kind !== 'text' || !!n.text?.trim()));
 const schema = z.object({ version: z.literal(1), width: z.literal(540), height: z.literal(960),
-  duration: number.min(1).max(120), background: color, nodes: z.array(node).max(80),
+  duration: number.min(1).max(120), background: color, transparent: z.boolean().optional(), nodes: z.array(node).max(80),
 }).strict().superRefine((g, ctx) => {
   if (new Set(g.nodes.map(n => n.id)).size !== g.nodes.length || g.nodes.some(n => n.end > g.duration)) ctx.addIssue({code: 'custom', message: 'IDs ou limites inválidos'});
 });

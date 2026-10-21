@@ -141,3 +141,5 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 
 | M4F-806 | Grafo da POC fora dos limites. | Schema fechado, IDs únicos e tempos limitados. |
 | M4F-807 | Adaptador Three indisponível na POC. | Falha no módulo fixo ou WebGL; Canvas permanece. |
+
+| M4F-808 | Fonte local/seek da POC indisponível. | Vídeo menor que 12 s, decoder, timeout ou captura ficou obsoleta. |

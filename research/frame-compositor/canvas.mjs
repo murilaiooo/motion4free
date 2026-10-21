@@ -6,7 +6,7 @@ export function createCanvas(canvas) {
       for (const n of graph.nodes) if (n.kind === 'text') texts.set(n.id, textCanvas(n)); },
     renderAt(time) {
       const t = Number.isFinite(time) ? Math.max(0, Math.min(graph.duration, time)) : 0;
-      ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = graph.background; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height); if (!graph.transparent) { ctx.fillStyle = graph.background; ctx.fillRect(0, 0, canvas.width, canvas.height); }
       for (const n of graph.nodes) { const s = stateAt(n, t); if (!s.visible) continue;
         ctx.save(); ctx.globalAlpha = s.opacity; ctx.translate(s.x, s.y); ctx.scale(s.scale, s.scale); ctx.fillStyle = n.color;
         if (n.kind === 'text') ctx.drawImage(texts.get(n.id), -n.width / 2, -n.height / 2);
