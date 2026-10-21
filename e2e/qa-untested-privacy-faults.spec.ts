@@ -78,12 +78,15 @@ test('falha real no write de video.bin: não mostra falso Salvo e solicita origi
       const root = await navigator.storage.getDirectory();
       const app = await root.getDirectoryHandle('motion4free');
       const state = JSON.parse(await (await (await app.getFileHandle('state.json')).getFile()).text()) as { current?: string };
-      const dir = await (await app.getDirectoryHandle('projects')).getDirectoryHandle(state.current!);
+      const projects = await app.getDirectoryHandle('projects');
+      let fallback: string | null = null;
+      for await (const [name] of (projects as any).entries()) { fallback = name; break; }
+      const dir = await projects.getDirectoryHandle(state.current ?? fallback!);
       const metaText = await (await (await dir.getFileHandle('meta.json')).getFile()).text();
       const dataText = await (await (await dir.getFileHandle('project.json')).getFile()).text();
       const meta = JSON.parse(metaText) as Record<string, unknown>;
       const data = JSON.parse(dataText) as Record<string, any>;
-      return { current: state.current, meta, projectKeys: Object.keys(data), projectFormat: data.format,
+      return { current: state.current, fallback, meta, projectKeys: Object.keys(data), projectFormat: data.format,
         historyKeys: Object.keys(data.history ?? {}), clips: data.history?.present?.clips,
         video: data.video, versions: data.versions?.length, bytes: { meta: metaText.length, project: dataText.length } };
     } catch (e) { return { diagnosticError: String(e) }; }
