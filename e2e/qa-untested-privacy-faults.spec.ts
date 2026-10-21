@@ -42,6 +42,9 @@ test('armazenamento OPFS indisponível: o editor funciona e avisa que o projeto 
 
 test('falha real no write de video.bin: não mostra falso Salvo e solicita original após reinício', async ({ page }) => {
   test.setTimeout(150_000);
+  page.on('console', (message) => {
+    if (message.text().includes('QA_PROJECT_')) console.log('QA_BROWSER_TRACE', message.text());
+  });
   await page.addInitScript(() => {
     const proto = (window as any).FileSystemFileHandle?.prototype;
     if (!proto?.createWritable) return;
