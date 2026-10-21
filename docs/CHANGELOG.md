@@ -3,7 +3,7 @@
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
 ## v0.22.0 — 21/10/2026
-**Novo modo: Clipes de vídeo longo.** Implementado; não testado.
+**Novo modo: Clipes de vídeo longo.** Implementado; não testado. (Publicação reenviada porque a Cloudflare não pegou o primeiro envio.)
 
 - A primeira tela agora tem dois modos: **Editar meus vídeos** (como antes) e **Clipes de vídeo longo**.
 - Solte um vídeo de 2 minutos a 2 horas (podcast, aula, live, entrevista). O app transcreve, mede a energia da voz e mostra os melhores momentos, cada um com título, horário, nota e motivos.
