@@ -2,6 +2,15 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.27.4 — 21/10/2026
+
+**Download de modelos Whisper sem HTTP 403 por URL temporária (#80, complemento do PR #90).** A correção do cache de borda do PR #90 era necessária, mas o arquivo grande do Whisper ainda respondia HTTP 403 no site público após o deploy. Verificação: endpoint do modelo (1.274.403.767 bytes) retornava "Auth failed: credentials expired"; Hugging Face direto e CDN Xet respondiam 200, e o CDN permitia CORS.
+
+- O Worker solicita ao Hugging Face um novo redirecionamento assinado para os pesos ONNX turbo, devolve um HTTP 302 sem cache e deixa o navegador buscar os bytes diretamente do CDN oficial. A origem é validada e só aceita HTTPS do Hugging Face.
+- GET/HEAD e Range não exigem baixar o modelo inteiro pelo Worker. Configuração, modelos menores e bibliotecas estáticas continuam na rota normal.
+- Testes do Worker para redirecionamento fresco, origem permitida, cache, Range, HEAD e erros sem exposição de endereços sensíveis.
+- Teste real pós-publicação apenas por HEAD e pequeno Range, sem baixar o modelo completo.
+
 ## v0.27.3 — 21/10/2026
 
 **Cores de referência no Creative Setup (#84).** Corrigida a ordem de aplicação das cores na composição e nos trechos com estilo próprio. A imagem escolhida depois do briefing agora determina as cores de destaque e a palavra realçada da legenda quando sua cor acompanha a marca; cores de legenda diferentes escolhidas manualmente são preservadas. Ao remover a imagem, retornam as cores do modelo e do pedido, inclusive a cor de marca explícita. A interface explica a prioridade. As regras de contraste da paleta continuam as mesmas.
