@@ -6,8 +6,9 @@ import { DEFAULT_LLM, LLM_KEYS, LLM_MODELS, bestFittingModel, localAiProgress, m
 import type { OnProgress } from '../core/progress';
 import { LOCAL_AI_ENABLED, loadLocalAi, webGpuAvailable } from '../ai/local-ai';
 import { localModelCapacity } from '../ai/local-capacity';
-import { getKey, useKeysVersion } from '../ai/credentials/keys';
+import { credentialRevision, getKey, onCredentialChange, useKeysVersion } from '../ai/credentials/keys';
 import { providerCompleter } from '../ai/providers/client';
+import { authorizeRequest } from '../ai/providers/consent';
 import { PROVIDERS, isProviderId, type PricingKind, type ProviderId } from '../ai/providers/registry';
 import type { AiChoice } from '../editorial/ai-brief';
 import { openSettings } from './settings/route';
@@ -60,6 +61,10 @@ const subscribe = (l: () => void) => {
     listeners.delete(l);
   };
 };
+
+onCredentialChange((id) => {
+  if (prefs.provider === id && prefs.remote) setAiSettings({ remote: null });
+});
 
 /** Muda a escolha de IA (e guarda neste navegador, sem nenhuma chave). */
 export function setAiSettings(patch: Partial<AiSettings>): void {
@@ -114,7 +119,27 @@ export async function prepareAi(s: AiSettings, setBusy: OnProgress): Promise<{ a
     if (!key) return { ai: null, warning: new AppError('IA_SEM_CHAVE', PROVIDERS[s.provider].name) };
     if (!s.consent.includes(s.provider)) return { ai: null, warning: new AppError('IA_SEM_AUTORIZACAO', PROVIDERS[s.provider].name) };
     setBusy({ label: `Consultando ${s.remote.label} (${PROVIDERS[s.provider].name}), só texto`, phase: 'ia-chave', fraction: null, detail: 'o vídeo continua neste computador' });
-    return { ai: { complete: providerCompleter(s.provider, key, s.remote.id), source: 'ia-chave' }, warning: null };
+    const provider = s.provider;
+    const model = s.remote.id;
+    const revision = credentialRevision(provider);
+    return { ai: { complete: async (messages) => {
+      // prepareAi pode ser guardado por uma operação longa: nunca reutilizar chave/autorização revogada.
+      const current = getAiSettings();
+      if (credentialRevision(provider) !== revision || getKey(provider) !== key || current.mode !== 'provedor' || current.provider !== provider || current.remote?.id !== model || !current.consent.includes(provider)) throw new AppError('PROVEDOR_CANCELADO');
+      const ctrl = new AbortController();
+      const cancel = () => ctrl.abort();
+      const unsubscribeKey = onCredentialChange((id) => { if (id === provider) cancel(); });
+      listeners.add(cancel);
+      try {
+        return await providerCompleter(provider, key, model, {
+          signal: ctrl.signal,
+          authorize: (body) => authorizeRequest(provider, model, body, ctrl.signal),
+        })(messages);
+      } finally {
+        unsubscribeKey();
+        listeners.delete(cancel);
+      }
+    }, source: 'ia-chave' }, warning: null };
   }
   return { ai: null, warning: null };
 }

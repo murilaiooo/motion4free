@@ -50,6 +50,7 @@ import { ProjectMenu } from './ProjectMenu';
 import { ProgressPanel } from './ProgressPanel';
 import { ProjectsList } from './Projects';
 import { SettingsHost } from './settings/SettingsScreen';
+import { OutboundConsent } from './settings/OutboundConsent';
 import { openSettings } from './settings/route';
 import { forgetAllKeys } from '../ai/credentials/keys';
 import { resetAiSettings } from './AiOptions';
@@ -105,7 +106,7 @@ export function App() {
     );
   }
   if (EVALUATE) return <Evaluate />;
-  return <EditorApp />;
+  return <><EditorApp /><OutboundConsent /></>;
 }
 
 /**

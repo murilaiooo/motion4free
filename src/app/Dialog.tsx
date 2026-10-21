@@ -16,6 +16,7 @@ export function Dialog({ title, onClose, children, wide = false, testId, classNa
     const first = ref.current?.querySelector<HTMLElement>('[data-autofocus]') ?? ref.current;
     first?.focus();
     const onKey = (e: KeyboardEvent) => {
+      if (document.querySelector('dialog[open]')) return;
       if (e.key === 'Escape') {
         e.stopPropagation();
         onClose();

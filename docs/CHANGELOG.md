@@ -2,6 +2,16 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.27.6 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#73 — Autorização para o conteúdo real e revogação imediata.** Cada envio externo, inclusive teste de conexão e reparo de JSON, mostra o corpo completo antes da autorização. O diálogo só guarda o texto enquanto o pedido aguarda a decisão; cancelar mantém o caminho de regras. Trocar/remover chave, trancar cofre ou revogar consentimento cancela operações em andamento e invalida a seleção anterior, inclusive fora do painel IA.
+
+- Respostas de conexão atrasadas não podem confirmar outro modelo/credencial. O timeout e cancelamento cobrem também a leitura do corpo HTTP.
+- Erros remotos não ecoam corpos, URLs ou cabeçalhos potencialmente privados; M4F-1218 identifica cancelamento.
+- Paginação incompleta falha explicitamente sem apresentar um catálogo truncado como completo.
+- Escritas e desbloqueios de cofre são descartados depois de lock/delete ou alteração em outra aba, preservando a revisão mais recente.
+- Nada foi executado para verificar estas mudanças. Testes existentes preservados; QA independente obrigatória.
+
 ## v0.27.5 — 21/10/2026
 
 **Conexão de provedores sem catálogo de outra conta nem sucesso de fachada (#73, entrega parcial).** Conectar/substituir/remover uma chave invalida o catálogo daquela conta e a escolha antiga de modelo, sem guardar identificador derivado da chave em armazenamento. Uma resposta atrasada de outra chave é descartada; requisições pendentes são canceladas ao trocar de provedor. Os catálogos ficam por até 30 minutos na memória desta aba, separados por revisão opaca da credencial.

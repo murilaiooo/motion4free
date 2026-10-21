@@ -20,6 +20,8 @@ import {
 } from '../../ai/credentials/keys';
 import { MIN_PASSWORD } from '../../ai/credentials/vault';
 import { listModels, testModel } from '../../ai/providers/client';
+import { authorizeRequest } from '../../ai/providers/consent';
+import { onCredentialChange } from '../../ai/credentials/keys';
 import { PRICING_LABEL, PROVIDERS, PROVIDER_IDS, keyLooksWrong, priceText, type ModelInfo, type ProviderId } from '../../ai/providers/registry';
 import { ErrorBox } from '../ErrorBox';
 import { LocalModelPicker, setAiSettings, useAiSettings, useWebGpu, type AiMode } from '../AiOptions';
@@ -224,7 +226,19 @@ function ProviderPanel({ id }: { id: ProviderId }) {
   const [show, setShow] = useState(false);
   const [loaded, setLoaded] = useState<CatalogEntry | null>(() => catalog.get(id) ?? null);
   const activeRequest = useRef<AbortController | null>(null);
-  useEffect(() => () => activeRequest.current?.abort(), []);
+  const activeTest = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const stop = onCredentialChange((provider) => {
+      if (provider !== id) return;
+      activeRequest.current?.abort();
+      activeTest.current?.abort();
+      catalog.delete(id);
+      setLoaded(null);
+      setTest({ kind: 'idle' });
+      setConfirmPaid(null);
+    });
+    return () => { stop(); activeRequest.current?.abort(); activeTest.current?.abort(); };
+  }, [id]);
   const revision = credentialRevision(id);
   // Uma listagem só pertence à chave que a buscou; trocar/revogar a chave a invalida sem guardar o segredo no cache.
   const models = loaded?.revision === revision && Date.now() - loaded.at < CATALOG_TTL_MS ? loaded.models : null;
@@ -238,6 +252,10 @@ function ProviderPanel({ id }: { id: ProviderId }) {
   const [test, setTest] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'ok' } | { kind: 'error'; error: AppError }>({ kind: 'idle' });
   const chosen = s.provider === id ? s.remote : null;
   const consent = s.consent.includes(id);
+  useEffect(() => {
+    activeTest.current?.abort();
+    setTest({ kind: 'idle' });
+  }, [chosen?.id, consent]);
 
   async function load(k: string) {
     activeRequest.current?.abort();
@@ -274,6 +292,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
     e.preventDefault();
     const k = draft.trim();
     if (!k) return;
+    setError(null);
     if (getKey(id) !== k) {
       // A chave nova pode pertencer a outra conta com modelos, billing e permissões diferentes.
       activeRequest.current?.abort();
@@ -287,7 +306,10 @@ function ProviderPanel({ id }: { id: ProviderId }) {
     setDraft('');
     setShow(false);
     // chave trocada de um serviço que estava no cofre: o cofre guarda a nova
-    if (isRemembered(id) && vaultState() === 'aberto') await rememberKey(id, true).catch((err) => setError(toAppError(err, 'COFRE_INDISPONIVEL')));
+    if (isRemembered(id) && vaultState() === 'aberto') {
+      try { await rememberKey(id, true); }
+      catch (err) { setError(toAppError(err, 'COFRE_INDISPONIVEL')); return; }
+    }
     await load(k);
   }
 
@@ -303,6 +325,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
   }, [models, query, filter]);
 
   function use(m: ModelInfo) {
+    activeTest.current?.abort();
     setConfirmPaid(null);
     setTest({ kind: 'idle' });
     setAiSettings({ mode: 'provedor', provider: id, remote: { id: m.id, label: m.label, pricing: m.pricing } });
@@ -340,7 +363,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
         {key ? (
           <div className="set-row" data-testid="key-open">
             <span className="tag ok">
-              <Check size={12} aria-hidden /> Chave aberta nesta aba (termina em …{key.slice(-4)})
+              <Check size={12} aria-hidden /> Chave aberta nesta aba
             </span>
             <button className="sm ghost" onClick={() => void load(key)} disabled={loading}>
               <RefreshCw size={14} aria-hidden /> Buscar modelos de novo
@@ -379,7 +402,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
         </form>
         {wrong && <p className="hint warn-text">Esta chave não parece ser do {p.name}{p.keyPrefix ? ` (as chaves dele começam com “${p.keyPrefix}”)` : ''}. Confira se escolheu o serviço certo.</p>}
         {key && <RememberBox id={id} />}
-        {loading && <p className="hint">Buscando os modelos que a sua chave pode usar… Isso não gasta cota.</p>}
+        {loading && <p className="hint">Consultando o catálogo do serviço… Isso não gera texto nem confirma saldo ou permissão para executar modelos.</p>}
         {error && <ErrorBox error={error} kind="error" onDismiss={() => setError(null)} />}
       </div>
 
@@ -461,7 +484,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
           <label className="set-check">
             <input type="checkbox" checked={consent} onChange={(e) => setAiSettings({ consent: e.target.checked ? [...s.consent.filter((c) => c !== id), id] : s.consent.filter((c) => c !== id) })} data-testid="consent-check" />
             <span>
-              Autorizo enviar ao <b>{p.name}</b> o texto dos meus pedidos e trechos da transcrição da fala (até 1.500 letras por pedido). <b>Nunca o vídeo, o áudio ou arquivos.</b>
+              Permito preparar pedidos para o <b>{p.name}</b>. Antes de cada envio, vou conferir e autorizar o conteúdo completo, incluindo instruções e trechos da fala. <b>Nunca o vídeo, o áudio ou arquivos.</b>
             </span>
           </label>
           <details className="set-details">
@@ -483,10 +506,17 @@ Trecho da fala: "hoje eu vou te mostrar três jeitos de…"`}</pre>
               disabled={!consent || !key || test.kind === 'busy'}
               onClick={() => {
                 if (!key) return;
+                activeTest.current?.abort();
+                const ctrl = new AbortController();
+                activeTest.current = ctrl;
+                const testedRevision = credentialRevision(id);
                 setTest({ kind: 'busy' });
-                testModel(id, key, chosen.id).then(
-                  () => setTest({ kind: 'ok' }),
-                  (err) => setTest({ kind: 'error', error: toAppError(err, 'PROVEDOR_ERRO') }),
+                testModel(id, key, chosen.id, {
+                  signal: ctrl.signal,
+                  authorize: (body) => authorizeRequest(id, chosen.id, body, ctrl.signal),
+                }).then(
+                  () => { if (!ctrl.signal.aborted && testedRevision === credentialRevision(id)) setTest({ kind: 'ok' }); },
+                  (err) => { if (!ctrl.signal.aborted && testedRevision === credentialRevision(id)) setTest({ kind: 'error', error: toAppError(err, 'PROVEDOR_ERRO') }); },
                 );
               }}
               data-testid="model-test"
