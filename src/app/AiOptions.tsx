@@ -123,7 +123,8 @@ export function useAiSettings(): AiSettings {
  * Prepara a IA escolhida. Falha ao carregar a IA do navegador, falta de chave, de modelo ou de autorização
  * não impedem o pedido: devolvem o aviso com código próprio e o pedido segue pelas regras.
  */
-export async function prepareAi(s: AiSettings, setBusy: OnProgress, task: AiTask = 'creative-brief', project = activeAiProject): Promise<{ ai: AiChoice | null; warning: AppError | null }> {
+export async function prepareAi(s: AiSettings, setBusy: OnProgress, task: AiTask = 'creative-brief', project = activeAiProject, signal?: AbortSignal): Promise<{ ai: AiChoice | null; warning: AppError | null }> {
+  if (signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
   s = routed(s, task, project);
   if (s.mode === 'local') {
     try {
@@ -137,7 +138,13 @@ export async function prepareAi(s: AiSettings, setBusy: OnProgress, task: AiTask
       }
       const local = await loadLocalAi(s.model, (f, t) => setBusy(localAiProgress(s.model, f, t)));
       setBusy({ label: 'A IA no navegador está lendo o pedido', phase: 'ia-ler', fraction: null, detail: `pode levar até ${LLM_MODELS[s.model].timeoutSec} s` });
-      return { ai: { complete: (messages) => cachedCompletion({ project, task, provider: 'local', model: s.model, account: 0 }, messages, () => local.complete(messages)), source: 'ia-local' }, warning: null };
+      if (signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
+      return { ai: { complete: async (messages) => {
+        if (signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
+        const response = await cachedCompletion({ project, task, provider: 'local', model: s.model, account: 0 }, messages, () => local.complete(messages));
+        if (signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
+        return response;
+      }, source: 'ia-local' }, warning: null };
     } catch (err) {
       return { ai: null, warning: toAppError(err, 'IA_LOCAL_FALHOU') };
     }
@@ -157,6 +164,8 @@ export async function prepareAi(s: AiSettings, setBusy: OnProgress, task: AiTask
       if (credentialRevision(provider) !== revision || getKey(provider) !== key || current.mode !== 'provedor' || current.provider !== provider || current.remote?.id !== model || !current.consent.includes(provider)) throw new AppError('PROVEDOR_CANCELADO');
       const ctrl = new AbortController();
       const cancel = () => ctrl.abort();
+      if (signal?.aborted) cancel();
+      signal?.addEventListener('abort', cancel, { once: true });
       const unsubscribeKey = onCredentialChange((id) => { if (id === provider) cancel(); });
       listeners.add(cancel);
       try {
@@ -171,6 +180,7 @@ export async function prepareAi(s: AiSettings, setBusy: OnProgress, task: AiTask
         return response;
       } finally {
         unsubscribeKey();
+        signal?.removeEventListener('abort', cancel);
         listeners.delete(cancel);
       }
     }, source: 'ia-chave' }, warning: null };

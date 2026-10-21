@@ -7,6 +7,7 @@ import { findHooks } from '../editorial/hooks';
 import { Check, Sparkles } from 'lucide-react';
 import { AiStatusLine, prepareAi, useAiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
+import { useEditRequest } from './use-edit-request';
 import { ProgressPanel } from './ProgressPanel';
 import type { Progress } from '../core/progress';
 
@@ -31,19 +32,24 @@ export function BriefPanel({ plan, words, onBrief, disabled }: { plan: EditPlan;
   const [error, setError] = useState<AppError | null>(null);
   const [warning, setWarning] = useState<AppError | null>(null);
   const [notDone, setNotDone] = useState<string[]>([]);
+  const requestScope = useEditRequest(plan, '', () => { setBusy(null); setWarning(new AppError('PEDIDO_CANCELADO')); });
   const summary = summarizeBrief(plan.brief);
   const hasBrief = plan.brief.prompt !== '';
   // desfazer/refazer traz de volta o texto do pedido daquele momento
   useEffect(() => setText(plan.brief.prompt), [plan.brief.prompt]);
 
   async function apply() {
+    const request = requestScope.begin();
+    const progress: typeof setBusy = (value) => { if (request.current()) setBusy(value); };
     setError(null);
     setWarning(null);
     setNotDone([]);
     setBusy({ label: 'Entendendo o pedido', phase: 'pedido', fraction: null });
     try {
-      const { ai: choice, warning: aiWarning } = await prepareAi(ai, setBusy);
+      const { ai: choice, warning: aiWarning } = await prepareAi(ai, progress, 'creative-brief', undefined, request.signal);
+      if (!request.current()) return;
       const r = await interpretLayered(text, words, choice);
+      if (!request.current()) return;
       setWarning(r.warning ?? aiWarning);
       if (!r.understood) {
         setWarning(new AppError('PEDIDO_NAO_ENTENDIDO', [...r.brief.unsupported, ...r.brief.notes.ignored].slice(0, 8).join(', ')));
@@ -52,9 +58,10 @@ export function BriefPanel({ plan, words, onBrief, disabled }: { plan: EditPlan;
       }
       onBrief(r.brief);
     } catch (err) {
-      setError(toAppError(err));
+      if (request.current()) setError(toAppError(err));
     } finally {
-      setBusy(null);
+      if (request.current()) setBusy(null);
+      request.finish();
     }
   }
 
@@ -93,6 +100,7 @@ export function BriefPanel({ plan, words, onBrief, disabled }: { plan: EditPlan;
           </button>
         ))}
       </div>
+      {busy && <button className="sm ghost" type="button" onClick={requestScope.cancel}>Cancelar pedido</button>}
       <ProgressPanel progress={busy} compact testId="ai-progress" />
       {error && <ErrorBox error={error} kind="error" />}
       {warning && <ErrorBox error={warning} kind="warning" />}

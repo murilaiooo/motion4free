@@ -144,3 +144,5 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 
 - M4F-1219: limite local de pedidos/texto atingido ou contador inválido. Edição por regras permanece. Conferir limites em Configurações, e conferir o gasto na própria conta de API. Sem novo envio automático.
 - M4F-1220: cooldown por 429 ou circuito após falhas transitórias. Aguardar o prazo mostrado, continuar localmente; trocar chave não contorna o limite do provedor.
+
+- M4F-527: pedido cancelado ou plano/seleção mudou. Nenhum resultado atrasado é aplicado; enviar novo pedido ao estado atual.

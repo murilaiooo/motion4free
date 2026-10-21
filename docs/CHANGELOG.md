@@ -2,6 +2,12 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.29.1 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#11 — Revisões assíncronas preservam a edição atual.** Pedidos gerais e de trecho são vinculados ao plano e à seleção que os iniciaram. Editar, desfazer/refazer, mudar o trecho ou sair do editor invalida o resultado pendente; ele não aplica um histórico antigo. Botão Cancelar pedido aborta o envio remoto e impede aplicar resultado local tardio. Downloads compartilhados de modelo local podem continuar, sem alterar a edição.
+
+M4F-527 explica o cancelamento; progresso e erros atrasados não substituem o novo pedido. Nenhum teste, build, typecheck, lint ou execução da aplicação foi realizado. Roteiro de QA separado.
+
 ## v0.29.0 — 21/10/2026 — IMPLEMENTED — NOT TESTED
 
 **#9 / complemento #73 — Roteamento explícito por tarefa/projeto e limites locais de IA.** Configurações avançadas permitem herdar a escolha global ou fixar regras, IA local ou modelo remoto já escolhido para pedido geral, revisão de trecho e ranking de clipes. O projeto aberto pode ter escolhas próprias. Trocar/revogar credencial remove escolhas vinculadas à conta anterior.

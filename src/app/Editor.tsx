@@ -1023,6 +1023,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           </div>
         ) : activeSelection ? (
           <RangePanel
+            revision={plan}
             selection={activeSelection}
             range={range}
             total={total}

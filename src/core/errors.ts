@@ -128,6 +128,7 @@ export const ERRORS = {
   COFRE_INDISPONIVEL: { code: 'M4F-1214', title: 'Este navegador não permite guardar chaves cifradas. A chave vale só até fechar a aba.' },
   COFRE_SENHA_CURTA: { code: 'M4F-1215', title: 'A senha do cofre precisa ter pelo menos 8 caracteres.' },
   COFRE_CORROMPIDO: { code: 'M4F-1216', title: 'O cofre de chaves deste navegador está danificado e não pode ser aberto. Apague o cofre em Privacidade e segurança e conecte as chaves de novo.' },
+  PEDIDO_CANCELADO: { code: 'M4F-527', title: 'O pedido foi cancelado ou a edição/seleção mudou enquanto ele era preparado. Preservei o estado atual; envie um novo pedido para continuar.' },
   IA_ORCAMENTO: { code: 'M4F-1219', title: 'O limite local de pedidos ou de texto para IA foi atingido. A edição continua pelas regras; ajuste os limites em Configurações se quiser autorizar mais uso.' },
   IA_COOLDOWN: { code: 'M4F-1220', title: 'Este serviço de IA está temporariamente em espera após limite de uso ou falhas repetidas. A edição continua pelas regras, sem repetir chamadas nem trocar para outro serviço.' },
   PROVEDOR_CANCELADO: { code: 'M4F-1218', title: 'O envio para a IA foi cancelado ou a autorização mudou. Nenhum novo pedido será enviado com a autorização anterior; a edição continua pelas regras.' },
