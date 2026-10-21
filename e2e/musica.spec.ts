@@ -41,6 +41,8 @@ test('música de fundo: escolher, ajustar, continuar no projeto e tirar (v0.26)'
   await expect(page.getByTestId('error-M4F-203')).toBeVisible();
   expect(await musicOf(page)).toMatchObject({ name: 'trilha.wav' });
 
+  // Só recarregue depois de o autosave confirmar: a gravação do plano é agrupada por 300 ms.
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 15_000 });
   // reabrir: a música volta junto com o projeto, sem o aviso de música perdida
   await page.reload();
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 60_000 });
