@@ -74,3 +74,20 @@ test('concorrência: trava nova importação durante análise de clipes e libera
   await expect(chooser).toBeEnabled({ timeout: 90_000 });
   await expect(page.getByTestId('clip-c3')).toHaveCount(0);
 });
+
+
+test('segurança: nome de vídeo com HTML malicioso permanece texto, sem execução de script no editor', async ({ page }) => {
+  test.setTimeout(150_000);
+  const suspicious = '<img src=x onerror=window.__m4fInjected=1>.webm';
+  await page.goto('/?asr=vazio');
+  await page.getByTestId('file-input').setInputFiles({
+    name: suspicious, mimeType: 'video/webm', buffer: readFileSync(MEDIA),
+  });
+  await expect(page.getByTestId('clip-c1')).toContainText(suspicious, { timeout: 90_000 });
+  await expect(page.locator('img[onerror]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).__m4fInjected)).toBeUndefined();
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 45_000 });
+  await page.reload();
+  await expect(page.getByTestId('clip-c1')).toContainText(suspicious, { timeout: 90_000 });
+  expect(await page.evaluate(() => (window as any).__m4fInjected)).toBeUndefined();
+});
