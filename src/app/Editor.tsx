@@ -654,11 +654,11 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           </div>
           <div role="tabpanel" id="panel-ia" aria-labelledby="tab-ia" hidden={tab !== 'ia'} className="stack">
             <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} disabled={off} ai={ai} onAi={setAi} />
-            <details className="fold" data-testid="fold-gancho">
+            <details className="fold" open data-testid="fold-gancho">
               <summary>Gancho: a frase que abre o vídeo</summary>
               <HookPanel plan={plan} words={ctx.words} onHook={(h) => apply((p) => applyHook(p, ctx, h))} disabled={off} />
             </details>
-            <details className="fold" data-testid="fold-trechos">
+            <details className="fold" open data-testid="fold-trechos">
               <summary>Mudar só um pedaço do vídeo</summary>
               <p className="hint">Arraste na faixa Trechos da linha do tempo, ou use o botão. O pedido do pedaço aparece à direita.</p>
               <button type="button" onClick={selectFromNow} data-testid="range-new" disabled={off}>

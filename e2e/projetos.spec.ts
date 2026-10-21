@@ -12,7 +12,6 @@ async function newVideo(page: Page) {
 }
 
 async function closeProject(page: Page) {
-  await page.getByTestId('project-menu').click();
   await page.getByTestId('menu-close').click();
   await expect(page.getByTestId('projects')).toBeVisible({ timeout: 30_000 });
 }
@@ -125,8 +124,7 @@ test('dois projetos: lista, renomeia, apaga um, armazenamento muda, apaga modelo
 test('apagar o projeto aberto pelo menu do editor volta para a primeira tela', async ({ page }) => {
   await page.goto('/');
   await newVideo(page);
-  await page.getByTestId('project-menu').click();
-  await expect(page.getByTestId('project-menu-list')).toContainText('Trocar vídeo');
+  await expect(page.getByTestId('file-input-replace')).toBeAttached();
   await page.getByTestId('menu-delete').click();
   const dialog = page.getByTestId('delete-dialog');
   await expect(dialog).toContainText('Apagar o projeto "fala-com-pausas"?');
@@ -144,7 +142,6 @@ test('renomear pelo menu do editor e abrir pela lista', async ({ page }) => {
   await page.goto('/');
   await newVideo(page);
   await page.getByTestId('project-menu').click();
-  await page.getByTestId('menu-rename').click();
   await page.getByTestId('project-name-input').fill('Meu Reels');
   await page.getByTestId('project-name-input').press('Enter');
   await expect(page.getByTestId('project-menu')).toContainText('Meu Reels');
