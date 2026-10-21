@@ -19,7 +19,8 @@ export function addVersion(list: PlanVersion[], name: string, plan: EditPlan, no
   if (list.length >= MAX_VERSIONS) throw new AppError('VERSAO_LIMITE', `${list.length} versões`);
   const n = Math.max(0, ...list.map((v) => Number(v.id.slice(1)) || 0)) + 1;
   const clean = name.replace(/\s+/g, ' ').trim().slice(0, VERSION_NAME_MAX) || `Versão ${n}`;
-  return [...list, { id: `v${n}`, name: clean, savedAt: now.toISOString(), plan }];
+  // Uma versão é um snapshot independente, não uma referência ao objeto ainda editável.
+  return [...list, { id: `v${n}`, name: clean, savedAt: now.toISOString(), plan: structuredClone(plan) }];
 }
 
 export function removeVersion(list: PlanVersion[], id: string): PlanVersion[] {

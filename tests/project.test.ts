@@ -131,6 +131,17 @@ describe('versões com nome (formato 2)', () => {
     expect(removeVersion(versions, 'v1').map((v) => v.id)).toEqual(['v2']);
   });
 
+  it('versão guardada é independente de alterações posteriores no objeto original', async () => {
+    const { addVersion } = await import('../src/core/versions');
+    const mutable = structuredClone(plan);
+    const saved = addVersion([], 'Antes', mutable, new Date('2026-10-21T21:00:00Z'));
+    mutable.style.palette.accent = '#010203';
+    mutable.brief.prompt = 'Mudança posterior';
+    expect(saved[0]!.plan.style.palette.accent).toBe(plan.style.palette.accent);
+    expect(saved[0]!.plan.brief.prompt).toBe(plan.brief.prompt);
+    expect(saved[0]!.plan).not.toBe(mutable);
+  });
+
   it('no máximo 20 versões (M4F-605)', async () => {
     const { addVersion, MAX_VERSIONS } = await import('../src/core/versions');
     let list: ReturnType<typeof addVersion> = [];

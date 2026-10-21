@@ -2,6 +2,13 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.27.2 — 21/10/2026
+
+**Versões e histórico da composição (#83).** Verificado no Brave: restaurar uma versão anterior remove o título acrescentado depois, desfazer/refazer recuperam o estado anterior e reabrir o projeto mantém o estado restaurado. A correção amplia o painel "O que mudou" para reconhecer elementos manuais, camadas e ajustes de composição (antes podia mostrar "Nada mudou" mesmo com título novo). As versões guardadas agora têm cópia independente do plano, protegida contra futuras mutações acidentais.
+
+- Regressão E2E curta no Brave: guardar A, adicionar título B, comparar, restaurar A, desfazer/refazer e recarregar, sem exportação.
+- Testes unitários de comparação, isolamento de snapshots e persistência.
+
 ## v0.27.1 — 21/10/2026
 **Corrigida a tela preta ao navegar em Configurações (#78).** O efeito de rolagem da seção não devolve mais o resultado de `scrollTo` ao React como se fosse função de limpeza. Ao trocar abas, o diálogo e o editor permanecem montados. Teste E2E de regressão monitora exceções JavaScript e percorre as seis seções, incluindo fechar e reabrir a janela; validação feita em cópia isolada, sem alterar o trabalho local em andamento.
 

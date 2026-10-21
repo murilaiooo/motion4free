@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { autoEdit } from '../src/editorial/auto-edit';
 import { diffPlans } from '../src/editorial/diff';
+import { addElement } from '../src/editorial/manual';
 import { applyRange, applyReferencePalette, applyStyle, editCaptionText, type EditContext } from '../src/editorial/ops';
 import { interpretRangePrompt } from '../src/editorial/range-interpret';
 import { SAMPLE_TEXT, wordsFrom } from './helpers/words';
@@ -49,6 +50,18 @@ describe('diffPlans', () => {
     expect(d.changes[0]!.text).toMatch(/Legenda em .*→ “Texto novo”/);
     const colored = applyReferencePalette(base, ctx, { colors: ['#C81E28'] });
     expect(diffPlans(base, colored).changes.map((c) => c.text)).toContain('Cores tiradas da sua imagem');
+  });
+
+  it('mostra título criado, restauração que remove o título e ajustes de composição', () => {
+    const withTitle = addElement(base, ctx, { kind: 'text', preset: 'title', text: 'Título novo' }, 1).plan;
+    const added = diffPlans(base, withTitle);
+    expect(added.changes.map((c) => c.text)).toContainEqual(expect.stringContaining('+ título “Título novo”'));
+    expect(added.span?.start).toBeCloseTo(1, 2);
+    expect(diffPlans(withTitle, base).changes.map((c) => c.text)).toContainEqual(expect.stringContaining('− título “Título novo”'));
+
+    const adjusted = { ...withTitle, edits: { ...withTitle.edits, video: { ...withTitle.edits.video, x: 0.2 } } };
+    expect(diffPlans(withTitle, adjusted).changes.map((c) => c.text)).toContainEqual(expect.stringContaining('enquadramento manual'));
+    expect(diffPlans(adjusted, adjusted).changes).toHaveLength(0);
   });
 
   it('travar aparece como mudança do trecho', () => {
