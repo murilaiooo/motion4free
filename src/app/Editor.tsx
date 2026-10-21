@@ -55,6 +55,8 @@ import { KeyframePanel } from './KeyframePanel';
 import { MaskPanel } from './MaskPanel';
 import { planCues, toSrt } from '../editorial/subtitles';
 import { DEFAULT_SETUP, type CreativeSetup } from '../core/production';
+import { StoryboardReview } from './production/StoryboardReview';
+import { applyCreativeFinding } from '../editorial/creative-plan';
 import { evaluateDraft, reviseCreativeDirection } from '../editorial/production';
 import { CreativeSetupScreen } from './production/CreativeSetup';
 import { DraftReview } from './production/DraftReview';
@@ -998,6 +1000,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
 
       <aside className="inspector" ref={inspectorRef} aria-label="Detalhes">
         {reviewOpen && <DraftReview editorial={evaluateDraft(plan, ctx)} onCustomize={() => setReviewOpen(false)} onExport={() => void onExport()} onRevise={openDirection} disabled={disabled || off} />}
+        {reviewOpen && <StoryboardReview plan={plan} onSeek={seek} onApply={id => apply(p => applyCreativeFinding(p, id))} disabled={disabled || off} />}
         {!reviewOpen && plan.brief.production && <button className="sm" onClick={openDirection} disabled={off}>Direção criativa</button>}
         <div hidden={reviewOpen}>
         <h2 className="insp-title">Detalhes</h2>

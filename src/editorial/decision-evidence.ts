@@ -1,3 +1,4 @@
+import { resolvePlan } from './elements';
 import type { SceneEvidence } from '../core/production';
 import type { EditPlan, Word } from '../core/types';
 import { SCENE_CATALOG } from '../motion/catalog';
@@ -6,7 +7,7 @@ import { CONTEXT_LABELS, contextFlags } from './context-policy';
 /** Derived from the CURRENT plan, never a claim about historical generator provenance.
  * No text copies, telemetry, console logging or storage. The UI owns this transient report. */
 export function sceneEvidence(plan: EditPlan, words: Word[]): SceneEvidence[] {
-  return plan.scenes.slice(0, 32).map(scene => {
+  return resolvePlan(plan).scenes.slice(0, 32).map(({ scene }) => {
     const nearby: Word[] = [];
     let out = 0;
     for (const segment of plan.segments) {

@@ -1,3 +1,7 @@
+## 0.31.0 — UNTESTED / AWAITING QA
+
+- #29: structural storyboard and allowlisted current-edit graph; bounded repetition review with explicit undoable action.
+
 ## 0.30.2 — UNTESTED / AWAITING QA
 
 - #8: preserve full short opening sentences, guard isolated emphasis in qualified claims, and expose transient source context in draft review.
