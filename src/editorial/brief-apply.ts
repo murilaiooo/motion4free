@@ -56,6 +56,14 @@ export function styleForBrief(preset: StyleDNA, brief: CreativeBrief): StyleDNA 
   const M = s.motion;
   const R = s.rhythm;
 
+  if (brief.production) {
+    const gentle = ['calmo', 'elegante', 'serio', 'acolhedor'].includes(brief.tone ?? '');
+    const lively = ['energetico', 'divertido'].includes(brief.tone ?? '');
+    M.inSec = r3(clamp(M.inSec * (gentle ? 1.2 : lively ? 0.8 : 1), 0.05, 1.2));
+    M.outSec = r3(clamp(M.outSec * (gentle ? 1.15 : lively ? 0.85 : 1), 0.05, 1));
+    if (gentle && ['pop', 'drop'].includes(M.enter)) M.enter = 'rise';
+  }
+
   if (brief.intensity === 'baixa') {
     M.intensity = r3(M.intensity * 0.4);
     M.inSec = r3(clamp(M.inSec * 1.3, 0.05, 1.2));

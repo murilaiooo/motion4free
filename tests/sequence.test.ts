@@ -64,7 +64,9 @@ describe('mapeamento do tempo com pedaços fora de ordem', () => {
     expect(sourceToOutput(swapped, 0.5)).toBeCloseTo(2.5);
     // instante cortado vai para o próximo pedaço da gravação, onde quer que ele esteja
     expect(sourceToOutputClamped(swapped, 2.5)).toBeCloseTo(0);
-    expect(rangeOut(swapped, { srcStart: 1, srcEnd: 4 })).toEqual({ start: 0, end: 3 });
+    expect(sourceToOutput(swapped, 1)).toBe(3);
+    expect(sourceToOutput(swapped, 1.5)).toBe(3.5);
+    expect(rangeOut(swapped, { srcStart: 1, srcEnd: 4 })).toEqual({ start: 0, end: 4 });
   });
 
   it('legendas acompanham a ordem nova e não se misturam', () => {

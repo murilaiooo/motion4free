@@ -7,6 +7,18 @@ import { paintBackdrop, renderShot } from './Gallery';
 
 let backdrop: HTMLCanvasElement | null = null;
 const getBackdrop = () => (backdrop ??= paintBackdrop(540, 960));
+let plainBackdrop: HTMLCanvasElement | null = null;
+function getPlainBackdrop(): HTMLCanvasElement {
+  if (!plainBackdrop) {
+    plainBackdrop = document.createElement('canvas');
+    plainBackdrop.width = 540;
+    plainBackdrop.height = 960;
+    const context = plainBackdrop.getContext('2d')!;
+    context.fillStyle = '#343B45';
+    context.fillRect(0, 0, 540, 960);
+  }
+  return plainBackdrop;
+}
 
 /** Duração do vídeo de demonstração (editorial/sample.ts). */
 const DEMO_SEC = 28;
@@ -15,7 +27,7 @@ const DEMO_SEC = 28;
  * Quadro do vídeo de demonstração desenhado com a mesma `drawFrame` do player, no estilo pedido.
  * Parado no instante `t`; anima enquanto `playing` (passar o mouse no cartão).
  */
-export function TemplateThumb({ styleId, t, width = 180, playing = false, className = '' }: { styleId: string; t: number; width?: number; playing?: boolean; className?: string }) {
+export function TemplateThumb({ styleId, t, width = 180, playing = false, className = '', plain = false }: { styleId: string; t: number; width?: number; playing?: boolean; className?: string; plain?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
   const [seen, setSeen] = useState(false);
@@ -41,18 +53,18 @@ export function TemplateThumb({ styleId, t, width = 180, playing = false, classN
     const c = ref.current;
     if (!c || !ready) return;
     if (!playing) {
-      renderShot(c, styleId, t, getBackdrop());
+      renderShot(c, styleId, t, plain ? getPlainBackdrop() : getBackdrop());
       return;
     }
     let raf = 0;
     const t0 = performance.now();
     const loop = (now: number) => {
-      renderShot(c, styleId, (t + (now - t0) / 1000) % DEMO_SEC, getBackdrop());
+      renderShot(c, styleId, (t + (now - t0) / 1000) % DEMO_SEC, plain ? getPlainBackdrop() : getBackdrop());
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [ready, playing, styleId, t]);
+  }, [ready, playing, styleId, t, plain]);
   const dpr = typeof devicePixelRatio === 'number' ? Math.min(2, devicePixelRatio) : 1;
   const w = Math.round(width * dpr);
   return <canvas ref={ref} className={`tpl-thumb ${className}`} width={w} height={Math.round((w * 16) / 9)} aria-hidden data-ready={ready ? '1' : '0'} />;

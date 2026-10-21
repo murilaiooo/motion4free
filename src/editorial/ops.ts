@@ -15,6 +15,7 @@ import { applyRangeRequest, assertCaptionEditable, assertSegmentsKeepLocks, reap
 import { applyReference } from './reference';
 import { withRecipe } from './recipe-apply';
 import type { ReferencePalette } from '../core/types';
+import { preserveManualScenes } from './scene-preservation';
 
 /**
  * Operações de edição da Fase 2. Todas são puras: recebem um plano e devolvem outro
@@ -106,7 +107,7 @@ export function applyReferencePalette(plan: EditPlan, ctx: EditContext, referenc
   if (JSON.stringify(plan.reference) === JSON.stringify(reference)) return plan;
   const preset = presetById(plan.style.id);
   if (!preset) throw new AppError('ESTILO_DESCONHECIDO', plan.style.id);
-  return rebuildAll({ ...plan, reference, style: planStyle(preset, plan.brief, reference) }, ctx);
+  return preserveManualScenes(plan, rebuildAll({ ...plan, reference, style: planStyle(preset, plan.brief, reference) }, ctx));
 }
 
 /** Pedido para um trecho (revisão focal). Devolve o plano e o trecho afetado (null = trecho removido). */
@@ -125,7 +126,7 @@ export function applyStyle(plan: EditPlan, ctx: EditContext, styleId: string): E
   // a escolha manual vira o estilo do pedido; os outros ajustes do pedido (calmo, proibições...) continuam valendo
   const brief = plan.brief.preset ? { ...plan.brief, preset: preset.id as CreativeBrief['preset'] } : plan.brief;
   const style = planStyle(preset, brief, plan.reference);
-  return reapplyRanges({ ...plan, style, brief, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style, brief) }, ctx.words);
+  return preserveManualScenes(plan, reapplyRanges({ ...plan, style, brief, captions: rebuildCaptions(plan, ctx, plan.segments, style), scenes: rebuildScenes(plan, ctx, plan.segments, style, brief) }, ctx.words));
 }
 
 /**
@@ -147,7 +148,8 @@ export function applyBrief(plan: EditPlan, ctx: EditContext, raw: CreativeBrief)
     const best = pickHook(findHooks(ctx.words), incoming.hookStyle);
     hook = best ? { text: best.text, wordIds: best.wordIds } : null;
   }
-  const brief: CreativeBrief = { ...incoming, hook, locked: plan.brief.locked };
+  const production = incoming.production ?? plan.brief.production;
+  const brief: CreativeBrief = { ...incoming, hook, locked: plan.brief.locked, ...(production ? { production } : {}) };
   const style = planStyle(preset, brief, plan.reference);
   // ritmo dos cortes: só quando o pedido muda o nível (respeita cortes feitos à mão depois)
   let segments = plan.segments;
@@ -156,7 +158,8 @@ export function applyBrief(plan: EditPlan, ctx: EditContext, raw: CreativeBrief)
     const locked = plan.ranges.filter((r) => r.locked).map((r) => ({ start: r.srcStart, end: r.srcEnd }));
     segments = splitAtClips(retimeCuts(plan.segments, ctx.words, ctx.durationSec, level, locked), plan.clips);
   }
-  return reapplyRanges({ ...plan, segments, style, brief, captions: rebuildCaptions(plan, ctx, segments, style), scenes: rebuildScenes(plan, ctx, segments, style, brief) }, ctx.words);
+  const rebuilt = reapplyRanges({ ...plan, segments, style, brief, captions: rebuildCaptions(plan, ctx, segments, style), scenes: rebuildScenes(plan, ctx, segments, style, brief) }, ctx.words);
+  return segments === plan.segments ? preserveManualScenes(plan, rebuilt) : rebuilt;
 }
 
 /** Escolhe (ou tira, com null) o gancho de abertura. Mesmo gancho = mesmo objeto. */
