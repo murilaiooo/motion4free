@@ -1,3 +1,9 @@
+# Implemented increment — UNTESTED / AWAITING QA
+
+`src/core/creative-plan.ts` and `src/editorial/creative-plan.ts` define and derive a structural storyboard, existing-element reference graph and bounded human review. Editor offers beat seek and one explicit undoable repetition-hiding action per click. This does not analyze visual samples or generate new artistic compositions. See `docs/reviews/2026-10-21-issue29-implementation-handoff.md` for limits and QA.
+
+The broader architecture below remains a proposal beyond this increment.
+
 # Creative Director Agent — IA como diretora de arte, não simples seletora de catálogo
 
 **Status:** arquitetura alternativa recomendada na [auditoria](../reviews/2026-10-18-premium-creative-audit.md), ainda não aprovada/implementada.
