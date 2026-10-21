@@ -79,6 +79,18 @@ test('falha real no write de video.bin: não mostra falso Salvo e solicita origi
 
 test('concorrência: trava nova importação durante análise de clipes e libera ao terminar', async ({ page }) => {
   test.setTimeout(180_000);
+  // Torna observável o estado ocupado da importação; não depende da velocidade do CI.
+  await page.addInitScript(() => {
+    if (!navigator.storage?.estimate) return;
+    const original = navigator.storage.estimate.bind(navigator.storage);
+    Object.defineProperty(navigator.storage, 'estimate', {
+      configurable: true,
+      value: async () => {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        return original();
+      },
+    });
+  });
   await page.goto('/?asr=vazio');
   await page.getByTestId('file-input').setInputFiles(MEDIA);
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
