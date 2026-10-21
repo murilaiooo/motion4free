@@ -103,10 +103,10 @@ export function ClipMaker({
 
   const working = work.items.some((it) => it.job.kind === 'working') || batch !== null || opening || aiBusy !== null;
   // lote: um relógio só para todos os clipes (o "falta" é do lote inteiro, não só do clipe atual)
-  const current = work.items.find((it) => it.job.kind === 'working');
+  const rendering = work.items.find((it) => it.job.kind === 'working');
   const batchProgress = useMemo((): Progress | null => {
     if (!batch) return null;
-    const cj = current?.job;
+    const cj = rendering?.job;
     const job = cj && cj.kind === 'working' ? cj.progress : null;
     const now = Math.min(batch.done + 1, batch.total);
     return {
@@ -115,7 +115,7 @@ export function ClipMaker({
       fraction: (batch.done + (job ? clipJobFraction(job) : 0)) / batch.total,
       detail: job ? `${job.label} · pode deixar a aba aberta e fazer outra coisa` : 'pode deixar a aba aberta e fazer outra coisa',
     };
-  }, [batch, current]);
+  }, [batch, rendering]);
   const selected = work.items.filter((it) => it.checked);
   const settings = (): ClipSettings => ({ style: presetById(work.templateId) ?? DEFAULT_STYLE, output: profileFor(work.format) });
 
