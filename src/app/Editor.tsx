@@ -1,6 +1,6 @@
 import { planSummary } from '../core/text';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Captions, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Magnet, MousePointerClick, Palette, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Captions, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Clapperboard, MousePointerClick, Palette, Smile, Type, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, Segment, TimeRange } from '../core/types';
 import { PRESETS } from '../core/presets';
@@ -22,7 +22,7 @@ import type { AiSettings } from './AiOptions';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
 import { PreviewOverlay } from './PreviewOverlay';
-import { copyElement, deleteElement, deleteSegment, duplicateElement, pasteElement, retimeElement, setElementTrack, segmentZoom, setElementText, setSegmentZoom, splitAt, trimSegment, type ElementClip } from '../editorial/manual';
+import { addElement, copyElement, deleteElement, deleteSegment, duplicateElement, pasteElement, retimeElement, setElementTrack, segmentZoom, setElementText, setSegmentZoom, splitAt, trimSegment, type AddSpec, type ElementClip } from '../editorial/manual';
 import { duplicateSegment, insertSegments, moveSegment, segmentOffsets } from '../editorial/sequence';
 import type { ElementRef } from '../editorial/elements';
 import { elementName, findElement, resolvePlan, sceneText, sameRef as sameEl } from '../editorial/elements';
@@ -43,6 +43,7 @@ import { reorderClipPlan } from '../editorial/clip-ops';
 import { combineAudios } from '../media/multi';
 import { buildPeakIndex, waveformPeaks } from '../analysis/waveform';
 import { ClipList } from './ClipList';
+import { CaptionStylePanel, ElementsPanel, TextPanel } from './SidePanels';
 
 export interface Session {
   file: Blob;
@@ -98,15 +99,17 @@ export function describeScenes(scenes: EditPlan['scenes']): string {
 const fmt = (s: number) => `${s.toFixed(2).replace('.', ',')} s`;
 const fmt1 = (s: number) => `${s.toFixed(1).replace('.', ',')} s`;
 
-type TabId = 'modelos' | 'pedido' | 'legendas' | 'gancho' | 'trechos' | 'versoes' | 'cores';
+type TabId = 'modelos' | 'texto' | 'elementos' | 'legendas' | 'midia' | 'ia' | 'cores' | 'versoes';
+/** Menu da esquerda (v0.19), na ordem de CapCut/Canva: o visual pronto, o que se adiciona, a mídia, a IA e o histórico. */
 const TABS: { id: TabId; label: string; title: string; about: string; Icon: typeof Play }[] = [
-  { id: 'modelos', label: 'Modelos', title: 'Modelos', about: 'Letras, cores, animações e ritmo do vídeo inteiro. Clique para aplicar; dá para desfazer.', Icon: LayoutTemplate },
-  { id: 'pedido', label: 'Pedido', title: 'Pedido e IA', about: 'Peça mudanças com suas palavras. Funciona sem IA; a IA é opcional.', Icon: Sparkles },
-  { id: 'legendas', label: 'Legendas', title: 'Legendas', about: 'O texto falado, como um roteiro. Clique numa palavra para ir até ela e corrigir.', Icon: Captions },
-  { id: 'gancho', label: 'Gancho', title: 'Gancho', about: 'A frase que abre o vídeo, sempre tirada da sua própria fala.', Icon: Magnet },
-  { id: 'trechos', label: 'Trechos', title: 'Trechos', about: 'Mude ou trave só um pedaço do vídeo. O resto não muda.', Icon: SquareDashedMousePointer },
-  { id: 'versoes', label: 'Versões', title: 'Versões', about: 'Guarde, compare e restaure versões do vídeo.', Icon: History },
+  { id: 'modelos', label: 'Modelos', title: 'Modelos', about: 'O visual do vídeo inteiro: letras, cores e animações. Um clique aplica; dá para desfazer.', Icon: LayoutTemplate },
+  { id: 'texto', label: 'Texto', title: 'Texto', about: 'Títulos e frases na tela, onde está a agulha.', Icon: Type },
+  { id: 'elementos', label: 'Elementos', title: 'Elementos', about: 'Emojis, setas e formas para chamar atenção.', Icon: Smile },
+  { id: 'legendas', label: 'Legendas', title: 'Legendas', about: 'Posição, tamanho e cores das legendas, e o texto falado para corrigir.', Icon: Captions },
+  { id: 'midia', label: 'Mídia', title: 'Mídia e formato', about: 'Seus vídeos, o formato de saída (Reels, quadrado, horizontal) e o enquadramento.', Icon: Clapperboard },
+  { id: 'ia', label: 'IA', title: 'Pedir com palavras', about: 'Diga o que quer mudar. Funciona sem IA; a IA é opcional.', Icon: Sparkles },
   { id: 'cores', label: 'Cores', title: 'Cores e marca', about: 'As cores do vídeo, ou as de uma imagem sua (logo, foto).', Icon: Palette },
+  { id: 'versoes', label: 'Versões', title: 'Versões', about: 'Guarde, compare e volte para versões do vídeo.', Icon: History },
 ];
 
 const SAFE = (() => {
@@ -393,6 +396,13 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     canPaste: !!clipboard,
   };
 
+  /** Adiciona texto, emoji ou forma na agulha (3 s) e já deixa escolhido para mover. */
+  const addAt = (spec: AddSpec) =>
+    run((p) => {
+      const r = addElement(p, ctx, spec, playerRef.current?.currentTime ?? time);
+      return { plan: r.plan, el: { type: 'added', id: r.id }, seg: null };
+    });
+
   /** Pedido de trecho: devolve o erro para o painel do trecho mostrar. */
   const requestRange = (req: RangeRequest): AppError | null => {
     if (!activeSelection) return null;
@@ -604,54 +614,81 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
               </a>
             </p>
           </div>
-          <div role="tabpanel" id="panel-pedido" aria-labelledby="tab-pedido" hidden={tab !== 'pedido'}>
-            <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} disabled={off} ai={ai} onAi={setAi} />
+          <div role="tabpanel" id="panel-texto" aria-labelledby="tab-texto" hidden={tab !== 'texto'}>
+            <TextPanel onAdd={addAt} disabled={off} />
+          </div>
+          <div role="tabpanel" id="panel-elementos" aria-labelledby="tab-elementos" hidden={tab !== 'elementos'}>
+            <ElementsPanel onAdd={addAt} disabled={off} />
           </div>
           <div role="tabpanel" id="panel-legendas" aria-labelledby="tab-legendas" hidden={tab !== 'legendas'} className="stack">
-            {asrModel && (
-              <p className="asr-model" data-testid="asr-model">
-                <Captions size={14} aria-hidden /> Legenda feita com {asrModel}.
-              </p>
-            )}
-            <Transcript words={ctx.words} captions={plan.captions} segments={plan.segments} time={time} playing={playing} onSeek={seek} onEdit={(id, text) => apply((p) => editCaptionText(p, id, text))} disabled={off} />
+            <details className="fold" open>
+              <summary>Estilo das legendas</summary>
+              <CaptionStylePanel plan={plan} onApply={apply} disabled={off} />
+            </details>
+            <details className="fold" open>
+              <summary>Texto falado</summary>
+              {asrModel && (
+                <p className="asr-model" data-testid="asr-model">
+                  <Captions size={14} aria-hidden /> Legenda feita com {asrModel}.
+                </p>
+              )}
+              <Transcript words={ctx.words} captions={plan.captions} segments={plan.segments} time={time} playing={playing} onSeek={seek} onEdit={(id, text) => apply((p) => editCaptionText(p, id, text))} disabled={off} />
+            </details>
           </div>
-          <div role="tabpanel" id="panel-gancho" aria-labelledby="tab-gancho" hidden={tab !== 'gancho'}>
-            <HookPanel plan={plan} words={ctx.words} onHook={(h) => apply((p) => applyHook(p, ctx, h))} disabled={off} />
+          <div role="tabpanel" id="panel-midia" aria-labelledby="tab-midia" hidden={tab !== 'midia'} className="stack" data-testid="clip-and-format">
+            <ClipList
+              disabled={off || disabled}
+              clips={plan.clips.map((c) => ({ id: c.id, name: c.name || c.id, duration: c.duration, file: new File([], c.name) }))}
+              onReorder={(next) => {
+                const ordered = next.map((n) => plan.clips.find((c) => c.id === n.id)!).filter(Boolean);
+                apply((p) => reorderClipPlan(p, ordered, session.clipWords ?? {}));
+              }}
+              onRemove={(id) => {
+                const remaining = plan.clips.filter((c) => c.id !== id);
+                if (remaining.length > 0) apply((p) => reorderClipPlan(p, remaining, session.clipWords ?? {}));
+              }}
+              onAdd={onAddClips}
+            />
+            <FormatSelector plan={plan} onChange={(n) => apply(() => n)} disabled={off || disabled} />
+            <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} disabled={off || disabled} />
           </div>
-          <div role="tabpanel" id="panel-trechos" aria-labelledby="tab-trechos" hidden={tab !== 'trechos'} className="stack">
-            <div className="card how">
-              <MousePointerClick size={18} aria-hidden />
-              <p>
-                Arraste na faixa <b>Trechos</b> da linha do tempo para escolher um pedaço, ou use o botão abaixo. Os detalhes aparecem no painel <b>Detalhes</b>.
-              </p>
-            </div>
-            <button type="button" onClick={selectFromNow} data-testid="range-new" disabled={off}>
-              <SquareDashedMousePointer size={15} aria-hidden /> Selecionar 3 s a partir de agora ({fmt(time)})
-            </button>
-            {plan.ranges.length > 0 && (
-              <ul className="range-list" aria-label="Trechos ajustados">
-                {plan.ranges.map((r) => (
-                  <li key={r.id}>
-                    <button
-                      type="button"
-                      className={`range-item ${r.locked ? 'locked' : ''}`}
-                      aria-pressed={selectedRange === r.id}
-                      onClick={() => {
-                        setSelectedCut(null);
-                        setSelectedRange(r.id);
-                        setSelection(null);
-                      }}
-                    >
-                      <span className="range-dot" aria-hidden />
-                      <span>
-                        <b>{r.locked ? 'Travado' : 'Ajustado'}</b> · {fmt1(r.out.start)} a {fmt1(r.out.end)}
-                        <small className="hint">{r.prompt || 'sem pedido'}</small>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div role="tabpanel" id="panel-ia" aria-labelledby="tab-ia" hidden={tab !== 'ia'} className="stack">
+            <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} disabled={off} ai={ai} onAi={setAi} />
+            <details className="fold" data-testid="fold-gancho">
+              <summary>Gancho: a frase que abre o vídeo</summary>
+              <HookPanel plan={plan} words={ctx.words} onHook={(h) => apply((p) => applyHook(p, ctx, h))} disabled={off} />
+            </details>
+            <details className="fold" data-testid="fold-trechos">
+              <summary>Mudar só um pedaço do vídeo</summary>
+              <p className="hint">Arraste na faixa Trechos da linha do tempo, ou use o botão. O pedido do pedaço aparece à direita.</p>
+              <button type="button" onClick={selectFromNow} data-testid="range-new" disabled={off}>
+                <SquareDashedMousePointer size={15} aria-hidden /> Escolher 3 s a partir de agora ({fmt(time)})
+              </button>
+              {plan.ranges.length > 0 && (
+                <ul className="range-list" aria-label="Trechos ajustados">
+                  {plan.ranges.map((r) => (
+                    <li key={r.id}>
+                      <button
+                        type="button"
+                        className={`range-item ${r.locked ? 'locked' : ''}`}
+                        aria-pressed={selectedRange === r.id}
+                        onClick={() => {
+                          setSelectedCut(null);
+                          setSelectedRange(r.id);
+                          setSelection(null);
+                        }}
+                      >
+                        <span className="range-dot" aria-hidden />
+                        <span>
+                          <b>{r.locked ? 'Travado' : 'Ajustado'}</b> · {fmt1(r.out.start)} a {fmt1(r.out.end)}
+                          <small className="hint">{r.prompt || 'sem pedido'}</small>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </details>
           </div>
           <div role="tabpanel" id="panel-versoes" aria-labelledby="tab-versoes" hidden={tab !== 'versoes'}>
             <VersionsPanel
@@ -760,23 +797,6 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
       <aside className="inspector" ref={inspectorRef} aria-label="Detalhes">
         <h2 className="insp-title">Detalhes</h2>
-        <div className="card" style={{display:'grid',gap:10,marginBottom:12}} data-testid="clip-and-format">
-          <FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off || disabled} />
-          <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n)=>apply(()=>n)} disabled={off || disabled} />
-          <ClipList
-            disabled={off || disabled}
-            clips={plan.clips.map(c => ({ id:c.id, name:c.name || c.id, duration:c.duration, file: new File([], c.name) }))}
-            onReorder={(next) => {
-              const ordered = next.map(n => plan.clips.find(c => c.id === n.id)!).filter(Boolean);
-              apply(p => reorderClipPlan(p, ordered, session.clipWords ?? {}));
-            }}
-            onRemove={(id) => {
-              const remaining = plan.clips.filter(c => c.id !== id);
-              if (remaining.length > 0) apply(p => reorderClipPlan(p, remaining, session.clipWords ?? {}));
-            }}
-            onAdd={onAddClips}
-          />
-        </div>
         {selectedEl ? (
           <ElementInspector
             plan={plan}

@@ -1,10 +1,18 @@
 import { expect, type Page } from '@playwright/test';
 
-/** Abre uma aba do painel de ferramentas (trilho à esquerda no computador, barra de baixo no celular). */
-export async function tab(page: Page, name: 'Modelos' | 'Pedido' | 'Legendas' | 'Gancho' | 'Trechos' | 'Versões' | 'Cores') {
-  const t = page.getByRole('tab', { name, exact: true });
+/**
+ * Abre uma aba do painel de ferramentas (trilho à esquerda no computador, barra de baixo no celular).
+ * v0.19: Pedido, Gancho e Trechos ficam juntos na aba IA; os dois últimos dentro de uma seção recolhível.
+ */
+export async function tab(page: Page, name: 'Modelos' | 'Texto' | 'Elementos' | 'Legendas' | 'Mídia' | 'IA' | 'Pedido' | 'Gancho' | 'Trechos' | 'Versões' | 'Cores') {
+  const real = name === 'Pedido' || name === 'Gancho' || name === 'Trechos' ? 'IA' : name;
+  const t = page.getByRole('tab', { name: real, exact: true });
   await t.click();
   await expect(t).toHaveAttribute('aria-selected', 'true');
+  if (name === 'Gancho' || name === 'Trechos') {
+    const fold = page.getByTestId(name === 'Gancho' ? 'fold-gancho' : 'fold-trechos');
+    if ((await fold.getAttribute('open')) === null) await fold.locator('summary').click();
+  }
 }
 
 /** Corrige uma legenda na transcrição: clica na legenda, troca o texto e confirma com Enter. */

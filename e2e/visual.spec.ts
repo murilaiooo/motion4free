@@ -32,11 +32,14 @@ test('primeira tela: promessa, área para soltar o vídeo, privacidade e exemplo
 
 test('todas as ferramentas ficam a um clique (e pelas setas do teclado)', async ({ page }) => {
   await openVideo(page);
-  const tabs = ['Modelos', 'Pedido', 'Legendas', 'Gancho', 'Trechos', 'Versões', 'Cores'] as const;
+  const tabs = ['Modelos', 'Texto', 'Elementos', 'Legendas', 'Mídia', 'IA', 'Gancho', 'Trechos', 'Versões', 'Cores'] as const;
   const marks: Record<(typeof tabs)[number], string> = {
     Modelos: 'style-pop',
-    Pedido: 'brief-input',
+    Texto: 'add-text-título',
+    Elementos: 'add-shape-arrow',
     Legendas: 'transcript',
+    Mídia: 'clip-and-format',
+    IA: 'brief-input',
     Gancho: 'hooks',
     Trechos: 'range-new',
     Versões: 'version-name',
