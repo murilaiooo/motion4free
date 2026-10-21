@@ -3,14 +3,18 @@
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
 ## v0.26.0 — 21/10/2026
-**Música de fundo e legenda em arquivo (.srt).** Primeiras melhorias da comparação com o OpenCut, na ordem escolhida pelo responsável ([ADR-0026](decisions/0026-musica-e-legenda-srt.md)). Implementado; não testado nesta sessão.
+**Música de fundo, legenda .srt, escolher vários, animação por pontos e máscara.** Melhorias da comparação com o OpenCut, todas numa versão, a pedido do responsável ([ADR-0026](decisions/0026-musica-e-legenda-srt.md), [ADR-0027](decisions/0027-varios-pontos-mascara.md)). Implementado; não testado nesta sessão.
 
 - Nova aba **Áudio** no editor: escolha uma música do aparelho (MP3, M4A, WAV ou OGG, até 60 MB). Ela toca por baixo da fala na prévia e no MP4, entra e sai suave e não se repete.
 - Volume da música e "abaixar a música quando alguém fala" (ligado por padrão). Trocar e tirar a música também entram no desfazer e nas versões.
 - A música fica guardada no projeto: ao reabrir, ela volta junto. Se o arquivo sumir, aparece o aviso M4F-205.
 - Vídeo sem som com música agora sai com áudio.
 - Aba **Legendas** ganha "Baixar legenda (.srt)": as legendas do vídeo editado, já corrigidas e nos tempos dos cortes, para o YouTube ou outro editor.
-- Códigos novos: M4F-203, M4F-204, M4F-205, M4F-206 (música) e M4F-523 (sem legenda para baixar).
+- **Escolher vários** na linha do tempo: Ctrl ou Shift + clique, ou o botão **Vários**, escolhe vários pedaços e elementos; Delete apaga todos de uma vez (uma entrada no desfazer) e o resto do vídeo encosta. Copiar com vários pedaços copia todos, na ordem.
+- Trecho marcado na faixa Trechos também pode ser apagado com Delete: só aquela parte sai e o resto encosta.
+- **Animação por pontos** (keyframes) em textos, títulos, emojis e formas: marque um ponto, vá para outro instante e arraste o elemento no vídeo; ele anda, cresce, gira e muda de opacidade sozinho entre os pontos. Cada ponto tem opacidade e curva (suave ou reta), e os pontos aparecem como losangos na linha do tempo.
+- **Máscara do vídeo** (aba Mídia): o vídeo aparece só dentro de um círculo, retângulo, coração, estrela ou losango, com tamanho, posição, cantos, borda e cor de fundo. Legendas e textos ficam por cima.
+- Códigos novos: M4F-203, M4F-204, M4F-205, M4F-206 (música), M4F-523 (sem legenda para baixar), M4F-524 (limite de pontos), M4F-525 (apagar todos os pedaços) e M4F-526 (vários itens com elemento ao copiar ou duplicar).
 
 ## v0.25.1 — 21/10/2026
 **Configuração com exemplos animados.** Pedido do responsável: as prévias do passo "Visual" estavam minúsculas e iguais, e "Palavra em destaque" e "Discreta" pareciam a mesma coisa. Implementado; não testado nesta sessão.

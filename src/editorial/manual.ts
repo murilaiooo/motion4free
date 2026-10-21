@@ -4,6 +4,7 @@ import {
   EMPTY_SCENE_EDIT,
   IDENTITY_OFFSET,
   MAX_ADDED,
+  MAX_KEYS,
   MAX_TRACK,
   SCALE_LIMITS,
   TEXT_MAX,
@@ -16,6 +17,7 @@ import {
   type AddedKind,
   type CaptionEdit,
   type Framing,
+  type Keyframe,
   type ManualEdits,
   type Offset,
   type Placement,
@@ -30,6 +32,7 @@ import { outputDuration } from '../engine/timeline';
 import { clipAt, clipLayout } from '../engine/clips';
 import { SCENE_TEXT_MAX, TEXT_SCENES, findElement, outToSrc, resolvePlan, sceneText, type ElementRef } from './elements';
 import { MIN_KEEP_SEC, editCaptionText, withSegments, type EditContext } from './ops';
+import { keyAt, keyedPose } from '../render/keyframes';
 
 /**
  * Operações da edição manual (v0.13, ADR-0018). Todas puras: recebem o plano e devolvem outro, ou o
@@ -127,9 +130,9 @@ export function patchCaptionLook(plan: EditPlan, scope: Scope, key: string | nul
 }
 
 /** Posição de qualquer elemento: legenda (escopo), cena gerada (deslocamento) ou adicionado (posição). */
-export function setElementPlacement(plan: EditPlan, ref: ElementRef, value: Placement | Offset | null, scope: Scope = 'all'): EditPlan {
+export function setElementPlacement(plan: EditPlan, ref: ElementRef, value: Placement | Offset | null, scope: Scope = 'all', t?: number): EditPlan {
   if (ref.type === 'caption') return setCaptionPlacement(plan, scope, ref.key, value as Placement | null);
-  editable(plan, ref);
+  const at = editable(plan, ref);
   if (ref.type === 'scene') {
     const o = value ? clampOffset(value as Offset) : null;
     const isId = o && o.dx === 0 && o.dy === 0 && o.scale === 1 && o.rotate === 0;
@@ -137,7 +140,77 @@ export function setElementPlacement(plan: EditPlan, ref: ElementRef, value: Plac
   }
   const p = value ? clampPlacement(value as Placement) : null;
   if (!p) return plan;
+  // com pontos de animação (v0.26): mexer no elemento cria ou atualiza o ponto da agulha
+  const el = plan.edits.added.find((a) => a.id === ref.id);
+  if (el?.keys?.length && t !== undefined) {
+    const local = r3(clamp(t - at.start, 0, at.end - at.start));
+    const now = keyedPose(el, local);
+    return putAdded(plan, ref.id, (e) => ({ ...e, keys: upsertKey(e.keys ?? [], { at: local, ...p, opacity: now.opacity, ease: 'smooth' }) }));
+  }
   return putAdded(plan, ref.id, (e) => ({ ...e, placement: p }));
+}
+
+/** Põe o ponto no lugar dele (por tempo); se já há um ponto nesse instante, troca os valores e mantém a curva. */
+function upsertKey(keys: readonly Keyframe[], k: Keyframe): Keyframe[] {
+  const i = keyAt(keys, k.at);
+  if (i >= 0) return keys.map((x, j) => (j === i ? { ...k, at: x.at, ease: x.ease } : x));
+  if (keys.length >= MAX_KEYS) throw new AppError('LIMITE_PONTOS', `${MAX_KEYS} pontos`);
+  return [...keys, k].sort((a, b) => a.at - b.at);
+}
+
+/**
+ * Pontos de animação (v0.26): cria um ponto na agulha com a posição, o tamanho, o giro e a opacidade
+ * que o elemento tem nesse instante. Depois, mexer no elemento em outro instante cria outro ponto.
+ */
+export function addKeyframe(plan: EditPlan, id: string, t: number): EditPlan {
+  const at = editable(plan, { type: 'added', id });
+  const el = plan.edits.added.find((a) => a.id === id);
+  if (!el) throw new AppError('ELEMENTO_SUMIU', id);
+  const local = r3(clamp(t - at.start, 0, at.end - at.start));
+  const now = keyedPose(el, local);
+  return putAdded(plan, id, (e) => ({ ...e, keys: upsertKey(e.keys ?? [], { at: local, ...clampPlacement(now.placement), opacity: r3(now.opacity), ease: 'smooth' }) }));
+}
+
+/** Muda opacidade, curva ou instante de um ponto (o instante fica entre os vizinhos). */
+export function patchKeyframe(plan: EditPlan, id: string, index: number, patch: Partial<Pick<Keyframe, 'opacity' | 'ease' | 'at'>>): EditPlan {
+  const at = editable(plan, { type: 'added', id });
+  return putAdded(plan, id, (e) => {
+    const keys = [...(e.keys ?? [])];
+    const k = keys[index];
+    if (!k) return e;
+    const next = { ...k, ...patch };
+    if (patch.opacity !== undefined) next.opacity = r3(clamp(patch.opacity, 0, 1));
+    if (patch.at !== undefined) {
+      const lo = (keys[index - 1]?.at ?? -0.01) + 0.01;
+      const hi = Math.min(at.end - at.start, (keys[index + 1]?.at ?? Infinity) - 0.01);
+      next.at = r3(clamp(patch.at, Math.max(0, lo), Math.max(0, hi)));
+    }
+    keys[index] = next;
+    return { ...e, keys };
+  });
+}
+
+/** Apaga um ponto; sem pontos, o elemento fica parado onde estava no primeiro ponto. */
+export function removeKeyframe(plan: EditPlan, id: string, index: number): EditPlan {
+  editable(plan, { type: 'added', id });
+  return putAdded(plan, id, (e) => {
+    const keys = (e.keys ?? []).filter((_, i) => i !== index);
+    if (keys.length) return { ...e, keys };
+    const only = e.keys?.[0];
+    const { keys: _gone, ...rest } = e;
+    return only ? { ...rest, placement: clampPlacement({ x: only.x, y: only.y, scale: only.scale, rotate: only.rotate }) } : rest;
+  });
+}
+
+/** Tira todos os pontos: o elemento para onde está no instante `t`. */
+export function clearKeyframes(plan: EditPlan, id: string, t: number): EditPlan {
+  const at = editable(plan, { type: 'added', id });
+  return putAdded(plan, id, (e) => {
+    if (!e.keys?.length) return e;
+    const now = keyedPose(e, clamp(t - at.start, 0, at.end - at.start));
+    const { keys: _gone, ...rest } = e;
+    return { ...rest, placement: clampPlacement(now.placement) };
+  });
 }
 
 /** Aparência de qualquer elemento (texto, cores, fonte, animação). */
@@ -445,6 +518,19 @@ export function deleteSegment(plan: EditPlan, ctx: EditContext, index: number): 
     ctx,
     plan.segments.filter((_, i) => i !== index),
   );
+}
+
+/**
+ * Seleção múltipla (v0.26): apaga vários pedaços e elementos numa entrada só do desfazer. O resto do
+ * vídeo encosta (o vídeo editado é a sequência dos pedaços), e os elementos andam junto com a fala.
+ */
+export function deleteMany(plan: EditPlan, ctx: EditContext, segs: readonly number[], els: readonly ElementRef[]): EditPlan {
+  let next = plan;
+  for (const ref of els) if (findElement(next, ref)) next = deleteElement(next, ref);
+  const drop = new Set(segs.filter((i) => i >= 0 && i < next.segments.length));
+  if (drop.size === 0) return next;
+  if (drop.size >= next.segments.length) throw new AppError('SELECAO_TUDO', `${drop.size} pedaços`);
+  return withSegments(next, ctx, next.segments.filter((_, i) => !drop.has(i)));
 }
 
 /** Puxa a ponta de um pedaço (tempo do original), sem passar dos vizinhos nem deixar menos de 0,1 s. */

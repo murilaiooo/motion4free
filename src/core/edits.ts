@@ -115,6 +115,25 @@ export type Shape = (typeof SHAPES)[number];
 
 /** Camadas de elementos adicionados (v0.18). */
 export const MAX_TRACK = 9;
+
+/**
+ * Pontos de animação (keyframes, v0.26): em cada ponto o elemento tem posição, tamanho, giro e
+ * opacidade; entre dois pontos ele anda de um para o outro. `at` é o tempo desde que o elemento aparece.
+ * `ease` diz como chega neste ponto: em linha reta ou suave (devagar no começo e no fim).
+ */
+export const KEY_EASES = ['linear', 'smooth'] as const;
+export type KeyEase = (typeof KEY_EASES)[number];
+export const MAX_KEYS = 24;
+export const keyframeSchema = z.object({
+  at: time,
+  x: coord,
+  y: coord,
+  scale: z.number().min(SCALE_LIMITS.min).max(SCALE_LIMITS.max),
+  rotate: z.number().min(-180).max(180),
+  opacity: z.number().min(0).max(1),
+  ease: z.enum(KEY_EASES),
+});
+export type Keyframe = z.infer<typeof keyframeSchema>;
 export const addedSchema = z
   .object({
     id: z.string().regex(/^e[0-9]{1,4}$/),
@@ -129,6 +148,12 @@ export const addedSchema = z
     look: textLookSchema,
     /** camada na linha do tempo (v0.18): maior fica por cima; ausente = 0 */
     track: z.number().int().min(0).max(MAX_TRACK).optional(),
+    /** pontos de animação em ordem de tempo (v0.26); ausente ou vazio = parado na `placement` */
+    keys: z
+      .array(keyframeSchema)
+      .max(MAX_KEYS)
+      .refine((k) => k.every((x, i) => i === 0 || x.at > k[i - 1]!.at), { message: 'pontos de animação fora de ordem' })
+      .optional(),
   })
   .refine((e) => e.srcEnd > e.srcStart, { message: 'elemento com fim antes do início' })
   .refine((e) => (e.kind === 'text' ? e.text.trim().length > 0 : e.kind === 'emoji' ? e.emoji !== null : e.shape !== null), { message: 'elemento sem conteúdo' });
@@ -146,6 +171,30 @@ export const framingSchema = z.object({
 export type Framing = z.infer<typeof framingSchema>;
 export const DEFAULT_FRAMING: Framing = { fit: 'fill', scale: 1, x: 0, y: 0 };
 
+/**
+ * Máscara do vídeo (v0.26): só a parte do vídeo dentro da forma aparece; fora fica a cor de fundo.
+ * Centro e tamanho em fração do quadro (tamanho = largura da forma ÷ largura do quadro).
+ */
+export const MASK_SHAPES = ['circle', 'rect', 'heart', 'star', 'diamond'] as const;
+export type MaskShape = (typeof MASK_SHAPES)[number];
+export const maskSchema = z.object({
+  shape: z.enum(MASK_SHAPES),
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  size: z.number().min(0.1).max(1.5),
+  /** altura ÷ largura do retângulo (as outras formas são proporcionais) */
+  aspect: z.number().min(0.3).max(3),
+  /** cantos arredondados do retângulo, em fração do lado menor */
+  radius: z.number().min(0).max(0.5),
+  /** cor de fora da máscara */
+  fill: hex,
+  /** borda da forma (0 = sem borda), px num quadro de 1080 */
+  border: z.number().min(0).max(40),
+  borderColor: hex,
+});
+export type VideoMask = z.infer<typeof maskSchema>;
+export const DEFAULT_MASK: VideoMask = { shape: 'circle', x: 0.5, y: 0.42, size: 0.8, aspect: 1.25, radius: 0.12, fill: '#111111', border: 0, borderColor: '#FFFFFF' };
+
 export const zoomRangeSchema = z
   .object({ srcStart: time, srcEnd: time, scale: z.number().min(ZOOM_LIMITS.min).max(ZOOM_LIMITS.max) })
   .refine((r) => r.srcEnd > r.srcStart, { message: 'zoom com fim antes do início' });
@@ -161,6 +210,8 @@ export const editsSchema = z.object({
   added: z.array(addedSchema).max(MAX_ADDED),
   video: framingSchema,
   zooms: z.array(zoomRangeSchema).max(200),
+  /** máscara do vídeo inteiro (v0.26); ausente ou null = sem máscara */
+  mask: maskSchema.nullable().optional(),
 });
 export type ManualEdits = z.infer<typeof editsSchema>;
 
@@ -208,6 +259,7 @@ export function editsAreEmpty(e: ManualEdits): boolean {
     Object.keys(e.scenes).length === 0 &&
     e.added.length === 0 &&
     e.zooms.length === 0 &&
+    !e.mask &&
     e.video.fit === 'fill' &&
     e.video.scale === 1 &&
     e.video.x === 0 &&

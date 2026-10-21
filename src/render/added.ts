@@ -7,6 +7,7 @@ import { clamp01, easeInCubic, easeOutBounce, progress } from './easing';
 import { applyCase, clearShadow, fillBox, setFont, setShadow, type Frame } from './kit';
 import { wrapText } from './layout';
 import { easeOutExpo, springIn } from './motion';
+import { keyedPose } from './keyframes';
 
 /**
  * Elementos adicionados à mão (v0.13): texto, título, emoji e forma (seta, círculo, retângulo).
@@ -215,14 +216,16 @@ export function drawAddedContent(ctx: Ctx2D, f: Frame, el: AddedElement, pose: A
 /** Desenha um elemento adicionado inteiro no instante `t` (posição, tamanho, giro, entrada e saída). */
 export function drawAdded(ctx: Ctx2D, f: Frame, el: AddedElement, start: number, end: number, t: number, mark?: { begin(): void; end(): void }): void {
   const pose = addedPose(f.style, el, start, end, t);
-  if (pose.alpha <= 0.001 || pose.scale <= 0.001) return;
-  const P = el.placement;
+  // pontos de animação (v0.26): posição, tamanho, giro e opacidade mudam com o tempo
+  const keyed = keyedPose(el, t - start);
+  if (pose.alpha * keyed.opacity <= 0.001 || pose.scale <= 0.001) return;
+  const P = keyed.placement;
   ctx.save();
   ctx.translate(P.x * f.w, P.y * f.h);
   if (P.rotate) ctx.rotate((P.rotate * Math.PI) / 180);
   if (P.scale !== 1) ctx.scale(P.scale, P.scale);
   mark?.begin();
-  ctx.globalAlpha *= pose.alpha;
+  ctx.globalAlpha *= pose.alpha * keyed.opacity;
   if (pose.dx || pose.dy) ctx.translate(pose.dx * f.u, pose.dy * f.u);
   if (pose.rotate) ctx.rotate(pose.rotate);
   if (pose.scale !== 1) ctx.scale(pose.scale, pose.scale);
