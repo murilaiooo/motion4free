@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { AudioLines, Captions, ClipboardPaste, Copy, CopyPlus, Film, Layers, Magnet, Scissors, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { AudioLines, Captions, ClipboardPaste, Copy, CopyPlus, Film, Layers, Magnet, Maximize2, Scissors, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import { peakBetween, type PeakIndex } from '../analysis/waveform';
 import { MAX_TRACK } from '../core/edits';
 import type { EditPlan, TimeRange } from '../core/types';
@@ -53,6 +53,27 @@ const SNAP_PX = 10;
 const DRAG_PX = 4;
 const MAX_ROWS = 3;
 
+/** Altura das faixas de vídeo e áudio (v0.25): pequena cabe mais camadas, grande mostra melhor a onda. */
+type TrackSize = 'p' | 'm' | 'g';
+const TRACK_SIZES: Record<TrackSize, { video: number; audio: number; label: string; name: string }> = {
+  p: { video: 32, audio: 36, label: 'P', name: 'pequenas' },
+  m: { video: 44, audio: 52, label: 'M', name: 'médias' },
+  g: { video: 72, audio: 96, label: 'G', name: 'grandes' },
+};
+const TRACK_SIZE_KEY = 'm4f.track-size';
+function loadTrackSize(): TrackSize {
+  try {
+    const v = localStorage.getItem(TRACK_SIZE_KEY);
+    return v === 'p' || v === 'g' ? v : 'm';
+  } catch {
+    return 'm';
+  }
+}
+const typingIn = (el: EventTarget | null) => {
+  const t = el as HTMLElement | null;
+  return !!t && (['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.isContentEditable || !!t.closest?.('[role="separator"]'));
+};
+
 function clock(s: number, step: number): string {
   const m = Math.floor(s / 60);
   const sec = s - m * 60;
@@ -86,6 +107,15 @@ export function EditTimeline(props: Props) {
   const [zoomIdx, setZoomIdx] = useState(0);
   const [viewW, setViewW] = useState(800);
   const [snapOn, setSnapOn] = useState(true);
+  const [trackSize, setTrackSizeState] = useState<TrackSize>(loadTrackSize);
+  const setTrackSize = (v: TrackSize) => {
+    setTrackSizeState(v);
+    try {
+      localStorage.setItem(TRACK_SIZE_KEY, v);
+    } catch {
+      /* sem armazenamento: vale só nesta aba */
+    }
+  };
   const [drag, setDragState] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
   // o arraste guarda a posição na hora e redesenha no máximo uma vez por quadro (arraste leve)
@@ -178,7 +208,7 @@ export function EditTimeline(props: Props) {
       const h = Math.max(dpr, peakBetween(peakIndex, src, src + span) * (H - 2 * dpr));
       g.fillRect(x, mid - h / 2, 1, h);
     }
-  }, [peakIndex, plan.segments, vis]);
+  }, [peakIndex, plan.segments, vis, trackSize]);
 
   function setZoom(next: number) {
     const el = scrollRef.current;
@@ -191,6 +221,35 @@ export function EditTimeline(props: Props) {
       el.scrollLeft = ratio * el.scrollWidth - before;
     });
   }
+
+  // atalhos de zoom: + aproxima, − afasta, 0 mostra o vídeo inteiro (fora de campos de texto e janelas)
+  const zoomRef = useRef({ zoomIdx, setZoom });
+  zoomRef.current = { zoomIdx, setZoom };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || typingIn(e.target) || e.isComposing || document.querySelector('[aria-modal="true"]')) return;
+      const z = zoomRef.current;
+      if (e.key === '+' || e.key === '=') z.setZoom(z.zoomIdx + 1);
+      else if (e.key === '-' || e.key === '_') z.setZoom(z.zoomIdx - 1);
+      else if (e.key === '0') z.setZoom(0);
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // o que foi escolhido na prévia (ou no painel) aparece na linha do tempo: com zoom, rola até ele
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || zoom === 1) return;
+    const target = el.querySelector<HTMLElement>('.etl-seg.selected, .etl-chip.selected');
+    if (!target) return;
+    const a = target.getBoundingClientRect();
+    const v = el.getBoundingClientRect();
+    if (a.right < v.left + 24 || a.left > v.right - 24) el.scrollLeft += a.left - v.left - v.width * 0.25;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSeg, selectedEl]);
 
   const tAt = (clientX: number) => {
     const r = lanesRef.current?.getBoundingClientRect();
@@ -366,7 +425,8 @@ export function EditTimeline(props: Props) {
   const { rowCount } = layout;
   const captions = useMemo(() => resolvePlan(plan).captions, [plan]);
   const layerIds = Array.from({ length: layout.layers }, (_, k) => layout.layers - 1 - k);
-  const tpl = `22px ${layerIds.map(() => '26px').join(' ')} ${rowCount * 24 - 2}px 44px 52px 26px 24px`;
+  const sizes = TRACK_SIZES[trackSize];
+  const tpl = `22px ${layerIds.map(() => '26px').join(' ')} ${rowCount * 24 - 2}px ${sizes.video}px ${sizes.audio}px 26px 24px`;
 
   const elRange = (ref: ElementRef, start: number, end: number) => {
     if (drag?.kind !== 'el' || !sameRef(drag.ref, ref)) return { start, end };
@@ -463,14 +523,25 @@ export function EditTimeline(props: Props) {
           </button>
         </div>
         <div className="tl-zoom">
-          <button className="sm icon ghost" onClick={() => setZoom(zoomIdx - 1)} disabled={zoomIdx === 0} aria-label="Diminuir zoom da linha do tempo" data-tip="Diminuir zoom">
+          <button className="sm icon ghost" onClick={() => setZoom(zoomIdx - 1)} disabled={zoomIdx === 0} aria-label="Diminuir zoom da linha do tempo" data-tip="Diminuir zoom (−)" aria-keyshortcuts="-">
             <ZoomOut size={16} />
           </button>
           <input type="range" min={0} max={ZOOMS.length - 1} step={1} value={zoomIdx} onChange={(e) => setZoom(e.target.valueAsNumber)} aria-label="Zoom da linha do tempo" />
-          <button className="sm icon ghost" onClick={() => setZoom(zoomIdx + 1)} disabled={zoomIdx === ZOOMS.length - 1} aria-label="Aumentar zoom da linha do tempo" data-tip="Aumentar zoom">
+          <button className="sm icon ghost" onClick={() => setZoom(zoomIdx + 1)} disabled={zoomIdx === ZOOMS.length - 1} aria-label="Aumentar zoom da linha do tempo" data-tip="Aumentar zoom (+)" aria-keyshortcuts="+">
             <ZoomIn size={16} />
           </button>
           <span className="hint tnum tl-zoom-label">{zoom}×</span>
+          <button className="sm icon ghost" onClick={() => setZoom(0)} disabled={zoomIdx === 0} aria-label="Ver o vídeo inteiro na linha do tempo" data-tip="Ver tudo (0)" aria-keyshortcuts="0" data-testid="tl-zoom-fit">
+            <Maximize2 size={15} />
+          </button>
+          <span className="tl-tools-sep" aria-hidden />
+          <div className="segmented tl-size" role="group" aria-label="Altura das faixas de vídeo e áudio">
+            {(Object.keys(TRACK_SIZES) as TrackSize[]).map((k) => (
+              <button key={k} aria-pressed={trackSize === k} onClick={() => setTrackSize(k)} aria-label={`Faixas ${TRACK_SIZES[k].name}`} data-tip={`Faixas ${TRACK_SIZES[k].name}`} data-testid={`tl-size-${k}`}>
+                {TRACK_SIZES[k].label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div className="tl-body">

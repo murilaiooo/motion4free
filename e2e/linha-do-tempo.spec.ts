@@ -95,3 +95,28 @@ test('a vista Original continua lá e a escolha fica guardada', async ({ page })
   await page.getByTestId('tl-view-edit').click();
   await expect(page.getByTestId('timeline')).toHaveAttribute('data-view', 'edicao');
 });
+
+test('faixas maiores, atalhos de zoom e Esc tira a seleção (v0.25)', async ({ page }) => {
+  await openVideo(page);
+  const video = page.getByTestId('tl-seg-0');
+  const small = (await video.boundingBox())!.height;
+  await page.getByTestId('tl-size-g').click();
+  await expect.poll(async () => (await video.boundingBox())!.height).toBeGreaterThan(small + 10);
+  await expect(page.getByTestId('tl-waveform')).toBeVisible();
+
+  // + aproxima, 0 volta a mostrar tudo
+  await page.getByTestId('ruler').click();
+  await page.keyboard.press('+');
+  await page.keyboard.press('+');
+  await expect(page.getByTestId('tl-zoom-fit')).toBeEnabled();
+  await page.keyboard.press('0');
+  await expect(page.getByTestId('tl-zoom-fit')).toBeDisabled();
+
+  // a escolha da altura fica guardada
+  expect(await page.evaluate(() => localStorage.getItem('m4f.track-size'))).toBe('g');
+
+  await page.getByTestId('tl-seg-0').click();
+  await expect(page.getByTestId('segment-panel')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('segment-panel')).toBeHidden();
+});

@@ -489,7 +489,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         keys.current.remove();
         return;
       }
-      if (k === 'escape' && keys.current.hasSel) {
+      // Esc tira qualquer seleção: pedaço, elemento, corte ou trecho (uma seleção só para prévia e linha do tempo)
+      if (k === 'escape' && keys.current.hasAny) {
         keys.current.clear();
         return;
       }
@@ -514,13 +515,17 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   }, [doUndo, doRedo, togglePlay, seek, disabled, history.present.output.fps]);
 
   // os atalhos leem sempre as ações e a seleção atuais (o ouvinte do teclado não é refeito a cada mudança)
-  const keys = useRef({ ...tl, hasSel: false, clear: () => {} });
+  const keys = useRef({ ...tl, hasSel: false, hasAny: false, clear: () => {} });
   keys.current = {
     ...tl,
     hasSel: selectedSeg !== null || !!selectedEl,
+    hasAny: selectedSeg !== null || !!selectedEl || selectedCut !== null || !!activeSelection || selectedRange !== null,
     clear: () => {
       setSelectedSeg(null);
       setSelectedEl(null);
+      setSelectedCut(null);
+      setSelection(null);
+      setSelectedRange(null);
     },
   };
 
@@ -1020,7 +1025,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <span className="status-keys" aria-label="Atalhos de teclado">
           <span className="kbd">Espaço</span> tocar/pausar <span className="kbd">J</span>
           <span className="kbd">L</span> −1 s/+1 s <span className="kbd">←</span>
-          <span className="kbd">→</span> um quadro <span className="kbd">S</span> dividir <span className="kbd">Ctrl</span>+<span className="kbd">C</span>/<span className="kbd">X</span>/<span className="kbd">V</span> copiar/recortar/colar <span className="kbd">Del</span> apagar <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer
+          <span className="kbd">→</span> um quadro <span className="kbd">S</span> dividir <span className="kbd">Ctrl</span>+<span className="kbd">C</span>/<span className="kbd">X</span>/<span className="kbd">V</span> copiar/recortar/colar <span className="kbd">Del</span> apagar <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer <span className="kbd">Esc</span> tirar seleção <span className="kbd">+</span><span className="kbd">−</span><span className="kbd">0</span> zoom
         </span>
         <span className="status-privacy">Tudo no seu aparelho · nada é enviado</span>
       </footer>
