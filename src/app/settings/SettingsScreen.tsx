@@ -40,7 +40,9 @@ function SettingsScreen({ precision, storage, currentProjectId, onProjectDeleted
   const { section } = useSettingsRoute();
   const body = useRef<HTMLDivElement>(null);
   const current = NAV.find((n) => n.id === section)!;
-  useEffect(() => body.current?.scrollTo?.({ top: 0 }), [section]);
+  useEffect(() => {
+    body.current?.scrollTo?.({ top: 0 });
+  }, [section]);
   return (
     <Dialog title="Configurações" onClose={closeSettings} className="settings" testId="settings-screen">
       <div className="set-layout">

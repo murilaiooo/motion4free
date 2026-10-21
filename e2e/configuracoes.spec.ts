@@ -4,6 +4,8 @@ import { closeSettings, settings, tab } from './ui';
 /** Configurações (v0.27, issue #73): abre de qualquer tela, tem as 6 seções e não mexe no projeto aberto. */
 
 test('Configurações abre no início com as seis seções explicadas', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('/');
   await page.getByTestId('open-settings').click();
   await expect(page.getByTestId('settings-screen')).toBeVisible();
@@ -16,9 +18,18 @@ test('Configurações abre no início com as seis seções explicadas', async ({
   await settings(page, 'sobre');
   await expect(page.getByTestId('settings-version')).toContainText(/^v\d+\.\d+\.\d+$/);
   await closeSettings(page);
+  // Regressão #78: ao trocar seção, o efeito de scroll não pode lançar
+  // "destroy is not a function" e desmontar toda a aplicação.
+  await page.getByTestId('open-settings').first().click();
+  await settings(page, 'transcricao');
+  await expect(page.getByTestId('settings-screen')).toBeVisible();
+  await closeSettings(page);
+  expect(pageErrors).toEqual([]);
 });
 
 test('a mesa fica só com edição e Configurações não perde o projeto aberto', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('/');
   await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
   const duration = page.getByTestId('out-duration');
@@ -38,4 +49,5 @@ test('a mesa fica só com edição e Configurações não perde o projeto aberto
   await expect(page.getByTestId('storage-total')).toBeVisible({ timeout: 30_000 });
   await closeSettings(page);
   await expect(duration).toHaveText(before!);
+  expect(pageErrors).toEqual([]);
 });
