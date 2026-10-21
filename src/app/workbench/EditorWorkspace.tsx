@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
-import { Columns3, PanelLeftClose, PanelRightClose, RotateCcw } from 'lucide-react';
+import { PanelLeftClose, PanelRightClose, RotateCcw } from 'lucide-react';
 import { clampWorkbenchLayout, DEFAULT_LAYOUT, LAYOUT_KEY, parseWorkbenchLayout, resizeWorkbench, type ResizePane, type WorkbenchLayout } from './layout';
 import './workbench.css';
 
@@ -14,17 +14,17 @@ function initialLayout(): WorkbenchLayout {
   try { return parseWorkbenchLayout(localStorage.getItem(LAYOUT_KEY)); } catch { return { ...DEFAULT_LAYOUT }; }
 }
 
+/** Botões da mesa sempre visíveis na barra do topo (regra do app: nada escondido em menu). */
 export function WorkspaceControls() {
   const workspace = useContext(Workspace);
   if (!workspace) return null;
   const { layout, setLayout, message } = workspace;
-  return <details className="wb-menu"><summary className="btn ghost icon" aria-label="Layout da mesa" data-testid="workspace-menu"><Columns3 size={17} aria-hidden /></summary><div className="wb-menu-body">
-    <p className="eyebrow">ÁREA DE TRABALHO</p>
-    <button className="ghost sm" aria-pressed={!layout.libraryCollapsed} onClick={() => setLayout({ ...layout, libraryCollapsed: !layout.libraryCollapsed })}><PanelLeftClose size={15} aria-hidden /> {layout.libraryCollapsed ? 'Mostrar biblioteca' : 'Recolher biblioteca'}</button>
-    <button className="ghost sm" aria-pressed={!layout.inspectorCollapsed} onClick={() => setLayout({ ...layout, inspectorCollapsed: !layout.inspectorCollapsed })}><PanelRightClose size={15} aria-hidden /> {layout.inspectorCollapsed ? 'Mostrar propriedades' : 'Recolher propriedades'}</button>
-    <button className="ghost sm" onClick={() => setLayout({ ...DEFAULT_LAYOUT })}><RotateCcw size={15} aria-hidden /> Restaurar layout</button>
-    <p className="hint">Arraste as divisórias ou use as setas do teclado. Duplo clique restaura o painel.</p>{message && <p className="hint" role="status">{message}</p>}
-  </div></details>;
+  return <div className="wb-controls" role="group" aria-label="Layout da mesa" data-testid="workspace-menu">
+    <button className="icon ghost" aria-pressed={!layout.libraryCollapsed} aria-label={layout.libraryCollapsed ? 'Mostrar painel de ferramentas' : 'Recolher painel de ferramentas'} data-tip={layout.libraryCollapsed ? 'Mostrar ferramentas' : 'Recolher ferramentas'} onClick={() => setLayout({ ...layout, libraryCollapsed: !layout.libraryCollapsed })}><PanelLeftClose size={17} aria-hidden /></button>
+    <button className="icon ghost" aria-pressed={!layout.inspectorCollapsed} aria-label={layout.inspectorCollapsed ? 'Mostrar propriedades' : 'Recolher propriedades'} data-tip={layout.inspectorCollapsed ? 'Mostrar propriedades' : 'Recolher propriedades'} onClick={() => setLayout({ ...layout, inspectorCollapsed: !layout.inspectorCollapsed })}><PanelRightClose size={17} aria-hidden /></button>
+    <button className="icon ghost" aria-label="Restaurar layout" data-tip="Restaurar tamanhos dos painéis" onClick={() => setLayout({ ...DEFAULT_LAYOUT })}><RotateCcw size={17} aria-hidden /></button>
+    {message && <span className="sr-only" role="status">{message}</span>}
+  </div>;
 }
 
 export function EditorWorkspace({ children, inspectionKey }: { children: ReactNode; inspectionKey: string }) {

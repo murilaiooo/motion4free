@@ -39,7 +39,8 @@ function validated(plan: EditPlan): EditPlan {
   if (!parsed.success || outputDuration(plan.segments) <= 0) {
     throw new AppError('PRODUCAO_INVALIDA', parsed.success ? 'Timeline vazia' : parsed.error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).slice(0, 4).join('; '));
   }
-  return parsed.data as EditPlan;
+  // o próprio plano, não a cópia do zod: nada de campo perdido nem identidade trocada
+  return plan;
 }
 
 function direction(plan: EditPlan, ctx: EditContext, setup: CreativeSetup): EditPlan {

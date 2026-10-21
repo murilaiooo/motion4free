@@ -92,7 +92,6 @@ test('custom output survives reselecting its platform and an invalid optional ca
   await page.getByTestId('start-creative').click();
   await page.getByRole('button', { name: 'Usar tema claro', exact: true }).click();
   await page.getByRole('button', { name: 'YouTube', exact: true }).click();
-  await page.getByText('Escolher outro formato', { exact: true }).click();
   await page.getByRole('button', { name: 'Quadrado', exact: true }).click();
   await page.getByRole('button', { name: 'YouTube', exact: true }).click();
   await expect(page.getByTestId('setup-output-format')).toContainText('Quadrado · 1:1');

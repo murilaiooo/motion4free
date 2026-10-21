@@ -18,11 +18,8 @@
   .wb-library-hidden .panel, .wb-library-hidden .wb-library, .wb-inspector-hidden .inspector, .wb-inspector-hidden .wb-inspector { visibility: hidden; overflow: hidden; }
   .wb-library-hidden .panel *, .wb-inspector-hidden .inspector * { visibility: hidden; }
 }
-.wb-menu { position: relative; }
-.wb-menu > summary { list-style: none; cursor: pointer; }
-.wb-menu > summary::-webkit-details-marker { display: none; }
-.wb-menu-body { position: absolute; right: 0; top: calc(100% + 12px); width: 250px; background: var(--bg-2); border: 1px solid var(--line-strong); border-radius: var(--r-md); box-shadow: var(--shadow-2); padding: var(--s-4); display: grid; gap: var(--s-3); z-index: 55; }
-.wb-menu-body button { justify-content: flex-start; }
+.wb-controls { display: flex; gap: 2px; padding-right: var(--s-2); margin-right: var(--s-1); border-right: 1px solid var(--line-strong); }
+@media (max-width: 899px) { .wb-controls { display: none; } }
 .wb-drawer-close { display: none; }
 .asset-library { display: grid; gap: var(--s-3); }
 .asset-library-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s-2); }

@@ -8,6 +8,6 @@ export function DraftReview({ editorial, onCustomize, onExport, onRevise, disabl
     <button className="ghost sm" onClick={onRevise} disabled={disabled}>Rever direção criativa</button>
     <div className="draft-metrics"><span><b>{editorial.metrics.outputSeconds.toFixed(1)} s</b>de vídeo</span><span><b>{editorial.metrics.captionCount}</b>legendas</span><span><b>{editorial.metrics.removedSeconds.toFixed(1)} s</b>removidos</span></div>
     <details className="draft-limits" open><summary>O que foi editado</summary><ul className="draft-decisions">{editorial.decisions.map(decision => <li key={decision.kind}>{decision.description}</li>)}</ul></details>
-    {editorial.warnings.length > 0 && <details className="draft-limits"><summary>Revisar antes de publicar · {editorial.warnings.length} observações</summary><ul>{editorial.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul></details>}
+    {editorial.warnings.length > 0 && <details className="draft-limits" open><summary>Revisar antes de publicar · {editorial.warnings.length} observações</summary><ul>{editorial.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul></details>}
   </section>;
 }

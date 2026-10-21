@@ -97,8 +97,8 @@ export function CreativeSetupScreen({ value, onChange, onComplete, onBack, revis
             const format = platform === 'youtube' ? 'horizontal' : platform === 'feed' ? 'retrato' : 'vertical';
             return { id: platform, label, description: PLATFORM_DESCRIPTIONS[platform as CreativeSetup['platform']], visual: <span className={`setup-format-icon ${format}`} />, detail: platform === 'other' ? 'Vertical, horizontal, quadrado ou retrato' : `${OUTPUT_FORMATS[format].ratio} · ${OUTPUT_FORMATS[format].width} × ${OUTPUT_FORMATS[format].height}` };
           })} />
-          <details className="setup-format-adjust"><summary>Escolher outro formato</summary><SetupChoices label="Formato de saída" className="setup-small-choices" value={value.format} onSelect={format => patch({ format: format as CreativeSetup['format'] })} options={FORMAT_IDS.map(format => ({ id: format, label: OUTPUT_FORMATS[format].label, description: OUTPUT_FORMATS[format].ratio }))} /></details>
-          <p className="setup-explanation" data-testid="setup-output-format">Saída escolhida: <strong>{OUTPUT_FORMATS[value.format].label} · {OUTPUT_FORMATS[value.format].ratio}</strong>. Você pode trocar em “Escolher outro formato”.</p>
+          <div className="setup-format-adjust"><p className="setup-format-label">Ou escolha outro formato</p><SetupChoices label="Formato de saída" className="setup-small-choices" value={value.format} onSelect={format => patch({ format: format as CreativeSetup['format'] })} options={FORMAT_IDS.map(format => ({ id: format, label: OUTPUT_FORMATS[format].label, description: OUTPUT_FORMATS[format].ratio }))} /></div>
+          <p className="setup-explanation" data-testid="setup-output-format">Saída escolhida: <strong>{OUTPUT_FORMATS[value.format].label} · {OUTPUT_FORMATS[value.format].ratio}</strong>. Você pode trocar logo acima.</p>
         </>}
         {stepId === 'editing' && <>
           <SetupChoices label="Modo de edição" value={editingMode(value)?.id ?? ''} onSelect={id => patch(EDITING_MODES.find(mode => mode.id === id)!.settings)} options={EDITING_MODES} />

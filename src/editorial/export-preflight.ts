@@ -13,7 +13,7 @@ export interface ExportPreflight {
 
 export function buildExportPreflight(plan: EditPlan, availableSources: ReadonlySet<string>, hasAudio: boolean): ExportPreflight {
   const parsed = editPlanSchema.safeParse(plan);
-  if (!parsed.success) throw new AppError('PRODUCAO_INVALIDA', parsed.error.issues.map(issue => issue.path.join('.')).slice(0, 3).join(', '));
+  if (!parsed.success) throw new AppError('EXPORTACAO_PLANO', parsed.error.issues.map(issue => issue.path.join('.')).slice(0, 3).join(', '));
   const sourceIds = new Set<string>();
   const sources = clipLayout(plan.clips);
   for (const segment of plan.segments) {

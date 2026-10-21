@@ -8,7 +8,7 @@ describe('atomic validated editing transactions', () => {
   it('refuses invalid edits without changing undo or redo state', () => {
     const history = createHistory(original);
     const serialized = JSON.stringify(history);
-    expect(() => commitEdit(history, { ...original, segments: [] })).toThrow('M4F-1016');
+    expect(() => commitEdit(history, { ...original, segments: [] })).toThrow('M4F-522');
     expect(JSON.stringify(history)).toBe(serialized);
   });
   it('records one accepted operation and replays the same full document', () => {

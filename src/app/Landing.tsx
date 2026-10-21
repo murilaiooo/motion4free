@@ -189,8 +189,8 @@ export function Landing({
 
             {!clips && !pendingName && onStart && <div className="lp-creative-start"><button className="primary" onClick={onStart} disabled={busy} data-testid="start-creative"><WandSparkles size={18} aria-hidden /> Começar meu vídeo</button><p>Intenção → direção criativa → seus vídeos → primeiro rascunho</p></div>}
 
-            <details className="lp-quick" open={clips || !!pendingName || !onStart}>
-              <summary>{clips || pendingName ? 'Selecionar arquivo' : 'Já tenho uma direção: usar preferências salvas'}</summary>
+            <div className="lp-quick">
+              {!clips && !pendingName && onStart && <p className="lp-quick-label">Ou solte os vídeos direto aqui: o app usa as últimas escolhas que você fez (ou as escolhas padrão).</p>}
 
             <label
               id="comecar"
@@ -226,7 +226,7 @@ export function Landing({
                 <span className="drop-sub">{clips ? 'ou arraste aqui · de 2 min a 2 horas · MP4, MOV, WebM · use vídeos seus ou com autorização' : 'ou arraste aqui · até 30 clipes de até 3 min · MP4, MOV, WebM'}</span>
               </span>
             </label>
-            </details>
+            </div>
 
             {clips && <FileHelp />}
             {options}

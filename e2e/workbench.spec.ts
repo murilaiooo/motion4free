@@ -26,7 +26,6 @@ test('resizing persists, keyboard works, cancel restores and playback canvas sta
   await page.mouse.up();
   await expect(splitter).toHaveAttribute('aria-valuenow', saved!);
   await expect(canvas).toHaveAttribute('data-mount-proof', 'same-canvas');
-  await page.getByTestId('workspace-menu').click();
   await page.getByRole('button', { name: 'Restaurar layout' }).click();
   await expect(splitter).toHaveAttribute('aria-valuenow', '320');
   await page.screenshot({ path: test.info().outputPath('workbench-1366.png') });
@@ -47,8 +46,7 @@ test('workspace remains bounded at compact widths and survives corrupt preferenc
   await page.getByRole('button', { name: 'Usar tema claro' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.screenshot({ path: test.info().outputPath('workbench-light.png'), animations: 'disabled' });
-  await page.getByTestId('workspace-menu').click();
-  await page.getByRole('button', { name: 'Recolher biblioteca' }).click();
+  await page.getByRole('button', { name: 'Recolher painel de ferramentas' }).click();
   await expect(page.getByRole('separator', { name: 'Largura da biblioteca' })).toBeHidden();
   await page.getByRole('tab', { name: 'Mídia', exact: true }).click();
   await expect(page.getByRole('separator', { name: 'Largura da biblioteca' })).toBeVisible();

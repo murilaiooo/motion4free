@@ -12,20 +12,29 @@ export interface LibraryAsset {
   media: OpenedMedia | null;
 }
 
+/** Uma miniatura por vez: com 30 clipes, 30 decodificadores ao mesmo tempo esgotariam a memória do aparelho. */
+let thumbQueue: Promise<unknown> = Promise.resolve();
+function queued<T>(job: () => Promise<T>): Promise<T> {
+  const run = thumbQueue.then(job, job);
+  thumbQueue = run.catch(() => undefined);
+  return run;
+}
+
 function AssetThumbnail({ media }: { media: OpenedMedia | null }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!media) return;
     let active = true;
     let objectUrl: string | null = null;
-    void (async () => {
+    void queued(async () => {
+      if (!active) return;
       const sink = new CanvasSink(media.video, { width: 240, height: 135, fit: 'contain' });
       const frame = await sink.getCanvas(Math.min(0.5, media.durationSec / 2));
       if (!frame || !active) return;
       const source = frame.canvas;
       const blob = source instanceof HTMLCanvasElement ? await new Promise<Blob | null>(resolve => source.toBlob(resolve, 'image/jpeg', 0.75)) : await source.convertToBlob({ type: 'image/jpeg', quality: 0.75 });
       if (blob && active) { objectUrl = URL.createObjectURL(blob); setUrl(objectUrl); }
-    })().catch(() => undefined);
+    }).catch(() => undefined);
     return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [media]);
   return url ? <img src={url} alt="" loading="lazy" /> : <FileVideo size={24} aria-hidden />;
