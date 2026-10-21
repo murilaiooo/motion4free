@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { tab } from './ui';
+import { pickTheme, tab } from './ui';
 
 /** Novo visual (v0.10): primeira tela, abas, transcrição, galeria de modelos, exportar, atalhos e telas pequenas. */
 
@@ -125,11 +125,11 @@ test('exportar pela barra do topo mostra progresso, o vídeo e o botão de baixa
 
 test('tema claro fica lembrado depois de recarregar', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Usar tema claro' }).click();
+  await pickTheme(page, 'light');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await page.getByRole('button', { name: 'Usar tema escuro' }).click();
+  await pickTheme(page, 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 

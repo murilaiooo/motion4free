@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, CircleAlert, Download, HardDrive, Pause, Play, Scissors, SquarePen, Sparkles, WandSparkles } from 'lucide-react';
+import { ArrowLeft, Check, CircleAlert, Download, Pause, Play, Scissors, SquarePen, Sparkles, WandSparkles } from 'lucide-react';
 import './clips.css';
-import { DEFAULT_LLM } from '../core/llm-models';
 import { AppError, toAppError } from '../core/errors';
 import { FORMAT_IDS, OUTPUT_FORMATS, profileFor, type OutputFormatId } from '../core/formats';
 import { DEFAULT_STYLE, presetById } from '../core/presets';
 import { listTemplates } from '../core/template-gallery';
 import { CLIP_COUNTS, CLIP_LENGTHS, CLIP_LENGTH_IDS, MAX_MOMENTS, clock, findMoments, nudgeMoment, type ClipLength, type Moment } from '../editorial/highlights';
 import { rankMomentsWithAi } from '../editorial/moments-ai';
-import { loadKey } from '../ai/own-key';
 import { VERSION_LABEL } from '../version';
-import { AiOptions, prepareAi, type AiSettings } from './AiOptions';
+import { AiStatusLine, prepareAi, useAiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
 import { ProgressPanel } from './ProgressPanel';
 import { clipJobFraction, type Progress } from '../core/progress';
 import { TemplateThumb } from './Templates';
-import { Logo, ThemeToggle } from './TopBar';
+import { Logo, SettingsButton } from './TopBar';
 import { downloadBlob, prepareClip, renderClip, type ClipSettings, type LongAnalysis, type PreparedClip } from './clip-pipeline';
 
 /**
@@ -74,7 +72,7 @@ export function releaseWork(work: ClipWork | null): void {
 }
 
 /** Avisos da IA (preparar ou ordenar): saem quando a IA é pedida de novo ou a lista é refeita. */
-const notAiNotice = (n: AppError) => !n.key.startsWith('IA_');
+const notAiNotice = (n: AppError) => !n.key.startsWith('IA_') && !n.key.startsWith('PROVEDOR_');
 
 const seconds = (m: Moment) => Math.round(m.end - m.start);
 
@@ -93,7 +91,7 @@ export function ClipMaker({
 }) {
   const { long } = work;
   const templates = useMemo(listTemplates, []);
-  const [ai, setAi] = useState<AiSettings>(() => ({ mode: 'regras', model: DEFAULT_LLM, key: loadKey() }));
+  const ai = useAiSettings();
   const [aiBusy, setAiBusy] = useState<Progress | null>(null);
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
   const [opening, setOpening] = useState(false);
@@ -246,10 +244,7 @@ export function ClipMaker({
           <button className="ghost" onClick={onBack} disabled={working} data-testid="clips-back">
             <ArrowLeft size={16} aria-hidden /> Início
           </button>
-          <button className="ghost" onClick={onStorage} aria-label="Armazenamento">
-            <HardDrive size={16} aria-hidden /> <span className="hide-sm">Armazenamento</span>
-          </button>
-          <ThemeToggle />
+          <SettingsButton />
         </nav>
       </header>
 
@@ -317,7 +312,7 @@ export function ClipMaker({
             </select>
           </div>
           <div className="clips-ai">
-            <AiOptions settings={ai} onChange={setAi} />
+            <AiStatusLine />
             {ai.mode !== 'regras' && (
               <button className="sm" onClick={() => void askAi()} disabled={working || work.items.length < 2} data-testid="clips-ask-ai">
                 <Sparkles size={15} aria-hidden /> Pedir para a IA escolher e dar títulos

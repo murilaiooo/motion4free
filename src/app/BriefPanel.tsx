@@ -5,7 +5,7 @@ import type { EditPlan, Word } from '../core/types';
 import { interpretLayered } from '../editorial/ai-brief';
 import { findHooks } from '../editorial/hooks';
 import { Check, Sparkles } from 'lucide-react';
-import { AiOptions, prepareAi, type AiSettings } from './AiOptions';
+import { AiStatusLine, prepareAi, useAiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
 import { ProgressPanel } from './ProgressPanel';
 import type { Progress } from '../core/progress';
@@ -24,7 +24,8 @@ const hookKey = (h: Pick<Hook, 'wordIds'> | null) => (h ? h.wordIds.join('|') : 
  * "O que você quer?": pedido por texto, o que foi aplicado, o que o app ainda não sabe fazer e a
  * escolha do gancho. Tudo vira operação no plano (entra no desfazer). Sem IA por padrão; a IA é opcional.
  */
-export function BriefPanel({ plan, words, onBrief, disabled, ai, onAi }: { plan: EditPlan; words: Word[]; onBrief: (b: CreativeBrief) => void; disabled: boolean; ai: AiSettings; onAi: (s: AiSettings) => void }) {
+export function BriefPanel({ plan, words, onBrief, disabled }: { plan: EditPlan; words: Word[]; onBrief: (b: CreativeBrief) => void; disabled: boolean }) {
+  const ai = useAiSettings();
   const [text, setText] = useState(plan.brief.prompt);
   const [busy, setBusy] = useState<Progress | null>(null);
   const [error, setError] = useState<AppError | null>(null);
@@ -141,7 +142,7 @@ export function BriefPanel({ plan, words, onBrief, disabled, ai, onAi }: { plan:
         </div>
       )}
 
-      <AiOptions settings={ai} onChange={onAi} />
+      <AiStatusLine />
     </section>
   );
 }

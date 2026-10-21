@@ -123,7 +123,7 @@ export function ProjectsList(props: Props) {
         <span className="hint tnum">
           {projects.length} {projects.length === 1 ? 'projeto' : 'projetos'} · {formatBytes(total)}
         </span>
-        <button className="sm ghost" onClick={onStorage}>
+        <button className="sm ghost" onClick={onStorage} data-testid="open-storage">
           <HardDrive size={14} aria-hidden /> Ver armazenamento
         </button>
       </header>

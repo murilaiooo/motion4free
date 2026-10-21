@@ -25,8 +25,9 @@ async function openStorage(page: Page) {
   await expect(page.getByTestId('storage-total')).toBeVisible({ timeout: 30_000 });
 }
 
+/** v0.27: Armazenamento é uma seção de Configurações; fechar é fechar Configurações. */
 async function closeStorage(page: Page) {
-  await page.getByTestId('storage-screen').getByRole('button', { name: 'Fechar' }).first().click();
+  await page.getByTestId('settings-screen').getByRole('button', { name: 'Fechar' }).first().click();
   await expect(page.getByTestId('storage-screen')).toHaveCount(0);
 }
 

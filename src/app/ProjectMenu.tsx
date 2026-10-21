@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FolderOpen, HardDrive, Pencil, Trash2 } from 'lucide-react';
+import { FolderOpen, Pencil, Trash2 } from 'lucide-react';
 import { NAME_MAX } from '../core/project-library';
 import './library.css';
 
@@ -12,15 +12,17 @@ interface Props {
   onReplaceFile?: (f: File) => void;
   onClose: () => void;
   onDelete: () => void;
-  onStorage: () => void;
+  /** não usado desde a v0.27: Armazenamento fica em Configurações (botão no topo) */
+  onStorage?: () => void;
 }
 
 /**
  * Ações do projeto na barra do topo, sempre à vista (v0.20; antes ficavam num menu escondido no nome):
- * nome com lápis para renomear, Meus projetos (fecha; continua salvo), Armazenamento e Apagar.
+ * nome com lápis para renomear, Meus projetos (fecha; continua salvo) e Apagar. Armazenamento mudou para
+ * Configurações na v0.27 (a mesa fica só com o que é do projeto e da edição).
  * "Trocar vídeo" já tem botão próprio na barra.
  */
-export function ProjectMenu({ name, busy, canSave, onRename, onClose, onDelete, onStorage }: Props) {
+export function ProjectMenu({ name, busy, canSave, onRename, onClose, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
 
@@ -61,9 +63,6 @@ export function ProjectMenu({ name, busy, canSave, onRename, onClose, onDelete, 
       <div className="pmenu-actions" role="group" aria-label="Projeto">
         <button className="ghost sm" onClick={onClose} disabled={busy} data-tip="Volta para Meus projetos; este continua salvo" data-testid="menu-close">
           <FolderOpen size={15} aria-hidden /> <span className="hide-sm">Meus projetos</span>
-        </button>
-        <button className="ghost sm" onClick={onStorage} data-tip="Ver e liberar o espaço usado neste computador" data-testid="menu-storage">
-          <HardDrive size={15} aria-hidden /> <span className="hide-sm">Armazenamento</span>
         </button>
         <button className="ghost sm danger" onClick={onDelete} disabled={busy || !canSave} data-tip="Apagar este projeto" aria-label="Apagar projeto" data-testid="menu-delete">
           <Trash2 size={15} aria-hidden /> <span className="hide-sm">Apagar</span>

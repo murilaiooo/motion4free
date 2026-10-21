@@ -1,7 +1,7 @@
 # Catálogo de erros
 
 Cada problema mostra na tela um código `M4F-xxx`. O código-fonte do catálogo é `src/core/errors.ts`.
-Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos, 6xx projeto salvo, versões e armazenamento, 7xx player, 8xx estilo, animações e imagem de referência, 9xx desconhecido, 10xx pedido por texto (geral e por trecho) e IA, 11xx criador de clipes de vídeo longo.
+Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos, 6xx projeto salvo, versões e armazenamento, 7xx player, 8xx estilo, animações e imagem de referência, 9xx desconhecido, 10xx pedido por texto (geral e por trecho) e IA, 11xx criador de clipes de vídeo longo, 12xx configurações, serviços de IA com chave própria e cofre de chaves.
 
 | Código | Mensagem | O que costuma significar |
 |---|---|---|
@@ -116,3 +116,24 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 Erros 3xx são avisos: o vídeo continua sendo editado e exportado sem legendas e sem título.
 Erros M4F-108 e M4F-508 são avisos: o vídeo continua sendo montado e exportado.
 Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
+
+## Configurações e serviços de IA com chave própria (12xx, desde a v0.27.0)
+
+| Código | Mensagem | O que costuma significar |
+|---|---|---|
+| M4F-1201 | Nenhum modelo de IA foi escolhido. Escolha um em Configurações › IA e provedores; desta vez usei as regras. | O modo "Serviço de IA com sua chave" está ligado, mas nenhum modelo foi marcado como "Usar este". O pedido foi feito pelas regras. |
+| M4F-1202 | A chave do serviço de IA não está aberta nesta aba (ela some ao fechar a aba, ou o cofre está trancado). Abra Configurações › IA e provedores; desta vez usei as regras. | Por segurança a chave fica só na memória da aba. Depois de recarregar, cole de novo ou destranque o cofre. |
+| M4F-1203 | Você ainda não autorizou enviar texto para este serviço de IA. Autorize em Configurações › IA e provedores; desta vez usei as regras. | A caixa de autorização do serviço está desmarcada (ou foi revogada em Privacidade e segurança). Nada foi enviado. |
+| M4F-1204 | O serviço de IA não aceitou a chave. Ela pode estar errada, incompleta, apagada ou vencida. Confira a chave em Configurações. | Resposta 401 (ou 400 de chave inválida). A chave nunca aparece no detalhe. |
+| M4F-1205 | A chave foi aceita, mas não tem permissão para este modelo ou recurso (configuração da conta, região ou do próprio serviço). | Resposta 403. Comum quando a organização bloqueia acesso pelo navegador ou o modelo não é liberado para a conta. |
+| M4F-1206 | O serviço de IA pediu para esperar: o limite de uso da sua conta foi atingido por agora. Tente daqui a pouco ou escolha outro modelo. | Resposta 429 sem falta de crédito. O app não repete o pedido sozinho. |
+| M4F-1207 | A conta deste serviço de IA está sem crédito ou saldo para uso por chave (API). Isso é resolvido na conta do serviço, não no Motion4Free. | Resposta 402, ou 429/400 com "insufficient_quota"/"credit balance". Assinatura ChatGPT ou Claude Pro não dá crédito de API. |
+| M4F-1208 | Não foi possível falar com o serviço de IA direto deste navegador. Pode ser falta de internet, uma extensão bloqueando ou o serviço não aceitar conexão direta do navegador. | O fetch falhou antes de haver resposta (rede, bloqueador ou CORS). O navegador não diz qual dos três. |
+| M4F-1209 | O modelo escolhido não existe mais ou não está liberado para a sua chave. Escolha outro em Configurações › IA e provedores. | Resposta 404. Modelos são retirados pelos serviços com o tempo. |
+| M4F-1210 | O serviço de IA demorou demais para responder. Tente de novo ou escolha outro modelo. | Passou do tempo máximo (lista: 20 s; resposta: 45 s). |
+| M4F-1211 | O serviço de IA respondeu com um erro do lado dele. Tente de novo mais tarde. | Resposta 5xx ou outro status inesperado. |
+| M4F-1212 | O serviço respondeu, mas a lista de modelos veio num formato que o app não reconhece. | O serviço mudou o formato da resposta de /models. |
+| M4F-1213 | Senha do cofre errada. As chaves continuam guardadas e trancadas; tente de novo. | A decifragem AES-GCM falhou com a senha digitada. |
+| M4F-1214 | Este navegador não permite guardar chaves cifradas. A chave vale só até fechar a aba. | Sem Web Crypto (página fora de HTTPS) ou sem localStorage (modo privado restrito). |
+| M4F-1215 | A senha do cofre precisa ter pelo menos 8 caracteres. | Senha curta demais ao criar o cofre. |
+| M4F-1216 | O cofre de chaves deste navegador está danificado e não pode ser aberto. Apague o cofre em Privacidade e segurança e conecte as chaves de novo. | O conteúdo guardado em "m4f-cofre" não está no formato esperado. |

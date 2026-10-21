@@ -8,9 +8,9 @@ import { ProgressView, useProgressClock } from './ProgressPanel';
 import { listTemplates } from '../core/template-gallery';
 import { APP_BUILT_AT, VERSION_LABEL } from '../version';
 import { TemplateThumb } from './Templates';
-import { Logo, ThemeToggle } from './TopBar';
+import { Logo, SettingsButton } from './TopBar';
 
-function Header({ onStorage }: { onStorage?: () => void }) {
+function Header(_: { onStorage?: () => void }) {
   return (
     <header className="land-nav">
       <a className="brand" href="./" aria-label="Motion4Free">
@@ -20,12 +20,7 @@ function Header({ onStorage }: { onStorage?: () => void }) {
       <nav className="land-links">
         <a className="hide-sm" href="#como-funciona">Como funciona</a>
         <a href="?galeria">Modelos</a>
-        {onStorage && (
-          <button className="ghost" onClick={onStorage} aria-label="Armazenamento" data-testid="open-storage">
-            <HardDrive size={16} aria-hidden /> <span className="hide-sm">Armazenamento</span>
-          </button>
-        )}
-        <ThemeToggle />
+        <SettingsButton />
       </nav>
     </header>
   );

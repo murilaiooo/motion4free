@@ -253,7 +253,7 @@ export async function deleteItem(deps: StorageDeps, item: StorageItem): Promise<
   return item.bytes ?? 0;
 }
 
-/** Preferências guardadas pelo app no localStorage (tema, precisão da legenda, chave própria). */
+/** Preferências guardadas pelo app no localStorage (tema, escolha de IA, cofre de chaves cifrado, chave antiga do Gemini). */
 export const PREFS_PREFIX = 'm4f-';
 
 /** "Apagar tudo do Motion4Free": projetos, modelos, caches, bancos e preferências desta origem. */
@@ -280,7 +280,8 @@ export async function deleteEverything(deps: StorageDeps): Promise<void> {
   }
   if (deps.prefs) {
     const prefs = deps.prefs;
-    for (const k of prefs.keys().filter((k) => k.startsWith(PREFS_PREFIX))) await attempt(`preferência ${k}`, () => prefs.remove(k));
+    // "m4f." pega a precisão da legenda (m4f.precisaoLegenda), que usa ponto em vez de hífen
+    for (const k of prefs.keys().filter((k) => k.startsWith(PREFS_PREFIX) || k.startsWith('m4f.'))) await attempt(`preferência ${k}`, () => prefs.remove(k));
   }
   if (failed.length) throw new AppError('APAGAR_FALHOU', failed.join('; '));
 }
