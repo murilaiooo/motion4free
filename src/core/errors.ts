@@ -80,6 +80,8 @@ export const ERRORS = {
   PLAYER_FALHOU: { code: 'M4F-701', title: 'Não foi possível tocar a prévia.' },
   PLAYER_CLIPE: { code: 'M4F-702', title: 'A prévia não conseguiu ler um dos clipes; esse pedaço aparece preto na prévia.' },
   FONTE_FALHOU: { code: 'M4F-801', title: 'As fontes do estilo não carregaram; o vídeo usa uma fonte reserva.' },
+  CRIATIVO_GRAFO: { code: 'M4F-806', title: 'O grafo de composição da POC está fora dos limites permitidos.' },
+  CRIATIVO_GPU: { code: 'M4F-807', title: 'A POC não conseguiu carregar o adaptador Three.js ou criar WebGL. Canvas2D continua disponível.' },
   ESTILO_DESCONHECIDO: { code: 'M4F-802', title: 'Este estilo não existe nesta versão do app.' },
   IMAGEM_FALHOU: { code: 'M4F-803', title: 'Não foi possível ler esta imagem. Use uma foto JPG, PNG ou WebP.' },
   IMAGEM_SEM_CORES: { code: 'M4F-804', title: 'A imagem é quase toda preta, branca ou cinza; as cores do estilo foram mantidas.' },

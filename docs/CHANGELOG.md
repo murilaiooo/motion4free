@@ -1,3 +1,7 @@
+## 0.32.0 — UNTESTED / AWAITING QA
+
+- #28: isolated Canvas2D/Three.js comparison implementation with common bounded SceneGraph and absolute-time sampling; no production engine change.
+
 # Histórico de versões
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
