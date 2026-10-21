@@ -68,3 +68,7 @@ Campos adicionais candidatos ao schema existente: `schemaVersion`, `uiLocale`, `
 **Casos de aceite a desenvolver**: campo inválido preserva os demais; versão de preset desconhecida; preset + prompt contraditórios; `none` + cena; texto em pt-BR com UI em inglês; alteração de 12–18s preserva o restante; referência excluída; trecho travado; rollback; modo sem LLM/API; storage bloqueado; link de preset sem dados pessoais. Testes de teclado e leitor de tela são obrigatórios no builder.
 
 Ver [auditoria do commit](../research/updates/2026-10-19-editonny-guide.md) para módulos, versões e limites concretos.
+
+## Precedência implementada em 21/10/2026 — não testada (#27)
+
+`compileCreativeBrief` mantém um único contrato. Proibições/locks e integridade da fala continuam constraints; a referência de cores escolhida conserva a regra do #84. Campos explícitos reconhecidos do prompt prevalecem sobre a base guiada; campos ausentes preservam a base. As opções explícitas de desligar movimento/abertura e política de cortes geram restrição e diagnóstico quando o texto contradiz. Conflitos limitados e legíveis vão para `brief.notes.conflicts` e o resumo real de produção. Links de referência não são tratados como estilo analisado. Ver [handoff #27](../reviews/2026-10-21-issue27-implementation-handoff.md). Comparação criativa humana, mídia autorizada e paridade prévia/export são gates de QA.

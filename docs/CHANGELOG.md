@@ -2,6 +2,12 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.29.2 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#27 — Prompt e opções guiadas compilam com precedência explícita.** Campos reconhecidos do pedido escrito agora prevalecem sobre a base guiada de preset, objetivo, público, tom, ritmo, cores, fonte, legenda, movimento e chamada. Campos não mencionados preservam a escolha guiada. As proibições se somam; desligar movimento/abertura e a política de cortes permanecem restrições explícitas, com conflito explicado.
+
+O resumo usa os conflitos reais do CreativeBrief; referência continua com a precedência já corrigida no #84. Sem contrato paralelo, migração de projeto, reanálise de mídia ou alteração de cenas manuais. Diferença criativa e paridade visual dependem de QA; nenhum teste/build/typecheck/lint foi executado.
+
 ## v0.27.5 — 21/10/2026
 
 **Conexão de provedores sem catálogo de outra conta nem sucesso de fachada (#73, entrega parcial).** Conectar/substituir/remover uma chave invalida o catálogo daquela conta e a escolha antiga de modelo, sem guardar identificador derivado da chave em armazenamento. Uma resposta atrasada de outra chave é descartada; requisições pendentes são canceladas ao trocar de provedor. Os catálogos ficam por até 30 minutos na memória desta aba, separados por revisão opaca da credencial.
