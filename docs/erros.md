@@ -140,3 +140,6 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 | M4F-1217 | O serviço aceitou o teste, mas não enviou uma resposta de texto. Não foi possível confirmar que este modelo funciona. | HTTP 200 sem conteúdo de texto útil. A listagem e a autenticação não comprovam a geração; experimente outro modelo ou peça novamente com mais tokens. |
 
 | M4F-809 | Dataset sem contrato/direitos/splits válidos. | Faltam direitos/anotações, IDs/tempos são inválidos ou origem/pessoa/hash cruza conjuntos. Nenhum dado privado é repetido no erro. |
+
+| M4F-810 | Pacote cego inválido. | Direitos, versões, IDs, referências ou briefing incompatíveis. |
+| M4F-811 | Respostas cegas incompletas/inválidas. | Identificador, notas/evidências/abstenções ou preferências ausentes. |
