@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { Captions, ClipboardPaste, Copy, CopyPlus, Film, Layers, Magnet, Scissors, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { AudioLines, Captions, ClipboardPaste, Copy, CopyPlus, Film, Layers, Magnet, Scissors, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { peakBetween, type PeakIndex } from '../analysis/waveform';
+import { MAX_TRACK } from '../core/edits';
 import type { EditPlan, TimeRange } from '../core/types';
 import { clipAt } from '../engine/clips';
 import { outputDuration, outputToSource } from '../engine/timeline';
@@ -20,9 +22,8 @@ export interface TimelineActions {
 
 interface Props {
   plan: EditPlan;
-  /** duração do original (os picos do áudio cobrem o original inteiro) */
-  durationSec: number;
-  peaks: Float32Array | null;
+  /** áudio do vídeo para a onda real (v0.18), no tempo do original */
+  peakIndex: PeakIndex | null;
   time: number;
   playing: boolean;
   cuts: TimeRange[];
@@ -34,7 +35,8 @@ interface Props {
   onSelectCut: (index: number) => void;
   onTrim: (index: number, edge: 'start' | 'end', src: number) => void;
   onMoveSeg: (from: number, to: number) => void;
-  onRetime: (ref: ElementRef, out: TimeRange) => void;
+  /** novo tempo e/ou nova camada (null = não muda); uma entrada só no desfazer */
+  onRetime: (ref: ElementRef, out: TimeRange | null, track: number | null) => void;
   selection: TimeRange | null;
   selectedRange: string | null;
   onSelection: (out: TimeRange) => void;
@@ -45,16 +47,16 @@ interface Props {
   disabled: boolean;
 }
 
-const ZOOMS = [1, 1.5, 2, 3, 4, 6, 8, 12, 16];
-const STEPS = [0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120];
-const SNAP_PX = 8;
+const ZOOMS = [1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64];
+const STEPS = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120];
+const SNAP_PX = 10;
 const DRAG_PX = 4;
 const MAX_ROWS = 3;
 
 function clock(s: number, step: number): string {
   const m = Math.floor(s / 60);
   const sec = s - m * 60;
-  const ss = step < 1 ? sec.toFixed(1).padStart(4, '0') : String(Math.round(sec)).padStart(2, '0');
+  const ss = step < 0.25 ? sec.toFixed(2).padStart(5, '0') : step < 1 ? sec.toFixed(1).padStart(4, '0') : String(Math.round(sec)).padStart(2, '0');
   return `${m}:${ss}`;
 }
 const secs = (s: number) => `${s.toFixed(1).replace('.', ',')} s`;
@@ -63,7 +65,7 @@ type Drag =
   | { kind: 'scrub' }
   | { kind: 'seg-move'; index: number; x0: number; moved: boolean; t: number; dx: number }
   | { kind: 'seg-trim'; index: number; edge: 'start' | 'end'; x0: number; delta: number }
-  | { kind: 'el'; mode: 'move' | 'start' | 'end'; ref: ElementRef; start: number; end: number; x0: number; delta: number; moved: boolean }
+  | { kind: 'el'; mode: 'move' | 'start' | 'end'; ref: ElementRef; start: number; end: number; x0: number; y0: number; delta: number; dy: number; moved: boolean; track: number | null }
   | { kind: 'range'; from: number; to: number; x0: number };
 
 /**
@@ -77,7 +79,7 @@ export function EditTimeline(props: Props) {
   // os callbacks mais recentes (o arraste começa num render e termina em outro)
   const live = useRef(props);
   live.current = props;
-  const { plan, durationSec, peaks, time, playing, cuts, selectedSeg, selectedEl, onSeek, onSelectSeg, onSelectEl, onSelectCut, actions, disabled } = props;
+  const { plan, peakIndex, time, playing, cuts, selectedSeg, selectedEl, onSeek, onSelectSeg, onSelectEl, onSelectCut, actions, disabled } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const lanesRef = useRef<HTMLDivElement>(null);
   const waveRef = useRef<HTMLCanvasElement>(null);
@@ -86,9 +88,21 @@ export function EditTimeline(props: Props) {
   const [snapOn, setSnapOn] = useState(true);
   const [drag, setDragState] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
-  const setDrag = (d: Drag | null) => {
+  // o arraste guarda a posição na hora e redesenha no máximo uma vez por quadro (arraste leve)
+  const frameRef = useRef(0);
+  const setDrag = (d: Drag | null, now = false) => {
     dragRef.current = d;
-    setDragState(d);
+    if (now || !d) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = 0;
+      setDragState(d);
+      return;
+    }
+    if (!frameRef.current)
+      frameRef.current = requestAnimationFrame(() => {
+        frameRef.current = 0;
+        setDragState(dragRef.current);
+      });
   };
   const zoom = ZOOMS[zoomIdx]!;
   const total = Math.max(0.001, outputDuration(plan.segments));
@@ -112,25 +126,59 @@ export function EditTimeline(props: Props) {
     if (x < el.scrollLeft || x > el.scrollLeft + el.clientWidth - 24) el.scrollLeft = x - el.clientWidth * 0.2;
   }, [time, playing, zoom, total]);
 
-  // forma de onda no tempo do vídeo final (cada coluna lê o áudio do instante do original que aparece ali)
+  // parte visível da linha do tempo (a onda só é desenhada ali, na resolução da tela)
+  const [vis, setVis] = useState({ t0: 0, t1: 1 });
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const lanes = lanesRef.current;
+      if (!lanes) return;
+      const r = lanes.getBoundingClientRect();
+      const v = el.getBoundingClientRect();
+      if (r.width <= 0) return;
+      const t0 = Math.max(0, ((v.left - r.left) / r.width) * total);
+      const t1 = Math.min(total, ((v.right - r.left) / r.width) * total);
+      setVis((old) => (Math.abs(old.t0 - t0) < 1e-4 && Math.abs(old.t1 - t1) < 1e-4 ? old : { t0, t1: Math.max(t0 + 0.001, t1) }));
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [total, zoom, viewW]);
+
+  // onda real: cada coluna da tela lê o maior pico das amostras daquele instante (nítida em qualquer zoom)
   useEffect(() => {
     const canvas = waveRef.current;
-    if (!canvas || !peaks || peaks.length === 0) return;
-    const cols = Math.max(200, Math.min(4000, Math.round(viewW * zoom)));
+    if (!canvas || !peakIndex) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cssW = Math.max(1, canvas.clientWidth);
+    const cssH = Math.max(1, canvas.clientHeight);
+    const cols = Math.round(cssW * dpr);
+    const H = Math.round(cssH * dpr);
     canvas.width = cols;
-    canvas.height = 64;
+    canvas.height = H;
     const g = canvas.getContext('2d');
     if (!g) return;
-    g.clearRect(0, 0, cols, 64);
+    g.clearRect(0, 0, cols, H);
     g.fillStyle = getComputedStyle(canvas).color;
+    const span = (vis.t1 - vis.t0) / cols;
+    const mid = H / 2;
     for (let x = 0; x < cols; x++) {
-      const src = outputToSource(plan.segments, ((x + 0.5) / cols) * total);
+      const t = vis.t0 + x * span;
+      const src = outputToSource(plan.segments, t);
       if (src === null) continue;
-      const p = peaks[Math.min(peaks.length - 1, Math.max(0, Math.floor((src / Math.max(0.001, durationSec)) * peaks.length)))] ?? 0;
-      const h = Math.max(1, p * 64);
-      g.fillRect(x, (64 - h) / 2, 1, h);
+      const h = Math.max(dpr, peakBetween(peakIndex, src, src + span) * (H - 2 * dpr));
+      g.fillRect(x, mid - h / 2, 1, h);
     }
-  }, [peaks, plan.segments, total, durationSec, viewW, zoom]);
+  }, [peakIndex, plan.segments, vis]);
 
   function setZoom(next: number) {
     const el = scrollRef.current;
@@ -186,7 +234,15 @@ export function EditTimeline(props: Props) {
         return setDrag({ ...d, delta });
       }
       const raw = pxToSec(e.clientX - d.x0);
-      const moved = d.moved || Math.abs(e.clientX - d.x0) > DRAG_PX;
+      const moved = d.moved || Math.abs(e.clientX - d.x0) > DRAG_PX || (d.mode === 'move' && Math.abs(e.clientY - d.y0) > DRAG_PX);
+      // elemento adicionado arrastado para cima/baixo muda de camada
+      let track: number | null = null;
+      let dy = 0;
+      if (d.mode === 'move' && d.ref.type === 'added') {
+        const lane = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest?.('[data-track]');
+        track = lane ? Number(lane.getAttribute('data-track')) : null;
+        dy = e.clientY - d.y0;
+      }
       let delta = raw;
       if (d.mode === 'move') {
         delta = Math.min(total - d.end, Math.max(-d.start, raw));
@@ -195,7 +251,7 @@ export function EditTimeline(props: Props) {
         delta = Math.abs(a - delta) <= Math.abs(b - delta) ? a : b;
       } else if (d.mode === 'start') delta = snap(d.start + raw) - d.start;
       else delta = snap(d.end + raw) - d.end;
-      setDrag({ ...d, delta, moved });
+      setDrag({ ...d, delta, moved, track, dy });
     };
     const up = (e: PointerEvent) => {
       const d = dragRef.current;
@@ -225,7 +281,9 @@ export function EditTimeline(props: Props) {
         return;
       }
       if (d.kind === 'el') {
-        if (!d.moved || Math.abs(d.delta) < 1e-3) {
+        const home = d.ref.type === 'added' ? (plan.edits.added.find((a) => a.id === (d.ref as { id: string }).id)?.track ?? 0) : null;
+        const newTrack = d.track !== null && d.track !== home ? d.track : null;
+        if (!d.moved || (Math.abs(d.delta) < 1e-3 && newTrack === null)) {
           live.current.onSelectEl(d.ref);
           live.current.onSelectSeg(null);
           if (time < d.start || time >= d.end) onSeek(Math.min(d.end - 0.01, d.start + 0.01));
@@ -233,7 +291,7 @@ export function EditTimeline(props: Props) {
         }
         const start = d.mode === 'end' ? d.start : d.start + d.delta;
         const end = d.mode === 'start' ? d.end : d.end + d.delta;
-        live.current.onRetime(d.ref, { start, end });
+        live.current.onRetime(d.ref, Math.abs(d.delta) < 1e-3 ? null : { start, end }, newTrack);
         live.current.onSelectEl(d.ref);
       }
     };
@@ -286,17 +344,29 @@ export function EditTimeline(props: Props) {
     return cut >= 0 ? [{ at: offsets[k + 1]!, cut, k: k + 1, len: cuts[cut]!.end - cuts[cut]!.start }] : [];
   });
 
-  const elements = listElements(plan);
-  const rows: number[] = [];
-  const rowEnds: number[] = [];
-  for (const e of elements) {
-    let r = rowEnds.findIndex((end) => end <= e.start + 1e-3);
-    if (r < 0) r = rowEnds.length < MAX_ROWS ? rowEnds.length : rowEnds.indexOf(Math.min(...rowEnds));
-    rowEnds[r] = e.end;
-    rows.push(r);
-  }
-  const rowCount = Math.max(1, rowEnds.length);
-  const captions = resolvePlan(plan).captions;
+  // animações geradas numa faixa (empilhadas quando se cruzam); elementos adicionados nas camadas
+  const layout = useMemo(() => {
+    const all = listElements(plan);
+    const scenes = all.filter((e) => e.ref.type === 'scene');
+    const rows: number[] = [];
+    const rowEnds: number[] = [];
+    for (const e of scenes) {
+      let r = rowEnds.findIndex((end) => end <= e.start + 1e-3);
+      if (r < 0) r = rowEnds.length < MAX_ROWS ? rowEnds.length : rowEnds.indexOf(Math.min(...rowEnds));
+      rowEnds[r] = e.end;
+      rows.push(r);
+    }
+    const trackOf = new Map(plan.edits.added.map((a) => [a.id, a.track ?? 0]));
+    const added = all.filter((e) => e.ref.type === 'added').map((e) => ({ ...e, track: trackOf.get((e.ref as { id: string }).id) ?? 0 }));
+    const top = added.reduce((m, e) => Math.max(m, e.track), -1);
+    // sempre uma camada vazia por cima, para arrastar um elemento até ela
+    const layers = Math.min(MAX_TRACK + 1, top + 2);
+    return { scenes, rows, rowCount: Math.max(1, rowEnds.length), added, layers };
+  }, [plan]);
+  const { rowCount } = layout;
+  const captions = useMemo(() => resolvePlan(plan).captions, [plan]);
+  const layerIds = Array.from({ length: layout.layers }, (_, k) => layout.layers - 1 - k);
+  const tpl = `22px ${layerIds.map(() => '26px').join(' ')} ${rowCount * 24 - 2}px 44px 52px 26px 24px`;
 
   const elRange = (ref: ElementRef, start: number, end: number) => {
     if (drag?.kind !== 'el' || !sameRef(drag.ref, ref)) return { start, end };
@@ -307,8 +377,39 @@ export function EditTimeline(props: Props) {
     if (disabled || e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
-    setDrag({ kind: 'el', mode, ref, start, end, x0: e.clientX, delta: 0, moved: false });
+    setDrag({ kind: 'el', mode, ref, start, end, x0: e.clientX, y0: e.clientY, delta: 0, dy: 0, moved: false, track: null }, true);
   };
+  const chip = (el: (typeof layout.scenes)[number], top: number) => {
+    const r = elRange(el.ref, el.start, el.end);
+    const sel = sameRef(selectedEl, el.ref);
+    const id = el.ref.type === 'added' ? el.ref.id : el.ref.type === 'scene' ? el.ref.key : '';
+    const dragging = drag?.kind === 'el' && drag.moved && sameRef(drag.ref, el.ref);
+    return (
+      <div
+        key={id}
+        role="button"
+        tabIndex={0}
+        className={`etl-chip etl-el kind-${el.kind} ${sel ? 'selected' : ''} ${dragging ? 'dragging' : ''}`}
+        style={{ left: left(r.start), width: width(r.end - r.start), top, transform: dragging && drag?.kind === 'el' && drag.dy ? `translateY(${drag.dy}px)` : undefined }}
+        aria-pressed={sel}
+        aria-label={`${el.label || 'Elemento'}, de ${secs(r.start)} a ${secs(r.end)}`}
+        title={`${el.label}: arraste para os lados para mudar quando aparece${el.ref.type === 'added' ? ', para cima ou para baixo para mudar de camada' : ''}; puxe as pontas para mudar a duração.`}
+        data-testid={`tl-el-${id}`}
+        onPointerDown={(e) => startEl(e, el.ref, el.start, el.end, 'move')}
+        onKeyDown={(e) => keySelect(e, () => onSelectEl(el.ref))}
+      >
+        <span className="etl-chip-text">{el.label}</span>
+        <span className="etl-handle start" aria-hidden onPointerDown={(e) => startEl(e, el.ref, el.start, el.end, 'start')} />
+        <span className="etl-handle end" aria-hidden onPointerDown={(e) => startEl(e, el.ref, el.start, el.end, 'end')} />
+      </div>
+    );
+  };
+  const laneDown = (e: ReactPointerEvent) => {
+    if (e.target !== e.currentTarget) return;
+    onSelectEl(null);
+    onSeek(tAt(e.clientX));
+  };
+
   const keySelect = (e: ReactKeyboardEvent, f: () => void) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -373,13 +474,21 @@ export function EditTimeline(props: Props) {
         </div>
       </div>
       <div className="tl-body">
-        <div className="tl-labels etl-labels" aria-hidden style={{ gridTemplateRows: `22px 60px ${rowCount * 22 + (rowCount - 1) * 2}px 26px 26px` }}>
+        <div className="tl-labels etl-labels" aria-hidden style={{ gridTemplateRows: tpl }}>
           <span className="tl-label" />
+          {layerIds.map((t) => (
+            <span key={t} className={`tl-label ${t === layout.layers - 1 ? 'etl-label-new' : ''}`}>
+              <Layers size={14} /> Camada {t + 1}
+            </span>
+          ))}
+          <span className="tl-label">
+            <Sparkles size={14} /> Animações
+          </span>
           <span className="tl-label">
             <Film size={14} /> Vídeo
           </span>
           <span className="tl-label">
-            <Layers size={14} /> Elementos
+            <AudioLines size={14} /> Áudio
           </span>
           <span className="tl-label">
             <Captions size={14} /> Legendas
@@ -398,12 +507,12 @@ export function EditTimeline(props: Props) {
           }}
         >
           <div className="tl-inner" style={{ width: `${zoom * 100}%` }}>
-            <div className="tl-lanes etl-lanes" ref={lanesRef} style={{ gridTemplateRows: `22px 60px ${rowCount * 22 + (rowCount - 1) * 2}px 26px 26px` }}>
+            <div className="tl-lanes etl-lanes" ref={lanesRef} style={{ gridTemplateRows: tpl }}>
               <div
                 className="tl-ruler"
                 onPointerDown={(e) => {
                   if (e.button !== 0) return;
-                  setDrag({ kind: 'scrub' });
+                  setDrag({ kind: 'scrub' }, true);
                   onSeek(tAt(e.clientX));
                 }}
                 title="Clique ou arraste para ir até um ponto"
@@ -416,6 +525,22 @@ export function EditTimeline(props: Props) {
                 ))}
               </div>
 
+              {layerIds.map((t) => {
+                const target = drag?.kind === 'el' && drag.moved && drag.track === t;
+                const items = layout.added.filter((e) => e.track === t);
+                return (
+                  <div key={`L${t}`} className={`etl-lane etl-layer ${target ? 'drop-target' : ''}`} data-track={t} data-testid={`tl-layer-${t}`} onPointerDown={laneDown}>
+                    {t === layout.layers - 1 && items.length === 0 && <span className="range-lane-label">{t === 0 ? 'Adicione texto, emoji ou forma na prévia; eles aparecem aqui.' : 'Arraste um elemento até aqui para criar uma camada nova por cima.'}</span>}
+                    {items.map((el) => chip(el, 2))}
+                  </div>
+                );
+              })}
+
+              <div className="etl-lane" onPointerDown={laneDown} data-testid="tl-anim">
+                {layout.scenes.length === 0 && <span className="range-lane-label">Sem animações geradas neste modelo.</span>}
+                {layout.scenes.map((el, k2) => chip(el, layout.rows[k2]! * 24))}
+              </div>
+
               <div
                 className="etl-video"
                 onPointerDown={(e) => {
@@ -424,7 +549,6 @@ export function EditTimeline(props: Props) {
                   onSeek(tAt(e.clientX));
                 }}
               >
-                {peaks && <canvas ref={waveRef} className="wave etl-wave" data-testid="tl-waveform" />}
                 {blocks.map(({ s, i, start, len, clip }) => {
                   const z = segmentZoom(plan, i);
                   const moving = drag?.kind === 'seg-move' && drag.moved && drag.index === i;
@@ -442,7 +566,7 @@ export function EditTimeline(props: Props) {
                       onPointerDown={(e) => {
                         if (disabled || e.button !== 0) return;
                         e.preventDefault();
-                        setDrag({ kind: 'seg-move', index: i, x0: e.clientX, moved: false, t: tAt(e.clientX), dx: 0 });
+                        setDrag({ kind: 'seg-move', index: i, x0: e.clientX, moved: false, t: tAt(e.clientX), dx: 0 }, true);
                       }}
                       onKeyDown={(e) =>
                         keySelect(e, () => {
@@ -467,7 +591,7 @@ export function EditTimeline(props: Props) {
                             e.stopPropagation();
                             e.preventDefault();
                             onSelectSeg(i);
-                            setDrag({ kind: 'seg-trim', index: i, edge, x0: e.clientX, delta: 0 });
+                            setDrag({ kind: 'seg-trim', index: i, edge, x0: e.clientX, delta: 0 }, true);
                           }}
                         />
                       ))}
@@ -494,49 +618,14 @@ export function EditTimeline(props: Props) {
                 {slotAt !== null && <span className="etl-drop" style={{ left: left(slotAt) }} aria-hidden />}
               </div>
 
-              <div
-                className="etl-lane"
-                onPointerDown={(e) => {
-                  if (e.target !== e.currentTarget) return;
-                  onSelectEl(null);
-                  onSeek(tAt(e.clientX));
-                }}
-              >
-                {elements.length === 0 && <span className="range-lane-label">Sem títulos ou elementos. Adicione texto, emoji ou forma na prévia.</span>}
-                {elements.map((el, k) => {
-                  const r = elRange(el.ref, el.start, el.end);
-                  const sel = sameRef(selectedEl, el.ref);
-                  const id = el.ref.type === 'added' ? el.ref.id : el.ref.type === 'scene' ? el.ref.key : '';
-                  return (
-                    <div
-                      key={id}
-                      role="button"
-                      tabIndex={0}
-                      className={`etl-chip etl-el kind-${el.kind} ${sel ? 'selected' : ''}`}
-                      style={{ left: left(r.start), width: width(r.end - r.start), top: rows[k]! * 24 }}
-                      aria-pressed={sel}
-                      aria-label={`${el.label || 'Elemento'}, de ${secs(r.start)} a ${secs(r.end)}`}
-                      title={`${el.label}: arraste para mudar quando aparece; puxe as pontas para mudar a duração.`}
-                      data-testid={`tl-el-${id}`}
-                      onPointerDown={(e) => startEl(e, el.ref, el.start, el.end, 'move')}
-                      onKeyDown={(e) => keySelect(e, () => onSelectEl(el.ref))}
-                    >
-                      <span className="etl-chip-text">{el.label}</span>
-                      <span className="etl-handle start" aria-hidden onPointerDown={(e) => startEl(e, el.ref, el.start, el.end, 'start')} />
-                      <span className="etl-handle end" aria-hidden onPointerDown={(e) => startEl(e, el.ref, el.start, el.end, 'end')} />
-                    </div>
-                  );
-                })}
+              <div className="etl-lane etl-audio" onPointerDown={laneDown} data-testid="tl-audio">
+                {blocks.map(({ i, start, len }) => (
+                  <span key={`a${i}`} className={`etl-audio-seg ${selectedSeg === i ? 'selected' : ''}`} style={{ left: left(start), width: width(len) }} aria-hidden />
+                ))}
+                {peakIndex && <canvas ref={waveRef} className="etl-wave" style={{ left: left(vis.t0), width: width(vis.t1 - vis.t0) }} data-testid="tl-waveform" aria-hidden />}
               </div>
 
-              <div
-                className="etl-lane etl-caps"
-                onPointerDown={(e) => {
-                  if (e.target !== e.currentTarget) return;
-                  onSelectEl(null);
-                  onSeek(tAt(e.clientX));
-                }}
-              >
+              <div className="etl-lane etl-caps" onPointerDown={laneDown}>
                 {captions.map((c) => {
                   const ref: ElementRef = { type: 'caption', key: c.key };
                   const r = elRange(ref, c.caption.start, c.caption.end);
@@ -568,7 +657,7 @@ export function EditTimeline(props: Props) {
                 onPointerDown={(e) => {
                   if ((e.target as HTMLElement).closest('button') || e.button !== 0 || disabled) return;
                   const t = tAt(e.clientX);
-                  setDrag({ kind: 'range', from: t, to: t, x0: e.clientX });
+                  setDrag({ kind: 'range', from: t, to: t, x0: e.clientX }, true);
                 }}
                 title="Arraste aqui para selecionar um trecho e pedir uma mudança só nele"
                 data-testid="range-lane"

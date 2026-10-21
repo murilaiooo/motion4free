@@ -113,6 +113,8 @@ export const TEXT_PRESETS = ['text', 'title'] as const;
 export const SHAPES = ['arrow', 'circle', 'box'] as const;
 export type Shape = (typeof SHAPES)[number];
 
+/** Camadas de elementos adicionados (v0.18). */
+export const MAX_TRACK = 9;
 export const addedSchema = z
   .object({
     id: z.string().regex(/^e[0-9]{1,4}$/),
@@ -125,6 +127,8 @@ export const addedSchema = z
     emoji: z.enum(EMOJI_SET).nullable(),
     shape: z.enum(SHAPES).nullable(),
     look: textLookSchema,
+    /** camada na linha do tempo (v0.18): maior fica por cima; ausente = 0 */
+    track: z.number().int().min(0).max(MAX_TRACK).optional(),
   })
   .refine((e) => e.srcEnd > e.srcStart, { message: 'elemento com fim antes do início' })
   .refine((e) => (e.kind === 'text' ? e.text.trim().length > 0 : e.kind === 'emoji' ? e.emoji !== null : e.shape !== null), { message: 'elemento sem conteúdo' });

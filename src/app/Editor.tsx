@@ -1,6 +1,6 @@
 import { planSummary } from '../core/text';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, Captions, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Magnet, MousePointerClick, Palette, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Captions, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Magnet, MousePointerClick, Palette, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, Segment, TimeRange } from '../core/types';
 import { PRESETS } from '../core/presets';
@@ -22,7 +22,7 @@ import type { AiSettings } from './AiOptions';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
 import { PreviewOverlay } from './PreviewOverlay';
-import { copyElement, deleteElement, deleteSegment, duplicateElement, pasteElement, retimeElement, segmentZoom, setElementText, setSegmentZoom, splitAt, trimSegment, type ElementClip } from '../editorial/manual';
+import { copyElement, deleteElement, deleteSegment, duplicateElement, pasteElement, retimeElement, setElementTrack, segmentZoom, setElementText, setSegmentZoom, splitAt, trimSegment, type ElementClip } from '../editorial/manual';
 import { duplicateSegment, insertSegments, moveSegment, segmentOffsets } from '../editorial/sequence';
 import type { ElementRef } from '../editorial/elements';
 import { elementName, findElement, resolvePlan, sceneText, sameRef as sameEl } from '../editorial/elements';
@@ -41,7 +41,7 @@ import { FramingPanel } from './FramingPanel';
 import { clipAt, placeWords, totalDuration } from '../engine/clips';
 import { reorderClipPlan } from '../editorial/clip-ops';
 import { combineAudios } from '../media/multi';
-import { waveformPeaks } from '../analysis/waveform';
+import { buildPeakIndex, waveformPeaks } from '../analysis/waveform';
 import { ClipList } from './ClipList';
 
 export interface Session {
@@ -168,6 +168,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     return combineAudios(shown.clips, Object.fromEntries(session.clipAudios), session.clipSilences);
   }, [session, shown.clips]);
   const peaks = useMemo(() => shownAudio ? waveformPeaks(shownAudio.channels[0]!, 1200, true) : null, [shownAudio]);
+  // onda real da linha do tempo Edição (v0.18): lida das amostras, nítida em qualquer zoom
+  const peakIndex = useMemo(() => (shownAudio?.channels[0] ? buildPeakIndex(shownAudio.channels[0], shownAudio.sampleRate) : null), [shownAudio]);
   const range = selectedRange ? (plan.ranges.find((r) => r.id === selectedRange) ?? null) : null;
   const activeSelection = range ? range.out : selection;
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -715,7 +717,19 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <div className="viewer">
           <div className="canvas-box">
             <canvas ref={canvasRef} data-testid="player-canvas" onClick={togglePlay} />
-            <PreviewOverlay plan={plan} time={time} selected={selectedEl} onSelect={selectEl} onChange={(next) => apply(() => next)} canvasRef={canvasRef} onEditText={setEditingEl} disabled={off} />
+            <PreviewOverlay
+              plan={plan}
+              time={time}
+              selected={selectedEl}
+              onSelect={selectEl}
+              onChange={(next) => apply(() => next)}
+              onPreview={(next) => playerRef.current?.setPlan(next ?? shownRef.current, shownAudio)}
+              onError={setEditError}
+              onEmptyClick={togglePlay}
+              canvasRef={canvasRef}
+              onEditText={setEditingEl}
+              disabled={off || view === 'antes'}
+            />
             {safeZone && (
               <div className="safe-zone" style={{ top: `${SAFE.top}%`, left: `${SAFE.left}%`, right: `${SAFE.right}%`, bottom: `${SAFE.bottom}%` }} aria-hidden>
                 <span>Área segura do Reels</span>
@@ -868,8 +882,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         {tlView === 'edicao' ? (
           <EditTimeline
             plan={plan}
-            durationSec={ctx.durationSec}
-            peaks={peaks}
+            peakIndex={peakIndex}
             time={time}
             playing={playing}
             cuts={cuts}
@@ -885,7 +898,13 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             }}
             onTrim={(i, edge, src) => apply((p) => trimSegment(p, ctx, i, edge, src))}
             onMoveSeg={(from, to) => run((p) => ({ plan: moveSegment(p, ctx, from, to), seg: to }))}
-            onRetime={(ref, out) => apply((p) => retimeElement(p, ref, out))}
+            onRetime={(ref, out, track) =>
+              apply((p) => {
+                let n = out ? retimeElement(p, ref, out) : p;
+                if (track !== null && ref.type === 'added') n = setElementTrack(n, ref.id, track);
+                return n;
+              })
+            }
             selection={activeSelection}
             selectedRange={selectedRange}
             onSelection={(out) => {
@@ -1166,6 +1185,17 @@ function ElementInspector({ plan, refEl, onApply, actions, onClose, onEditText, 
         <div className="edges">
           <SecondsField label="Aparece em (s)" value={at.start} testId="el-start" disabled={disabled} onCommit={(v) => onApply((p) => retimeElement(p, refEl, { start: v, end: at.end }))} />
           <SecondsField label="Some em (s)" value={at.end} testId="el-end" disabled={disabled} onCommit={(v) => onApply((p) => retimeElement(p, refEl, { start: at.start, end: v }))} />
+        </div>
+      )}
+      {refEl.type === 'added' && (
+        <div className="row wrap" style={{ marginTop: 8 }} data-testid="el-layer">
+          <span className="hint">Camada {(plan.edits.added.find((x) => x.id === refEl.id)?.track ?? 0) + 1}</span>
+          <button className="sm" disabled={disabled} onClick={() => onApply((p) => setElementTrack(p, refEl.id, (p.edits.added.find((x) => x.id === refEl.id)?.track ?? 0) + 1))} data-testid="el-layer-up">
+            <ArrowUp size={13} aria-hidden /> Para cima
+          </button>
+          <button className="sm" disabled={disabled || (plan.edits.added.find((x) => x.id === refEl.id)?.track ?? 0) === 0} onClick={() => onApply((p) => setElementTrack(p, refEl.id, (p.edits.added.find((x) => x.id === refEl.id)?.track ?? 0) - 1))} data-testid="el-layer-down">
+            <ArrowDown size={13} aria-hidden /> Para baixo
+          </button>
         </div>
       )}
       <div className="row wrap" style={{ marginTop: 8 }}>

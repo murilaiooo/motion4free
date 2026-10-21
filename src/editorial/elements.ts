@@ -237,7 +237,9 @@ export function resolvePlan(plan: EditPlan): Resolved {
   captions.sort((a, b) => a.caption.start - b.caption.start);
 
   const added: ResolvedAdded[] = [];
-  for (const el of E.added) {
+  // camadas (v0.18): a de número maior é desenhada por cima; na mesma camada vale a ordem da lista
+  const layered = E.added.map((el, i) => ({ el, i })).sort((x, y) => (x.el.track ?? 0) - (y.el.track ?? 0) || x.i - y.i).map((x) => x.el);
+  for (const el of layered) {
     const out = srcToOut(plan, el.srcStart, el.srcEnd);
     if (out.end - out.start >= 0.05) added.push({ el, start: out.start, end: out.end });
   }

@@ -4,6 +4,7 @@ import {
   EMPTY_SCENE_EDIT,
   IDENTITY_OFFSET,
   MAX_ADDED,
+  MAX_TRACK,
   SCALE_LIMITS,
   TEXT_MAX,
   VIDEO_SCALE,
@@ -316,7 +317,7 @@ export function copyElement(plan: EditPlan, ref: ElementRef): ElementClip {
   const seconds = Math.max(MIN_ELEMENT_SEC, at.end - at.start);
   if (ref.type === 'added') {
     const el = plan.edits.added.find((a) => a.id === ref.id)!;
-    return { template: { kind: el.kind, preset: el.preset, text: el.text, emoji: el.emoji, shape: el.shape, placement: el.placement, look: el.look }, seconds };
+    return { template: { kind: el.kind, preset: el.preset, text: el.text, emoji: el.emoji, shape: el.shape, placement: el.placement, look: el.look, track: el.track }, seconds };
   }
   const s = resolvePlan(plan).scenes.find((x) => x.key === ref.key)!;
   const look = s.edit?.look ?? {};
@@ -339,6 +340,16 @@ export function pasteElement(plan: EditPlan, ctx: EditContext, clip: ElementClip
   const id = nextId(plan.edits.added);
   const el: AddedElement = { ...clip.template, id, srcStart: src.srcStart, srcEnd: Math.min(ctx.durationSec, src.srcEnd) };
   return { plan: withEdits(plan, { ...plan.edits, added: [...plan.edits.added, el] }), id };
+}
+
+/** Leva um elemento adicionado para outra camada da linha do tempo (0 = a de baixo). */
+export function setElementTrack(plan: EditPlan, id: string, track: number): EditPlan {
+  const el = plan.edits.added.find((a) => a.id === id);
+  if (!el) throw new AppError('ELEMENTO_SUMIU', id);
+  const t = Math.max(0, Math.min(MAX_TRACK, Math.round(track)));
+  if ((el.track ?? 0) === t) return plan;
+  editable(plan, { type: 'added', id });
+  return putAdded(plan, id, (e) => ({ ...e, track: t }));
 }
 
 /** Camada de um elemento adicionado: frente/trás um passo, ou tudo para frente/trás. */
