@@ -92,9 +92,9 @@ export function withSegments(plan: EditPlan, ctx: EditContext, input: Segment[])
   return reapplyRanges({ ...plan, segments, captions: rebuildCaptions(plan, ctx, segments, plan.style), scenes: rebuildScenes(plan, ctx, segments, plan.style) }, ctx.words);
 }
 
-/** Estilo do vídeo: preset ajustado pelo pedido, pelas cores da imagem de referência e pelo look (que vale mais). */
+/** Ordem explícita: preset → briefing (incluindo cor de marca) → imagem escolhida. Remover a imagem restaura o briefing. */
 export function planStyle(preset: StyleDNA, brief: CreativeBrief, reference: ReferencePalette | null): StyleDNA {
-  return applyLook(applyReference(styleForBrief(preset, brief), reference), brief.look, effectiveForbid(brief));
+  return applyReference(applyLook(styleForBrief(preset, brief), brief.look, effectiveForbid(brief)), reference);
 }
 
 /** Refaz legendas e cenas do vídeo inteiro com o estilo e o pedido atuais (trechos reaplicados por cima). */

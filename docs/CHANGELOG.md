@@ -2,6 +2,13 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.27.3 — 21/10/2026
+
+**Cores de referência no Creative Setup (#84).** Corrigida a ordem de aplicação das cores na composição e nos trechos com estilo próprio. A imagem escolhida depois do briefing agora determina as cores de destaque e a palavra realçada da legenda quando sua cor acompanha a marca; cores de legenda diferentes escolhidas manualmente são preservadas. Ao remover a imagem, retornam as cores do modelo e do pedido, inclusive a cor de marca explícita. A interface explica a prioridade. As regras de contraste da paleta continuam as mesmas.
+
+- Testes unitários: paleta real versus briefing com cor definida, todos os presets, contraste mínimo, trechos com look próprio, remoção e desfazer/refazer.
+- Regressão visual dirigida no Brave com imagem BMP pequena; sem exportação.
+
 ## v0.27.2 — 21/10/2026
 
 **Versões e histórico da composição (#83).** Verificado no Brave: restaurar uma versão anterior remove o título acrescentado depois, desfazer/refazer recuperam o estado anterior e reabrir o projeto mantém o estado restaurado. A correção amplia o painel "O que mudou" para reconhecer elementos manuais, camadas e ajustes de composição (antes podia mostrar "Nada mudou" mesmo com título novo). As versões guardadas agora têm cópia independente do plano, protegida contra futuras mutações acidentais.

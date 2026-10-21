@@ -58,7 +58,8 @@ export function styleForRange(plan: EditPlan, r: RangeEdit): StyleDNA | null {
   const preset = presetById(plan.style.id);
   if (!preset) return null;
   const brief = rangeBrief(plan, r);
-  return applyLook(applyReference(styleForBrief(preset, brief), plan.reference), brief.look, effectiveForbid(brief));
+  // Mesma precedência do vídeo inteiro: a referência escolhida vence as cores do brief também nos trechos.
+  return applyReference(applyLook(styleForBrief(preset, brief), brief.look, effectiveForbid(brief)), plan.reference);
 }
 
 /** Estilo usado para desenhar o instante `t`: o do trecho que contém `t`, se tiver; senão o do vídeo. */

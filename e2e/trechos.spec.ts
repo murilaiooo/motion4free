@@ -16,7 +16,7 @@ interface Scene {
   end: number;
 }
 interface Plan {
-  style: { id: string; palette: { accent: string } };
+  style: { id: string; palette: { accent: string }; captions: { colors: { highlight: string | null } } };
   segments: unknown[];
   captions: { id: string; start: number; end: number }[];
   scenes: Scene[];
@@ -194,14 +194,18 @@ function bmp(): Buffer {
 
 test('cores de uma imagem: aplica com contraste, desfaz e recusa arquivo que não é imagem', async ({ page }) => {
   await openVideo(page);
-  const accent = (await plan(page)).style.palette.accent;
+  const originalStyle = (await plan(page)).style;
+  const accent = originalStyle.palette.accent;
   await tab(page, 'Cores');
   await page.getByTestId('reference-input').setInputFiles({ name: 'logo.bmp', mimeType: 'image/bmp', buffer: bmp() });
   await expect(page.getByTestId('reference-colors')).toBeVisible();
   await expect.poll(async () => (await plan(page)).style.palette.accent).not.toBe(accent);
+  const withRef = (await plan(page)).style;
+  if (originalStyle.captions.colors.highlight === accent) expect(withRef.captions.colors.highlight).toBe(withRef.palette.accent);
   await expect(page.getByTestId('changes-list')).toContainText('Cores tiradas da sua imagem');
   await page.getByTestId('reference-clear').click();
   await expect.poll(async () => (await plan(page)).style.palette.accent).toBe(accent);
+  expect((await plan(page)).style.captions.colors.highlight).toBe(originalStyle.captions.colors.highlight);
 
   await page.getByTestId('reference-input').setInputFiles({ name: 'nada.png', mimeType: 'image/png', buffer: Buffer.from('isto não é imagem') });
   await expect(page.getByTestId('error-M4F-803')).toBeVisible();

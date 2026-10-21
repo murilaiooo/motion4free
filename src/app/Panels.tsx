@@ -194,7 +194,7 @@ export function ReferencePicker({ reference, onReference, disabled }: { referenc
   return (
     <section className="reference stack" aria-label="Cores de uma imagem" data-testid="reference">
       <h3 className="section-title">Cores de uma imagem sua (opcional)</h3>
-      <p className="hint">Escolha uma foto ou logo: as cores de destaque do vídeo passam a ser as dela, sempre com contraste para a legenda continuar legível. A imagem fica só no seu aparelho.</p>
+      <p className="hint">Escolha uma foto ou logo: suas cores de destaque têm prioridade sobre as cores do modelo e do pedido enquanto a imagem estiver selecionada. Para recuperar as cores do pedido, clique em “Voltar às cores do estilo”. O contraste da legenda é preservado. A imagem fica só no seu aparelho.</p>
       <div className="inline-form">
         <label className={`btn ${disabled || busy ? 'disabled' : ''}`}>
           <ImageUp size={15} aria-hidden /> {busy ? 'Lendo a imagem…' : 'Escolher imagem'}
