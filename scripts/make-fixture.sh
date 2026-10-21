@@ -23,3 +23,14 @@ ffmpeg -y -loglevel error -f lavfi -i "color=c=red:size=180x320:rate=15:duration
 ffmpeg -y -loglevel error -f lavfi -i "color=c=blue:size=320x180:rate=15:duration=1.4" \
   -f lavfi -i "sine=frequency=880:sample_rate=48000:duration=1.4" \
   -c:v libvpx-vp9 -b:v 220k -deadline realtime -cpu-used 8 -c:a libopus -shortest e2e/fixtures/clip-blue.webm
+
+# QA NOVO: diferença real de sample rate e de canais (não repete o tom mono 48 kHz já testado).
+# Vorbis mantém 44,1 kHz estéreo; Opus usa 48 kHz mono. Os canais L/R têm amplitudes distintas.
+ffmpeg -y -loglevel error -f lavfi -i "color=c=gray:size=160x90:rate=15:duration=1.3" \
+  -f lavfi -i "sine=frequency=440:sample_rate=44100:duration=1.3" \
+  -f lavfi -i "sine=frequency=660:sample_rate=44100:duration=1.3" \
+  -filter_complex "[1:a]volume=0.65[l];[2:a]volume=0.20[r];[l][r]amerge=inputs=2[a]" \
+  -map 0:v -map "[a]" -c:v libvpx-vp9 -b:v 140k -deadline realtime -cpu-used 8 -c:a libvorbis -ar 44100 -shortest e2e/fixtures/qa-44100-stereo.webm
+ffmpeg -y -loglevel error -f lavfi -i "color=c=green:size=90x160:rate=15:duration=1.1" \
+  -f lavfi -i "sine=frequency=880:sample_rate=48000:duration=1.1" \
+  -map 0:v -map 1:a -ac 1 -c:v libvpx-vp9 -b:v 140k -deadline realtime -cpu-used 8 -c:a libopus -shortest e2e/fixtures/qa-48000-mono.webm
