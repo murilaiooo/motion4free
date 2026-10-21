@@ -2,6 +2,17 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.25.0 — 21/10/2026
+**Publica o trabalho local da v0.24 (configuração por escolhas, mesa ajustável, biblioteca, guias, checagem antes de exportar), revisado, e melhora a linha do tempo.** As v0.24.0 e v0.24.1 foram feitas e testadas só no computador do responsável e não chegaram a ser publicadas; esta versão as inclui. Implementado; não testado nesta sessão.
+
+- Mesa: recolher ferramentas, recolher propriedades e restaurar layout viram botões sempre visíveis no topo (antes ficavam num menu fechado).
+- Primeira tela: a área para soltar vídeos fica sempre à vista, com as últimas escolhas salvas (antes escondida embaixo de um texto clicável). Na configuração, os outros formatos aparecem direto e as observações do rascunho ficam abertas.
+- Linha do tempo: altura das faixas de vídeo e áudio em P, M ou G (fica guardada), botão "ver tudo", atalhos + − 0 para zoom e rolagem automática até o item escolhido na prévia.
+- Esc tira qualquer seleção (pedaço, elemento, corte ou trecho).
+- Códigos de erro próprios: edição recusada pela checagem vira M4F-522 e plano inválido na exportação vira M4F-406 (antes os dois apareciam como M4F-1016).
+- O histórico guarda o próprio plano depois de validá-lo (antes guardava uma cópia que podia perder campos).
+- Biblioteca de mídia gera uma miniatura por vez, para 30 clipes não esgotarem a memória.
+
 ## v0.24.1 — 21/10/2026
 **Configuração por escolhas, sem formulário obrigatório.** Revisão local após feedback do responsável; publicação pendente.
 
