@@ -26,6 +26,7 @@ import { deleteOutRange, duplicateSegment, insertSegments, moveSegment, segmentO
 import type { ElementRef } from '../editorial/elements';
 import { elementName, findElement, resolvePlan, sceneText, sameRef as sameEl } from '../editorial/elements';
 import { ErrorBox } from './ErrorBox';
+import { StageNotices } from './StageNotices';
 import { ProgressView, useProgressClock } from './ProgressPanel';
 import { exportProgress } from '../core/progress';
 import { BriefPanel, HookPanel } from './BriefPanel';
@@ -166,6 +167,7 @@ interface EditorProps {
   onAddClips: (files: File[]) => void;
   /** avisos do app (projeto, transcrição, sem áudio…) */
   notices: ReactNode;
+  noticeCount?: number;
   /** menu do projeto na barra do topo (v0.11: renomear, fechar, apagar, armazenamento) */
   projectMenu?: ReactNode;
   initialReview?: boolean;
@@ -177,7 +179,7 @@ interface EditorProps {
   musicLoading?: boolean;
 }
 
-export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, projectMenu, initialReview = false, music = null, onPickMusic, musicLoading = false }: EditorProps) {
+export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, noticeCount = 0, projectMenu, initialReview = false, music = null, onPickMusic, musicLoading = false }: EditorProps) {
   const plan = history.present;
   const [reviewOpen, setReviewOpen] = useState(initialReview);
   const [directionDraft, setDirectionDraft] = useState<CreativeSetup | null>(null);
@@ -898,13 +900,13 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             <span className="muted summary-detail">{planSummary(plan.segments.length, plan.captions.length, ctx.words.length)}</span>
           </div>
         </div>
-        <div className="stage-notices">
+        <StageNotices count={noticeCount + Number(!!playerError) + Number(!!fontError) + Number(!!emojiError) + Number(!!editError)}>
           {notices}
           {playerError && <ErrorBox error={playerError} kind="warning" />}
           {fontError && <ErrorBox error={fontError} kind="warning" />}
           {emojiError && <ErrorBox error={emojiError} kind="warning" />}
           {editError && <ErrorBox error={editError} kind="error" />}
-        </div>
+        </StageNotices>
         <div className="viewer">
           <div className="canvas-box" style={{ ['--ar' as string]: plan.output.width / plan.output.height }} data-format={`${plan.output.width}x${plan.output.height}`}>
             <canvas ref={canvasRef} data-testid="player-canvas" onClick={togglePlay} />
