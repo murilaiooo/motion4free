@@ -139,3 +139,8 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 | M4F-1216 | O cofre de chaves deste navegador está danificado e não pode ser aberto. Apague o cofre em Privacidade e segurança e conecte as chaves de novo. | O conteúdo guardado em "m4f-cofre" não está no formato esperado. |
 | M4F-1218 | Envio de IA cancelado ou autorização alterada. Conferir a credencial e autorizar um novo pedido; continuar pelas regras. |
 | M4F-1217 | O serviço aceitou o teste, mas não enviou uma resposta de texto. Não foi possível confirmar que este modelo funciona. | HTTP 200 sem conteúdo de texto útil. A listagem e a autenticação não comprovam a geração; experimente outro modelo ou peça novamente com mais tokens. |
+
+## Limites e disponibilidade de IA (#9)
+
+- M4F-1219: limite local de pedidos/texto atingido ou contador inválido. Edição por regras permanece. Conferir limites em Configurações, e conferir o gasto na própria conta de API. Sem novo envio automático.
+- M4F-1220: cooldown por 429 ou circuito após falhas transitórias. Aguardar o prazo mostrado, continuar localmente; trocar chave não contorna o limite do provedor.

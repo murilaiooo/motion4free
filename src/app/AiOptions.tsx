@@ -11,6 +11,7 @@ import { providerCompleter } from '../ai/providers/client';
 import { authorizeRequest } from '../ai/providers/consent';
 import { PROVIDERS, isProviderId, type PricingKind, type ProviderId } from '../ai/providers/registry';
 import type { AiChoice } from '../editorial/ai-brief';
+import { cachedCompletion, clearResponseCache, DEFAULT_AI_POLICY, parseAiPolicy, parseProjectRoutes, parseTaskRoutes, reserveRequest, resetRoutingSession, withoutProvider, type AiPolicy, type AiTask, type ProjectRoutes, type TaskRoutes } from '../ai/routing';
 import { openSettings } from './settings/route';
 
 /**
@@ -30,6 +31,9 @@ export interface AiSettings {
   remote: { id: string; label: string; pricing: PricingKind } | null;
   /** serviços para os quais a pessoa autorizou enviar texto */
   consent: ProviderId[];
+  taskRoutes?: TaskRoutes;
+  projectRoutes?: ProjectRoutes;
+  policy?: AiPolicy;
 }
 
 const PREFS_KEY = 'm4f-ia';
@@ -46,6 +50,9 @@ function read(): AiSettings {
       model: LLM_KEYS.includes(raw.model as LlmKey) ? (raw.model as LlmKey) : DEFAULT_LLM,
       provider: isProviderId(raw.provider) ? raw.provider : null,
       remote,
+      taskRoutes: parseTaskRoutes(raw.taskRoutes),
+      projectRoutes: parseProjectRoutes(raw.projectRoutes),
+      policy: parseAiPolicy(raw.policy),
       consent: Array.isArray(raw.consent) ? raw.consent.filter(isProviderId) : [],
     };
   } catch {
@@ -63,8 +70,28 @@ const subscribe = (l: () => void) => {
 };
 
 onCredentialChange((id) => {
-  if (prefs.provider === id && prefs.remote) setAiSettings({ remote: null });
+  clearResponseCache();
+  setAiSettings({
+    ...(prefs.provider === id ? { remote: null } : {}),
+    taskRoutes: withoutProvider(prefs.taskRoutes ?? {}, id),
+    projectRoutes: Object.fromEntries(Object.entries(prefs.projectRoutes ?? {}).map(([project, routes]) => [project, withoutProvider(routes, id)])),
+  });
 });
+
+let activeAiProject = 'session';
+export function setActiveAiProject(id: string | null): void {
+  activeAiProject = id ?? 'session';
+  listeners.forEach((listener) => listener());
+}
+export function activeAiScope(): string { return activeAiProject; }
+
+function routed(s: AiSettings, task: AiTask, project: string): AiSettings {
+  const choice = s.projectRoutes?.[project]?.[task] ?? s.taskRoutes?.[task];
+  if (!choice) return s;
+  if (choice.kind === 'rules') return { ...s, mode: 'regras' };
+  if (choice.kind === 'local') return { ...s, mode: 'local', model: choice.model };
+  return { ...s, mode: 'provedor', provider: choice.provider, remote: choice.remote };
+}
 
 /** Muda a escolha de IA (e guarda neste navegador, sem nenhuma chave). */
 export function setAiSettings(patch: Partial<AiSettings>): void {
@@ -84,6 +111,7 @@ export function getAiSettings(): AiSettings {
 /** Depois de "Apagar tudo": volta ao padrão (só regras), sem tocar no localStorage já limpo. */
 export function resetAiSettings(): void {
   prefs = DEFAULTS;
+  resetRoutingSession();
   listeners.forEach((l) => l());
 }
 
@@ -95,7 +123,8 @@ export function useAiSettings(): AiSettings {
  * Prepara a IA escolhida. Falha ao carregar a IA do navegador, falta de chave, de modelo ou de autorização
  * não impedem o pedido: devolvem o aviso com código próprio e o pedido segue pelas regras.
  */
-export async function prepareAi(s: AiSettings, setBusy: OnProgress): Promise<{ ai: AiChoice | null; warning: AppError | null }> {
+export async function prepareAi(s: AiSettings, setBusy: OnProgress, task: AiTask = 'creative-brief', project = activeAiProject): Promise<{ ai: AiChoice | null; warning: AppError | null }> {
+  s = routed(s, task, project);
   if (s.mode === 'local') {
     try {
       const capacity = await localModelCapacity();
@@ -108,7 +137,7 @@ export async function prepareAi(s: AiSettings, setBusy: OnProgress): Promise<{ a
       }
       const local = await loadLocalAi(s.model, (f, t) => setBusy(localAiProgress(s.model, f, t)));
       setBusy({ label: 'A IA no navegador está lendo o pedido', phase: 'ia-ler', fraction: null, detail: `pode levar até ${LLM_MODELS[s.model].timeoutSec} s` });
-      return { ai: { complete: local.complete, source: 'ia-local' }, warning: null };
+      return { ai: { complete: (messages) => cachedCompletion({ project, task, provider: 'local', model: s.model, account: 0 }, messages, () => local.complete(messages)), source: 'ia-local' }, warning: null };
     } catch (err) {
       return { ai: null, warning: toAppError(err, 'IA_LOCAL_FALHOU') };
     }
@@ -124,17 +153,22 @@ export async function prepareAi(s: AiSettings, setBusy: OnProgress): Promise<{ a
     const revision = credentialRevision(provider);
     return { ai: { complete: async (messages) => {
       // prepareAi pode ser guardado por uma operação longa: nunca reutilizar chave/autorização revogada.
-      const current = getAiSettings();
+      const current = routed(getAiSettings(), task, project);
       if (credentialRevision(provider) !== revision || getKey(provider) !== key || current.mode !== 'provedor' || current.provider !== provider || current.remote?.id !== model || !current.consent.includes(provider)) throw new AppError('PROVEDOR_CANCELADO');
       const ctrl = new AbortController();
       const cancel = () => ctrl.abort();
       const unsubscribeKey = onCredentialChange((id) => { if (id === provider) cancel(); });
       listeners.add(cancel);
       try {
-        return await providerCompleter(provider, key, model, {
+        const policy = current.policy ?? DEFAULT_AI_POLICY;
+        const response = await cachedCompletion({ project, task, provider, model, account: revision, outputTokens: policy.outputTokens }, messages, () => providerCompleter(provider, key, model, {
           signal: ctrl.signal,
           authorize: (body) => authorizeRequest(provider, model, body, ctrl.signal),
-        })(messages);
+          beforeSend: (body) => reserveRequest(project, body, policy),
+          maxTokens: policy.outputTokens, timeoutMs: policy.timeoutMs,
+        })(messages));
+        if (ctrl.signal.aborted) throw new AppError('PROVEDOR_CANCELADO');
+        return response;
       } finally {
         unsubscribeKey();
         listeners.delete(cancel);
@@ -172,7 +206,7 @@ export function AiStatusLine() {
     <div className={`ai-status ${problem ? 'warn' : ''}`} data-testid="ai-status">
       <Sparkles size={15} aria-hidden />
       <span>
-        <b>IA: {aiLabel(s)}</b>
+        <b>IA: {aiLabel(s)}{Object.keys(s.taskRoutes ?? {}).length || Object.keys(s.projectRoutes ?? {}).length ? ' · com escolhas por tarefa' : ''}</b>
         <small className="hint">
           {problem
             ? `${problem} Enquanto isso, os pedidos usam as regras.`

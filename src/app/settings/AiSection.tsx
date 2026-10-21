@@ -18,13 +18,15 @@ import {
   vaultAvailable,
   vaultState,
 } from '../../ai/credentials/keys';
+import { DEFAULT_AI_POLICY, reserveRequest } from '../../ai/routing';
+import { AiRouting } from './AiRouting';
 import { MIN_PASSWORD } from '../../ai/credentials/vault';
 import { listModels, testModel } from '../../ai/providers/client';
 import { authorizeRequest } from '../../ai/providers/consent';
 import { onCredentialChange } from '../../ai/credentials/keys';
 import { PRICING_LABEL, PROVIDERS, PROVIDER_IDS, keyLooksWrong, priceText, type ModelInfo, type ProviderId } from '../../ai/providers/registry';
 import { ErrorBox } from '../ErrorBox';
-import { LocalModelPicker, setAiSettings, useAiSettings, useWebGpu, type AiMode } from '../AiOptions';
+import { LocalModelPicker, activeAiScope, getAiSettings, setAiSettings, useAiSettings, useWebGpu, type AiMode } from '../AiOptions';
 
 /**
  * Configurações › IA e provedores (v0.27, issue #73): como o app entende os pedidos por texto.
@@ -67,7 +69,7 @@ function PromptDemo() {
   );
 }
 
-export function AiSection() {
+export function AiSection({ currentProjectId }: { currentProjectId?: string | null }) {
   const s = useAiSettings();
   const gpu = useWebGpu();
   return (
@@ -101,6 +103,7 @@ export function AiSection() {
       </div>
       {s.mode === 'local' && LOCAL_AI_ENABLED && <LocalModelPicker />}
       {s.mode === 'provedor' && <ProviderSetup />}
+      <AiRouting projectId={currentProjectId} />
     </div>
   );
 }
@@ -514,6 +517,7 @@ Trecho da fala: "hoje eu vou te mostrar três jeitos de…"`}</pre>
                 testModel(id, key, chosen.id, {
                   signal: ctrl.signal,
                   authorize: (body) => authorizeRequest(id, chosen.id, body, ctrl.signal),
+                  beforeSend: (body) => reserveRequest(activeAiScope(), body, { ...(getAiSettings().policy ?? DEFAULT_AI_POLICY), outputTokens: 128 }),
                 }).then(
                   () => { if (!ctrl.signal.aborted && testedRevision === credentialRevision(id)) setTest({ kind: 'ok' }); },
                   (err) => { if (!ctrl.signal.aborted && testedRevision === credentialRevision(id)) setTest({ kind: 'error', error: toAppError(err, 'PROVEDOR_ERRO') }); },

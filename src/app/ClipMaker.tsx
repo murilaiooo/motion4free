@@ -8,6 +8,7 @@ import { listTemplates } from '../core/template-gallery';
 import { CLIP_COUNTS, CLIP_LENGTHS, CLIP_LENGTH_IDS, MAX_MOMENTS, clock, findMoments, nudgeMoment, type ClipLength, type Moment } from '../editorial/highlights';
 import { rankMomentsWithAi } from '../editorial/moments-ai';
 import { VERSION_LABEL } from '../version';
+import { fingerprint } from '../ai/routing';
 import { AiStatusLine, prepareAi, useAiSettings, setAiSettings } from './AiOptions';
 import { openSettings } from './settings/route';
 import { ErrorBox } from './ErrorBox';
@@ -146,7 +147,9 @@ export function ClipMaker({
     if (working) return;
     setAiBusy({ label: 'Preparando a IA', phase: 'ia-preparar', fraction: null });
     try {
-      const { ai: choice, warning } = await prepareAi(ai, setAiBusy);
+      const source = work.long.file;
+      const project = `clips-${await fingerprint({ name: source.name, size: source.size, modified: source.lastModified })}`;
+      const { ai: choice, warning } = await prepareAi(ai, setAiBusy, 'moment-ranking', project);
       if (!choice) {
         if (warning) onWork((w) => ({ ...w, notices: [...w.notices.filter(notAiNotice), warning] }));
         return;

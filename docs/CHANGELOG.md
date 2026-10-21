@@ -2,6 +2,15 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.29.0 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#9 / complemento #73 — Roteamento explícito por tarefa/projeto e limites locais de IA.** Configurações avançadas permitem herdar a escolha global ou fixar regras, IA local ou modelo remoto já escolhido para pedido geral, revisão de trecho e ranking de clipes. O projeto aberto pode ter escolhas próprias. Trocar/revogar credencial remove escolhas vinculadas à conta anterior.
+
+- Reserva de pedidos e estimativa conservadora de texto antes de cada chamada, após consentimento. Limites por projeto e por sessão, teto de saída e timeout ajustáveis; conexão e reparos também contam. Não é fatura nem garantia de gasto no provedor. Contadores persistem sem conteúdo; armazenamento bloqueado usa só memória da aba.
+- Cache SHA-256 por versão/contexto/modelo/credencial, até 20 respostas por 10 minutos só na memória; pedidos idênticos simultâneos compartilham resultado. Trocar chave ou limpar dados invalida o cache; não salva transcrição nem resposta em localStorage.
+- `429` respeita `Retry-After`; três falhas transitórias abrem circuito temporário. O app não repete nem troca provedor/modelo sozinho. Cota/falha mantém edição por regras.
+- M4F-1219/1220, documentação e roteiro de QA. Nenhum teste, build, typecheck, lint ou execução da aplicação foi realizado.
+
 ## v0.27.6 — 21/10/2026 — IMPLEMENTED — NOT TESTED
 
 **#73 — Autorização para o conteúdo real e revogação imediata.** Cada envio externo, inclusive teste de conexão e reparo de JSON, mostra o corpo completo antes da autorização. O diálogo só guarda o texto enquanto o pedido aguarda a decisão; cancelar mantém o caminho de regras. Trocar/remover chave, trancar cofre ou revogar consentimento cancela operações em andamento e invalida a seleção anterior, inclusive fora do painel IA.

@@ -1,3 +1,4 @@
+import { assertProviderReady, noteProviderFailure, noteProviderSuccess } from '../routing';
 import { AppError } from '../../core/errors';
 import type { AiMessages, Completer } from '../../editorial/ai-brief';
 import { PROVIDERS, allowedUrl, providerErrorKey, sortModels, type HttpRequest, type ModelInfo, type ProviderId } from './registry';
@@ -9,6 +10,7 @@ const MAX_PAGES = 10;
 async function send(id: ProviderId, req: HttpRequest, _key: string, timeoutMs: number, outer?: AbortSignal): Promise<unknown> {
   if (!allowedUrl(id, req.url)) throw new AppError('PROVEDOR_BLOQUEADO', PROVIDERS[id].host);
   if (outer?.aborted) throw new AppError('PROVEDOR_CANCELADO');
+  assertProviderReady(id);
   const ctrl = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => { timedOut = true; ctrl.abort(); }, timeoutMs);
@@ -23,15 +25,18 @@ async function send(id: ProviderId, req: HttpRequest, _key: string, timeoutMs: n
     const text = await res.text();
     if (outer?.aborted) throw new AppError('PROVEDOR_CANCELADO');
     if (!res.ok) {
+      noteProviderFailure(id, res.status, res.headers.get('retry-after'));
       // Não exibir corpo remoto: pode ecoar chave, transcrição ou dados da conta, mesmo truncado.
       throw new AppError(providerErrorKey(res.status, text), `${host} HTTP ${res.status}`);
     }
+    noteProviderSuccess(id);
     try { return JSON.parse(text); }
     catch { throw new AppError('PROVEDOR_LISTA_FALHOU', `${host}: resposta não é JSON`); }
   } catch (err) {
-    if (timedOut) throw new AppError('PROVEDOR_DEMOROU', host);
+    if (timedOut) { noteProviderFailure(id, 0); throw new AppError('PROVEDOR_DEMOROU', host); }
     if (outer?.aborted) throw new AppError('PROVEDOR_CANCELADO');
     if (err instanceof AppError) throw err;
+    noteProviderFailure(id, 0);
     // Exceções de fetch também podem conter URLs ou cabeçalhos; nunca ecoá-las.
     throw new AppError('PROVEDOR_BLOQUEADO', host);
   } finally {
@@ -66,15 +71,21 @@ export async function listModels(id: ProviderId, key: string, signal?: AbortSign
 export interface CompletionOptions {
   signal?: AbortSignal;
   authorize?: (body: string) => Promise<boolean>;
+  beforeSend?: (body: string) => Promise<void>;
+  maxTokens?: number;
+  timeoutMs?: number;
 }
 
 export function providerCompleter(id: ProviderId, key: string, modelId: string, options: CompletionOptions = {}): Completer {
   const spec = PROVIDERS[id];
   return async (messages: AiMessages) => {
     if (options.signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
-    const req = spec.completeRequest(key, modelId, messages);
+    const req = spec.completeRequest(key, modelId, messages, options.maxTokens);
     if (options.authorize && !await options.authorize(req.body ?? '')) throw new AppError('PROVEDOR_CANCELADO');
-    const body = await send(id, req, key, COMPLETE_TIMEOUT_MS, options.signal);
+    if (options.signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
+    assertProviderReady(id);
+    await options.beforeSend?.(req.body ?? '');
+    const body = await send(id, req, key, options.timeoutMs ?? COMPLETE_TIMEOUT_MS, options.signal);
     const text = spec.parseCompletion(body);
     if (!text?.trim()) throw new AppError('IA_RESPOSTA_INVALIDA', spec.host);
     return text;
@@ -87,6 +98,9 @@ export async function testModel(id: ProviderId, key: string, modelId: string, op
   const messages: AiMessages = { system: 'Responda somente com o JSON {"ok":true}.', examples: [], user: 'Teste de conexão do Motion4Free.' };
   const req = spec.completeRequest(key, modelId, messages, 128);
   if (options.authorize && !await options.authorize(req.body ?? '')) throw new AppError('PROVEDOR_CANCELADO');
-  const body = await send(id, req, key, COMPLETE_TIMEOUT_MS, options.signal);
+  if (options.signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
+  assertProviderReady(id);
+  await options.beforeSend?.(req.body ?? '');
+  const body = await send(id, req, key, options.timeoutMs ?? COMPLETE_TIMEOUT_MS, options.signal);
   if (!spec.parseCompletion(body)?.trim()) throw new AppError('PROVEDOR_SEM_TEXTO', spec.host);
 }

@@ -69,7 +69,7 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
     setNotDone([]);
     setBusy({ label: 'Entendendo o pedido', phase: 'pedido', fraction: null });
     try {
-      const prepared = await prepareAi(ai, setBusy);
+      const prepared = await prepareAi(ai, setBusy, 'local-revision');
       const { req, warning: w } = await interpretRangeLayered(t, words, prepared.ai);
       setWarning(w ?? prepared.warning);
       setNotDone(req.unsupported);
