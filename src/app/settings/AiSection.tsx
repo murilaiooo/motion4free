@@ -1,8 +1,9 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Bot, Check, Cpu, ExternalLink, Eye, EyeOff, KeyRound, ListChecks, Lock, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Trash2 } from 'lucide-react';
 import { AppError, toAppError } from '../../core/errors';
 import { LOCAL_AI_ENABLED } from '../../ai/local-ai';
 import {
+  credentialRevision,
   forgetKey,
   getKey,
   isRemembered,
@@ -30,7 +31,9 @@ import { LocalModelPicker, setAiSettings, useAiSettings, useWebGpu, type AiMode 
  */
 
 /** Lista de modelos já buscada nesta aba (sem chave), para não buscar de novo a cada vez que a tela abre. */
-const catalog = new Map<ProviderId, { models: ModelInfo[]; at: number }>();
+const CATALOG_TTL_MS = 30 * 60_000;
+type CatalogEntry = { models: ModelInfo[]; at: number; revision: number };
+const catalog = new Map<ProviderId, CatalogEntry>();
 
 const MODES: { id: AiMode; title: string; text: string; tags: string[]; Icon: typeof Bot }[] = [
   { id: 'regras', title: 'Só regras', text: 'O app reconhece palavras e frases comuns, como “legenda amarela”, “sem emojis” ou “cortes rápidos”. Não precisa de internet nem de cadastro.', tags: ['Grátis', 'Funciona em qualquer computador'], Icon: ListChecks },
@@ -219,11 +222,17 @@ function ProviderPanel({ id }: { id: ProviderId }) {
   const key = getKey(id);
   const [draft, setDraft] = useState('');
   const [show, setShow] = useState(false);
-  const [models, setModels] = useState<ModelInfo[] | null>(() => catalog.get(id)?.models ?? null);
+  const [loaded, setLoaded] = useState<CatalogEntry | null>(() => catalog.get(id) ?? null);
+  const activeRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => activeRequest.current?.abort(), []);
+  const revision = credentialRevision(id);
+  // Uma listagem só pertence à chave que a buscou; trocar/revogar a chave a invalida sem guardar o segredo no cache.
+  const models = loaded?.revision === revision && Date.now() - loaded.at < CATALOG_TTL_MS ? loaded.models : null;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<'todos' | 'gratis' | 'sugeridos'>('sugeridos');
+  const [filter, setFilter] = useState<'todos' | 'gratis' | 'sugeridos'>(() =>
+    catalog.get(id)?.models.some((m) => m.recommended) ? 'sugeridos' : 'todos');
   const [limit, setLimit] = useState(30);
   const [confirmPaid, setConfirmPaid] = useState<string | null>(null);
   const [test, setTest] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'ok' } | { kind: 'error'; error: AppError }>({ kind: 'idle' });
@@ -231,17 +240,33 @@ function ProviderPanel({ id }: { id: ProviderId }) {
   const consent = s.consent.includes(id);
 
   async function load(k: string) {
+    activeRequest.current?.abort();
+    const ctrl = new AbortController();
+    activeRequest.current = ctrl;
+    const requestedRevision = credentialRevision(id);
     setLoading(true);
     setError(null);
     try {
-      const list = await listModels(id, k);
-      catalog.set(id, { models: list, at: Date.now() });
-      setModels(list);
-      if (chosen && !list.some((m) => m.id === chosen.id)) setError(new AppError('PROVEDOR_MODELO_SUMIU', chosen.id));
+      const list = await listModels(id, k, ctrl.signal);
+      // Não mostrar nem guardar resposta atrasada de uma chave substituída ou de um painel já fechado.
+      if (ctrl.signal.aborted || requestedRevision !== credentialRevision(id) || getKey(id) !== k) return;
+      const entry = { models: list, at: Date.now(), revision: requestedRevision };
+      catalog.set(id, entry);
+      setLoaded(entry);
+      // Não abrir o seletor em "Sugeridos" vazio quando a conta só tem modelos sem recomendação.
+      setFilter(list.some((m) => m.recommended) ? 'sugeridos' : 'todos');
+      if (chosen && !list.some((m) => m.id === chosen.id)) {
+        setAiSettings({ remote: null });
+        setTest({ kind: 'idle' });
+        setError(new AppError('PROVEDOR_MODELO_SUMIU', chosen.id));
+      }
     } catch (err) {
-      setError(toAppError(err, 'PROVEDOR_ERRO'));
+      if (!ctrl.signal.aborted && requestedRevision === credentialRevision(id)) setError(toAppError(err, 'PROVEDOR_ERRO'));
     } finally {
-      setLoading(false);
+      if (activeRequest.current === ctrl) {
+        activeRequest.current = null;
+        setLoading(false);
+      }
     }
   }
 
@@ -249,6 +274,15 @@ function ProviderPanel({ id }: { id: ProviderId }) {
     e.preventDefault();
     const k = draft.trim();
     if (!k) return;
+    if (getKey(id) !== k) {
+      // A chave nova pode pertencer a outra conta com modelos, billing e permissões diferentes.
+      activeRequest.current?.abort();
+      catalog.delete(id);
+      setLoaded(null);
+      setTest({ kind: 'idle' });
+      setConfirmPaid(null);
+      setAiSettings({ remote: null });
+    }
     setSessionKey(id, k);
     setDraft('');
     setShow(false);
@@ -262,7 +296,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
     const q = query.trim().toLowerCase();
     return models.filter((m) => {
       if (q && !`${m.label} ${m.id}`.toLowerCase().includes(q)) return false;
-      if (filter === 'gratis') return m.pricing === 'gratis' || m.pricing === 'cota';
+      if (filter === 'gratis') return m.pricing === 'gratis';
       if (filter === 'sugeridos') return !!m.recommended;
       return true;
     });
@@ -311,7 +345,14 @@ function ProviderPanel({ id }: { id: ProviderId }) {
             <button className="sm ghost" onClick={() => void load(key)} disabled={loading}>
               <RefreshCw size={14} aria-hidden /> Buscar modelos de novo
             </button>
-            <button className="sm ghost danger" onClick={() => void forgetKey(id).then(() => setModels(null))} data-testid="key-forget">
+            <button className="sm ghost danger" onClick={() => {
+              activeRequest.current?.abort();
+              catalog.delete(id);
+              setLoaded(null);
+              setTest({ kind: 'idle' });
+              setAiSettings({ remote: null });
+              void forgetKey(id).catch((err) => setError(toAppError(err, 'COFRE_INDISPONIVEL')));
+            }} data-testid="key-forget">
               <Trash2 size={14} aria-hidden /> Esquecer esta chave
             </button>
           </div>
@@ -346,7 +387,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
         <div className="set-sub" data-testid="model-list">
           <p className="set-sub-title">4. Escolha o modelo</p>
           <p className="hint">
-            “Modelo” é a versão da IA. Os sugeridos são rápidos e bons para entender pedidos de edição. A lista vem do próprio {p.name} agora; o preço só aparece quando o serviço informa.
+            “Modelo” é a versão da IA. A lista vem da sua chave no {p.name} e vale por até 30 minutos. Estar na lista não comprova que o modelo responde, nem que sua conta tem créditos. Use “Testar resposta” para confirmar.
           </p>
           <div className="set-row">
             <label className="set-search">
@@ -356,7 +397,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
             <div className="chips" role="group" aria-label="Filtrar modelos">
               {(['sugeridos', 'gratis', 'todos'] as const).map((f) => (
                 <button key={f} className="chip" aria-pressed={filter === f} onClick={() => setFilter(f)}>
-                  {f === 'sugeridos' ? 'Sugeridos' : f === 'gratis' ? 'Sem cobrança' : `Todos (${models.length})`}
+                  {f === 'sugeridos' ? 'Sugeridos' : f === 'gratis' ? 'Preço zero informado' : `Todos (${models.length})`}
                 </button>
               ))}
             </div>
@@ -374,7 +415,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
                       <b>{m.label}</b>
                       <span className="set-tags">
                         {m.recommended && <span className="tag ok">Sugerido</span>}
-                        <span className={`tag ${m.pricing === 'pago' ? 'paid' : m.pricing === 'desconhecido' ? '' : 'free'}`}>{PRICING_LABEL[m.pricing]}</span>
+                        <span className={`tag ${m.pricing === 'pago' ? 'paid' : m.pricing === 'gratis' ? 'free' : ''}`}>{PRICING_LABEL[m.pricing]}</span>
                       </span>
                       <small className="hint">
                         {price && <>{price}. </>}
@@ -397,7 +438,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
                         </button>
                       </div>
                     ) : (
-                      <button className="sm" onClick={() => (m.pricing === 'pago' || m.pricing === 'desconhecido' ? setConfirmPaid(m.id) : use(m))} data-testid={`use-model-${m.id}`}>
+                      <button className="sm" onClick={() => (m.pricing === 'gratis' ? use(m) : setConfirmPaid(m.id))} data-testid={`use-model-${m.id}`}>
                         Usar este
                       </button>
                     )}
@@ -461,10 +502,10 @@ Trecho da fala: "hoje eu vou te mostrar três jeitos de…"`}</pre>
           )}
           {test.kind === 'error' && <ErrorBox error={test.error} kind="error" />}
           {consent && key && (
-            <p className="m4f-callout ok" role="status" data-testid="ai-ready">
-              <Check size={16} aria-hidden />
+            <p className={`m4f-callout ${test.kind === 'ok' ? 'ok' : ''}`} role="status" data-testid="ai-ready">
+              {test.kind === 'ok' ? <Check size={16} aria-hidden /> : <Sparkles size={16} aria-hidden />}
               <span>
-                <b>Pronto.</b> Os pedidos por texto agora usam <b>{chosen.label}</b>. Se algo falhar, o app avisa com um código e usa as regras naquele pedido; ele nunca troca sozinho para outro modelo.
+                <b>{test.kind === 'ok' ? 'Resposta confirmada.' : 'Modelo selecionado, ainda não testado.'}</b> Os próximos pedidos usam <b>{chosen.label}</b>. {test.kind === 'ok' ? 'O modelo respondeu ao teste de texto.' : 'Estar no catálogo não garante acesso, saldo ou compatibilidade. Para confirmar, clique em “Testar resposta do modelo”.'} Se falhar, o app informa o erro e usa regras, sem trocar para outro modelo pago.
               </span>
             </p>
           )}
