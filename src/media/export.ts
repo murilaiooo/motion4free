@@ -13,11 +13,14 @@ import type { OpenedMedia } from './input';
 import { CLIP_CROSSFADE_SEC, spliceAudio } from './splice';
 import { ClipFrames, EXPORT_MAX_SIDE, decodeSize, type ClipSource } from './sources';
 import { clipLayout, outputToClip } from '../engine/clips';
+import { mixMusic } from '../engine/music-mix';
 
 export interface ExportOptions {
   maxDurationSec?: number;
   scale?: number;
   onProgress?: (fraction: number) => void;
+  /** música de fundo decodificada (v0.26); entra só se o plano tem `music` */
+  music?: DecodedAudio | null;
 }
 
 export interface ExportResult {
@@ -71,7 +74,8 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
   const videoSource = new CanvasSource(canvas, { codec: codecs.video, bitrate: QUALITY_HIGH });
   output.addVideoTrack(videoSource, { frameRate: fps });
-  const audioSource = audio ? new AudioSampleSource({ codec: 'aac', bitrate: 128_000 }) : null;
+  const music = opts.music && plan.music ? opts.music : null;
+  const audioSource = audio || music ? new AudioSampleSource({ codec: 'aac', bitrate: 128_000 }) : null;
   if (audioSource) output.addAudioTrack(audioSource);
   await output.start();
 
@@ -97,15 +101,10 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
 
   // quadros prontos: o resto é o áudio e o fechamento do arquivo (a tela mostra "Fechando o arquivo MP4")
   opts.onProgress?.(0.95);
-  if (audio && audioSource) {
+  if (audioSource) {
     const trimmed = trimSegments(plan.segments, duration);
-    const spliced = spliceAudio(audio.channels, audio.sampleRate, trimmed);
-    const len = spliced[0]!.length;
-    const planar = new Float32Array(len * spliced.length);
-    spliced.forEach((ch, c) => planar.set(ch, c * len));
-    const sample = new AudioSample({ data: planar, format: 'f32-planar', numberOfChannels: spliced.length, sampleRate: audio.sampleRate, timestamp: 0 });
-    await audioSource.add(sample);
-    sample.close();
+    const speech = audio ? spliceAudio(audio.channels, audio.sampleRate, trimmed) : null;
+    await addAudio(audioSource, speech, audio?.sampleRate ?? music!.sampleRate, duration, plan, music);
   }
 
   await output.finalize();
@@ -137,7 +136,8 @@ async function exportPlanUnsafeMulti(
   const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
   const videoSource = new CanvasSource(canvas, { codec: codecs.video, bitrate: QUALITY_HIGH });
   output.addVideoTrack(videoSource, { frameRate: fps });
-  const audioSource = audio ? new AudioSampleSource({ codec: 'aac', bitrate: 128_000 }) : null;
+  const music = opts.music && plan.music ? opts.music : null;
+  const audioSource = audio || music ? new AudioSampleSource({ codec: 'aac', bitrate: 128_000 }) : null;
   if (audioSource) output.addAudioTrack(audioSource);
   await output.start();
 
@@ -175,22 +175,29 @@ async function exportPlanUnsafeMulti(
 
   // quadros prontos: o resto é o áudio e o fechamento do arquivo (a tela mostra "Fechando o arquivo MP4")
   opts.onProgress?.(0.95);
-  if (audio && audioSource) {
+  if (audioSource) {
     const trimmed = trimSegments(plan.segments, duration);
     const joins = { clips: clipLayout(plan.clips).map(c => ({ start: c.start, end: c.end })), crossfadeSec: CLIP_CROSSFADE_SEC };
-    const spliced = spliceAudio(audio.channels, audio.sampleRate, trimmed, 0.008, joins);
-    const len = spliced[0]!.length;
-    const planar = new Float32Array(len * spliced.length);
-    spliced.forEach((ch, c) => planar.set(ch, c * len));
-    const sample = new AudioSample({ data: planar, format: 'f32-planar', numberOfChannels: spliced.length, sampleRate: audio.sampleRate, timestamp: 0 });
-    await audioSource.add(sample);
-    sample.close();
+    const speech = audio ? spliceAudio(audio.channels, audio.sampleRate, trimmed, 0.008, joins) : null;
+    await addAudio(audioSource, speech, audio?.sampleRate ?? music!.sampleRate, duration, plan, music);
   }
 
   await output.finalize();
   opts.onProgress?.(1);
   const data = (output.target as BufferTarget).buffer!;
   return { blob: new Blob([data], { type: 'video/mp4' }), degraded: codecs.degraded, codec: codecs.video, fontWarning: fonts.ok ? '' : fonts.detail, emojiWarning: emoji.ok ? '' : emoji.detail };
+}
+
+/** Fala montada (ou silêncio) com a música por baixo, na mesma mistura da prévia, numa amostra só. */
+async function addAudio(source: AudioSampleSource, speech: Float32Array[] | null, sampleRate: number, duration: number, plan: EditPlan, music: DecodedAudio | null): Promise<void> {
+  const channels = music && plan.music ? mixMusic(speech, sampleRate, duration, music, plan.music) : speech;
+  if (!channels?.length) return;
+  const len = channels[0]!.length;
+  const planar = new Float32Array(len * channels.length);
+  channels.forEach((ch, c) => planar.set(ch, c * len));
+  const sample = new AudioSample({ data: planar, format: 'f32-planar', numberOfChannels: channels.length, sampleRate, timestamp: 0 });
+  await source.add(sample);
+  sample.close();
 }
 
 function even(n: number): number {

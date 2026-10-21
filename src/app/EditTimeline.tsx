@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { AudioLines, Captions, ClipboardPaste, Copy, CopyPlus, Film, Layers, Magnet, Maximize2, Scissors, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
+import { AudioLines, Captions, ClipboardPaste, Copy, CopyPlus, Film, Layers, ListChecks, Magnet, Maximize2, Scissors, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, ZoomIn, ZoomOut } from 'lucide-react';
 import { peakBetween, type PeakIndex } from '../analysis/waveform';
 import { MAX_TRACK } from '../core/edits';
 import type { EditPlan, TimeRange } from '../core/types';
@@ -32,6 +32,12 @@ interface Props {
   onSeek: (outTime: number) => void;
   onSelectSeg: (index: number | null) => void;
   onSelectEl: (ref: ElementRef | null) => void;
+  /** seleção múltipla (v0.26) */
+  multi: { segs: number[]; els: ElementRef[] };
+  /** Ctrl/Shift + clique ou modo Vários: põe ou tira o item da seleção */
+  onToggle: (item: { seg: number } | { el: ElementRef }) => void;
+  /** Apagar vale também para a seleção múltipla e para o trecho marcado na faixa Trechos */
+  canRemove: boolean;
   onSelectCut: (index: number) => void;
   onTrim: (index: number, edge: 'start' | 'end', src: number) => void;
   onMoveSeg: (from: number, to: number) => void;
@@ -100,7 +106,11 @@ export function EditTimeline(props: Props) {
   // os callbacks mais recentes (o arraste começa num render e termina em outro)
   const live = useRef(props);
   live.current = props;
-  const { plan, peakIndex, time, playing, cuts, selectedSeg, selectedEl, onSeek, onSelectSeg, onSelectEl, onSelectCut, actions, disabled } = props;
+  const { plan, peakIndex, time, playing, cuts, selectedSeg, selectedEl, onSeek, onSelectSeg, onSelectEl, onSelectCut, actions, disabled, multi, onToggle } = props;
+  // modo Vários (v0.26): cada clique põe ou tira o item da seleção, sem precisar segurar Ctrl ou Shift
+  const [multiMode, setMultiMode] = useState(false);
+  const additive = (e: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => multiMode || e.shiftKey || e.ctrlKey || e.metaKey;
+  const inMulti = (ref: ElementRef) => multi.els.some((r) => sameRef(r, ref));
   const scrollRef = useRef<HTMLDivElement>(null);
   const lanesRef = useRef<HTMLDivElement>(null);
   const waveRef = useRef<HTMLCanvasElement>(null);
@@ -437,11 +447,12 @@ export function EditTimeline(props: Props) {
     if (disabled || e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
+    if (additive(e)) return onToggle({ el: ref });
     setDrag({ kind: 'el', mode, ref, start, end, x0: e.clientX, y0: e.clientY, delta: 0, dy: 0, moved: false, track: null }, true);
   };
   const chip = (el: (typeof layout.scenes)[number], top: number) => {
     const r = elRange(el.ref, el.start, el.end);
-    const sel = sameRef(selectedEl, el.ref);
+    const sel = sameRef(selectedEl, el.ref) || inMulti(el.ref);
     const id = el.ref.type === 'added' ? el.ref.id : el.ref.type === 'scene' ? el.ref.key : '';
     const dragging = drag?.kind === 'el' && drag.moved && sameRef(drag.ref, el.ref);
     return (
@@ -456,9 +467,13 @@ export function EditTimeline(props: Props) {
         title={`${el.label}: arraste para os lados para mudar quando aparece${el.ref.type === 'added' ? ', para cima ou para baixo para mudar de camada' : ''}; puxe as pontas para mudar a duração.`}
         data-testid={`tl-el-${id}`}
         onPointerDown={(e) => startEl(e, el.ref, el.start, el.end, 'move')}
-        onKeyDown={(e) => keySelect(e, () => onSelectEl(el.ref))}
+        onKeyDown={(e) => keySelect(e, () => (additive(e) ? onToggle({ el: el.ref }) : onSelectEl(el.ref)))}
       >
         <span className="etl-chip-text">{el.label}</span>
+        {el.ref.type === 'added' &&
+          (plan.edits.added.find((x) => x.id === (el.ref as { id: string }).id)?.keys ?? []).map((k, i) => (
+            <span key={i} className="etl-key" style={{ left: `${(k.at / Math.max(0.01, el.end - el.start)) * 100}%` }} aria-hidden data-testid={`tl-key-${id}-${i}`} />
+          ))}
         <span className="etl-handle start" aria-hidden onPointerDown={(e) => startEl(e, el.ref, el.start, el.end, 'start')} />
         <span className="etl-handle end" aria-hidden onPointerDown={(e) => startEl(e, el.ref, el.start, el.end, 'end')} />
       </div>
@@ -489,7 +504,8 @@ export function EditTimeline(props: Props) {
     const s = plan.segments[to]!;
     slotAt = to <= drag.index ? offsets[to]! : offsets[to]! + (s.srcEnd - s.srcStart);
   }
-  const hasSel = selectedSeg !== null || selectedEl !== null;
+  const multiCount = multi.segs.length + multi.els.length;
+  const hasSel = selectedSeg !== null || selectedEl !== null || multiCount > 0;
   const moveDx = drag?.kind === 'seg-move' && drag.moved ? drag.dx : 0;
 
   return (
@@ -514,9 +530,17 @@ export function EditTimeline(props: Props) {
           <button className="sm icon ghost" onClick={actions.duplicate} disabled={disabled || !hasSel} aria-label="Duplicar" data-tip="Duplicar (Ctrl+D)" aria-keyshortcuts="Control+D" data-testid="tl-duplicate">
             <CopyPlus size={15} />
           </button>
-          <button className="sm icon ghost" onClick={actions.remove} disabled={disabled || !hasSel} aria-label="Apagar" data-tip="Apagar (Delete)" aria-keyshortcuts="Delete" data-testid="tl-delete">
+          <button className="sm icon ghost" onClick={actions.remove} disabled={disabled || !props.canRemove} aria-label={multiCount > 0 ? `Apagar ${multiCount} itens` : 'Apagar'} data-tip={multiCount > 0 ? `Apagar ${multiCount} itens (Delete); o resto do vídeo encosta` : props.selection && !props.selectedRange && !hasSel ? 'Apagar o trecho marcado (Delete); o resto encosta' : 'Apagar (Delete)'} aria-keyshortcuts="Delete" data-testid="tl-delete">
             <Trash2 size={15} />
           </button>
+          <button className="sm ghost" aria-pressed={multiMode} onClick={() => setMultiMode(!multiMode)} disabled={disabled} data-tip="Escolher vários: cada clique põe ou tira (o mesmo que Ctrl ou Shift + clique)" data-testid="tl-multi">
+            <ListChecks size={15} aria-hidden /> Vários
+          </button>
+          {multiCount > 0 && (
+            <span className="tl-multi-count" role="status" data-testid="tl-multi-count">
+              {multiCount} escolhidos
+            </span>
+          )}
           <span className="tl-tools-sep" aria-hidden />
           <button className="sm icon ghost" aria-pressed={snapOn} onClick={() => setSnapOn(!snapOn)} aria-label="Ímã: encostar nas emendas e na agulha" data-tip="Ímã (encosta nas emendas)" data-testid="tl-snap">
             <Magnet size={15} />
@@ -623,24 +647,27 @@ export function EditTimeline(props: Props) {
                 {blocks.map(({ s, i, start, len, clip }) => {
                   const z = segmentZoom(plan, i);
                   const moving = drag?.kind === 'seg-move' && drag.moved && drag.index === i;
+                  const segSel = selectedSeg === i || multi.segs.includes(i);
                   return (
                     <div
                       key={`${i}-${s.srcStart}-${s.srcEnd}`}
                       role="button"
                       tabIndex={0}
-                      className={`etl-seg ${selectedSeg === i ? 'selected' : ''} ${moving ? 'moving' : ''} ${clip ? `clip-tint-${clip.index % 6}` : ''}`}
+                      className={`etl-seg ${segSel ? 'selected' : ''} ${moving ? 'moving' : ''} ${clip ? `clip-tint-${clip.index % 6}` : ''}`}
                       style={{ left: left(start), width: width(len), transform: moving ? `translateX(${moveDx}px)` : undefined }}
-                      aria-pressed={selectedSeg === i}
+                      aria-pressed={segSel}
                       aria-label={`Pedaço ${i + 1} do vídeo, ${secs(s.srcEnd - s.srcStart)}${clip ? `, clipe ${clip.index + 1}` : ''}`}
-                      title={`Pedaço ${i + 1}: ${secs(s.srcEnd - s.srcStart)}. Clique para selecionar, arraste para mudar de lugar, puxe as pontas para aparar.`}
+                      title={`Pedaço ${i + 1}: ${secs(s.srcEnd - s.srcStart)}. Clique para selecionar (Ctrl ou Shift + clique escolhe vários), arraste para mudar de lugar, puxe as pontas para aparar.`}
                       data-testid={`tl-seg-${i}`}
                       onPointerDown={(e) => {
                         if (disabled || e.button !== 0) return;
                         e.preventDefault();
+                        if (additive(e)) return onToggle({ seg: i });
                         setDrag({ kind: 'seg-move', index: i, x0: e.clientX, moved: false, t: tAt(e.clientX), dx: 0 }, true);
                       }}
                       onKeyDown={(e) =>
                         keySelect(e, () => {
+                          if (additive(e)) return onToggle({ seg: i });
                           onSelectSeg(i);
                           onSelectEl(null);
                           onSeek(offsets[i]!);
@@ -691,7 +718,7 @@ export function EditTimeline(props: Props) {
 
               <div className="etl-lane etl-audio" onPointerDown={laneDown} data-testid="tl-audio">
                 {blocks.map(({ i, start, len }) => (
-                  <span key={`a${i}`} className={`etl-audio-seg ${selectedSeg === i ? 'selected' : ''}`} style={{ left: left(start), width: width(len) }} aria-hidden />
+                  <span key={`a${i}`} className={`etl-audio-seg ${selectedSeg === i || multi.segs.includes(i) ? 'selected' : ''}`} style={{ left: left(start), width: width(len) }} aria-hidden />
                 ))}
                 {peakIndex && <canvas ref={waveRef} className="etl-wave" style={{ left: left(vis.t0), width: width(vis.t1 - vis.t0) }} data-testid="tl-waveform" aria-hidden />}
               </div>
@@ -700,7 +727,7 @@ export function EditTimeline(props: Props) {
                 {captions.map((c) => {
                   const ref: ElementRef = { type: 'caption', key: c.key };
                   const r = elRange(ref, c.caption.start, c.caption.end);
-                  const sel = sameRef(selectedEl, ref);
+                  const sel = sameRef(selectedEl, ref) || inMulti(ref);
                   return (
                     <div
                       key={c.key}
@@ -713,7 +740,7 @@ export function EditTimeline(props: Props) {
                       title={`${c.caption.text}: clique para escolher, arraste as pontas para mudar quando aparece.`}
                       data-testid={`tl-cap-${c.caption.id}`}
                       onPointerDown={(e) => startEl(e, ref, c.caption.start, c.caption.end, 'move')}
-                      onKeyDown={(e) => keySelect(e, () => onSelectEl(ref))}
+                      onKeyDown={(e) => keySelect(e, () => (additive(e) ? onToggle({ el: ref }) : onSelectEl(ref)))}
                     >
                       <span className="etl-chip-text">{c.caption.text}</span>
                       <span className="etl-handle start" aria-hidden onPointerDown={(e) => startEl(e, ref, c.caption.start, c.caption.end, 'start')} />

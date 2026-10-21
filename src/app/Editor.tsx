@@ -1,6 +1,6 @@
 import { planSummary } from '../core/text';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Captions, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Clapperboard, MousePointerClick, Palette, Smile, Type, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Captions, FileText, Music, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Clapperboard, MousePointerClick, Palette, Smile, Type, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, Segment, TimeRange } from '../core/types';
 import { PRESETS } from '../core/presets';
@@ -22,8 +22,8 @@ import type { AiSettings } from './AiOptions';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
 import { PreviewOverlay } from './PreviewOverlay';
-import { addElement, copyElement, deleteElement, deleteSegment, duplicateElement, pasteElement, retimeElement, setElementTrack, segmentZoom, setElementText, setSegmentZoom, splitAt, trimSegment, type AddSpec, type ElementClip } from '../editorial/manual';
-import { duplicateSegment, insertSegments, moveSegment, segmentOffsets } from '../editorial/sequence';
+import { addElement, copyElement, deleteElement, deleteMany, deleteSegment, duplicateElement, pasteElement, retimeElement, setElementTrack, segmentZoom, setElementText, setSegmentZoom, splitAt, trimSegment, type AddSpec, type ElementClip } from '../editorial/manual';
+import { deleteOutRange, duplicateSegment, insertSegments, moveSegment, segmentOffsets } from '../editorial/sequence';
 import type { ElementRef } from '../editorial/elements';
 import { elementName, findElement, resolvePlan, sceneText, sameRef as sameEl } from '../editorial/elements';
 import { ErrorBox } from './ErrorBox';
@@ -47,6 +47,10 @@ import { combineAudios } from '../media/multi';
 import { buildPeakIndex, waveformPeaks } from '../analysis/waveform';
 import { ClipList } from './ClipList';
 import { CaptionStylePanel, ElementsPanel, TextPanel } from './SidePanels';
+import { AudioPanel } from './AudioPanel';
+import { KeyframePanel } from './KeyframePanel';
+import { MaskPanel } from './MaskPanel';
+import { planCues, toSrt } from '../editorial/subtitles';
 import { DEFAULT_SETUP, type CreativeSetup } from '../core/production';
 import { evaluateDraft, reviseCreativeDirection } from '../editorial/production';
 import { CreativeSetupScreen } from './production/CreativeSetup';
@@ -111,7 +115,7 @@ export function describeScenes(scenes: EditPlan['scenes']): string {
 const fmt = (s: number) => `${s.toFixed(2).replace('.', ',')} s`;
 const fmt1 = (s: number) => `${s.toFixed(1).replace('.', ',')} s`;
 
-type TabId = 'modelos' | 'texto' | 'elementos' | 'legendas' | 'midia' | 'ia' | 'cores' | 'versoes';
+type TabId = 'modelos' | 'texto' | 'elementos' | 'legendas' | 'midia' | 'audio' | 'ia' | 'cores' | 'versoes';
 /** Menu da esquerda (v0.19), na ordem de CapCut/Canva: o visual pronto, o que se adiciona, a mídia, a IA e o histórico. */
 const TABS: { id: TabId; label: string; title: string; about: string; Icon: typeof Play }[] = [
   { id: 'modelos', label: 'Modelos', title: 'Modelos', about: 'O visual do vídeo inteiro: letras, cores e animações. Um clique aplica; dá para desfazer.', Icon: LayoutTemplate },
@@ -119,6 +123,7 @@ const TABS: { id: TabId; label: string; title: string; about: string; Icon: type
   { id: 'elementos', label: 'Elementos', title: 'Elementos', about: 'Emojis, setas e formas para chamar atenção.', Icon: Smile },
   { id: 'legendas', label: 'Legendas', title: 'Legendas', about: 'Posição, tamanho e cores das legendas, e o texto falado para corrigir.', Icon: Captions },
   { id: 'midia', label: 'Mídia', title: 'Mídia e formato', about: 'Seus vídeos, o formato de saída (Reels, quadrado, horizontal) e o enquadramento.', Icon: Clapperboard },
+  { id: 'audio', label: 'Áudio', title: 'Música de fundo', about: 'Uma música por baixo da fala, com volume e abaixamento automático quando alguém fala.', Icon: Music },
   { id: 'ia', label: 'IA', title: 'Pedir com palavras', about: 'Diga o que quer mudar. Funciona sem IA; a IA é opcional.', Icon: Sparkles },
   { id: 'cores', label: 'Cores', title: 'Cores e marca', about: 'As cores do vídeo, ou as de uma imagem sua (logo, foto).', Icon: Palette },
   { id: 'versoes', label: 'Versões', title: 'Versões', about: 'Guarde, compare e volte para versões do vídeo.', Icon: History },
@@ -127,6 +132,12 @@ const TABS: { id: TabId; label: string; title: string; about: string; Icon: type
 
 /** O que o Copiar/Recortar guardou: pedaços do vídeo ou um elemento (v0.17). */
 type Clipboard = { kind: 'video'; segments: Segment[] } | { kind: 'element'; clip: ElementClip };
+/** Seleção múltipla (v0.26): vários pedaços e elementos escolhidos com Ctrl/Shift + clique ou o botão Vários. */
+export interface MultiSel {
+  segs: number[];
+  els: ElementRef[];
+}
+const NO_MULTI: MultiSel = { segs: [], els: [] };
 type TlView = 'edicao' | 'original';
 const TL_VIEW_KEY = 'm4f.timeline-view';
 function loadTlView(): TlView {
@@ -159,9 +170,15 @@ interface EditorProps {
   /** menu do projeto na barra do topo (v0.11: renomear, fechar, apagar, armazenamento) */
   projectMenu?: ReactNode;
   initialReview?: boolean;
+  /** música de fundo decodificada (v0.26), ou null */
+  music?: DecodedAudio | null;
+  /** lê e guarda a música escolhida; lança AppError se não der */
+  onPickMusic?: (file: File) => Promise<void>;
+  /** a música salva do projeto ainda está sendo lida */
+  musicLoading?: boolean;
 }
 
-export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, projectMenu, initialReview = false }: EditorProps) {
+export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, projectMenu, initialReview = false, music = null, onPickMusic, musicLoading = false }: EditorProps) {
   const plan = history.present;
   const [reviewOpen, setReviewOpen] = useState(initialReview);
   const [directionDraft, setDirectionDraft] = useState<CreativeSetup | null>(null);
@@ -196,6 +213,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const [selectedCut, setSelectedCut] = useState<number | null>(null);
   const [selectedEl, setSelectedEl] = useState<ElementRef | null>(null);
   const [selectedSeg, setSelectedSeg] = useState<number | null>(null);
+  const [multi, setMulti] = useState<MultiSel>(NO_MULTI);
+  const multiCount = multi.segs.length + multi.els.length;
   useEffect(() => {
     if (selectedCut !== null || selectedEl || selectedSeg !== null || activeSelection) setReviewOpen(false);
   }, [selectedCut, selectedEl, selectedSeg, activeSelection]);
@@ -287,6 +306,11 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     };
   }, [usesEmoji]);
 
+  // música de fundo (v0.26): o player mistura igual ao MP4
+  useEffect(() => {
+    playerRef.current?.setMusic(music);
+  }, [music, session]);
+
   useEffect(() => {
     playerRef.current?.setPlan(shown, shownAudio);
     setTime((t) => Math.min(t, outputDuration(shown.segments)));
@@ -340,9 +364,17 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   useEffect(() => {
     if (selectedEl && !findElement(plan, selectedEl)) setSelectedEl(null);
   }, [plan, selectedEl]);
+  useEffect(() => {
+    setMulti((m) => {
+      const segs = m.segs.filter((i) => i < plan.segments.length);
+      const els = m.els.filter((r) => !!findElement(plan, r));
+      return segs.length === m.segs.length && els.length === m.els.length ? m : { segs, els };
+    });
+  }, [plan]);
 
   const selectSeg = (i: number | null) => {
     if (i !== null) setReviewOpen(false);
+    setMulti(NO_MULTI);
     setSelectedSeg(i);
     if (i !== null) {
       setSelectedCut(null);
@@ -351,6 +383,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   };
   const selectEl = (ref: ElementRef | null) => {
     if (ref) setReviewOpen(false);
+    setMulti(NO_MULTI);
     setSelectedEl(ref);
     if (ref) {
       setSelectedCut(null);
@@ -358,14 +391,59 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     }
   };
 
+  /**
+   * Ctrl/Shift + clique (ou o modo Vários): põe ou tira um item da seleção. O que já estava escolhido
+   * entra junto; com um item só, volta a ser a seleção normal (com os detalhes à direita).
+   */
+  const toggleMulti = (item: { seg: number } | { el: ElementRef }) => {
+    setReviewOpen(false);
+    setSelectedCut(null);
+    setSelection(null);
+    setSelectedRange(null);
+    const segs = [...multi.segs];
+    const els = [...multi.els];
+    if (multiCount === 0) {
+      if (selectedSeg !== null) segs.push(selectedSeg);
+      if (selectedEl) els.push(selectedEl);
+    }
+    if ('seg' in item) {
+      const k = segs.indexOf(item.seg);
+      if (k >= 0) segs.splice(k, 1);
+      else segs.push(item.seg);
+    } else {
+      const k = els.findIndex((r) => sameEl(r, item.el));
+      if (k >= 0) els.splice(k, 1);
+      else els.push(item.el);
+    }
+    const one = segs.length + els.length === 1;
+    setSelectedSeg(one && segs.length ? segs[0]! : null);
+    setSelectedEl(one && els.length ? els[0]! : null);
+    setMulti(one ? NO_MULTI : { segs: segs.sort((a, b) => a - b), els });
+  };
+
   /** Copiar: o pedaço selecionado (com a fala, legendas e animações dele) ou o elemento selecionado. */
   const copySel = (p: EditPlan): Clipboard => {
+    if (multiCount > 0) {
+      if (multi.els.length > 0) throw new AppError('VARIOS_SELECIONADOS', `${multi.els.length} elemento(s)`);
+      return { kind: 'video', segments: multi.segs.flatMap((i) => (p.segments[i] ? [{ ...p.segments[i]! }] : [])) };
+    }
     if (selectedEl) return { kind: 'element', clip: copyElement(p, selectedEl) };
     const seg = selectedSeg !== null ? p.segments[selectedSeg] : undefined;
     if (seg) return { kind: 'video', segments: [{ ...seg }] };
     throw new AppError('NADA_SELECIONADO');
   };
   const removeSel = (p: EditPlan): { plan: EditPlan; seg?: null; el?: null } => {
+    if (multiCount > 0) {
+      const next = deleteMany(p, ctx, multi.segs, multi.els);
+      setMulti(NO_MULTI);
+      return { plan: next, seg: null, el: null };
+    }
+    // trecho marcado na faixa Trechos (ainda sem pedido): apaga só ele e o resto encosta
+    if (!selectedEl && selectedSeg === null && selection && !selectedRange) {
+      const next = deleteOutRange(p, ctx, selection);
+      setSelection(null);
+      return { plan: next, seg: null, el: null };
+    }
     if (selectedEl) return { plan: deleteElement(p, selectedEl), el: null };
     if (selectedSeg !== null && p.segments[selectedSeg]) return { plan: deleteSegment(p, ctx, selectedSeg), seg: null };
     throw new AppError('NADA_SELECIONADO');
@@ -401,6 +479,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       }),
     duplicate: () =>
       run((p) => {
+        if (multiCount > 0) throw new AppError('VARIOS_SELECIONADOS', `${multiCount} itens`);
         if (selectedEl) {
           if (selectedEl.type === 'caption') throw new AppError('LEGENDA_NAO_COPIA');
           const r = duplicateElement(p, selectedEl);
@@ -484,7 +563,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         keys.current.split();
         return;
       }
-      if (!disabled && (k === 'delete' || k === 'backspace') && keys.current.hasSel) {
+      if (!disabled && (k === 'delete' || k === 'backspace') && keys.current.hasDel) {
         e.preventDefault();
         keys.current.remove();
         return;
@@ -515,12 +594,14 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   }, [doUndo, doRedo, togglePlay, seek, disabled, history.present.output.fps]);
 
   // os atalhos leem sempre as ações e a seleção atuais (o ouvinte do teclado não é refeito a cada mudança)
-  const keys = useRef({ ...tl, hasSel: false, hasAny: false, clear: () => {} });
+  const keys = useRef({ ...tl, hasSel: false, hasDel: false, hasAny: false, clear: () => {} });
   keys.current = {
     ...tl,
-    hasSel: selectedSeg !== null || !!selectedEl,
-    hasAny: selectedSeg !== null || !!selectedEl || selectedCut !== null || !!activeSelection || selectedRange !== null,
+    hasSel: selectedSeg !== null || !!selectedEl || multiCount > 0,
+    hasDel: selectedSeg !== null || !!selectedEl || multiCount > 0 || (!!selection && !selectedRange),
+    hasAny: selectedSeg !== null || !!selectedEl || selectedCut !== null || !!activeSelection || selectedRange !== null || multiCount > 0,
     clear: () => {
+      setMulti(NO_MULTI);
       setSelectedSeg(null);
       setSelectedEl(null);
       setSelectedCut(null);
@@ -550,10 +631,10 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       const isMulti = !!multiSources && multiSources.size > 0;
       const multiAudio = session.clipAudios ? combineAudios(plan.clips, Object.fromEntries(session.clipAudios), session.clipSilences) : session.audio;
       const available = multiSources ? new Set(multiSources.keys()) : new Set([plan.clips[0]!.id]);
-      buildExportPreflight(plan, available, multiAudio !== null);
+      buildExportPreflight(plan, available, multiAudio !== null || (!!music && !!plan.music));
       const out = isMulti
-        ? await (await import('../media/export')).exportPlanMulti(multiSources!, multiAudio, plan, { onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
-        : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
+        ? await (await import('../media/export')).exportPlanMulti(multiSources!, multiAudio, plan, { music, onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
+        : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f), music);
       if (result) URL.revokeObjectURL(result.url);
       const base = session.fileName.replace(/\.[^.]+$/, '');
       setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, codec: out.codec, where: out.where, style: plan.style.name, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning });
@@ -562,6 +643,25 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     } finally {
       setExporting(null);
     }
+  }
+
+  // legenda em arquivo (v0.26): o mesmo texto e tempo do vídeo editado
+  const [srtError, setSrtError] = useState<AppError | null>(null);
+  function downloadSrt() {
+    const cues = planCues(plan);
+    if (!cues.length) {
+      setSrtError(new AppError('LEGENDA_SEM_TEXTO'));
+      return;
+    }
+    setSrtError(null);
+    const url = URL.createObjectURL(new Blob([toSrt(cues)], { type: 'application/x-subrip;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${session.fileName.replace(/\.[^.]+$/, '')}-legendas.srt`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   const cut = selectedCut !== null ? cuts[selectedCut] : undefined;
@@ -665,6 +765,14 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
               )}
               <Transcript words={ctx.words} captions={plan.captions} segments={plan.segments} time={time} playing={playing} onSeek={seek} onEdit={(id, text) => apply((p) => editCaptionText(p, id, text))} disabled={off} />
             </details>
+            <details className="fold" open>
+              <summary>Legenda em arquivo</summary>
+              <p className="hint">Um arquivo .srt com as legendas do vídeo editado, já corrigidas, para enviar ao YouTube ou abrir em outro editor.</p>
+              <button type="button" className="sm" disabled={off} onClick={downloadSrt} data-testid="download-srt">
+                <FileText size={14} aria-hidden /> Baixar legenda (.srt)
+              </button>
+              {srtError && <ErrorBox error={srtError} kind="warning" onDismiss={() => setSrtError(null)} />}
+            </details>
           </div>
           <div role="tabpanel" id="panel-midia" aria-labelledby="tab-midia" hidden={tab !== 'midia'} className="stack" data-testid="clip-and-format">
             <MediaLibrary assets={plan.clips.map(clip => {
@@ -693,6 +801,10 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             />
             <FormatSelector plan={plan} onChange={(n) => apply(() => n)} disabled={off || disabled} />
             <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} disabled={off || disabled} />
+            <MaskPanel plan={plan} onApply={apply} disabled={off || disabled} />
+          </div>
+          <div role="tabpanel" id="panel-audio" aria-labelledby="tab-audio" hidden={tab !== 'audio'} className="stack">
+            <AudioPanel plan={plan} loaded={!!music} loading={musicLoading} onPick={onPickMusic ?? (async () => { throw new AppError('MUSICA_NAO_SALVA', 'sem projeto'); })} onApply={apply} disabled={off || disabled} />
           </div>
           <div role="tabpanel" id="panel-ia" aria-labelledby="tab-ia" hidden={tab !== 'ia'} className="stack">
             <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} disabled={off} ai={ai} onAi={setAi} />
@@ -848,6 +960,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             editing={editingEl}
             setEditing={setEditingEl}
             onSeek={seek}
+            time={time}
             disabled={off}
           />
         ) : selectedSeg !== null && plan.segments[selectedSeg] ? (
@@ -952,6 +1065,9 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             onSeek={seek}
             onSelectSeg={selectSeg}
             onSelectEl={selectEl}
+            multi={multi}
+            onToggle={toggleMulti}
+            canRemove={selectedSeg !== null || !!selectedEl || multiCount > 0 || (!!selection && !selectedRange)}
             onSelectCut={(i) => {
               setSelectedSeg(null);
               setSelectedEl(null);
@@ -1179,7 +1295,7 @@ function SegmentInspector({ plan, ctx, index, time, multi, onApply, onMove, acti
 }
 
 /** Painel do elemento escolhido (na prévia ou na linha do tempo): texto, quando aparece, copiar, duplicar, apagar. */
-function ElementInspector({ plan, refEl, onApply, actions, onClose, onEditText, editing, setEditing, onSeek, disabled }: { plan: EditPlan; refEl: ElementRef; onApply: (op: (p: EditPlan) => EditPlan) => void; actions: TimelineActions; onClose: () => void; onEditText: (t: string) => void; editing: ElementRef | null; setEditing: (r: ElementRef | null) => void; onSeek: (t: number) => void; disabled: boolean }) {
+function ElementInspector({ plan, refEl, onApply, actions, onClose, onEditText, editing, setEditing, onSeek, time, disabled }: { plan: EditPlan; refEl: ElementRef; onApply: (op: (p: EditPlan) => EditPlan) => void; actions: TimelineActions; onClose: () => void; onEditText: (t: string) => void; editing: ElementRef | null; setEditing: (r: ElementRef | null) => void; onSeek: (t: number) => void; time: number; disabled: boolean }) {
   const name = (() => {
     try {
       return elementName(plan, refEl);
@@ -1275,6 +1391,7 @@ function ElementInspector({ plan, refEl, onApply, actions, onClose, onEditText, 
           <Trash2 size={13} aria-hidden /> Apagar
         </button>
       </div>
+      {refEl.type === 'added' && <KeyframePanel plan={plan} id={refEl.id} time={time} onApply={onApply} onSeek={onSeek} disabled={disabled} />}
     </div>
   );
 }

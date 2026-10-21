@@ -532,3 +532,26 @@
 .color-pick { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--text-2); }
 .color-pick input[type='color'] { width: 100%; height: 34px; border: 1px solid var(--line); border-radius: var(--r-sm); background: none; padding: 2px; cursor: pointer; }
 .cap-style { gap: var(--s-4); }
+
+/* Música de fundo (v0.26) */
+.audio-panel .music-card { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3); border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--bg-2); }
+.audio-panel .music-card svg { flex: none; color: var(--brand); }
+.audio-panel .music-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.audio-panel .check { display: flex; align-items: center; gap: var(--s-2); cursor: pointer; }
+.audio-panel .row-wrap { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+/* v0.26: seleção múltipla, pontos de animação e máscara */
+.tl-multi-count { font-size: 12px; font-weight: 600; color: var(--brand); white-space: nowrap; padding: 0 4px; }
+.mask-shapes { display: flex; flex-wrap: wrap; gap: 6px; }
+.mask-shapes button { display: inline-flex; align-items: center; gap: 6px; }
+.mask-color { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.mask-color input[type='color'] { width: 34px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; }
+.keyframes { margin-top: 10px; }
+.key-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
+.key-list li { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 6px; }
+.key-list li.current { background: color-mix(in srgb, var(--brand) 14%, transparent); }
+.key-time { font-variant-numeric: tabular-nums; min-width: 6.5em; justify-content: flex-start; }
+.key-opacity { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 12px; }
+.key-opacity input { flex: 1; min-width: 50px; }
+.key-list select { font-size: 12px; padding: 2px 4px; }
+.etl-key { position: absolute; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background: #fff; border: 1px solid rgba(0, 0, 0, 0.6); transform: rotate(45deg); pointer-events: none; }

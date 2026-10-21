@@ -52,6 +52,9 @@ const scene = z.discriminatedUnion('kind', [...sceneV4Options, z.object({ ...bas
 
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
+/** Música de fundo (v0.26): o arquivo fica no projeto (music.bin); aqui só o nome e a mistura. */
+const musicSchema = z.object({ name: z.string().max(200), volume: z.number().min(0).max(1), duck: z.boolean() });
+
 const rangeFields = {
   id: z.string().regex(/^r[0-9]{1,4}$/),
   srcStart: time,
@@ -151,6 +154,7 @@ export const editPlanSchema = z
       .refine((cs) => new Set(cs.map((c) => c.id)).size === cs.length, { message: 'clipes com o mesmo id' }),
     framing: framingSchema,
     edits: editsSchema,
+    music: musicSchema.nullable().optional(),
   })
   .refine((p) => p.segments.every((s) => s.srcEnd <= p.clips.reduce((a, c) => a + c.duration, 0) + 0.01), { message: 'trecho depois do fim dos clipes' });
 

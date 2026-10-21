@@ -5,6 +5,7 @@ import { toAppError, type AppError } from '../core/errors';
 import { setElementPlacement } from '../editorial/manual';
 import { resolvePlan, sameRef, type ElementRef } from '../editorial/elements';
 import { boxGeometry, elementBoxes, hitTest, snapLines, snapRect } from '../render/hit';
+import { keyedPose } from '../render/keyframes';
 import type { ElementBox, Measurer } from '../render/bounds';
 
 interface Props {
@@ -44,7 +45,7 @@ type Drag = {
 };
 
 /** Posição atual de uma legenda (a dela, a de todas, ou o centro da caixa desenhada pelo modelo) ou de um elemento. */
-function startPlace(plan: EditPlan, ref: ElementRef, box: ElementBox, W: number, H: number): Placement | null {
+function startPlace(plan: EditPlan, ref: ElementRef, box: ElementBox, W: number, H: number, t: number): Placement | null {
   const R = resolvePlan(plan);
   if (ref.type === 'caption') {
     const c = R.captions.find((x) => x.key === ref.key);
@@ -52,7 +53,11 @@ function startPlace(plan: EditPlan, ref: ElementRef, box: ElementBox, W: number,
     const g = boxGeometry(box);
     return { x: g.cx / W, y: g.cy / H, scale: 1, rotate: 0 };
   }
-  if (ref.type === 'added') return R.added.find((x) => x.el.id === ref.id)?.el.placement ?? null;
+  if (ref.type === 'added') {
+    // com pontos de animação (v0.26), parte de onde o elemento está na agulha
+    const a = R.added.find((x) => x.el.id === ref.id);
+    return a ? keyedPose(a.el, t - a.start).placement : null;
+  }
   return null;
 }
 
@@ -152,7 +157,7 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, onPre
     }
     const box = boxes.find((b) => sameRef(b.ref, ref))!;
     if (!sameRef(ref, selected)) onSelect(ref);
-    drag.current = { ref, mode, plan, start: { x: p.x, y: p.y }, place: startPlace(plan, ref, box, W, H), offset: startOffset(plan, ref), box, moved: false };
+    drag.current = { ref, mode, plan, start: { x: p.x, y: p.y }, place: startPlace(plan, ref, box, W, H, time), offset: startOffset(plan, ref), box, moved: false };
     e.currentTarget.setPointerCapture?.(e.pointerId);
     e.preventDefault();
   };
@@ -191,7 +196,7 @@ export function PreviewOverlay({ plan, time, selected, onSelect, onChange, onPre
     }
     if (!value) return;
     try {
-      pending.current.next = setElementPlacement(d.plan, d.ref, value, 'all');
+      pending.current.next = setElementPlacement(d.plan, d.ref, value, 'all', time);
       pending.current.err = null;
     } catch (err) {
       pending.current.err = toAppError(err);

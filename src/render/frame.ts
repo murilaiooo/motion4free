@@ -10,6 +10,7 @@ import type { StyleDNA } from '../core/style';
 import { outputDuration, outputToSource } from '../engine/timeline';
 import { drawCaption } from './captions';
 import { drawEmoji, emojiPose } from './emoji';
+import { maskPath } from './mask';
 import type { Ctx2D } from './ctx';
 import { clamp01, progress } from './easing';
 import type { Rect } from './layout';
@@ -209,6 +210,15 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
   ctx.globalAlpha = 1;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, w, h);
+  // máscara (v0.26): fora da forma fica a cor escolhida; o vídeo só aparece dentro
+  const mask = plan.edits?.mask ?? null;
+  if (source && mask) {
+    ctx.fillStyle = mask.fill;
+    ctx.fillRect(0, 0, w, h);
+    ctx.save();
+    maskPath(ctx, mask, w, h);
+    ctx.clip();
+  }
   if (source) {
     const cam = cameraAt(rp, t, style);
     const z = cam.zoom * zoomAt(plan, t);
@@ -226,6 +236,16 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
     if (isSourceFrame(source)) drawSource(ctx, plan, source, w, h, style);
     else drawVideo(ctx, source, w, h, (plan as any).edits?.video ?? { fit: 'fill', scale: 1, x: 0, y: 0 });
     ctx.restore();
+  }
+  if (source && mask) {
+    ctx.restore();
+    if (mask.border > 0) {
+      maskPath(ctx, mask, w, h);
+      ctx.lineWidth = mask.border * (w / 1080);
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = mask.borderColor;
+      ctx.stroke();
+    }
   }
   // acabamento do modelo (v0.9): véu de cor e vinheta sobre o vídeo, antes de qualquer texto
   drawTint(ctx, f);
