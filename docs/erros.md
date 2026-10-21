@@ -1,7 +1,7 @@
 # Catálogo de erros
 
 Cada problema mostra na tela um código `M4F-xxx`. O código-fonte do catálogo é `src/core/errors.ts`.
-Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos, 6xx projeto salvo, versões e armazenamento, 7xx player, 8xx estilo, animações e imagem de referência, 9xx desconhecido, 10xx pedido por texto (geral e por trecho) e IA.
+Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos, 6xx projeto salvo, versões e armazenamento, 7xx player, 8xx estilo, animações e imagem de referência, 9xx desconhecido, 10xx pedido por texto (geral e por trecho) e IA, 11xx criador de clipes de vídeo longo.
 
 | Código | Mensagem | O que costuma significar |
 |---|---|---|
@@ -87,6 +87,15 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-1013 | Este aparelho não tem memória de vídeo suficiente para o modelo de IA escolhido; usei as regras. Tente o modelo leve. | A placa de vídeo não tem memória para o modelo (o padrão pede ~1,6 GB; o forte, ~3,4 GB) ou o navegador perdeu a GPU ao carregar. Escolha "leve" (~0,9 GB) ou use a chave própria. |
 | M4F-1014 | Falta espaço neste navegador para baixar o modelo de IA; usei as regras. Libere espaço em Armazenamento. | Antes de baixar o modelo de IA (leve ~300 MB, padrão ~0,9 GB, forte ~2,3 GB) o app confere o espaço livre que o navegador informa. Apague projetos ou modelos que não usa na tela Armazenamento, ou escolha o modelo leve. |
 | M4F-1015 | Não entendi o pedido para o elemento escolhido; nada mudou. Tente “maior”, “amarelo”, “em cima”, “negrito” ou “apagar”. | Desde a v0.13. Com uma legenda, título ou texto selecionado, a barra "Peça qualquer coisa" vale só para ele: entende cor, tamanho, posição (em cima, no meio, embaixo, esquerda, direita), negrito, maiúsculas/minúsculas, fonte, animação, caixa e apagar. Para pedir algo para o vídeo inteiro, clique fora (nada selecionado). |
+| M4F-1101 | Para fazer clipes, o vídeo pode ter no máximo 2 horas. Corte o vídeo em partes e envie uma de cada vez. | Criador de clipes (v0.22, [ADR-0023](decisions/0023-criador-de-clipes.md)). Acima de 2 horas o áudio reduzido não cabe com folga na memória do navegador. O detalhe traz a duração. |
+| M4F-1102 | Não encontrei fala neste vídeo, então não dá para escolher os melhores momentos. O criador de clipes precisa de fala (podcast, aula, live, entrevista). | A transcrição terminou sem palavras (só música, ruído ou vídeo mudo). Os momentos são escolhidos pela fala. |
+| M4F-1103 | Este vídeo é curto para virar vários clipes (menos de 2 minutos). Use "Editar meus vídeos" para editá-lo inteiro. | O criador de clipes é para vídeos longos. Vídeo curto vai pelo modo normal. |
+| M4F-1104 | Não foi possível recortar este trecho do vídeo longo. | O recorte do trecho num arquivo pequeno falhou (codec que o navegador não recodifica, memória, arquivo movido). O detalhe traz o trecho e o motivo. Os outros clipes continuam. |
+| M4F-1105 | O navegador não consegue baixar vídeos de links (YouTube, Instagram, TikTok). Baixe o arquivo e solte aqui. | A pessoa colou um link. Baixar do YouTube fora do próprio YouTube vai contra os termos de uso e o navegador é bloqueado pelo site. Vídeo próprio: YouTube Studio → Conteúdo → ⋮ → Baixar. Vídeo de outra pessoa: só com autorização. |
+| M4F-1106 | A IA não conseguiu ordenar os momentos; usei a escolha automática por regras. | IA ligada no criador de clipes, mas ela não carregou, não respondeu ou respondeu fora do formato. O detalhe traz o motivo (às vezes outro código, como M4F-1005 ou M4F-1008). Os momentos continuam, na ordem das regras. |
+| M4F-1107 | Não achei trechos de fala contínua do tamanho escolhido. Tente clipes mais curtos. | A fala tem muitas pausas longas ou o vídeo é curto para o tamanho pedido (ex.: clipes de 60–90 s num vídeo de 3 minutos). |
+| M4F-1108 | Um dos clipes não pôde ser gerado; os outros continuaram normalmente. | Em "Gerar os escolhidos", um clipe falhou ao recortar, montar ou exportar. O detalhe traz o número do clipe e o código do motivo (M4F-1104, M4F-402…). |
+| M4F-1109 | O aparelho ficou sem memória para ler o áudio do vídeo longo. Feche outras abas ou envie um pedaço menor do vídeo. | O navegador recusou memória ao ler o áudio do vídeo longo. Nada foi perdido. |
 | M4F-999 | Erro inesperado. | Erro não previsto; ver detalhe. |
 
 Erros 3xx são avisos: o vídeo continua sendo editado e exportado sem legendas e sem título.

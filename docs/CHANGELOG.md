@@ -2,6 +2,18 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.22.0 — 21/10/2026
+**Novo modo: Clipes de vídeo longo.** Implementado; não testado.
+
+- A primeira tela agora tem dois modos: **Editar meus vídeos** (como antes) e **Clipes de vídeo longo**.
+- Solte um vídeo de 2 minutos a 2 horas (podcast, aula, live, entrevista). O app transcreve, mede a energia da voz e mostra os melhores momentos, cada um com título, horário, nota e motivos.
+- Escolha tamanho (15–30 s, 30–60 s, 60–90 s), quantidade, formato e modelo. Veja cada trecho na prévia e ajuste começo e fim de 3 em 3 segundos, sempre encaixando numa palavra.
+- **Baixar pronto** recorta, edita (cortes de silêncio, legenda, título e animações do modelo) e baixa o MP4. **Gerar e baixar os escolhidos** faz vários seguidos. **Abrir no editor** vira um projeto normal, sem transcrever de novo.
+- IA opcional reordena os momentos e dá títulos; se falhar, ficam as regras (M4F-1106).
+- Link do YouTube: o app explica como conseguir o arquivo (M4F-1105). Não baixa de links.
+- A análise do último vídeo longo fica guardada: escolher o mesmo arquivo de novo pula a espera. Aparece em Armazenamento.
+- Novos códigos M4F-1101 a M4F-1109. Decisões em `docs/decisions/0023-criador-de-clipes.md`.
+
 ## v0.21.1 — 21/10/2026
 **Revisão da primeira tela.** Implementado; não testado.
 

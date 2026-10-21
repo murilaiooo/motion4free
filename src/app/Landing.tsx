@@ -1,6 +1,9 @@
 import { useState, type DragEvent, type ReactNode } from 'react';
-import { Captions, Check, Clapperboard, Cpu, FileVideo, HardDrive, History, Layers, MessageSquareText, Move, RectangleVertical, Scissors, ShieldCheck, Upload, WandSparkles } from 'lucide-react';
+import { Captions, Check, Clapperboard, Cpu, FileVideo, Film, HardDrive, History, Layers, Link2, MessageSquareText, Move, RectangleVertical, Scissors, ShieldCheck, Upload, WandSparkles } from 'lucide-react';
 import './landing.css';
+import './clips.css';
+import { AppError } from '../core/errors';
+import { ErrorBox } from './ErrorBox';
 import { PROCESSING_STEPS, processingStep } from '../core/steps';
 import { listTemplates } from '../core/template-gallery';
 import { APP_BUILT_AT, VERSION_LABEL } from '../version';
@@ -52,6 +55,7 @@ function Footer() {
 const SHOWCASE = ['pop', 'podcast', 'cinema', 'neon', 'documental'];
 
 const FEATURES: { icon: ReactNode; title: string; text: string }[] = [
+  { icon: <Film size={18} aria-hidden />, title: 'Clipes de vídeo longo', text: 'Solte um podcast, aula ou live de até 2 horas. O app acha os melhores momentos e entrega cada corte vertical, com legenda e pronto para postar.' },
   { icon: <Scissors size={18} aria-hidden />, title: 'Corte automático', text: 'Tira silêncios, pausas e respiros longos sem cortar palavras. Você revê cada corte e devolve o que quiser.' },
   { icon: <Captions size={18} aria-hidden />, title: 'Legendas palavra por palavra', text: 'Transcrição no próprio aparelho, com destaque na palavra falada. Clique numa palavra para corrigir.' },
   { icon: <Layers size={18} aria-hidden />, title: 'Linha do tempo de verdade', text: 'Divida, apare, copie, cole e reordene trechos. Camadas para textos, emojis e formas, com onda de áudio.' },
@@ -66,23 +70,94 @@ const FAQ: [string, string][] = [
   ['É grátis mesmo?', 'Sim. Não tem plano pago, cadastro nem marca d’água. O processamento é feito pelo seu próprio computador, então não há servidor para pagar.'],
   ['Meu vídeo é enviado para algum lugar?', 'Não. O vídeo e tudo o que o app gera ficam neste aparelho. Você vê e apaga o espaço usado em Armazenamento.'],
   ['Preciso instalar alguma coisa?', 'Não. Funciona no Chrome ou no Edge, no computador. Na primeira vez o app baixa o modelo de transcrição, uma vez só.'],
-  ['Funciona com vídeo gravado no celular?', 'Sim. MP4, MOV ou WebM, até 3 minutos por clipe. O resultado sai em MP4, pronto para o Instagram.'],
+  ['Dá para colar um link do YouTube?', 'Ainda não. O navegador não consegue baixar vídeo do YouTube, e os termos do YouTube só permitem baixar pelo próprio YouTube. Se o vídeo é seu, baixe no YouTube Studio e solte o arquivo no modo Clipes. Vídeo de outra pessoa, só com autorização dela.'],
+  ['Funciona com vídeo gravado no celular?', 'Sim. MP4, MOV ou WebM, até 3 minutos por clipe no editor e até 2 horas no modo Clipes. O resultado sai em MP4, pronto para o Instagram.'],
 ];
 
-export function Landing({ onFile, busy, pendingName, pendingClipCount, notices, options, projects, onStorage }: { onFile: (files: File[]) => void; busy: boolean; pendingName: string | null; pendingClipCount?: number; notices: ReactNode; options?: ReactNode; projects?: ReactNode; onStorage?: () => void }) {
+export type LandingMode = 'editar' | 'clipes';
+
+/** Link colado no modo Clipes: o app não baixa (ADR-0023), então explica como conseguir o arquivo. */
+function LinkHelp() {
+  const [url, setUrl] = useState('');
+  const [asked, setAsked] = useState<string | null>(null);
+  return (
+    <div className="lp-link" data-testid="link-help">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (url.trim()) setAsked(url.trim());
+        }}
+      >
+        <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Tem só o link? Cole aqui (YouTube, Instagram…)" aria-label="Link do vídeo" data-testid="link-input" />
+        <button type="submit" className="sm" disabled={!url.trim()} data-testid="link-submit">
+          <Link2 size={15} aria-hidden /> Usar link
+        </button>
+      </form>
+      {asked && (
+        <>
+          <ErrorBox error={new AppError('LINK_NAO_BAIXA', asked.slice(0, 120))} kind="warning" onDismiss={() => setAsked(null)} />
+          <ol>
+            <li>
+              <b>Vídeo seu no YouTube:</b> abra o YouTube Studio → Conteúdo → nos três pontinhos do vídeo, <b>Baixar</b>. Depois solte o arquivo aqui.
+            </li>
+            <li>
+              <b>Vídeo de outra pessoa:</b> peça o arquivo ou a autorização ao dono (muitos podcasts liberam cortes) e use o arquivo que ele mandar.
+            </li>
+            <li>
+              <b>Live ou reunião gravada:</b> use o arquivo que o programa salvou no computador (OBS, Zoom, Meet, StreamYard…).
+            </li>
+          </ol>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function Landing({
+  onFile,
+  busy,
+  pendingName,
+  pendingClipCount,
+  notices,
+  options,
+  projects,
+  onStorage,
+  mode = 'editar',
+  onMode,
+  onLongFile,
+  clipResume,
+}: {
+  onFile: (files: File[]) => void;
+  busy: boolean;
+  pendingName: string | null;
+  pendingClipCount?: number;
+  notices: ReactNode;
+  options?: ReactNode;
+  projects?: ReactNode;
+  onStorage?: () => void;
+  mode?: LandingMode;
+  onMode?: (m: LandingMode) => void;
+  onLongFile?: (file: File) => void;
+  /** aviso "voltar aos clipes" quando há um trabalho de clipes aberto */
+  clipResume?: ReactNode;
+}) {
   const [over, setOver] = useState(false);
+  // projeto salvo esperando o vídeo original: a entrada é sempre a do editor
+  const clips = mode === 'clipes' && !pendingName && !!onLongFile;
   const all = listTemplates();
   const examples = SHOWCASE.map((id) => all.find((t) => t.id === id)).filter((t) => t !== undefined);
   const hero = examples[0];
   const drop = (e: DragEvent) => {
     e.preventDefault();
     setOver(false);
-    const files = e.dataTransfer.files ? Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|webm)$/i)) : [];
-    if (files.length && !busy) onFile(files);
+    const files = e.dataTransfer.files ? Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|webm|mkv)$/i)) : [];
+    if (!files.length || busy) return;
+    if (clips) onLongFile!(files[0]!);
+    else onFile(files);
   };
   const toStart = () => {
     document.getElementById('comecar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    document.querySelector<HTMLInputElement>('[data-testid="file-input"]')?.focus();
+    document.querySelector<HTMLInputElement>('#comecar input[type="file"]')?.focus();
   };
   return (
     <div className="land lp">
@@ -91,17 +166,40 @@ export function Landing({ onFile, busy, pendingName, pendingClipCount, notices, 
       <main>
         <section className="lp-hero">
           <div className="lp-hero-copy">
+            {onMode && !pendingName && (
+              <div className="lp-modes" role="group" aria-label="O que você quer fazer">
+                <button aria-pressed={!clips} onClick={() => onMode('editar')} disabled={busy} data-testid="mode-edit">
+                  <WandSparkles size={16} aria-hidden /> Editar meus vídeos
+                </button>
+                <button aria-pressed={clips} onClick={() => onMode('clipes')} disabled={busy} data-testid="mode-clips">
+                  <Scissors size={16} aria-hidden /> Clipes de vídeo longo
+                </button>
+              </div>
+            )}
             <p className="lp-kicker">
-              <span className="lp-dot" aria-hidden /> Editor de vídeo para Reels · no navegador
+              <span className="lp-dot" aria-hidden /> {clips ? 'Criador de clipes · vídeos longos · no navegador' : 'Editor de vídeo para Reels · no navegador'}
             </p>
-            <h1>
-              Grave. Solte aqui.
-              <br />
-              <em>Poste editado.</em>
-            </h1>
-            <p className="lp-lead">O Motion4Free corta as pausas, escreve as legendas e anima seu vídeo em poucos minutos. Depois você ajusta tudo numa linha do tempo de verdade e baixa o MP4. Sem enviar o vídeo para ninguém.</p>
+            {clips ? (
+              <h1>
+                Um vídeo longo.
+                <br />
+                <em>Vários clipes prontos.</em>
+              </h1>
+            ) : (
+              <h1>
+                Grave. Solte aqui.
+                <br />
+                <em>Poste editado.</em>
+              </h1>
+            )}
+            <p className="lp-lead">
+              {clips
+                ? 'Solte um podcast, aula, live ou entrevista de até 2 horas. O Motion4Free transcreve tudo, acha os melhores momentos e entrega cada corte vertical, com legenda e animação, pronto para postar. Você revê, ajusta e baixa.'
+                : 'O Motion4Free corta as pausas, escreve as legendas e anima seu vídeo em poucos minutos. Depois você ajusta tudo numa linha do tempo de verdade e baixa o MP4. Sem enviar o vídeo para ninguém.'}
+            </p>
 
             {notices}
+            {clipResume}
 
             <label
               id="comecar"
@@ -117,12 +215,15 @@ export function Landing({ onFile, busy, pendingName, pendingClipCount, notices, 
                 className="sr-only"
                 type="file"
                 accept="video/*"
-                multiple
+                multiple={!clips}
                 disabled={busy}
-                data-testid="file-input"
+                data-testid={clips ? 'long-file-input' : 'file-input'}
                 onChange={(e) => {
                   const files = e.target.files ? Array.from(e.target.files) : [];
-                  if (files.length) onFile(files);
+                  if (files.length) {
+                    if (clips) onLongFile!(files[0]!);
+                    else onFile(files);
+                  }
                   e.currentTarget.value = '';
                 }}
               />
@@ -130,11 +231,12 @@ export function Landing({ onFile, busy, pendingName, pendingClipCount, notices, 
                 {pendingName ? <FileVideo size={22} /> : <Upload size={22} />}
               </span>
               <span className="lp-drop-text">
-                <span className="drop-title">{pendingName ? (pendingClipCount ? (pendingClipCount === 1 ? 'Selecione novamente o vídeo original deste projeto' : `Selecione novamente os ${pendingClipCount} vídeos originais`) : `Escolha de novo o vídeo original (${pendingName})`) : 'Escolher vídeos'}</span>
-                <span className="drop-sub">ou arraste aqui · até 30 clipes de até 3 min · MP4, MOV, WebM</span>
+                <span className="drop-title">{clips ? 'Escolher vídeo longo' : pendingName ? (pendingClipCount ? (pendingClipCount === 1 ? 'Selecione novamente o vídeo original deste projeto' : `Selecione novamente os ${pendingClipCount} vídeos originais`) : `Escolha de novo o vídeo original (${pendingName})`) : 'Escolher vídeos'}</span>
+                <span className="drop-sub">{clips ? 'ou arraste aqui · de 2 min a 2 horas · MP4, MOV, WebM · use vídeos seus ou com autorização' : 'ou arraste aqui · até 30 clipes de até 3 min · MP4, MOV, WebM'}</span>
               </span>
             </label>
 
+            {clips && <LinkHelp />}
             {options}
 
             <ul className="lp-facts">
@@ -305,7 +407,7 @@ export function Landing({ onFile, busy, pendingName, pendingClipCount, notices, 
 }
 
 /** Tela de processamento: passos com o que já foi feito, o atual e a barra de progresso. */
-export function Processing({ label, fraction, fileName }: { label: string; fraction: number; fileName: string | null }) {
+export function Processing({ label, fraction, fileName, title = 'Editando seu vídeo', note }: { label: string; fraction: number; fileName: string | null; title?: string; note?: string }) {
   const step = processingStep(label);
   const overall = (step + Math.min(1, Math.max(0, fraction))) / PROCESSING_STEPS.length;
   return (
@@ -318,7 +420,7 @@ export function Processing({ label, fraction, fileName }: { label: string; fract
               <WandSparkles size={22} />
             </span>
             <div>
-              <h1>Editando seu vídeo</h1>
+              <h1>{title}</h1>
               {fileName && <p className="hint proc-file">{fileName}</p>}
             </div>
             <b className="proc-pct tnum">{Math.round(overall * 100)}%</b>
@@ -342,6 +444,7 @@ export function Processing({ label, fraction, fileName }: { label: string; fract
           <p className="privacy">
             <Cpu size={15} aria-hidden /> Processando no seu aparelho. Na primeira vez o modelo de transcrição é baixado (uma vez só).
           </p>
+          {note && <p className="hint">{note}</p>}
         </div>
       </main>
       <Footer />

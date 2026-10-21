@@ -2,7 +2,8 @@
  * Catálogo de erros com código próprio por problema.
  * O código aparece na tela para quem testa e identifica a causa sem ambiguidade.
  * Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos,
- * 6xx projeto salvo e armazenamento, 7xx player, 8xx estilo e animações, 9xx desconhecido, 10xx pedido por texto e IA.
+ * 6xx projeto salvo e armazenamento, 7xx player, 8xx estilo e animações, 9xx desconhecido, 10xx pedido por texto e IA,
+ * 11xx criador de clipes de vídeo longo.
  */
 export const ERRORS = {
   FORMATO_DESCONHECIDO: { code: 'M4F-101', title: 'Formato de arquivo não reconhecido.' },
@@ -87,6 +88,15 @@ export const ERRORS = {
   IA_SEM_ESPACO: { code: 'M4F-1014', title: 'Falta espaço neste navegador para baixar o modelo de IA; usei as regras. Libere espaço em Armazenamento.' },
   PEDIDO_ELEMENTO_NAO_ENTENDIDO: { code: 'M4F-1015', title: 'Não entendi o pedido para o elemento escolhido; nada mudou. Tente “maior”, “amarelo”, “em cima”, “negrito” ou “apagar”.' },
   IA_CHAVE_RECUSADA: { code: 'M4F-1009', title: 'O serviço recusou a sua chave (confira se ela está certa ou se o limite gratuito acabou); usei as regras.' },
+  LONGO_DEMAIS: { code: 'M4F-1101', title: 'Para fazer clipes, o vídeo pode ter no máximo 2 horas. Corte o vídeo em partes e envie uma de cada vez.' },
+  LONGO_SEM_FALA: { code: 'M4F-1102', title: 'Não encontrei fala neste vídeo, então não dá para escolher os melhores momentos. O criador de clipes precisa de fala (podcast, aula, live, entrevista).' },
+  LONGO_CURTO: { code: 'M4F-1103', title: 'Este vídeo é curto para virar vários clipes (menos de 2 minutos). Use "Editar meus vídeos" para editá-lo inteiro.' },
+  CORTE_FALHOU: { code: 'M4F-1104', title: 'Não foi possível recortar este trecho do vídeo longo.' },
+  LINK_NAO_BAIXA: { code: 'M4F-1105', title: 'O navegador não consegue baixar vídeos de links (YouTube, Instagram, TikTok). Baixe o arquivo e solte aqui.' },
+  IA_MOMENTOS_FALHOU: { code: 'M4F-1106', title: 'A IA não conseguiu ordenar os momentos; usei a escolha automática por regras.' },
+  SEM_MOMENTOS: { code: 'M4F-1107', title: 'Não achei trechos de fala contínua do tamanho escolhido. Tente clipes mais curtos.' },
+  CLIPE_LOTE_FALHOU: { code: 'M4F-1108', title: 'Um dos clipes não pôde ser gerado; os outros continuaram normalmente.' },
+  MEMORIA_LONGO: { code: 'M4F-1109', title: 'O aparelho ficou sem memória para ler o áudio do vídeo longo. Feche outras abas ou envie um pedaço menor do vídeo.' },
   DESCONHECIDO: { code: 'M4F-999', title: 'Erro inesperado.' },
 } as const;
 
