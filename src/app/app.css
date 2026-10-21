@@ -173,6 +173,12 @@
 .summary-sep { width: 1px; height: 14px; background: var(--line-strong); }
 .stage-notices { display: grid; gap: var(--s-2); padding: var(--s-2) var(--s-4) 0; max-height: 34vh; overflow-y: auto; }
 .stage-notices:empty { padding: 0; }
+.stage-warning-group { display: grid; gap: var(--s-2); }
+.stage-warning-toggle { display: flex; align-items: center; gap: var(--s-2); width: 100%; justify-content: center; border: 1px solid color-mix(in srgb, var(--amber) 45%, transparent); border-radius: var(--r-md); color: var(--text-1); background: var(--amber-soft); cursor: pointer; }
+.stage-warning-toggle svg:last-child { transition: transform 120ms ease; }
+.stage-warning-toggle svg.expanded { transform: rotate(180deg); }
+.stage-warning-content { display: grid; gap: var(--s-2); max-height: min(26vh, 260px); overflow-y: auto; }
+.stage-warning-group:has(.stage-warning-content) { min-height: 0; }
 .stage-head { grid-row: 1; }
 .stage-notices { grid-row: 2; }
 .viewer { grid-row: 3; }

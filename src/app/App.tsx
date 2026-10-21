@@ -960,6 +960,7 @@ function EditorApp() {
               onStorage={openStorage}
             />
           }
+          noticeCount={notices.length + session.warnings.length + Number(status.kind === 'error') + Number(!!spaceWarn)}
           notices={
             <>
               {status.kind === 'working' && (
