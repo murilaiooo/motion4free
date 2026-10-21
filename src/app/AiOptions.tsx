@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Settings2, Sparkles } from 'lucide-react';
 import { AppError, toAppError } from '../core/errors';
 import { formatBytes } from '../core/bytes';
-import { DEFAULT_LLM, LLM_KEYS, LLM_MODELS, localAiProgress, modelFit, type LlmKey } from '../core/llm-models';
-import { cachedRepos } from '../core/storage-report';
-import { storage } from './project-store';
+import { DEFAULT_LLM, LLM_KEYS, LLM_MODELS, bestFittingModel, localAiProgress, modelFit, type LlmKey } from '../core/llm-models';
 import type { OnProgress } from '../core/progress';
 import { LOCAL_AI_ENABLED, loadLocalAi, webGpuAvailable } from '../ai/local-ai';
+import { localModelCapacity } from '../ai/local-capacity';
 import { getKey, useKeysVersion } from '../ai/credentials/keys';
 import { providerCompleter } from '../ai/providers/client';
 import { PROVIDERS, isProviderId, type PricingKind, type ProviderId } from '../ai/providers/registry';
@@ -94,6 +93,14 @@ export function useAiSettings(): AiSettings {
 export async function prepareAi(s: AiSettings, setBusy: OnProgress): Promise<{ ai: AiChoice | null; warning: AppError | null }> {
   if (s.mode === 'local') {
     try {
+      const capacity = await localModelCapacity();
+      const suggested = bestFittingModel(s.model, capacity.free, capacity.cached);
+      // Quota reported by Brave is advisory, not a hard limit. Offer a smaller model
+      // before starting a multi-GB download, but never silently change the user's choice.
+      if (suggested !== s.model && !capacity.cached.has(s.model)) {
+        const alternative = suggested ? ` Em Configurações → IA, escolha ${LLM_MODELS[suggested].label.split(' (')[0]}.` : ' Abra Armazenamento para liberar espaço.';
+        return { ai: null, warning: new AppError('IA_SEM_ESPACO', `Estimativa do navegador: ${capacity.free === null ? 'desconhecida' : formatBytes(capacity.free)} disponíveis; ${LLM_MODELS[s.model].label.split(' (')[0]} baixa cerca de ${formatBytes(LLM_MODELS[s.model].downloadMB * 1024 * 1024)}.${alternative} A estimativa pode ser menor que o espaço real (Brave).`) };
+      }
       const local = await loadLocalAi(s.model, (f, t) => setBusy(localAiProgress(s.model, f, t)));
       setBusy({ label: 'A IA no navegador está lendo o pedido', phase: 'ia-ler', fraction: null, detail: `pode levar até ${LLM_MODELS[s.model].timeoutSec} s` });
       return { ai: { complete: local.complete, source: 'ia-local' }, warning: null };
@@ -165,10 +172,8 @@ function useModelSpace(active: boolean): { free: number | null; cached: Set<LlmK
     if (!active) return;
     let alive = true;
     void (async () => {
-      const est = await storage.quota?.estimate().catch(() => null);
-      const repos = await cachedRepos(storage.caches).catch(() => new Set<string>());
-      const cached = new Set(LLM_KEYS.filter((k) => repos.has(LLM_MODELS[k].repo)));
-      if (alive) setSpace({ free: est ? Math.max(0, est.quota - est.usage) : null, cached });
+      const capacity = await localModelCapacity();
+      if (alive) setSpace({ free: capacity.free, cached: new Set(capacity.cached) });
     })();
     return () => {
       alive = false;
