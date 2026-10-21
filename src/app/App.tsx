@@ -270,12 +270,12 @@ function EditorApp() {
       clips.push({ id: c.id, file: blob, name: c.name, media, durationSec: media.durationSec, words: [], silences: [], audio });
       clipSources.set(c.id, { id: c.id, video: media.video, width: media.width, height: media.height });
     }
-    // O áudio deve ser reconstituído para o preview e o MP4, não apenas os quadros.
-    const combinedAudio = combineAudios(h.present.clips, audiosByClip);
     const oldWords = unplaceWords(h.present.clips, project.words);
     const oldSilences = unplaceRanges(h.present.clips, project.silences);
     const clipWords = Object.fromEntries(allRefs.map(c => [c.id, project.clipAnnotations?.[c.id]?.words ?? oldWords[c.id] ?? []]));
     const clipSilences = Object.fromEntries(allRefs.map(c => [c.id, project.clipAnnotations?.[c.id]?.silences ?? oldSilences[c.id] ?? []]));
+    // O áudio deve ser reconstituído para o preview e o MP4, não apenas os quadros (com o mesmo volume por clipe da importação).
+    const combinedAudio = combineAudios(h.present.clips, audiosByClip, clipSilences);
     const totalDur = totalDuration(h.present.clips);
     setFileName(project.video.name);
     setSession({
@@ -571,7 +571,7 @@ function EditorApp() {
         sources.set(c.id, { id: c.id, video: c.media.video, width: c.media.width, height: c.media.height });
         if (c.audio) audios.set(c.id, c.audio);
       }
-      const combined = combineAudios(nextPlan.clips, Object.fromEntries(audios));
+      const combined = combineAudios(nextPlan.clips, Object.fromEntries(audios), allSilences);
       setSession({
         ...initialSession,
         warnings: [...initialSession.warnings, ...opened.warnings],

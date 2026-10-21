@@ -6,6 +6,7 @@ import type { OpenedMedia } from './input';
 import { openMedia } from './input';
 import { decodeAudio, toMono16k, type DecodedAudio } from './audio';
 import { findSilences } from '../analysis/silence';
+import { clipGains, peakOf, speechLevelDb } from '../analysis/loudness';
 import { cleanTranscript, toWords } from '../analysis/asr-merge';
 import { planAsr } from '../analysis/asr-windows';
 import type { Transcriber } from '../asr/transcriber';
@@ -98,7 +99,7 @@ export async function openClips(
 
   if (clips.length === 0) throw new AppError('NENHUM_CLIPE', 'Nenhum arquivo de vídeo pôde ser aberto.');
   const refs = buildClipRefs(clips);
-  const combinedAudio = combineAudios(refs, audiosByClip);
+  const combinedAudio = combineAudios(refs, audiosByClip, silencesByClip);
 
   return { clips, wordsByClip, silencesByClip, audiosByClip, combinedAudio, warnings, asrModel };
 }
@@ -124,11 +125,47 @@ export function assembledSilences(refs: ClipRef[], silencesByClip: Record<string
   return placeRanges(refs, silencesByClip);
 }
 
+/** Nível da fala e pico de cada áudio, medidos uma vez só (o áudio decodificado nunca muda). */
+const levelCache = new WeakMap<DecodedAudio, { silences: readonly TimeRange[] | undefined; level: number | null; peak: number }>();
+
+function measure(audio: DecodedAudio, silences: readonly TimeRange[] | undefined): { level: number | null; peak: number } {
+  const hit = levelCache.get(audio);
+  if (hit && hit.silences === silences) return hit;
+  // canal mais forte: microfone gravado só num lado do estéreo não conta como "baixo"
+  const levels = audio.channels.map((ch) => speechLevelDb(ch, audio.sampleRate, silences ?? []));
+  const known = levels.filter((l): l is number => l !== null);
+  const level = known.length ? Math.max(...known) : null;
+  const peak = Math.max(0, ...audio.channels.map(peakOf));
+  levelCache.set(audio, { silences, level, peak });
+  return { level, peak };
+}
+
 /**
- * Combina áudios de múltiplos clipes em timeline virtual (concatenação).
- * Lida com taxas diferentes via resample simples (OfflineAudioContext) quando necessário.
+ * Ganho de cada clipe para todos falarem no mesmo volume (issue #53): mediana dos clipes, até ±9 dB, sem
+ * passar do pico 0,97 (src/analysis/loudness.ts). Calculado sempre a partir do áudio original de cada
+ * clipe, nunca de um áudio já ajustado: por isso prévia, MP4, reabrir e desfazer dão o mesmo resultado
+ * e o ganho nunca é aplicado duas vezes. Nada disso é salvo no projeto.
  */
-export function combineAudios(refs: ClipRef[], audiosByClip: Record<string, DecodedAudio | null>): DecodedAudio | null {
+export function clipLoudnessGains(
+  refs: readonly ClipRef[],
+  audiosByClip: Record<string, DecodedAudio | null>,
+  silencesByClip?: Record<string, readonly TimeRange[]>,
+): Record<string, number> {
+  const ids = [...new Set(refs.map((r) => r.id))].filter((id) => audiosByClip[id]);
+  const measured = ids.map((id) => measure(audiosByClip[id]!, silencesByClip?.[id]));
+  const gains = clipGains(measured.map((m) => m.level), measured.map((m) => m.peak));
+  return Object.fromEntries(ids.map((id, i) => [id, gains[i]!]));
+}
+
+/**
+ * Combina áudios de múltiplos clipes em timeline virtual (concatenação), com o volume igualado entre clipes.
+ * Lida com taxas diferentes via reamostragem linear.
+ */
+export function combineAudios(
+  refs: ClipRef[],
+  audiosByClip: Record<string, DecodedAudio | null>,
+  silencesByClip?: Record<string, readonly TimeRange[]>,
+): DecodedAudio | null {
   const withAudio = refs.filter(r => audiosByClip[r.id]);
   if (withAudio.length === 0) return null;
   // Escolhe taxa do primeiro com áudio como referência
@@ -137,35 +174,39 @@ export function combineAudios(refs: ClipRef[], audiosByClip: Record<string, Deco
   const totalDur = totalDuration(refs);
   const totalSamples = Math.ceil(totalDur * refRate);
   const channels: Float32Array[] = Array.from({ length: refChannels }, () => new Float32Array(totalSamples));
+  const gains = clipLoudnessGains(refs, audiosByClip, silencesByClip);
   let offsetSec = 0;
   for (const ref of refs) {
     const audio = audiosByClip[ref.id];
     if (!audio) { offsetSec += ref.duration; continue; }
     const offsetSamples = Math.round(offsetSec * refRate);
-    // Resample se taxa diferente (simples:nearest, suficiente para preview; export resample melhor)
     let srcChannels = audio.channels;
-    let srcRate = audio.sampleRate;
-    if (srcRate !== refRate) {
-      // Resample via linear interpolation (rápido, sem OfflineAudioContext no teste)
-      const ratio = srcRate / refRate;
+    if (audio.sampleRate !== refRate) {
+      // Reamostragem linear (rápida, sem OfflineAudioContext, igual no teste e no navegador)
+      const ratio = audio.sampleRate / refRate;
       const newLen = Math.ceil(audio.channels[0]!.length / ratio);
       srcChannels = audio.channels.map(ch => {
         const out = new Float32Array(newLen);
         for (let i = 0; i < newLen; i++) {
           const srcIdx = i * ratio;
-          const i0 = Math.floor(srcIdx);
+          const i0 = Math.min(ch.length - 1, Math.floor(srcIdx));
           const i1 = Math.min(ch.length - 1, i0 + 1);
-          const f = srcIdx - i0;
+          const f = srcIdx - Math.floor(srcIdx);
           out[i] = ch[i0]! * (1 - f) + ch[i1]! * f;
         }
         return out;
       });
     }
+    const gain = gains[ref.id] ?? 1;
+    // o clipe ocupa exatamente a sua duração: um áudio mais longo não invade o clipe seguinte
+    const clipSamples = Math.min(Math.round(ref.duration * refRate), totalSamples - offsetSamples);
     for (let c = 0; c < refChannels; c++) {
       const src = srcChannels[Math.min(c, srcChannels.length - 1)]!;
       const dst = channels[c]!;
-      const available = Math.min(src.length, totalSamples - offsetSamples);
-      if (available > 0) dst.set(src.subarray(0, available), offsetSamples);
+      const available = Math.min(src.length, clipSamples);
+      if (available <= 0) continue;
+      if (gain === 1) dst.set(src.subarray(0, available), offsetSamples);
+      else for (let i = 0; i < available; i++) dst[offsetSamples + i] = src[i]! * gain;
     }
     offsetSec += ref.duration;
   }

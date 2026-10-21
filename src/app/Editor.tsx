@@ -149,7 +149,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     : session.ctx;
   const shownAudio = useMemo(() => {
     if (!session.clipAudios) return session.audio;
-    return combineAudios(shown.clips, Object.fromEntries(session.clipAudios));
+    return combineAudios(shown.clips, Object.fromEntries(session.clipAudios), session.clipSilences);
   }, [session, shown.clips]);
   const peaks = useMemo(() => shownAudio ? waveformPeaks(shownAudio.channels[0]!, 1200, true) : null, [shownAudio]);
   const range = selectedRange ? (plan.ranges.find((r) => r.id === selectedRange) ?? null) : null;
@@ -343,7 +343,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       // Route to multi-clip export when session has multiple sources
       const multiSources = session.clipSources;
       const isMulti = !!multiSources && multiSources.size > 0;
-      const multiAudio = session.clipAudios ? combineAudios(plan.clips, Object.fromEntries(session.clipAudios)) : session.audio;
+      const multiAudio = session.clipAudios ? combineAudios(plan.clips, Object.fromEntries(session.clipAudios), session.clipSilences) : session.audio;
       const out = isMulti
         ? await (await import('../media/export')).exportPlanMulti(multiSources!, multiAudio, plan, { onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
         : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
