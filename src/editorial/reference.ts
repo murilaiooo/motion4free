@@ -3,8 +3,8 @@ import type { StyleDNA } from '../core/style';
 import type { ReferencePalette } from '../core/types';
 
 /**
- * Imagem de referência → cores do estilo. Só as cores de destaque (`accent`, `accent2`) e o painel
- * mudam; texto da legenda, sombra e degradê ficam os do estilo, para a legenda continuar legível.
+ * Imagem de referência → cores do estilo. Cores de destaque e painel mudam; a palavra realçada da
+ * legenda também acompanha quando tinha a mesma cor do destaque. Texto, sombra e degradê permanecem.
  * Toda cor nova passa por contraste mínimo (WCAG 4,5:1) contra o que fica por cima dela.
  */
 
@@ -75,5 +75,11 @@ export function applyReference(style: StyleDNA, ref: ReferencePalette | null): S
     for (let t = 0; t <= 1.0001 && (luminance(panel) > 0.02 || contrast(panel, onPanel) < MIN_CONTRAST); t += 0.05) panel = mix(darkest, BLACK, t);
     P.panel = `${rgbToHex(panel)}${alphaSuffix(style.palette.panel)}`;
   }
-  return { ...style, palette: P };
+  // O Creative Setup vincula o destaque das legendas à cor da marca. Quando esse vínculo existir,
+  // a referência substitui ambos; uma cor diferente escolhida só para a legenda é preservada.
+  const linkedHighlight = style.captions.colors.highlight?.toUpperCase() === style.palette.accent.toUpperCase();
+  const captions = linkedHighlight
+    ? { ...style.captions, colors: { ...style.captions.colors, highlight: P.accent } }
+    : style.captions;
+  return { ...style, palette: P, captions };
 }

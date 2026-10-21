@@ -130,8 +130,8 @@ export function sceneOptionsFor(brief: CreativeBrief): SceneOptions {
 }
 
 /**
- * Aplica o look (cores, legenda, emojis, transição, intensidade, cenas ligadas) por cima do estilo já
- * ajustado pelo pedido e pelas cores da imagem. Proibições continuam vencendo: "sem emojis" desliga os
+ * Aplica o look (cores, legenda, emojis, transição, intensidade, cenas ligadas) por cima do estilo
+ * ajustado pelo pedido, antes da imagem de referência opcional. Proibições continuam vencendo: "sem emojis" desliga os
  * emojis mesmo que o look peça, "sem efeitos" segura a intensidade e tira a transição.
  * Cada valor fica dentro dos limites do esquema do StyleDNA.
  */
