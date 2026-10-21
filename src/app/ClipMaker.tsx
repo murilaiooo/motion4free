@@ -8,7 +8,8 @@ import { listTemplates } from '../core/template-gallery';
 import { CLIP_COUNTS, CLIP_LENGTHS, CLIP_LENGTH_IDS, MAX_MOMENTS, clock, findMoments, nudgeMoment, type ClipLength, type Moment } from '../editorial/highlights';
 import { rankMomentsWithAi } from '../editorial/moments-ai';
 import { VERSION_LABEL } from '../version';
-import { AiStatusLine, prepareAi, useAiSettings } from './AiOptions';
+import { AiStatusLine, prepareAi, useAiSettings, setAiSettings } from './AiOptions';
+import { openSettings } from './settings/route';
 import { ErrorBox } from './ErrorBox';
 import { ProgressPanel } from './ProgressPanel';
 import { clipJobFraction, type Progress } from '../core/progress';
@@ -264,7 +265,15 @@ export function ClipMaker({
         {work.notices.length > 0 && (
           <div className="clips-notices">
             {work.notices.map((n) => (
-              <ErrorBox key={n.code} error={n} kind="warning" onDismiss={() => onWork((w) => ({ ...w, notices: w.notices.filter((x) => x.code !== n.code) }))} />
+              <div key={n.code}>
+                <ErrorBox error={n} kind="warning" onDismiss={() => onWork((w) => ({ ...w, notices: w.notices.filter((x) => x.code !== n.code) }))} />
+                {(n.key === 'IA_SEM_ESPACO' || n.key === 'IA_MODELO_GRANDE') && (
+                  <div className="notice-row" data-testid="clips-ai-recovery">
+                    <button className="sm primary" disabled={working} onClick={() => { setAiSettings({ model: 'padrao' }); onWork((w) => ({ ...w, notices: w.notices.filter(notAiNotice) })); }} data-testid="clips-ai-smaller">Escolher IA Padrão e tentar novamente</button>
+                    <button className="sm" onClick={() => openSettings('armazenamento')}>Gerenciar armazenamento</button>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
