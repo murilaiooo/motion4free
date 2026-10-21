@@ -2,6 +2,14 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.18.0 — 21/10/2026
+**Camadas, onda de áudio real e mover itens na prévia de forma fluida.** Implementado; os testes automáticos e manuais desta versão ainda não foram executados.
+
+- **Mover na prévia (corrigido):** a legenda, o emoji e o título não se moviam. O código pegava a posição inicial com `require`, que não existe no navegador, e emojis e títulos gerados recebiam a posição no formato errado. Agora: clique escolhe, arrastar move, os cantos mudam o tamanho, Shift trava o eixo e o ímã encosta no centro e na área segura. Arrastar uma legenda leva todas as legendas juntas (para tirar do rosto de uma vez). Durante o arraste só a prévia muda; ao soltar, vira uma entrada do desfazer (antes, cada movimento do mouse criava uma).
+- **Camadas:** cada texto, emoji ou forma adicionado fica numa camada (faixa) da linha do tempo; a de cima é desenhada por cima. Arraste o item para outra faixa (sempre há uma vazia por cima) ou use "Para cima / Para baixo" no painel. As animações geradas, o vídeo e o áudio têm faixas próprias. Ver [ADR-0021](decisions/0021-camadas-e-edicao-direta.md).
+- **Onda de áudio real:** lida das amostras do áudio e desenhada só na parte visível, na resolução da tela. Fica nítida em qualquer zoom, que agora vai até 64×.
+- **Arraste mais leve:** a linha do tempo redesenha no máximo uma vez por quadro; as pontas para aparar ficaram com área de pegada maior (para fora do bloco) e uma alça visível; a borda amarela da seleção ficou mais fina.
+
 ## v0.17.0 — 21/10/2026
 **Linha do tempo de editor de verdade: dividir, apagar, mover, aparar, copiar, recortar, colar e duplicar.** Implementado; os testes automáticos e manuais desta versão ainda não foram executados.
 

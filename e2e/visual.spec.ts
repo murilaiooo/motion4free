@@ -94,7 +94,7 @@ test('galeria de modelos: filtro por etiqueta, cartão escolhido marcado e desfa
 test('atalhos e prévia: espaço toca e pausa, área segura do Reels liga e desliga', async ({ page }) => {
   await openVideo(page);
   await page.locator('body').click({ position: { x: 5, y: 5 } }).catch(() => {});
-  await page.getByTestId('player-canvas').click(); // clicar na prévia também toca
+  await page.getByTestId('preview-overlay').click({ position: { x: 5, y: 5 } }); // clicar na prévia também toca
   await expect(page.getByTestId('play')).toHaveText('Pausar');
   await page.locator('.stage-head').click();
   await page.keyboard.press(' ');
