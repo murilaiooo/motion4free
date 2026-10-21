@@ -4,6 +4,8 @@
 
 | Repositório | Evidência | Regra para Motion4Free (MIT) |
 |---|---|---|
+| `opencut-app/opencut` | LICENSE MIT; rewrite em andamento | potencial para futuras ideias de API/plugins, editor ainda placeholder; não copiar stack |
+| `opencut-app/opencut-classic` | LICENSE MIT; README afirma arquivado; GitHub confirma `archived=true` | código potencialmente reutilizável com notices/aviso, mas sem manutenção: versões congeladas, auditoria de dependências e código |
 | `walterlow/freecut` | LICENSE MIT | código potencialmente reutilizável com copyright/notice, dependências/asset independentes |
 | `S07K/cutaway` | LICENSE MIT | reutilização potencial, guardar notices e provenance |
 | `afatabe/openreel` | LICENSE MIT | reutilização potencial com auditoria detalhada |

@@ -29,6 +29,16 @@
 | MASTER-16 | Biblioteca de elementos e efeitos autorais: buscas/filtros, agrupamentos, favoritos e propriedades | 07/10 | presets editáveis e realmente distintos; assets licenciados; sem dependências pagas |
 | MASTER-17 | Enquadramento assistido offline e safe zones para rosto/legenda, opt-in de modelos | 04/06 | comparação com enquadramento manual; respeitar limites de GPU/IA e fallback sem tracking |
 
+## P1 adicional: descobertas OpenCut Classic (adendo 21/10)
+
+| ID | Iniciativa | Dependência | Aceitação |
+|---|---|---|---|
+| MASTER-22 | Guias visuais de plataforma (TikTok / Reels / Shorts), grid e safe zones opcionais | layout/framing atual, 04/10 | guias de interface não entram no MP4; presets por plataforma realmente desenhados e testes nos quatro formatos; não presumir overlays de Reels/Shorts prontos no upstream |
+| MASTER-23 | Máscaras editáveis por objeto (rectangle, ellipse e feather inicial, editor de handle) | 04/07, render determinístico | preview idêntico a MP4 em frames de borda e de keyframe; shape preservado no projeto; máscara não afeta objetos não selecionados |
+| MASTER-24 | Registro de efeitos tipados + pipeline de passes, com protótipo GPU opcional | 03/04/06/07, validar compatibilidade WebGPU | pelo menos blur/color deterministic preview/export; fallback Canvas2D, métricas de RAM/tempo e zero dependência de GPU/servidor obrigatório |
+
+**Referência técnica:** [OpenCut Classic](08-opencut-deep-dive.md), projeto MIT mas arquivado. Não é convite para reescrever o motor em Rust/WGPU.
+
 ## P2: ampliar confiança, acabamento e interoperabilidade
 
 | ID | Iniciativa | Dependência | Aceitação |
@@ -44,9 +54,9 @@
 
 **M2, Ferramentas (07, 09, 10, 11):** primeiro keyframes puramente na engine e fixture; depois inspector, timeline visual, workspaces. Separar cada passo em PR e avaliação.
 
-**M3, Produção audiovisual (08, 12, 13, 15, 19):** transições, áudio/beat, legendas e formatos. Evitar fazer todos em uma PR.
+**M3, Produção audiovisual (08, 12, 13, 15, 19, 22):** transições, áudio/beat, legendas e formatos. Evitar fazer todos em uma PR.
 
-**M4, Direção criativa inteligente (14, 16, 17, 20):** IA como proponente reversível, mais qualidade artística, refinamento de clipes longos; M4 pode iniciar spikes paralelos que não mudem runtime.
+**M4, Direção criativa inteligente (14, 16, 17, 20, 23, 24):** IA como proponente reversível, mais qualidade artística, refinamento de clipes longos; M4 pode iniciar spikes paralelos que não mudem runtime.
 
 **M5, Aprovação de produto (18):** comparação cega com material real e validação por usuários em diferentes máquinas.
 

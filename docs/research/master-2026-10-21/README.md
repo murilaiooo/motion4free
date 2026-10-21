@@ -13,6 +13,11 @@ Chegar a um editor de Reels/Shorts com comportamento previsível, controle criat
 5. [05-architecture-and-qa.md](05-architecture-and-qa.md): contratos de engine e plano de provas técnicas/visuais.
 6. [06-licenses-and-provenance.md](06-licenses-and-provenance.md): permissões, restrições, atribuição e regras de reutilização.
 7. [07-source-map.md](07-source-map.md): caminhos exatos do GitHub para retomar cada inspeção sem repetir a pesquisa.
+8. [08-opencut-deep-dive.md](08-opencut-deep-dive.md): avaliação detalhada de OpenCut Classic e rewrite, módulos úteis, lacunas e integração segura.
+
+## Adendo 21/10: OpenCut
+
+A inspeção posterior identificou [OpenCut Classic](https://github.com/opencut-app/opencut-classic) (MIT, **arquivado**) como referência forte para comandos, keyframes Bézier, máscaras, efeitos em GPU e timebase em ticks, e [OpenCut rewrite](https://github.com/opencut-app/opencut) (MIT, **ainda esqueleto de editor**) como visão futura de plugins/API. **Não migrar stack e não tratar recursos anunciados no rewrite como entregues.** Ver [estudo técnico](08-opencut-deep-dive.md).
 
 ## Conclusões da pesquisa
 
@@ -30,6 +35,6 @@ Primeiro integridade de timeline/projeto/exportação, depois ferramentas de aut
 
 ## Como usar
 
-Use os IDs `MASTER-01` a `MASTER-21` do backlog. Faça PRs pequenos e independentes, com migrações compatíveis e rollback. Antes de implementar, confirme a versão atual da main e se um PR paralelo já implementou o item. Este relatório complementa, não substitui, `AGENTS.md`, `docs/superpowers/`, `docs/decisions/`, `docs/research/upstream-implementation/` e `docs/quality.md`.
+Use os IDs `MASTER-01` a `MASTER-24` do backlog (22–24 adicionados após a avaliação do OpenCut). Faça PRs pequenos e independentes, com migrações compatíveis e rollback. Antes de implementar, confirme a versão atual da main e se um PR paralelo já implementou o item. Este relatório complementa, não substitui, `AGENTS.md`, `docs/superpowers/`, `docs/decisions/`, `docs/research/upstream-implementation/` e `docs/quality.md`.
 
 **Estado no GitHub:** material proposto em branch de documentação, sem merge automático e sem mudanças no aplicativo.
