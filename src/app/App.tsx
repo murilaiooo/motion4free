@@ -12,12 +12,14 @@ import {
   duplicateProject,
   getCurrent,
   listProjects,
+  loadMusic,
   loadProject,
   migrateLegacy,
   nameFromFile,
   newProjectId,
   readMeta,
   renameProject,
+  saveMusic,
   saveProjectData,
   saveThumb,
   saveVideo,
@@ -34,6 +36,7 @@ import { appendClipsToPlan } from '../editorial/clip-append';
 import { placeWords, placeRanges, unplaceWords, unplaceRanges, totalDuration } from '../engine/clips';
 import type { PlanVersion } from '../core/versions';
 import type { OpenedMedia } from '../media/input';
+import type { DecodedAudio } from '../media/audio';
 import { makeThumbnail } from '../media/thumbnail';
 import { APP_VERSION, VERSION_LABEL } from '../version';
 import { DeleteProjectDialog, type DeleteTarget } from './DeleteProjectDialog';
@@ -158,6 +161,10 @@ function EditorApp() {
   const [creativeSetup, setCreativeSetup] = useState(readSetup);
   const [creativePhase, setCreativePhase] = useState<'home' | 'setup' | 'upload'>('home');
   const [firstDraft, setFirstDraft] = useState(false);
+  // música de fundo (v0.26): fica fora da sessão para sobreviver a trocar/adicionar clipes
+  const [music, setMusic] = useState<DecodedAudio | null>(null);
+  const [musicLoading, setMusicLoading] = useState(false);
+  const musicFor = useRef<string | null>(null);
   const saveFailed = useRef(false);
   /** A análise e a inclusão de clipes são uma operação única; duas chamadas não podem usar o mesmo histórico inicial. */
   const addingClips = useRef(false);
@@ -204,6 +211,9 @@ function EditorApp() {
   }, []);
 
   function resetSession() {
+    musicFor.current = null;
+    setMusic(null);
+    setMusicLoading(false);
     setCreativePhase('home');
     setFirstDraft(false);
     setPending(null);
@@ -242,6 +252,7 @@ function EditorApp() {
     }
     const meta = await readMeta(fs, id).catch(() => null);
     setProjectId(id);
+    void restoreMusic(id, loaded.project);
     setProjectName(meta?.name ?? nameFromFile(loaded.project.video.name));
     await enqueue(() => setCurrent(fs, id)).catch(() => undefined);
     const savedClips = referencedClips(loaded.project);
@@ -267,6 +278,45 @@ function EditorApp() {
       await resume(id, loaded.project, loaded.video, true);
     } catch (err) {
       fail(err);
+    }
+  }
+
+  /** Música de fundo salva no projeto (music.bin), lida em paralelo com os vídeos. */
+  async function restoreMusic(id: string, project: SavedProject) {
+    musicFor.current = id;
+    setMusic(null);
+    if (!fs) return;
+    const h = restoreHistory(project);
+    const wanted = [h.present, ...h.past, ...h.future, ...project.versions.map((v) => v.plan)].some((p) => p.music);
+    if (!wanted) return;
+    setMusicLoading(true);
+    try {
+      const blob = await enqueue(() => loadMusic(fs, id));
+      if (musicFor.current !== id) return;
+      if (!blob) {
+        if (h.present.music) notify(new AppError('MUSICA_SUMIU', h.present.music.name));
+        return;
+      }
+      const { decodeMusic } = await import('../media/music');
+      const audio = await decodeMusic(blob);
+      if (musicFor.current === id) setMusic(audio);
+    } catch (err) {
+      if (musicFor.current === id) notify(toAppError(err, 'MUSICA_SUMIU'));
+    } finally {
+      if (musicFor.current === id) setMusicLoading(false);
+    }
+  }
+
+  /** Música escolhida na aba Áudio: lê aqui no aparelho e guarda no projeto. */
+  async function pickMusic(file: File) {
+    const { decodeMusic } = await import('../media/music');
+    const audio = await decodeMusic(file);
+    musicFor.current = projectId;
+    setMusic(audio);
+    setMusicLoading(false);
+    if (fs && projectId) {
+      const id = projectId;
+      await enqueue(() => saveMusic(fs, id, file)).catch((err) => notify(new AppError('MUSICA_NAO_SALVA', describeError(err))));
     }
   }
 
@@ -478,6 +528,8 @@ function EditorApp() {
       void storeThumb(projectId, session.media, history.present);
     }
     setFileName(primary.name);
+    musicFor.current = null;
+    setMusic(null);
     setSession(null);
     setAsrModel(null);
     setHistory(null);
@@ -883,6 +935,9 @@ function EditorApp() {
           saveState={saveState}
           asrModel={asrModel}
           initialReview={firstDraft}
+          music={music}
+          musicLoading={musicLoading}
+          onPickMusic={pickMusic}
           onReplaceFile={(f: File|File[]) => void onFile(f as any)}
           onAddClips={(files: File[]) => void onAddClips(files)}
           projectMenu={

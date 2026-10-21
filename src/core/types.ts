@@ -166,6 +166,17 @@ export interface EditPlan {
   reference: ReferencePalette | null;
   /** o que a pessoa mexeu à mão no editor (v6, ADR-0018): posições, aparência, elementos, enquadramento */
   edits: ManualEdits;
+  /** música de fundo (v0.26); sem o campo ou null = sem música */
+  music?: MusicTrack | null;
+}
+
+/** Música de fundo: o arquivo fica salvo no projeto; o plano guarda o nome e como misturar. */
+export interface MusicTrack {
+  name: string;
+  /** volume da música, 0 a 1 */
+  volume: number;
+  /** abaixar a música enquanto alguém fala */
+  duck: boolean;
 }
 
 export const REELS_PROFILE: OutputProfile = { width: 1080, height: 1920, fps: 30 };

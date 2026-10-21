@@ -25,6 +25,7 @@ export const PROJECT = 'project.json';
 export const VIDEO = 'video.bin';
 export const VIDEO_DIR = 'video'; // multi-clip: video/<clipId>.bin
 export const THUMB = 'thumb.jpg';
+export const MUSIC = 'music.bin';
 export const NAME_MAX = 80;
 
 export interface ProjectMeta {
@@ -191,6 +192,16 @@ export async function saveClipVideo(fs: Fs, id: string, clipId: string, video: B
 
 export async function loadClipVideo(fs: Fs, id: string, clipId: string): Promise<Blob | null> {
   return (await fs.readFile([...dir(id), VIDEO_DIR, `${clipId}.bin`])) ?? null;
+}
+
+/** Música de fundo do projeto (v0.26): um arquivo só; escolher outra substitui. */
+export async function saveMusic(fs: Fs, id: string, music: Blob): Promise<void> {
+  await fs.writeFile([...dir(id), MUSIC], music);
+}
+
+export async function loadMusic(fs: Fs, id: string): Promise<Blob | null> {
+  const blob = await fs.readFile([...dir(id), MUSIC]);
+  return usable(blob) ? blob : null;
 }
 
 export async function saveThumb(fs: Fs, id: string, thumb: Blob): Promise<void> {

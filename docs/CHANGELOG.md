@@ -2,6 +2,16 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.26.0 — 21/10/2026
+**Música de fundo e legenda em arquivo (.srt).** Primeiras melhorias da comparação com o OpenCut, na ordem escolhida pelo responsável ([ADR-0026](decisions/0026-musica-e-legenda-srt.md)). Implementado; não testado nesta sessão.
+
+- Nova aba **Áudio** no editor: escolha uma música do aparelho (MP3, M4A, WAV ou OGG, até 60 MB). Ela toca por baixo da fala na prévia e no MP4, entra e sai suave e não se repete.
+- Volume da música e "abaixar a música quando alguém fala" (ligado por padrão). Trocar e tirar a música também entram no desfazer e nas versões.
+- A música fica guardada no projeto: ao reabrir, ela volta junto. Se o arquivo sumir, aparece o aviso M4F-205.
+- Vídeo sem som com música agora sai com áudio.
+- Aba **Legendas** ganha "Baixar legenda (.srt)": as legendas do vídeo editado, já corrigidas e nos tempos dos cortes, para o YouTube ou outro editor.
+- Códigos novos: M4F-203, M4F-204, M4F-205, M4F-206 (música) e M4F-523 (sem legenda para baixar).
+
 ## v0.25.1 — 21/10/2026
 **Configuração com exemplos animados.** Pedido do responsável: as prévias do passo "Visual" estavam minúsculas e iguais, e "Palavra em destaque" e "Discreta" pareciam a mesma coisa. Implementado; não testado nesta sessão.
 

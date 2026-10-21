@@ -8,6 +8,7 @@ import type { OpenedMedia } from './input';
 import { CLIP_CROSSFADE_SEC, spliceAudio } from './splice';
 import { ClipFrames, PREVIEW_MAX_SIDE, decodeSize, type ClipSource } from './sources';
 import { clipLayout, outputToClip } from '../engine/clips';
+import { mixMusic } from '../engine/music-mix';
 
 interface TimedFrame {
   t: number; // out
@@ -32,6 +33,8 @@ export class PlanPlayer {
   private readonly clipLayouts: Map<string, { start: number; end: number }> | null;
 
   private audioCtx: AudioContext | null = null;
+  /** música de fundo decodificada (v0.26); toca só quando o plano tem `music` */
+  private music: DecodedAudio | null = null;
   private audioBuffer: AudioBuffer | null = null;
   private node: AudioBufferSourceNode | null = null;
   private useAudioClock = false;
@@ -106,7 +109,7 @@ export class PlanPlayer {
 
   setPlan(plan: EditPlan, audio: DecodedAudio | null = this.audio): void {
     if (plan === this.plan && audio === this.audio) return;
-    const sameAudio = plan.segments === this.plan.segments && plan.clips === this.plan.clips && audio === this.audio;
+    const sameAudio = plan.segments === this.plan.segments && plan.clips === this.plan.clips && audio === this.audio && plan.music === this.plan.music;
     const outputChanged = plan.output.width !== this.plan.output.width || plan.output.height !== this.plan.output.height;
     // vários clipes: o enquadramento entra no quadro decodificado (SourceFrame), então precisa decodificar de novo
     const framingChanged = !!this.clipFrames && plan.framing !== this.plan.framing;
@@ -136,9 +139,21 @@ export class PlanPlayer {
     }
   }
 
+  /** Troca a música de fundo (null = sem música); tocando, recomeça do mesmo ponto com o som novo. */
+  setMusic(music: DecodedAudio | null): void {
+    if (music === this.music) return;
+    this.music = music;
+    this.audioBuffer = null;
+    if (this.playing) this.restart(this.currentTime);
+  }
+
+  private hasSound(): boolean {
+    return !!this.audio || (!!this.music && !!this.plan.music);
+  }
+
   play(): void {
     if (this.playing) return;
-    if (this.audio && !this.audioCtx) this.audioCtx = new AudioContext();
+    if (this.hasSound() && !this.audioCtx) this.audioCtx = new AudioContext();
     if (this.pausedAt >= this.duration - 0.02) this.pausedAt = 0;
     void this.start(this.pausedAt);
   }
@@ -184,7 +199,7 @@ export class PlanPlayer {
     this.playing = true;
     this.useAudioClock = false;
     try {
-      if (this.audioCtx && this.audio) {
+      if (this.audioCtx && this.hasSound()) {
         if (this.audioCtx.state !== 'running') await Promise.race([this.audioCtx.resume(), wait(400)]);
         if (s !== this.session) return;
         if (this.audioCtx.state === 'running') {
@@ -222,10 +237,13 @@ export class PlanPlayer {
   }
 
   private buildAudio(ctx: AudioContext): AudioBuffer {
-    const audio = this.audio!;
+    const audio = this.audio;
     const joins = this.clipFrames ? { clips: clipLayout(this.plan.clips).map(c => ({ start: c.start, end: c.end })), crossfadeSec: CLIP_CROSSFADE_SEC } : undefined;
-    const spliced = spliceAudio(audio.channels, audio.sampleRate, this.plan.segments, 0.008, joins);
-    const buffer = ctx.createBuffer(spliced.length, Math.max(1, spliced[0]!.length), audio.sampleRate);
+    const speech = audio ? spliceAudio(audio.channels, audio.sampleRate, this.plan.segments, 0.008, joins) : null;
+    const rate = audio?.sampleRate ?? this.music?.sampleRate ?? 48000;
+    // mesma mistura do MP4 (engine/music-mix.ts): a prévia soa como o arquivo final
+    const spliced = this.music && this.plan.music ? mixMusic(speech, rate, this.duration, this.music, this.plan.music) : speech ?? [new Float32Array(1)];
+    const buffer = ctx.createBuffer(spliced.length, Math.max(1, spliced[0]!.length), rate);
     spliced.forEach((ch, c) => buffer.copyToChannel(ch as Float32Array<ArrayBuffer>, c));
     return buffer;
   }

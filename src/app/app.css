@@ -532,3 +532,10 @@
 .color-pick { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: var(--fs-xs); color: var(--text-2); }
 .color-pick input[type='color'] { width: 100%; height: 34px; border: 1px solid var(--line); border-radius: var(--r-sm); background: none; padding: 2px; cursor: pointer; }
 .cap-style { gap: var(--s-4); }
+
+/* Música de fundo (v0.26) */
+.audio-panel .music-card { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3); border: 1px solid var(--line-strong); border-radius: var(--r-md); background: var(--bg-2); }
+.audio-panel .music-card svg { flex: none; color: var(--brand); }
+.audio-panel .music-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.audio-panel .check { display: flex; align-items: center; gap: var(--s-2); cursor: pointer; }
+.audio-panel .row-wrap { display: flex; flex-wrap: wrap; gap: var(--s-2); }
