@@ -45,9 +45,19 @@ export interface EditorialDecision {
   description: string;
 }
 
+export interface SceneEvidence {
+  sceneId: string;
+  name: string;
+  start: number;
+  end: number;
+  wordIds: string[];
+  coverage: 'nearby-speech' | 'configured-or-manual';
+  notes: string[];
+}
 export interface EditorialPlan {
   version: 1;
   decisions: EditorialDecision[];
   warnings: string[];
+  sceneEvidence?: SceneEvidence[];
   metrics: { sourceSeconds: number; outputSeconds: number; removedSeconds: number; captionCount: number; sceneCount: number };
 }

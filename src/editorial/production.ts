@@ -1,3 +1,4 @@
+import { sceneEvidence } from './decision-evidence';
 import { EMPTY_BRIEF, briefSchema, type CreativeBrief } from '../core/brief';
 import { AppError } from '../core/errors';
 import { profileFor } from '../core/formats';
@@ -102,5 +103,5 @@ export function evaluateDraft(plan: EditPlan, ctx: EditContext): EditorialPlan {
     { kind: 'hook', description: plan.brief.hook ? 'Frase real destacada como título de abertura; a fala mantém sua ordem.' : 'Abertura natural, sem frase inventada.' },
     { kind: 'audio', description: 'Áudio original acompanha os mesmos cortes do vídeo.' },
   ];
-  return { version: 1, decisions, warnings: [...new Set(warnings)], metrics: { sourceSeconds: ctx.durationSec, outputSeconds: duration, removedSeconds: Math.max(0, ctx.durationSec - duration), captionCount: plan.captions.length, sceneCount: plan.scenes.length } };
+  return { version: 1, decisions, sceneEvidence: sceneEvidence(plan, ctx.words), warnings: [...new Set(warnings)], metrics: { sourceSeconds: ctx.durationSec, outputSeconds: duration, removedSeconds: Math.max(0, ctx.durationSec - duration), captionCount: plan.captions.length, sceneCount: plan.scenes.length } };
 }

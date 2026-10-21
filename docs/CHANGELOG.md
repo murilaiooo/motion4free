@@ -1,3 +1,7 @@
+## 0.30.2 — UNTESTED / AWAITING QA
+
+- #8: preserve full short opening sentences, guard isolated emphasis in qualified claims, and expose transient source context in draft review.
+
 ## 0.30.1 — UNTESTED / AWAITING QA
 
 - #7: fichas semânticas e proveniência das onze cenas originais; limites compartilhados para propostas automáticas.
