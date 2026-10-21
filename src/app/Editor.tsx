@@ -300,12 +300,15 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const seek = useCallback((t: number) => playerRef.current?.seek(t), []);
   const togglePlay = useCallback(() => (playerRef.current?.isPlaying ? playerRef.current.pause() : playerRef.current?.play()), []);
 
-  // Atalhos: Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y; espaço toca/pausa; J e L voltam e avançam 1 s; K pausa.
+  // Atalhos: Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y; espaço toca/pausa; J e L voltam e avançam 1 s; K pausa;
+  // ← e → andam um quadro (com Shift, 1 s); Home e End vão ao início e ao fim.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (typing(e.target)) return;
       const k = e.key.toLowerCase();
       if (e.ctrlKey || e.metaKey) {
+        // enquanto o app trabalha (clipes entrando, exportação), desfazer misturaria o histórico
+        if (disabled) return;
         if (k === 'z' && !e.shiftKey) doUndo();
         else if ((k === 'z' && e.shiftKey) || k === 'y') doRedo();
         else return;
@@ -320,10 +323,19 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       } else if (k === 'k') playerRef.current?.pause();
       else if (k === 'j') seek((playerRef.current?.currentTime ?? 0) - 1);
       else if (k === 'l') seek((playerRef.current?.currentTime ?? 0) + 1);
+      else if ((k === 'arrowleft' || k === 'arrowright') && !onControl && !(e.target as HTMLElement)?.closest?.('[role="slider"], [role="listbox"], [role="tablist"]')) {
+        e.preventDefault();
+        const step = e.shiftKey ? 1 : 1 / Math.max(1, history.present.output.fps);
+        playerRef.current?.pause();
+        seek((playerRef.current?.currentTime ?? 0) + (k === 'arrowleft' ? -step : step));
+      } else if ((k === 'home' || k === 'end') && !onControl) {
+        e.preventDefault();
+        seek(k === 'home' ? 0 : (playerRef.current?.duration ?? 0));
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [doUndo, doRedo, togglePlay, seek]);
+  }, [doUndo, doRedo, togglePlay, seek, disabled, history.present.output.fps]);
 
   useEffect(() => {
     if (selectedCut !== null && selectedCut >= cuts.length) setSelectedCut(null);
@@ -703,7 +715,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         </span>
         <span className="status-keys" aria-label="Atalhos de teclado">
           <span className="kbd">Espaço</span> tocar/pausar <span className="kbd">J</span>
-          <span className="kbd">L</span> −1 s/+1 s <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer <span className="kbd">Ctrl</span>+<span className="kbd">Shift</span>+<span className="kbd">Z</span> refazer
+          <span className="kbd">L</span> −1 s/+1 s <span className="kbd">←</span>
+          <span className="kbd">→</span> um quadro <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer <span className="kbd">Ctrl</span>+<span className="kbd">Shift</span>+<span className="kbd">Z</span> refazer
         </span>
         <span className="status-privacy">Tudo no seu aparelho · nada é enviado</span>
       </footer>

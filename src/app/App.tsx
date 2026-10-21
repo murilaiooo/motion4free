@@ -745,7 +745,7 @@ function EditorApp() {
     <>
       {status.kind === 'error' && <ErrorBox error={status.error} kind="error" />}
       {notices.map((n) => (
-        <ErrorBox key={n.code} error={n} kind="warning" />
+        <ErrorBox key={n.code} error={n} kind="warning" onDismiss={() => setNotices((list) => list.filter((x) => x.code !== n.code))} />
       ))}
       {spaceWarn && (
         <div className="space-warn" data-testid="space-warning" style={{ display: 'grid', gap: 'var(--s-2)' }}>

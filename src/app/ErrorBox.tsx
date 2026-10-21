@@ -1,19 +1,30 @@
-import { useState } from 'react';
-import { CircleAlert, Copy, Check, TriangleAlert } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { CircleAlert, Copy, Check, TriangleAlert, X } from 'lucide-react';
 import { formatReport, type AppError } from '../core/errors';
 import { VERSION_LABEL } from '../version';
 
 /** Mostra o código do erro, o que aconteceu e um botão para copiar os detalhes para o feedback. */
-export function ErrorBox({ error, kind }: { error: AppError; kind: 'error' | 'warning' }) {
-  const [copied, setCopied] = useState(false);
+export function ErrorBox({ error, kind, onDismiss }: { error: AppError; kind: 'error' | 'warning'; onDismiss?: () => void }) {
+  const [copied, setCopied] = useState<'no' | 'yes' | 'select'>('no');
+  const details = useRef<HTMLDetailsElement>(null);
+  const pre = useRef<HTMLPreElement>(null);
   const report = formatReport(error, VERSION_LABEL, navigator.userAgent);
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(report);
-      setCopied(true);
+      setCopied('yes');
     } catch {
-      setCopied(false);
+      // sem permissão de área de transferência (ou navegador antigo): abre os detalhes já selecionados para Ctrl+C
+      if (details.current) details.current.open = true;
+      const sel = window.getSelection();
+      if (pre.current && sel) {
+        const range = document.createRange();
+        range.selectNodeContents(pre.current);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      setCopied('select');
     }
   }
 
@@ -30,15 +41,20 @@ export function ErrorBox({ error, kind }: { error: AppError; kind: 'error' | 'wa
           {kind === 'warning' && error.key.startsWith('MODELO') ? ' O vídeo foi editado mesmo assim, sem legendas e sem título.' : ''}
           {kind === 'warning' && error.key === 'TRANSCRICAO_FALHOU' ? ' O vídeo foi editado mesmo assim, sem legendas e sem título.' : ''}
         </p>
+        {onDismiss && (
+          <button className="icon sm ghost" onClick={onDismiss} aria-label={`Dispensar o aviso ${error.code}`} style={{ marginLeft: 'auto', flex: 'none' }} data-testid={`dismiss-${error.code}`}>
+            <X size={14} aria-hidden />
+          </button>
+        )}
       </div>
       <div className="notice-row" style={{ justifyContent: 'space-between', paddingLeft: 24 }}>
-        <details>
+        <details ref={details}>
           <summary>Detalhes técnicos</summary>
-          <pre>{report}</pre>
+          <pre ref={pre}>{report}</pre>
         </details>
         <button className="sm" onClick={copy}>
-          {copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
-          {copied ? 'Copiado' : 'Copiar detalhes'}
+          {copied === 'yes' ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
+          {copied === 'yes' ? 'Copiado' : copied === 'select' ? 'Selecionado: aperte Ctrl+C' : 'Copiar detalhes'}
         </button>
       </div>
     </div>
