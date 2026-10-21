@@ -1,4 +1,5 @@
 import { ASR_REPOS } from './asr-models';
+import { CLIP_JOB_DIR } from './clip-job';
 import { AppError, describeError } from './errors';
 import { LLM_MODELS, type LlmKey } from './llm-models';
 import { ROOT, deleteProject, listProjects, type ProjectSummary } from './project-library';
@@ -166,7 +167,7 @@ export async function measureStorage(deps: StorageDeps): Promise<StorageReport> 
       for (const e of (await deps.fs.list([])) ?? []) {
         if (e.name === ROOT) continue;
         const size = e.kind === 'dir' ? await dirSize(deps.fs, [e.name]) : ((await deps.fs.readFile([e.name]))?.size ?? 0);
-        other.push({ id: `fs:${e.name}`, kind: 'other', label: e.name === 'motion4free-projeto' ? 'Projeto da versão anterior' : `Pasta "${e.name}"`, detail: 'Arquivos no armazenamento privado do navegador', bytes: size, refs: [{ type: 'fs', path: [e.name] }] });
+        other.push({ id: `fs:${e.name}`, kind: 'other', label: e.name === 'motion4free-projeto' ? 'Projeto da versão anterior' : e.name === CLIP_JOB_DIR ? 'Análise do último vídeo longo (Clipes)' : `Pasta "${e.name}"`, detail: e.name === CLIP_JOB_DIR ? 'Fala transcrita e energia do áudio; o vídeo longo não é copiado' : 'Arquivos no armazenamento privado do navegador', bytes: size, refs: [{ type: 'fs', path: [e.name] }] });
       }
     } catch (err) {
       problems.push(new AppError('LISTA_FALHOU', describeError(err)));

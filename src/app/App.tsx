@@ -38,7 +38,9 @@ import { DeleteProjectDialog, type DeleteTarget } from './DeleteProjectDialog';
 import { Editor, type Session } from './Editor';
 import { ErrorBox } from './ErrorBox';
 import { Gallery } from './Gallery';
-import { Landing, Processing } from './Landing';
+import { Landing, Processing, type LandingMode } from './Landing';
+import { ClipMaker, newClipWork, releaseWork, type ClipWork } from './ClipMaker';
+import { analyzeLong, type PreparedClip } from './clip-pipeline';
 import { ProjectMenu } from './ProjectMenu';
 import { ProjectsList } from './Projects';
 import { StorageScreen } from './Storage';
@@ -140,6 +142,11 @@ function EditorApp() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [spaceWarn, setSpaceWarn] = useState<{ files: File[]; error: AppError } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  // v0.22: dois modos na primeira tela e o criador de clipes (ADR-0023)
+  const [mode, setModeState] = useState<LandingMode>(() => (typeof location !== 'undefined' && location.hash === '#clipes' ? 'clipes' : 'editar'));
+  const [clipWork, setClipWork] = useState<ClipWork | null>(null);
+  const [clipView, setClipView] = useState(false);
+  const [longWork, setLongWork] = useState(false);
   const saveFailed = useRef(false);
   /** A análise e a inclusão de clipes são uma operação única; duas chamadas não podem usar o mesmo histórico inicial. */
   const addingClips = useRef(false);
@@ -456,77 +463,119 @@ function EditorApp() {
         a = { media: clips[0]!.media, audio: combinedAudio, words: allWords, silences: allSilences, warnings, asrModel, plan } as any;
         (a as any).__multi = { clips, refs, combinedAudio, wordsByClip, silencesByClip };
       }
-      setAsrModel(a.asrModel);
-      const id = newProjectId(Date.now());
-      const h = createHistory(a.plan);
-      setProjectId(id);
-      setSavedFor(null);
-      setVersions(noVersions);
-      setVersionsSaved(noVersions);
-      const multi = (a as any).__multi as { clips: import('../media/multi').OpenedClip[]; refs: import('../core/types').ClipRef[]; wordsByClip: Record<string, import('../core/types').Word[]>; silencesByClip: Record<string, import('../core/types').TimeRange[]> } | undefined;
-      // O arquivo inicialmente escolhido pode ser inválido; o projeto pertence ao primeiro válido.
-      const canonicalBlob = multi?.clips[0]?.file ?? primary;
-      const canonicalName = multi?.clips[0]?.name ?? primary.name;
-      setFileName(canonicalName);
-      setProjectName(nameFromFile(canonicalName));
-      // Build clipSources map for player/export from opened clips
-      let clipSources: Map<string, import('../media/sources').ClipSource> | null = null;
-      if (multi) {
-        clipSources = new Map();
-        for (const c of multi.clips) {
-          clipSources.set(c.id, { id: c.id, video: c.media.video, width: c.media.width, height: c.media.height });
-        }
-      }
-      const opened: Session = {
-        file: canonicalBlob,
-        fileName: canonicalName,
-        media: a.media,
-        audio: a.audio,
-        ctx: { durationSec: (a.plan as any)?.clips ? (a.plan as any).clips.reduce((s:number,c:any)=>s+c.duration,0) : a.media.durationSec, words: a.words },
-        silences: a.silences,
-        warnings: a.warnings,
-        peaks: peaksOf(a.audio),
-        clipSources: clipSources,
-        openedClips: multi?.clips ?? null,
-        clipWords: multi?.wordsByClip,
-        clipSilences: multi?.silencesByClip,
-        clipAudios: multi ? new Map(multi.clips.filter((c) => c.audio !== null).map((c): [string, import('../media/audio').DecodedAudio] => [c.id, c.audio!])) : null,
-        originalVideo: { name: canonicalName, size: canonicalBlob.size, durationSec: a.media.durationSec },
-      } as any;
-      setSession(opened);
-      setHistory(h);
-      setStatus({ kind: 'ready' });
-      if (storageAvailable() && fs) {
-        // Ordem que sobrevive a fechar a aba no meio (v0.16): primeiro as edições (project.json + meta.json, poucos KB),
-        // depois "aberto por último", e só então a cópia do vídeo, que pode levar vários segundos ou não caber.
-        // Antes a cópia ia primeiro: fechar a aba durante ela deixava uma pasta sem dados ("Projeto que não abre").
-        const first = snapshot(opened, h, noVersions);
-        saveFailed.current = false;
-        void enqueue(() => saveProjectData(fs, id, first, nameFromFile(canonicalName), first.savedAt)).then(
-          () => {
-            setSavedFor((cur) => cur ?? h);
-            void enqueue(() => setCurrent(fs, id)).catch(() => undefined);
-            if (multi && multi.clips.length > 1) {
-              storeMultiCopies(id, multi.clips);
-            } else {
-              void storeCopy(id, canonicalBlob);
-            }
-            void storeThumb(id, a.media, a.plan);
-          },
-          (err) => {
-            // sem os dados do projeto, uma cópia do vídeo só ocuparia espaço
-            saveFailed.current = true;
-            setCopy('failed');
-            notify(toAppError(err, 'SALVAR_FALHOU'));
-          },
-        );
-      } else {
-        setCopy('failed');
-        notify(new AppError('SALVAR_FALHOU', 'navigator.storage.getDirectory indisponível'));
-      }
+      startProject(a, primary);
     } catch (err) {
       fail(err);
     }
+  }
+
+  /** Abre no editor o resultado de uma análise (vídeo novo, vários clipes ou um clipe do criador de clipes) e começa a salvar. */
+  function startProject(a: Awaited<ReturnType<typeof analyze>>, primary: File, name?: string) {
+    setAsrModel(a.asrModel);
+    const id = newProjectId(Date.now());
+    const h = createHistory(a.plan);
+    setProjectId(id);
+    setSavedFor(null);
+    setVersions(noVersions);
+    setVersionsSaved(noVersions);
+    const multi = (a as any).__multi as { clips: import('../media/multi').OpenedClip[]; refs: import('../core/types').ClipRef[]; wordsByClip: Record<string, import('../core/types').Word[]>; silencesByClip: Record<string, import('../core/types').TimeRange[]> } | undefined;
+    // O arquivo inicialmente escolhido pode ser inválido; o projeto pertence ao primeiro válido.
+    const canonicalBlob = multi?.clips[0]?.file ?? primary;
+    const canonicalName = multi?.clips[0]?.name ?? primary.name;
+    setFileName(canonicalName);
+    const projectTitle = name ?? nameFromFile(canonicalName);
+    setProjectName(projectTitle);
+    // Build clipSources map for player/export from opened clips
+    let clipSources: Map<string, import('../media/sources').ClipSource> | null = null;
+    if (multi) {
+      clipSources = new Map();
+      for (const c of multi.clips) {
+        clipSources.set(c.id, { id: c.id, video: c.media.video, width: c.media.width, height: c.media.height });
+      }
+    }
+    const opened: Session = {
+      file: canonicalBlob,
+      fileName: canonicalName,
+      media: a.media,
+      audio: a.audio,
+      ctx: { durationSec: (a.plan as any)?.clips ? (a.plan as any).clips.reduce((s:number,c:any)=>s+c.duration,0) : a.media.durationSec, words: a.words },
+      silences: a.silences,
+      warnings: a.warnings,
+      peaks: peaksOf(a.audio),
+      clipSources: clipSources,
+      openedClips: multi?.clips ?? null,
+      clipWords: multi?.wordsByClip,
+      clipSilences: multi?.silencesByClip,
+      clipAudios: multi ? new Map(multi.clips.filter((c) => c.audio !== null).map((c): [string, import('../media/audio').DecodedAudio] => [c.id, c.audio!])) : null,
+      originalVideo: { name: canonicalName, size: canonicalBlob.size, durationSec: a.media.durationSec },
+    } as any;
+    setSession(opened);
+    setHistory(h);
+    setStatus({ kind: 'ready' });
+    if (storageAvailable() && fs) {
+      // Ordem que sobrevive a fechar a aba no meio (v0.16): primeiro as edições (project.json + meta.json, poucos KB),
+      // depois "aberto por último", e só então a cópia do vídeo, que pode levar vários segundos ou não caber.
+      // Antes a cópia ia primeiro: fechar a aba durante ela deixava uma pasta sem dados ("Projeto que não abre").
+      const first = snapshot(opened, h, noVersions);
+      saveFailed.current = false;
+      void enqueue(() => saveProjectData(fs, id, first, projectTitle, first.savedAt)).then(
+        () => {
+          setSavedFor((cur) => cur ?? h);
+          void enqueue(() => setCurrent(fs, id)).catch(() => undefined);
+          if (multi && multi.clips.length > 1) {
+            storeMultiCopies(id, multi.clips);
+          } else {
+            void storeCopy(id, canonicalBlob);
+          }
+          void storeThumb(id, a.media, a.plan);
+        },
+        (err) => {
+          // sem os dados do projeto, uma cópia do vídeo só ocuparia espaço
+          saveFailed.current = true;
+          setCopy('failed');
+          notify(toAppError(err, 'SALVAR_FALHOU'));
+        },
+      );
+    } else {
+      setCopy('failed');
+      notify(new AppError('SALVAR_FALHOU', 'navigator.storage.getDirectory indisponível'));
+    }
+  }
+
+  function setMode(m: LandingMode) {
+    setModeState(m);
+    try {
+      window.history.replaceState(null, '', m === 'clipes' ? '#clipes' : `${location.pathname}${location.search}`);
+    } catch {
+      // sem histórico (página em quadro): o modo vale só nesta tela
+    }
+  }
+
+  /** Modo Clipes: analisa o vídeo longo (ou reaproveita a análise guardada) e abre a lista de momentos. */
+  async function onLongFile(file: File) {
+    setStatus({ kind: 'idle' });
+    setFlash(null);
+    setNotices([]);
+    setFileName(file.name);
+    setLongWork(true);
+    try {
+      const long = await analyzeLong(file, transcriber, step, { asrMode: precision.mode, fs: storageAvailable() ? fs : null });
+      releaseWork(clipWork);
+      setClipWork(newClipWork(long));
+      setClipView(true);
+      setStatus({ kind: 'idle' });
+    } catch (err) {
+      fail(err);
+    } finally {
+      setLongWork(false);
+    }
+  }
+
+  /** "Abrir no editor" num clipe: vira um projeto normal (sem transcrever de novo). */
+  function openClipInEditor(p: PreparedClip, title: string) {
+    setClipView(false);
+    setNotices([]);
+    startProject({ media: p.media, audio: p.audio, plan: p.plan, words: p.words, silences: p.silences, warnings: [], asrModel: clipWork?.long.asrModel ?? null }, p.file, title);
   }
 
   /** Acrescentar clipes no projeto aberto sem substituir as edições existentes. */
@@ -820,7 +869,29 @@ function EditorApp() {
       </>
     );
   }
-  if (status.kind === 'working') return <Processing label={status.label} fraction={status.fraction} fileName={fileName} />;
+  if (status.kind === 'working')
+    return longWork ? (
+      <Processing label={status.label} fraction={status.fraction} fileName={fileName} title="Procurando os melhores momentos" note="Vídeo longo: transcrever leva de alguns minutos a quase uma hora, conforme o computador. Deixe a aba aberta; se fechar, a análise que já terminou fica guardada e o mesmo arquivo abre direto." />
+    ) : (
+      <Processing label={status.label} fraction={status.fraction} fileName={fileName} />
+    );
+  if (clipView && clipWork)
+    return (
+      <>
+        <ClipMaker
+          work={clipWork}
+          onWork={(update) => setClipWork((w) => (w ? update(w) : w))}
+          onOpenInEditor={openClipInEditor}
+          onBack={() => {
+            setClipView(false);
+            setMode('clipes');
+            void refreshProjects();
+          }}
+          onStorage={() => setStorageOpen(true)}
+        />
+        {overlays}
+      </>
+    );
   return (
     <>
       <Landing
@@ -830,6 +901,31 @@ function EditorApp() {
         pendingClipCount={pendingMulti ? pendingClips.length : undefined}
         options={!pending && <AsrPrecisionOption precision={precision} disabled={busy} />}
         onStorage={() => setStorageOpen(true)}
+        mode={mode}
+        onMode={setMode}
+        onLongFile={(f) => void onLongFile(f)}
+        clipResume={
+          clipWork &&
+          mode === 'clipes' && (
+            <div className="lp-resume" data-testid="clips-resume">
+              <span>
+                Clipes de <b>{clipWork.long.file.name}</b> continuam abertos ({clipWork.items.filter((it) => it.job.kind === 'done').length} prontos).
+              </span>
+              <button className="sm primary" onClick={() => setClipView(true)} data-testid="clips-resume-open">
+                Voltar aos clipes
+              </button>
+              <button
+                className="sm ghost"
+                onClick={() => {
+                  releaseWork(clipWork);
+                  setClipWork(null);
+                }}
+              >
+                Fechar
+              </button>
+            </div>
+          )
+        }
         projects={
           projects.length > 0 && (
             <ProjectsList
