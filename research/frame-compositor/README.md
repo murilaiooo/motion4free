@@ -9,3 +9,7 @@ QA in Brave: serve the source, open the POC, inspect common graph at fixed/fract
 Audio/muxed MP4 and source video decoding are intentionally not reimplemented in this research increment. They require a separate integration against the existing Mediabunny pipeline before any engine adoption. Motion Canvas/Pixi/Theatre/GSAP/dotLottie/OpenReel are documented candidates, not implemented adapters in this POC. Source-of-truth ADR-0005 remains unchanged; no winner can be selected from unexecuted code. #2 corresponding-source/license blockers remain independent. #26 adds structurally different compositions on this common foundation.
 
 Primary references read: https://threejs.org/docs/ ; https://github.com/mrdoob/three.js/blob/r180/LICENSE ; npm metadata three@0.180.0. Module origin https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js (imports its same-version three.core.js). Research network dependency only, never receives user content.
+
+## #26 composition increment — unexecuted
+
+Three separate graph builders now exist: sparse sequential reading band, linked lit 3D diagram and asymmetric documentary chapter rail. Same manually entered phrases/boundaries and optional local recording are shared. Rights acknowledgement, blob-only input, paused synchronized seek and source+overlay PNG capture are implemented; no ASR/playback/audio/MP4 output or blind review is claimed. See `docs/reviews/2026-10-21-issue26-implementation-handoff.md`. No source video is distributed.

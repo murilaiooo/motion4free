@@ -187,3 +187,5 @@ O limite local não substitui os limites da conta de API. Não há fallback para
 | M4F-529 | O pedido foi cancelado ou a edição/seleção mudou enquanto ele era preparado. Preservei o estado atual; envie um novo pedido para continuar. | pedido cancelado ou plano/seleção mudou. Nenhum resultado atrasado é aplicado; enviar novo pedido ao estado atual. |
 | M4F-806 | Grafo da POC fora dos limites. | Schema fechado, IDs únicos e tempos limitados. |
 | M4F-807 | Adaptador Three indisponível na POC. | Falha no módulo fixo ou WebGL; Canvas permanece. |
+
+| M4F-808 | Fonte local/seek da POC indisponível. | Vídeo menor que 12 s, decoder, timeout ou captura ficou obsoleta. |

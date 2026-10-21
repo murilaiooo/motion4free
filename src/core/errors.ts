@@ -95,6 +95,7 @@ export const ERRORS = {
   QUALIDADE_DATASET: { code: 'M4F-809', title: 'O dataset precisa de direitos e anotações válidos, com origem, pessoas e conteúdo separados entre os conjuntos.' },
   FONTE_FALHOU: { code: 'M4F-801', title: 'As fontes do estilo não carregaram; o vídeo usa uma fonte reserva.' },
   CRIATIVO_GRAFO: { code: 'M4F-806', title: 'O grafo de composição da POC está fora dos limites permitidos.' },
+  CRIATIVO_MIDIA: { code: 'M4F-808', title: 'A POC precisa de um vídeo local decodificável de pelo menos 12 s e de um seek concluído antes de salvar o frame.' },
   CRIATIVO_GPU: { code: 'M4F-807', title: 'A POC não conseguiu carregar o adaptador Three.js ou criar WebGL. Canvas2D continua disponível.' },
   ESTILO_DESCONHECIDO: { code: 'M4F-802', title: 'Este estilo não existe nesta versão do app.' },
   IMAGEM_FALHOU: { code: 'M4F-803', title: 'Não foi possível ler esta imagem. Use uma foto JPG, PNG ou WebP.' },
