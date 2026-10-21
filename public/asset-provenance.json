@@ -1,0 +1,820 @@
+{
+  "version": 1,
+  "status": "PARTIAL STATIC INVENTORY — UNTESTED / AWAITING QA",
+  "sourceBase": "84e13c644cbf556021ccf76b89feeb93d2d8c7e3",
+  "date": "2026-10-21",
+  "scope": "Source-imported font binaries and known browser runtime package notices. No build generated or inspected.",
+  "assets": [
+    {
+      "file": "node_modules/@fontsource/anton/files/anton-latin-400-normal.woff2",
+      "sha256": "d0fa07ff63dd60cbc0e2f58e29c802dca2a5ae0276c999f59c6111ab7bbaec3b",
+      "bytes": 18612,
+      "package": "@fontsource/anton",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/anton/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/archivo-black/files/archivo-black-latin-400-normal.woff2",
+      "sha256": "25f33e61cf995abd6be62931cf03bf427286259177b43618cc410ee0157cfd30",
+      "bytes": 18604,
+      "package": "@fontsource/archivo-black",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/archivo-black/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/bungee/files/bungee-latin-400-normal.woff2",
+      "sha256": "126eec706b7931682dbcf6c6efc274132c603f181fbf912678e6cfeb341e721b",
+      "bytes": 14344,
+      "package": "@fontsource/bungee",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/bungee/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/caveat/files/caveat-latin-700-normal.woff2",
+      "sha256": "15f9638095ad5ec9816f93d66805ca1a87e71dc5a76b596bfce1c78d4704c405",
+      "bytes": 51020,
+      "package": "@fontsource/caveat",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/caveat/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-italic.woff2",
+      "sha256": "4fb55a7a6d564d428061fe12c82c896264bcc8b7f0b52840bf88e0db5b91256f",
+      "bytes": 23924,
+      "package": "@fontsource/cormorant-garamond",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/cormorant-garamond/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2",
+      "sha256": "8197bf53615ddc8c423f444c7f0eec63b7fa0ba093fcfbec60dfdd28429b0fc8",
+      "bytes": 23312,
+      "package": "@fontsource/cormorant-garamond",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/cormorant-garamond/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-600-normal.woff2",
+      "sha256": "ae062b6d5ae308e7edf61b28b07b9984bbb6e961b1f34d9b2c2f4389c33f21ea",
+      "bytes": 23396,
+      "package": "@fontsource/cormorant-garamond",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/cormorant-garamond/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/courier-prime/files/courier-prime-latin-400-normal.woff2",
+      "sha256": "f09844e1f4fe9e67df2cc77474519e68756d559b4648278b9dd4f03c8ac9c31f",
+      "bytes": 18640,
+      "package": "@fontsource/courier-prime",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/courier-prime/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/courier-prime/files/courier-prime-latin-700-normal.woff2",
+      "sha256": "5c7ae1cc9aae183453565c836b74a1b988f5f2e52b65098decb909b3930957ec",
+      "bytes": 19348,
+      "package": "@fontsource/courier-prime",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/courier-prime/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/dm-sans/files/dm-sans-latin-500-normal.woff2",
+      "sha256": "19bf1984956517c35c2bd35b6cdedac12a21d6fcd3596c614ecdfb88b648909d",
+      "bytes": 14304,
+      "package": "@fontsource/dm-sans",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/dm-sans/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/dm-sans/files/dm-sans-latin-700-normal.woff2",
+      "sha256": "35c5efa0e5daa52ee5c6500f5be354bf751fb65c4e49e1d6806c6eb5883e8fe9",
+      "bytes": 14348,
+      "package": "@fontsource/dm-sans",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/dm-sans/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2",
+      "sha256": "01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22",
+      "bytes": 14888,
+      "package": "@fontsource/ibm-plex-mono",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/ibm-plex-mono/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-600-normal.woff2",
+      "sha256": "0d1f0b8d0722224e32e9f28261bdc86c79115be73444ae5eceb73976a1bcdf83",
+      "bytes": 15620,
+      "package": "@fontsource/ibm-plex-mono",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/ibm-plex-mono/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/ibm-plex-sans-condensed/files/ibm-plex-sans-condensed-latin-600-normal.woff2",
+      "sha256": "3d72a0923c5830358b0a8e25b258aecadbecbf542b6ee9a25f387803e37d56b9",
+      "bytes": 19816,
+      "package": "@fontsource/ibm-plex-sans-condensed",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/ibm-plex-sans-condensed/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/ibm-plex-sans-condensed/files/ibm-plex-sans-condensed-latin-700-normal.woff2",
+      "sha256": "4768878c107d92c528a65bba206a87cdcf2c694514e75907fb91772cf8a388a5",
+      "bytes": 19352,
+      "package": "@fontsource/ibm-plex-sans-condensed",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/ibm-plex-sans-condensed/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2",
+      "sha256": "0717336fb31fcdcde4b8deb3675bb4a0f7f6d484864afcd6751ac29975962203",
+      "bytes": 24184,
+      "package": "@fontsource/ibm-plex-sans",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/ibm-plex-sans/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2",
+      "sha256": "8960851d691c054ed38e259bdcf1a6190d157b4203ed5bb32c632a863fb8ec2f",
+      "bytes": 24252,
+      "package": "@fontsource/ibm-plex-sans",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/ibm-plex-sans/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-700-normal.woff2",
+      "sha256": "42e7b0c143c19df9d99fd896e76b48f846edf0902d200bc29796b34d12c33aa7",
+      "bytes": 22832,
+      "package": "@fontsource/ibm-plex-sans",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/ibm-plex-sans/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2",
+      "sha256": "5a51946dfffa82972bc98745359c46761515641fda557c25116459a9f83da4a7",
+      "bytes": 22128,
+      "package": "@fontsource/instrument-serif",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/instrument-serif/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2",
+      "sha256": "5eb09b5ac0e28b67c2f041c8ba6d244604ca0c0980d65912ab2d47fed84ddc31",
+      "bytes": 21032,
+      "package": "@fontsource/instrument-serif",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/instrument-serif/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2",
+      "sha256": "8909904ab6c872eb994093482a88a28eca2cd95912d7b6fecd72103b0dc07edc",
+      "bytes": 23664,
+      "package": "@fontsource/inter",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/inter/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/app/theme.css"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/inter/files/inter-latin-500-normal.woff2",
+      "sha256": "f3779f1efccc4bdcdf9c0a02ab95bf6bd092ed09c48c08cedc725889edd1d19f",
+      "bytes": 24272,
+      "package": "@fontsource/inter",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/inter/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/app/theme.css",
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/inter/files/inter-latin-600-normal.woff2",
+      "sha256": "f9a06e79cd3a2a20951c0f0e28f66dd0e6d3fda73911d640a2125c8fcb78f21a",
+      "bytes": 24452,
+      "package": "@fontsource/inter",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/inter/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/app/theme.css",
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/inter/files/inter-latin-700-normal.woff2",
+      "sha256": "6f56409fd3d64bb85f7d070bce20749db2d66b6d63cec586cc22d1c761be2491",
+      "bytes": 24356,
+      "package": "@fontsource/inter",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/inter/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/app/theme.css",
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/inter/files/inter-latin-800-normal.woff2",
+      "sha256": "a7d0a50f15d389cad679238466bdb5fc9787aa0715719064ce25abaff042820d",
+      "bytes": 24400,
+      "package": "@fontsource/inter",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/inter/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/kalam/files/kalam-latin-700-normal.woff2",
+      "sha256": "252063af6ade8b9a744cde4ddad0fc21ea53b8ba711eed121a0c2e8610ea9c93",
+      "bytes": 22144,
+      "package": "@fontsource/kalam",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/kalam/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2",
+      "sha256": "f9d9e65b15372cebcafc3acd1e664a564c5c4b23278de4d5760de9a13c530371",
+      "bytes": 18824,
+      "package": "@fontsource/montserrat",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/montserrat/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/montserrat/files/montserrat-latin-800-normal.woff2",
+      "sha256": "ba826fb84c2e961578adf3a08b5778b87905d4443445d1d56d84f9f157d5ea4b",
+      "bytes": 19012,
+      "package": "@fontsource/montserrat",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/montserrat/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/montserrat/files/montserrat-latin-900-normal.woff2",
+      "sha256": "5b6958520638bb8609f9eacb17c4d189563efeae96d5da49f7c2043988697205",
+      "bytes": 18020,
+      "package": "@fontsource/montserrat",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/montserrat/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/nunito/files/nunito-latin-800-normal.woff2",
+      "sha256": "2363d3ed037283ebb961e8c4b4917e40a8bc8853cf9965cf1ea7b4daa1df630a",
+      "bytes": 16520,
+      "package": "@fontsource/nunito",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/nunito/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/nunito/files/nunito-latin-900-normal.woff2",
+      "sha256": "9ca32f5d8334579387361096944286df451272a557bb09bd906254a623aba99e",
+      "bytes": 16676,
+      "package": "@fontsource/nunito",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/nunito/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/oswald/files/oswald-latin-500-normal.woff2",
+      "sha256": "541b12882301dc44b73eaaed9e230709df1d299379c3594695870fc2f9e3ff0a",
+      "bytes": 12704,
+      "package": "@fontsource/oswald",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/oswald/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/oswald/files/oswald-latin-700-normal.woff2",
+      "sha256": "aae665c75af89ea7cb7d8ccc8b0911ea72267442ebcd84f6e3efa041ad3b3c16",
+      "bytes": 12672,
+      "package": "@fontsource/oswald",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/oswald/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/playfair-display/files/playfair-display-latin-400-italic.woff2",
+      "sha256": "eabce94d4a69e439cd050755c31f9894ac8a78f93e58b063c6c01f370474e1de",
+      "bytes": 21884,
+      "package": "@fontsource/playfair-display",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/playfair-display/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/playfair-display/files/playfair-display-latin-400-normal.woff2",
+      "sha256": "1fe9ad5d8b2ebd8ecb8fbd05bed1e3fdfa52dae3f1a04e1c219918442fe9394d",
+      "bytes": 21856,
+      "package": "@fontsource/playfair-display",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/playfair-display/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/rubik/files/rubik-latin-800-italic.woff2",
+      "sha256": "bad087a4713159824858683eef307bb0a6b73ddbe2fc00e656924820e8b71858",
+      "bytes": 19224,
+      "package": "@fontsource/rubik",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/rubik/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/rubik/files/rubik-latin-900-italic.woff2",
+      "sha256": "f8054480da6a9b256902835bb30990edc568c98de8d121c083b7d00381b16325",
+      "bytes": 18204,
+      "package": "@fontsource/rubik",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/rubik/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-500-normal.woff2",
+      "sha256": "1b1a8131d9edf975d9decee81e2f2bf504812f7a4f498e5500f28a613e22e64c",
+      "bytes": 13312,
+      "package": "@fontsource/space-grotesk",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/space-grotesk/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-700-normal.woff2",
+      "sha256": "35f8aec56cfd5cbfdb03cc68733a54a0b05bb3617ffcd5fd332badc0b045ca55",
+      "bytes": 12840,
+      "package": "@fontsource/space-grotesk",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/space-grotesk/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "node_modules/@fontsource/vt323/files/vt323-latin-400-normal.woff2",
+      "sha256": "8ddbebcc1048154132e1d78eb9b1f7850bca1b7d857035ccf1cb4318ebc615b6",
+      "bytes": 17936,
+      "package": "@fontsource/vt323",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/vt323/v/5.3.0",
+      "notice": "/licencas-fontes.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "unmodified package file",
+      "restrictions": "Retain OFL notice; reserved names apply to modified fonts; no standalone font sale."
+    },
+    {
+      "file": "src/assets/emoji/m4f-emoji.woff2",
+      "sha256": "4a94180bd80e397ce112fe05b60943ba03c1c6e779a4226cf4a24fd037b72f0a",
+      "bytes": 49956,
+      "package": "@fontsource/noto-color-emoji",
+      "version": "5.3.2",
+      "license": "OFL-1.1",
+      "source": "https://www.npmjs.com/package/@fontsource/noto-color-emoji/v/5.3.2",
+      "notice": "src/assets/emoji/OFL.txt",
+      "usedBy": [
+        "src/media/fonts.ts"
+      ],
+      "modification": "72-emoji subset via scripts/make-emoji-font.sh; registered as M4F Emoji",
+      "restrictions": "Retain OFL notice; no standalone font sale."
+    }
+  ],
+  "runtimes": [
+    {
+      "package": "react",
+      "version": "19.3.1",
+      "declaredLicense": "MIT",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/react/react.git",
+        "directory": "packages/react"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "react-dom",
+      "version": "19.3.1",
+      "declaredLicense": "MIT",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/react/react.git",
+        "directory": "packages/react-dom"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "scheduler",
+      "version": "0.28.0",
+      "declaredLicense": "MIT",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/react/react.git",
+        "directory": "packages/scheduler"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "zod",
+      "version": "4.6.7",
+      "declaredLicense": "MIT",
+      "source": {
+        "type": "git",
+        "url": "git+https://github.com/colinhacks/zod.git"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "mediabunny",
+      "version": "1.61.6",
+      "declaredLicense": "MPL-2.0",
+      "source": {
+        "type": "git",
+        "url": "git+https://github.com/Vanilagy/mediabunny.git"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "@mediabunny/aac-encoder",
+      "version": "1.61.6",
+      "declaredLicense": "MPL-2.0",
+      "source": {
+        "type": "git",
+        "url": "git+https://github.com/Vanilagy/mediabunny.git",
+        "directory": "packages/aac-encoder"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "lucide-react",
+      "version": "1.49.0",
+      "declaredLicense": "ISC",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/lucide-icons/lucide.git",
+        "directory": "packages/lucide-react"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "@huggingface/transformers",
+      "version": "4.3.1",
+      "declaredLicense": "Apache-2.0",
+      "source": {
+        "type": "git",
+        "url": "git+https://github.com/huggingface/transformers.js.git"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "@huggingface/jinja",
+      "version": "0.5.10",
+      "declaredLicense": "MIT",
+      "source": "https://github.com/huggingface/huggingface.js.git",
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "@huggingface/tokenizers",
+      "version": "0.2.0",
+      "declaredLicense": "Apache-2.0",
+      "source": {
+        "type": "git",
+        "url": "git+https://github.com/huggingface/tokenizers.js.git"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "onnxruntime-web",
+      "version": "1.31.0-dev.20260914-8d85527a0",
+      "declaredLicense": "MIT",
+      "source": {
+        "url": "https://github.com/Microsoft/onnxruntime.git",
+        "type": "git"
+      },
+      "noticeFiles": [],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "onnxruntime-common",
+      "version": "1.30.0",
+      "declaredLicense": "MIT",
+      "source": {
+        "url": "https://github.com/Microsoft/onnxruntime.git",
+        "type": "git"
+      },
+      "noticeFiles": [],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "@mlc-ai/web-llm",
+      "version": "0.2.85",
+      "declaredLicense": "Apache-2.0",
+      "source": {
+        "type": "git",
+        "url": "git+https://github.com/mlc-ai/web-llm"
+      },
+      "noticeFiles": [
+        "LICENSE"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "loglevel",
+      "version": "1.9.2",
+      "declaredLicense": "MIT",
+      "source": {
+        "type": "git",
+        "url": "git://github.com/pimterry/loglevel.git"
+      },
+      "noticeFiles": [
+        "LICENSE-MIT"
+      ],
+      "status": "package metadata and notices only; embedded third parties require separate review"
+    }
+  ],
+  "notDistributed": [
+    "Editonny media/code",
+    "OpenReel media/code",
+    "third-party music/SFX/3D"
+  ],
+  "pending": [
+    "Exact embedded FFmpeg revision, configuration, corresponding source and redistribution obligations of AAC fallback",
+    "Remote model file inventories, immutable revisions and converter provenance (Whisper/Qwen/MLC/ONNX)",
+    "Complete bundled transitive license mapping from an actual QA build",
+    "Any later MediaPipe/model addition (#98) must extend this main-based inventory"
+  ]
+}

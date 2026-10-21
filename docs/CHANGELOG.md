@@ -1,3 +1,7 @@
+## 0.31.1 — UNTESTED / AWAITING QA
+
+- #2: file-level imported font provenance and accessible runtime notices; record embedded AAC/FFmpeg source audit blocker.
+
 # Histórico de versões
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
