@@ -3,7 +3,7 @@
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
 ## v0.20.0 — 21/10/2026
-**Nada escondido: ações do projeto à vista no topo.** Implementado; não testado.
+**Nada escondido: ações do projeto à vista no topo.** Implementado; não testado. (Publicação reenviada porque a Cloudflare não pegou o primeiro envio.)
 
 - O menu que abria ao clicar no nome do projeto saiu. Agora a barra do topo mostra direto: o nome com um lápis (clique para renomear), **Meus projetos**, **Armazenamento** e **Apagar**, ao lado de Trocar vídeo, Desfazer/Refazer e Exportar.
 - Na aba IA, as seções Gancho e "Mudar só um pedaço" já vêm abertas.
