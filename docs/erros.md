@@ -168,3 +168,6 @@ O limite local não substitui os limites da conta de API. Não há fallback para
 - M4F-113: análise cancelada; nenhuma alteração parcial de enquadramento aplicada.
 - M4F-114: mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual.
 | M4F-809 | Dataset sem contrato/direitos/splits válidos. | Faltam direitos/anotações, IDs/tempos são inválidos ou origem/pessoa/hash cruza conjuntos. Nenhum dado privado é repetido no erro. |
+
+| M4F-810 | Pacote cego inválido. | Direitos, versões, IDs, referências ou briefing incompatíveis. |
+| M4F-811 | Respostas cegas incompletas/inválidas. | Identificador, notas/evidências/abstenções ou preferências ausentes. |
