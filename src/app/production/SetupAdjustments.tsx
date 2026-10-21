@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { LABELS } from '../../core/brief';
 import type { CreativeSetup } from '../../core/production';
 import { SetupChoices } from './SetupChoices';
+import { HookDemo, MotionDemo, TransitionDemo } from './SetupDemos';
 
 const COLORS = [
   { id: '#FFD400', label: 'Amarelo' }, { id: '#FFFFFF', label: 'Branco' }, { id: '#55BBFF', label: 'Azul' },
@@ -27,9 +28,9 @@ export function SetupAdjustments({ value, onChange, callError = false }: { value
     <p>O vídeo já pode ser criado com as escolhas acima. Abra apenas o que quiser personalizar.</p>
     <details ref={callSection}><summary>Abertura e chamada final</summary><div className="setup-adjustment-content">
       <h3>Abertura</h3>
-      <SetupChoices label="Título de abertura" value={String(value.hook)} onSelect={hook => onChange({ hook: hook === 'true' })} options={[
-        { id: 'true', label: 'Destacar uma frase', description: 'Usa uma frase real da gravação como título. Não reordena a fala.' },
-        { id: 'false', label: 'Sem título de abertura', description: 'Começa direto na gravação, sem título automático.' },
+      <SetupChoices label="Título de abertura" className="setup-demo-choices" value={String(value.hook)} onSelect={hook => onChange({ hook: hook === 'true' })} options={[
+        { id: 'true', label: 'Destacar uma frase', description: 'Usa uma frase real da gravação como título. Não reordena a fala.', visual: <HookDemo hook /> },
+        { id: 'false', label: 'Sem título de abertura', description: 'Começa direto na gravação, sem título automático.', visual: <HookDemo hook={false} /> },
       ]} />
       <h3>Chamada final</h3>
       <SetupChoices label="Chamada final" value={customCall ? 'custom' : value.cta} onSelect={cta => { setCustomCall(cta === 'custom'); if (cta !== 'custom') onChange({ cta }); }} options={[
@@ -48,18 +49,18 @@ export function SetupAdjustments({ value, onChange, callError = false }: { value
     </div></details>
     <details><summary>Movimento e transições</summary><div className="setup-adjustment-content">
       <h3>Movimento</h3>
-      <SetupChoices label="Intensidade do movimento" value={String(value.motion)} onSelect={motion => onChange({ motion: Number(motion) })} options={[
-        { id: '0', label: 'Sem movimento', description: 'Desliga zoom, transições e animações fortes.' },
-        { id: '0.2', label: 'Sutil', description: 'Animações contidas para não disputar com a fala.' },
-        { id: '0.65', label: 'Marcante', description: 'Mais presença nas animações dos textos.' },
+      <SetupChoices label="Intensidade do movimento" className="setup-demo-choices" value={String(value.motion)} onSelect={motion => onChange({ motion: Number(motion) })} options={[
+        { id: '0', label: 'Sem movimento', description: 'Desliga zoom, transições e animações fortes.', visual: <MotionDemo motion={0} /> },
+        { id: '0.2', label: 'Sutil', description: 'Animações contidas para não disputar com a fala.', visual: <MotionDemo motion={0.2} /> },
+        { id: '0.65', label: 'Marcante', description: 'Mais presença nas animações dos textos.', visual: <MotionDemo motion={0.65} /> },
       ]} />
       {![0, 0.2, 0.65].includes(value.motion) && <p>Intensidade personalizada mantida: {Math.round(value.motion * 100)}%.</p>}
       <h3>Transição entre cortes</h3>
-      <SetupChoices label="Transições" value={value.transition} onSelect={transition => onChange({ transition: transition as CreativeSetup['transition'] })} options={[
-        { id: 'none', label: 'Corte direto', description: 'Troca de trecho sem efeito de passagem.' },
-        { id: 'dip', label: 'Suave', description: 'Escurece brevemente na passagem.' },
-        { id: 'zoom', label: 'Aproximação', description: 'Um zoom curto marca a passagem.' },
-        { id: 'flash', label: 'Flash', description: 'Um clarão curto marca a passagem.' },
+      <SetupChoices label="Transições" className="setup-demo-choices" value={value.transition} onSelect={transition => onChange({ transition: transition as CreativeSetup['transition'] })} options={[
+        { id: 'none', label: 'Corte direto', description: 'Troca de trecho sem efeito de passagem.', visual: <TransitionDemo transition="none" /> },
+        { id: 'dip', label: 'Suave', description: 'Escurece brevemente na passagem.', visual: <TransitionDemo transition="dip" /> },
+        { id: 'zoom', label: 'Aproximação', description: 'Um zoom curto marca a passagem.', visual: <TransitionDemo transition="zoom" /> },
+        { id: 'flash', label: 'Flash', description: 'Um clarão curto marca a passagem.', visual: <TransitionDemo transition="flash" /> },
       ]} />
       {value.motion === 0 && <p role="status">Sem movimento também desliga as transições, mesmo se uma estiver selecionada.</p>}
       <h3>Ritmo visual</h3>

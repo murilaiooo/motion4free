@@ -2,6 +2,14 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.25.1 — 21/10/2026
+**Configuração com exemplos animados.** Pedido do responsável: as prévias do passo "Visual" estavam minúsculas e iguais, e "Palavra em destaque" e "Discreta" pareciam a mesma coisa. Implementado; não testado nesta sessão.
+
+- Cada escolha agora tem um exemplo que se mexe em loop, como um GIF leve (sem arquivo pesado): telinha no formato de cada destino, gravação de exemplo mostrando as pausas que somem em cada modo de edição, barra com a parte que entra em cada duração, legenda falada palavra por palavra, movimento, transições e título de abertura.
+- Visual: prévias grandes ao lado do nome, sobre um fundo que parece vídeo, todas animadas (com "menos movimento" ligado no sistema, só a escolhida e a do mouse animam).
+- Legendas: "Palavra em destaque" mostra as palavras entrando uma a uma e a falada pulando; "Discreta" mostra a frase inteira parada, só trocando a cor. Textos dos cartões reescritos.
+- Rodapé: "Usar estas escolhas" virou "Pular e escolher vídeos" e "Continuar" virou "Próximo: (nome da etapa)".
+
 ## v0.25.0 — 21/10/2026
 **Publica o trabalho local da v0.24 (configuração por escolhas, mesa ajustável, biblioteca, guias, checagem antes de exportar), revisado, e melhora a linha do tempo.** As v0.24.0 e v0.24.1 foram feitas e testadas só no computador do responsável e não chegaram a ser publicadas; esta versão as inclui. Implementado; não testado nesta sessão.
 

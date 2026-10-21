@@ -67,7 +67,7 @@ test('mobile and keyboard choices persist, custom settings are not overwritten b
   await expect(page.getByRole('button', { name: 'TikTok', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByTestId('setup-next').click();
   await expect(page.getByRole('button', { name: 'Dinâmico', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Usar estas escolhas', exact: true }).click();
+  await page.getByRole('button', { name: 'Pular e escolher vídeos', exact: true }).click();
   await page.getByRole('button', { name: 'Rever escolhas', exact: true }).click();
   await page.getByRole('button', { name: 'Revisão', exact: true }).click();
   await page.getByText('Ajustes opcionais', { exact: true }).click();
