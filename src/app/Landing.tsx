@@ -1,4 +1,4 @@
-import { useState, type DragEvent, type ReactNode } from 'react';
+import { useEffect, useState, type DragEvent, type ReactNode } from 'react';
 import { Captions, Check, Clapperboard, Cpu, FileVideo, Film, HardDrive, History, Layers, MessageSquareText, Move, RectangleVertical, Scissors, ShieldCheck, Upload, WandSparkles } from 'lucide-react';
 import './landing.css';
 import './clips.css';
@@ -100,6 +100,8 @@ export function Landing({
   options,
   projects,
   onStorage,
+  focusProjects = false,
+  onProjectsFocused,
   mode = 'editar',
   onMode,
   onLongFile,
@@ -114,6 +116,8 @@ export function Landing({
   options?: ReactNode;
   projects?: ReactNode;
   onStorage?: () => void;
+  focusProjects?: boolean;
+  onProjectsFocused?: () => void;
   mode?: LandingMode;
   onMode?: (m: LandingMode) => void;
   onLongFile?: (file: File) => void;
@@ -122,6 +126,15 @@ export function Landing({
   onStart?: () => void;
 }) {
   const [over, setOver] = useState(false);
+  useEffect(() => {
+    if (!focusProjects) return;
+    const heading = document.getElementById('projects-title');
+    if (!heading) return;
+    heading.setAttribute('tabindex', '-1');
+    heading.focus({ preventScroll: true });
+    heading.scrollIntoView({ block: 'start', behavior: 'instant' });
+    onProjectsFocused?.();
+  }, [focusProjects, projects, onProjectsFocused]);
   // projeto salvo esperando o vídeo original: a entrada é sempre a do editor
   const clips = mode === 'clipes' && !pendingName && !!onLongFile;
   const all = listTemplates();

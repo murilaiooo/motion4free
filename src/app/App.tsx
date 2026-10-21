@@ -152,6 +152,7 @@ function EditorApp() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState('');
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [focusProjects, setFocusProjects] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [spaceWarn, setSpaceWarn] = useState<{ files: File[]; error: AppError } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
@@ -809,6 +810,7 @@ function EditorApp() {
     }
     if (fs) await enqueue(() => setCurrent(fs, null)).catch(() => undefined);
     resetSession();
+    setFocusProjects(true);
     await refreshProjects();
   }
 
@@ -1022,6 +1024,8 @@ function EditorApp() {
         pendingClipCount={pendingMulti ? pendingClips.length : undefined}
         options={!pending && <AsrPrecisionSummary precision={precision} disabled={busy} />}
         onStorage={openStorage}
+        focusProjects={focusProjects}
+        onProjectsFocused={() => setFocusProjects(false)}
         mode={mode}
         onMode={setMode}
         onLongFile={(f) => void onLongFile(f)}
