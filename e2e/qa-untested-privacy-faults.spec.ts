@@ -110,11 +110,11 @@ test('segurança: nome de vídeo com HTML malicioso permanece texto, sem execuç
   await page.getByTestId('file-input').setInputFiles({
     name: suspicious, mimeType: 'video/webm', buffer: readFileSync(MEDIA),
   });
-  await expect(page.getByTestId('clip-c1')).toContainText(suspicious, { timeout: 90_000 });
+  await expect(page.getByTestId('project-menu')).toContainText(suspicious.replace(/\\.webm$/, '')), { timeout: 90_000 });
   await expect(page.locator('img[onerror]')).toHaveCount(0);
   expect(await page.evaluate(() => (window as any).__m4fInjected)).toBeUndefined();
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 45_000 });
   await page.reload();
-  await expect(page.getByTestId('clip-c1')).toContainText(suspicious, { timeout: 90_000 });
+  await expect(page.getByTestId('project-menu')).toContainText(suspicious.replace(/\\.webm$/, '')), { timeout: 90_000 });
   expect(await page.evaluate(() => (window as any).__m4fInjected)).toBeUndefined();
 });
