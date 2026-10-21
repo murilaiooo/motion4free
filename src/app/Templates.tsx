@@ -14,7 +14,17 @@ function getPlainBackdrop(): HTMLCanvasElement {
     plainBackdrop.width = 540;
     plainBackdrop.height = 960;
     const context = plainBackdrop.getContext('2d')!;
-    context.fillStyle = '#343B45';
+    // fundo de vídeo neutro (céu ao entardecer, luz suave) para os títulos se destacarem como num vídeo real
+    const sky = context.createLinearGradient(0, 0, 540, 960);
+    sky.addColorStop(0, '#2C4A6E');
+    sky.addColorStop(0.55, '#3F3552');
+    sky.addColorStop(1, '#1D2233');
+    context.fillStyle = sky;
+    context.fillRect(0, 0, 540, 960);
+    const light = context.createRadialGradient(400, 220, 0, 400, 220, 360);
+    light.addColorStop(0, 'rgba(255, 214, 160, 0.5)');
+    light.addColorStop(1, 'rgba(255, 214, 160, 0)');
+    context.fillStyle = light;
     context.fillRect(0, 0, 540, 960);
   }
   return plainBackdrop;
