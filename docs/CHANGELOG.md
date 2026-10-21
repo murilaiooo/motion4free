@@ -2,6 +2,14 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.20.0 — 21/10/2026
+**Nada escondido: ações do projeto à vista no topo.** Implementado; não testado.
+
+- O menu que abria ao clicar no nome do projeto saiu. Agora a barra do topo mostra direto: o nome com um lápis (clique para renomear), **Meus projetos**, **Armazenamento** e **Apagar**, ao lado de Trocar vídeo, Desfazer/Refazer e Exportar.
+- Na aba IA, as seções Gancho e "Mudar só um pedaço" já vêm abertas.
+- O lápis de corrigir legenda no texto falado aparece sempre (antes só ao passar o mouse).
+- Continua recolhida só a "IA opcional (avançado)", marcada como avançada.
+
 ## v0.19.1 — 21/10/2026
 **Prévia no formato escolhido.** Implementado; não testado.
 

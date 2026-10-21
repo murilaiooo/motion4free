@@ -98,3 +98,10 @@ button.ghost.danger:hover:not(:disabled) { background: var(--red-soft); color: v
   .pmenu-trigger .project-name { max-width: 34vw; }
   .proj-grid { max-height: none; overflow: visible; }
 }
+
+/* v0.20: ações do projeto sempre visíveis no topo */
+.pmenu { display: flex; align-items: center; gap: var(--s-2); }
+.pmenu-trigger svg { color: var(--text-3); }
+.pmenu-trigger:hover svg { color: var(--text-1); }
+.pmenu-actions { display: flex; align-items: center; gap: 2px; padding-left: var(--s-2); border-left: 1px solid var(--line); }
+.pmenu-actions .danger, .pmenu-actions .danger svg { color: var(--red); }
