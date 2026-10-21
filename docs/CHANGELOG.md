@@ -1,3 +1,7 @@
+## 0.30.1 — UNTESTED / AWAITING QA
+
+- #7: fichas semânticas e proveniência das onze cenas originais; limites compartilhados para propostas automáticas.
+
 # Histórico de versões
 
 ## Em preparação — 24/10/2026 (não publicado)

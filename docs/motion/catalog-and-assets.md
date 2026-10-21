@@ -1,3 +1,9 @@
+# Catálogo implementado — UNTESTED / AWAITING QA
+
+As onze cenas originais possuem fichas tipadas em `src/motion/catalog.ts`: intenção, uso/contraindicação, inputs, limites de duração, riscos ao rosto, variantes, renderer e licença por item. A seleção automática compartilha o schema de parâmetros e recusa propostas fora dos limites. Campos face-safe não prometem detecção de rosto. Nenhum asset externo do Editonny foi importado. Ver `docs/reviews/2026-10-21-issue7-implementation-handoff.md`.
+
+A pesquisa histórica abaixo descreve o upstream; seu exemplo de schema não é um catálogo auditado do Editonny.
+
 # Motion design profissional: catálogo, sincronização e proveniência
 
 ## Conclusão da pesquisa
