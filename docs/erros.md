@@ -171,3 +171,7 @@ O limite local não substitui os limites da conta de API. Não há fallback para
 
 | M4F-810 | Pacote cego inválido. | Direitos, versões, IDs, referências ou briefing incompatíveis. |
 | M4F-811 | Respostas cegas incompletas/inválidas. | Identificador, notas/evidências/abstenções ou preferências ausentes. |
+- M4F-1219: limite local de pedidos/texto atingido ou contador inválido. Edição por regras permanece. Conferir limites em Configurações, e conferir o gasto na própria conta de API. Sem novo envio automático.
+- M4F-1220: cooldown por 429 ou circuito após falhas transitórias. Aguardar o prazo mostrado, continuar localmente; trocar chave não contorna o limite do provedor.
+
+- M4F-527: pedido cancelado ou plano/seleção mudou. Nenhum resultado atrasado é aplicado; enviar novo pedido ao estado atual.

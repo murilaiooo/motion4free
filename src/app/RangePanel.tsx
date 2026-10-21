@@ -6,6 +6,7 @@ import { RANGE_PROMPT_MAX, type RangeRequest } from '../editorial/range-interpre
 import { interpretRangeLayered } from '../editorial/range-ai';
 import { prepareAi, type AiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
+import { useEditRequest } from './use-edit-request';
 import { ProgressPanel } from './ProgressPanel';
 import type { Progress } from '../core/progress';
 
@@ -30,6 +31,7 @@ function summarize(r: RangeEdit): string[] {
 }
 
 interface Props {
+  revision?: unknown;
   /** pedaço selecionado (tempo do vídeo editado) */
   selection: TimeRange;
   /** trecho já ajustado, se a seleção for um deles */
@@ -48,13 +50,14 @@ interface Props {
 }
 
 /** Painel do trecho: limites, pedido em português e o que o trecho tem. Tudo entra no desfazer. */
-export function RangePanel({ selection, range, total, onSelection, onRequest, onClose, onSeek, disabled, ai, words }: Props) {
+export function RangePanel({ revision, selection, range, total, onSelection, onRequest, onClose, onSeek, disabled, ai, words }: Props) {
   const [text, setText] = useState('');
   const [error, setError] = useState<AppError | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
   const [warning, setWarning] = useState<AppError | null>(null);
   const [notDone, setNotDone] = useState<string[]>([]);
   const [busy, setBusy] = useState<Progress | null>(null);
+  const requestScope = useEditRequest(revision, `${range?.id ?? ''}:${selection.start}:${selection.end}`, () => { setBusy(null); setWarning(new AppError('PEDIDO_CANCELADO')); });
   useEffect(() => {
     setError(null);
     setNotes([]);
@@ -63,14 +66,18 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
   }, [range?.id, selection.start, selection.end]);
 
   async function send(t: string) {
+    const request = requestScope.begin();
+    const progress: typeof setBusy = (value) => { if (request.current()) setBusy(value); };
     setError(null);
     setNotes([]);
     setWarning(null);
     setNotDone([]);
     setBusy({ label: 'Entendendo o pedido', phase: 'pedido', fraction: null });
     try {
-      const prepared = await prepareAi(ai, setBusy, 'local-revision');
+      const prepared = await prepareAi(ai, progress, 'local-revision', undefined, request.signal);
+      if (!request.current()) return;
       const { req, warning: w } = await interpretRangeLayered(t, words, prepared.ai);
+      if (!request.current()) return;
       setWarning(w ?? prepared.warning);
       setNotDone(req.unsupported);
       if (!req.understood) {
@@ -84,9 +91,10 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
         setText('');
       }
     } catch (e) {
-      setError(toAppError(e));
+      if (request.current()) setError(toAppError(e));
     } finally {
-      setBusy(null);
+      if (request.current()) setBusy(null);
+      request.finish();
     }
   }
   const off = disabled || busy !== null;
@@ -158,6 +166,7 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
           ))}
         </ul>
       )}
+      {busy && <button className="sm ghost" type="button" onClick={requestScope.cancel}>Cancelar pedido</button>}
       <ProgressPanel progress={busy} compact testId="ai-progress" />
       {notDone.length > 0 && (
         <p className="hint" data-testid="range-unsupported">

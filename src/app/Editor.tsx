@@ -1077,6 +1077,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
           </div>
         ) : activeSelection ? (
           <RangePanel
+            revision={plan}
             selection={activeSelection}
             range={range}
             total={total}
