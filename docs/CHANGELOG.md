@@ -2,6 +2,13 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.21.0 — 21/10/2026
+**Primeira tela nova, do zero.** Implementado; não testado.
+
+- Abertura com título forte, botão grande "Escolher vídeos" (ou arrastar) e uma prévia de como o editor se parece: modelo animado ao vivo, trilho de abas e linha do tempo com faixas.
+- Seções numeradas explicam tudo o que o app faz: como funciona (3 passos), os 8 recursos principais, modelos desenhados ao vivo, privacidade, perguntas frequentes e chamada final.
+- Seus projetos salvos aparecem logo abaixo da abertura.
+
 ## v0.20.0 — 21/10/2026
 **Nada escondido: ações do projeto à vista no topo.** Implementado; não testado. (Publicação reenviada porque a Cloudflare não pegou o primeiro envio.)
 
