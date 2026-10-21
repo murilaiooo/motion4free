@@ -1,7 +1,7 @@
 import type { AddedElement, CaptionEdit, Placement, SceneEdit, TextLook } from '../core/edits';
 import { isEmoji } from '../core/emoji';
 import type { Caption, EditPlan, ListItem, SceneInstance, SceneKind, TimeRange } from '../core/types';
-import { outputToSource, outputToSourceEnd, sourceToOutputClamped } from '../engine/timeline';
+import { outputDuration, outputToSource, outputToSourceEnd, sourceEndToOutputClamped, sourceToOutputClamped } from '../engine/timeline';
 
 /**
  * Elementos do vídeo como a pessoa os vê no editor (v0.13, ADR-0018): legendas, cenas geradas
@@ -165,9 +165,16 @@ export interface Resolved {
 
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
 
-/** Tempo no vídeo editado de um intervalo do original (cortado = encosta na emenda seguinte). */
+/**
+ * Tempo no vídeo editado de um intervalo do original (cortado = encosta na emenda seguinte). Com os
+ * pedaços fora da ordem do original (v0.17), o elemento fica onde o começo dele aparece e nunca dura
+ * mais do que durava no original.
+ */
 export function srcToOut(plan: Pick<EditPlan, 'segments'>, srcStart: number, srcEnd: number): TimeRange {
-  return { start: r3(sourceToOutputClamped(plan.segments, srcStart)), end: r3(sourceToOutputClamped(plan.segments, srcEnd)) };
+  const start = sourceToOutputClamped(plan.segments, srcStart);
+  let end = sourceEndToOutputClamped(plan.segments, srcEnd);
+  if (end < start || end - start > srcEnd - srcStart + 1e-6) end = Math.min(outputDuration(plan.segments), start + (srcEnd - srcStart));
+  return { start: r3(start), end: r3(end) };
 }
 
 /** Intervalo do original de um intervalo do vídeo editado. */
@@ -207,8 +214,13 @@ export function resolvePlan(plan: EditPlan): Resolved {
 
   const lockedOut = plan.ranges.filter((r) => r.locked).map((r) => ({ out: r.out, snap: r.locked!.captionEdits }));
   const captions: ResolvedCaption[] = [];
+  const seenCaption = new Map<string, number>();
   for (const base of plan.captions) {
-    const key = captionKey(base);
+    // a mesma fala colada duas vezes (v0.17): a cópia ganha chave própria, como as cenas repetidas
+    const k0 = captionKey(base);
+    const n = (seenCaption.get(k0) ?? 0) + 1;
+    seenCaption.set(k0, n);
+    const key = n === 1 ? k0 : `${k0}#${n}`;
     const edit = E.captions[key] ?? null;
     if (edit?.hidden) continue;
     let caption = base;

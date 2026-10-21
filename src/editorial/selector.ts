@@ -1,7 +1,7 @@
 import type { StyleDNA } from '../core/style';
 import type { Emphasis } from '../core/brief';
 import type { SceneInstance, SceneKind, Segment, Word } from '../core/types';
-import { outputDuration, sourceToOutput } from '../engine/timeline';
+import { outputDuration, placeSpan } from '../engine/timeline';
 import { findName, isQuestion, keywordScore, normalizeToken, ordinalOf, parseNumberAt, splitSentences } from './detect';
 import type { Emoji } from '../core/emoji';
 import { FALLBACK_EMOJIS, emojiForWords } from './emoji-pick';
@@ -104,12 +104,10 @@ const CONNECTORS = new Set(['e', 'em', 'o', 'a', 'depois', 'agora', 'então', 'p
 function placeWords(words: Word[], segments: Segment[]): Placed[] {
   const out: Placed[] = [];
   for (const w of words) {
-    const start = sourceToOutput(segments, w.start);
-    const end = sourceToOutput(segments, Math.max(w.start, w.end - 1e-3));
-    if (start === null || end === null || !w.text.trim()) continue;
-    out.push({ raw: w.text.trim(), start, end: end + 1e-3 });
+    if (!w.text.trim()) continue;
+    for (const o of placeSpan(segments, w.start, Math.max(w.start, w.end - 1e-3))) out.push({ raw: w.text.trim(), start: o.start, end: o.end + 1e-3 });
   }
-  return out;
+  return out.sort((a, b) => a.start - b.start);
 }
 
 /** Até `maxWords` palavras a partir de `from`, parando no fim da frase, sem conectivos soltos no fim. */

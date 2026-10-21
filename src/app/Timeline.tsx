@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { Captions, Film, SquareDashedMousePointer, ZoomIn, ZoomOut } from 'lucide-react';
 import type { EditPlan, TimeRange } from '../core/types';
 import { outputToSource, outputToSourceEnd, sourceToOutput, sourceToOutputClamped } from '../engine/timeline';
@@ -19,6 +19,8 @@ interface Props {
   selectedRange: string | null;
   onSelection: (out: TimeRange) => void;
   onPickRange: (id: string) => void;
+  /** botões Edição | Original (v0.17) */
+  viewSwitch?: ReactNode;
 }
 
 const ZOOMS = [1, 1.5, 2, 3, 4, 6, 8, 12, 16];
@@ -32,10 +34,10 @@ function clock(s: number, step: number): string {
 }
 
 /**
- * Linha do tempo no tempo do vídeo original, em faixas: régua (clique/arraste para ir), vídeo (trechos
+ * Vista "Original" (v0.17: a vista padrão é a EditTimeline). Linha do tempo no tempo do vídeo original, em faixas: régua (clique/arraste para ir), vídeo (trechos
  * mantidos, cortes clicáveis e waveform), legendas e trechos (arraste para selecionar). Com zoom.
  */
-export function Timeline({ durationSec, plan, cuts, peaks, time, playing, selectedCut, onSeek, onSelectCut, selection, selectedRange, onSelection, onPickRange }: Props) {
+export function Timeline({ durationSec, plan, cuts, peaks, time, playing, selectedCut, onSeek, onSelectCut, selection, selectedRange, onSelection, onPickRange, viewSwitch }: Props) {
   const waveRef = useRef<HTMLCanvasElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ from: number; to: number; x0: number } | null>(null);
@@ -141,9 +143,10 @@ export function Timeline({ durationSec, plan, cuts, peaks, time, playing, select
   for (let s = 0; s <= durationSec + 1e-6 && ticks.length < 2000; s += step) ticks.push(s);
 
   return (
-    <section className="timeline" data-testid="timeline" aria-label="Linha do tempo">
+    <section className="timeline" data-testid="timeline" data-view="original" aria-label="Linha do tempo">
       <div className="tl-head">
         <h2 className="tl-title">Linha do tempo</h2>
+        {viewSwitch}
         <div className="tl-legend" aria-hidden>
           <span className="sw sw-kept" /> mantido <span className="sw sw-cut" /> cortado <span className="sw sw-range" /> ajustado <span className="sw sw-locked" /> travado
         </div>

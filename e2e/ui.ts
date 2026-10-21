@@ -16,3 +16,9 @@ export async function editCaption(page: Page, id: string, text: string) {
   await input.fill(text);
   await input.press('Enter');
 }
+
+/** Linha do tempo na vista Original (v0.17: a vista padrão é Edição, no tempo do vídeo final). */
+export async function originalView(page: Page) {
+  await page.getByTestId('tl-view-original').click();
+  await expect(page.getByTestId('timeline')).toHaveAttribute('data-view', 'original');
+}

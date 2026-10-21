@@ -2,6 +2,17 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.17.0 — 21/10/2026
+**Linha do tempo de editor de verdade: dividir, apagar, mover, aparar, copiar, recortar, colar e duplicar.** Implementado; os testes automáticos e manuais desta versão ainda não foram executados.
+
+- **Vista Edição (nova, padrão):** a linha do tempo mostra o vídeo final em blocos, um por pedaço, com a forma de onda. Clique seleciona (e leva a agulha até ali); arrastar muda a ordem; puxar as pontas apara ou devolve imagem; a tesoura entre dois pedaços abre o corte para restaurar. A vista **Original** (a gravação inteira com os cortes) continua a um clique.
+- **Copiar, recortar, colar e duplicar** pedaços do vídeo (a fala, as legendas e as animações vão junto) e elementos (títulos, números, textos, emojis, formas). Colar entra na agulha. Os pedaços podem ficar numa ordem diferente da gravação e o mesmo trecho pode aparecer duas vezes. Ver [ADR-0020](decisions/0020-linha-do-tempo-edicao.md).
+- **Elementos e legendas no tempo:** arrastar na faixa muda quando aparecem; as pontas mudam a duração; o ímã encosta nas emendas e na agulha. O painel do elemento ganhou "Aparece em / Some em", Copiar e Ir até ele.
+- **Painel do pedaço:** tempos no vídeo final e na gravação, início/fim por número, zoom só naquele pedaço, dividir na agulha, mover para antes/depois, copiar, duplicar e apagar.
+- **Atalhos:** S divide; Delete apaga; Ctrl+C, Ctrl+X, Ctrl+V e Ctrl+D copiam, recortam, colam e duplicam; Esc solta a seleção. Tudo volta com Ctrl+Z.
+- **Erros novos:** M4F-518 (ajuste de corte pelos campos com ordem própria), M4F-519 (legenda não copia sozinha), M4F-520 (colar sem ter copiado), M4F-521 (nada selecionado).
+- **Correções:** o painel do elemento usava `require` (não existe no navegador) para preencher o texto ao editar e engolia erros de Duplicar/Apagar sem mostrar o código; agora mostra o erro com código. O roteiro da transcrição segue a ordem do vídeo final quando ela muda.
+
 ## v0.16.0 — 21/10/2026
 **Projetos que não se perdem, volume igual entre clipes, enquadramento na tela e polimento do editor.** Implementado; os testes automáticos e manuais desta versão ainda não foram executados.
 

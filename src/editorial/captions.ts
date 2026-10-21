@@ -1,6 +1,6 @@
 import type { Caption, Segment, Word } from '../core/types';
 import type { StyleDNA } from '../core/style';
-import { sourceToOutput } from '../engine/timeline';
+import { placeSpan } from '../engine/timeline';
 
 export interface CaptionOptions {
   maxChars: number;
@@ -17,13 +17,10 @@ export function captionOptionsFor(style: StyleDNA): CaptionOptions {
 
 /** Agrupa palavras em legendas curtas (estilo Reels) já no tempo do vídeo editado. */
 export function buildCaptions(words: Word[], segments: Segment[], opts: CaptionOptions = DEFAULT_CAPTIONS): Caption[] {
+  // cada vez que a palavra aparece no vídeo editado (um pedaço colado de novo repete a fala dele)
   const placed = words
-    .map((w) => {
-      const start = sourceToOutput(segments, w.start);
-      const end = sourceToOutput(segments, Math.max(w.start, w.end - 1e-3));
-      return start === null || end === null ? null : { ...w, start, end: end + 1e-3 };
-    })
-    .filter((w): w is Word => w !== null);
+    .flatMap((w) => placeSpan(segments, w.start, Math.max(w.start, w.end - 1e-3)).map((o) => ({ ...w, start: o.start, end: o.end + 1e-3 })))
+    .sort((a, b) => a.start - b.start);
 
   const captions: Caption[] = [];
   let group: Word[] = [];

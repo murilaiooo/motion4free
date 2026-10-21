@@ -1,8 +1,8 @@
 import { planSummary } from '../core/text';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Captions, ChevronRight, Download, History, LayoutTemplate, Magnet, MousePointerClick, Palette, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Captions, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Magnet, MousePointerClick, Palette, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
 import { AppError, toAppError } from '../core/errors';
-import type { EditPlan, TimeRange } from '../core/types';
+import type { EditPlan, Segment, TimeRange } from '../core/types';
 import { PRESETS } from '../core/presets';
 import { adjustCut, applyBrief, applyHook, applyRange, applyReferencePalette, applyStyle, editCaptionText, listCuts, restoreCut, type EditContext } from '../editorial/ops';
 import type { RangeRequest } from '../editorial/range-interpret';
@@ -16,18 +16,21 @@ import { ensureEmojiFont, ensureFonts } from '../media/fonts';
 import { planUsesEmoji } from '../core/emoji';
 import { DEFAULT_LLM } from '../core/llm-models';
 import { reelsSafeArea } from '../render/layout';
+import { ZOOM_LIMITS } from '../core/edits';
 import { loadKey } from '../ai/own-key';
 import type { AiSettings } from './AiOptions';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
 import { PreviewOverlay } from './PreviewOverlay';
-import { setElementPlacement, deleteElement, duplicateElement, setElementText } from '../editorial/manual';
+import { copyElement, deleteElement, deleteSegment, duplicateElement, pasteElement, retimeElement, segmentZoom, setElementText, setSegmentZoom, splitAt, trimSegment, type ElementClip } from '../editorial/manual';
+import { duplicateSegment, insertSegments, moveSegment, segmentOffsets } from '../editorial/sequence';
 import type { ElementRef } from '../editorial/elements';
-import { elementName, resolvePlan, sceneText, sameRef as sameEl } from '../editorial/elements';
+import { elementName, findElement, resolvePlan, sceneText, sameRef as sameEl } from '../editorial/elements';
 import { ErrorBox } from './ErrorBox';
 import { BriefPanel, HookPanel } from './BriefPanel';
 import { TemplateGallery } from './Templates';
 import { Timeline } from './Timeline';
+import { EditTimeline, type TimelineActions } from './EditTimeline';
 import { RangePanel } from './RangePanel';
 import { ChangesPanel, ReferencePicker, VersionsPanel, type CompareView } from './Panels';
 import { Transcript } from './Transcript';
@@ -35,7 +38,7 @@ import { TopBar, type SaveState } from './TopBar';
 import { VERSION_LABEL, APP_BUILT_AT } from '../version';
 import { FormatSelector } from './FormatSelector';
 import { FramingPanel } from './FramingPanel';
-import { placeWords, totalDuration } from '../engine/clips';
+import { clipAt, placeWords, totalDuration } from '../engine/clips';
 import { reorderClipPlan } from '../editorial/clip-ops';
 import { combineAudios } from '../media/multi';
 import { waveformPeaks } from '../analysis/waveform';
@@ -111,6 +114,18 @@ const SAFE = (() => {
   return { top: (100 * r.y) / 1920, left: (100 * r.x) / 1080, right: (100 * (1080 - r.x - r.w)) / 1080, bottom: (100 * (1920 - r.y - r.h)) / 1920 };
 })();
 
+/** O que o Copiar/Recortar guardou: pedaços do vídeo ou um elemento (v0.17). */
+type Clipboard = { kind: 'video'; segments: Segment[] } | { kind: 'element'; clip: ElementClip };
+type TlView = 'edicao' | 'original';
+const TL_VIEW_KEY = 'm4f.timeline-view';
+function loadTlView(): TlView {
+  try {
+    return localStorage.getItem(TL_VIEW_KEY) === 'original' ? 'original' : 'edicao';
+  } catch {
+    return 'edicao';
+  }
+}
+
 const typing = (el: EventTarget | null) => {
   const t = el as HTMLElement | null;
   return !!t && (['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.isContentEditable);
@@ -164,6 +179,17 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const [safeZone, setSafeZone] = useState(false);
   const [selectedCut, setSelectedCut] = useState<number | null>(null);
   const [selectedEl, setSelectedEl] = useState<ElementRef | null>(null);
+  const [selectedSeg, setSelectedSeg] = useState<number | null>(null);
+  const [clipboard, setClipboard] = useState<Clipboard | null>(null);
+  const [tlView, setTlViewState] = useState<TlView>(loadTlView);
+  const setTlView = (v: TlView) => {
+    setTlViewState(v);
+    try {
+      localStorage.setItem(TL_VIEW_KEY, v);
+    } catch {
+      /* sem armazenamento: a escolha vale só nesta aba */
+    }
+  };
   const [editingEl, setEditingEl] = useState<ElementRef | null>(null);
   const [editError, setEditError] = useState<AppError | null>(null);
   const [playerError, setPlayerError] = useState<AppError | null>(null);
@@ -267,6 +293,104 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     [history, onHistory],
   );
 
+  /** Como apply, mas a operação também diz o que selecionar depois (pedaço colado, elemento novo...). */
+  const run = useCallback(
+    (op: (p: EditPlan) => { plan: EditPlan; seg?: number | null; el?: ElementRef | null }) => {
+      try {
+        const r = op(history.present);
+        setEditError(null);
+        if (r.plan !== history.present) onHistory(pushHistory(history, r.plan));
+        if (r.seg !== undefined) setSelectedSeg(r.seg);
+        if (r.el !== undefined) setSelectedEl(r.el);
+        return true;
+      } catch (err) {
+        setEditError(toAppError(err));
+        return false;
+      }
+    },
+    [history, onHistory],
+  );
+
+  // pedaço selecionado que sumiu (desfazer, outro corte): solta a seleção
+  useEffect(() => {
+    if (selectedSeg !== null && selectedSeg >= plan.segments.length) setSelectedSeg(null);
+  }, [plan.segments.length, selectedSeg]);
+  useEffect(() => {
+    if (selectedEl && !findElement(plan, selectedEl)) setSelectedEl(null);
+  }, [plan, selectedEl]);
+
+  const selectSeg = (i: number | null) => {
+    setSelectedSeg(i);
+    if (i !== null) {
+      setSelectedCut(null);
+      setSelectedEl(null);
+    }
+  };
+  const selectEl = (ref: ElementRef | null) => {
+    setSelectedEl(ref);
+    if (ref) {
+      setSelectedCut(null);
+      setSelectedSeg(null);
+    }
+  };
+
+  /** Copiar: o pedaço selecionado (com a fala, legendas e animações dele) ou o elemento selecionado. */
+  const copySel = (p: EditPlan): Clipboard => {
+    if (selectedEl) return { kind: 'element', clip: copyElement(p, selectedEl) };
+    const seg = selectedSeg !== null ? p.segments[selectedSeg] : undefined;
+    if (seg) return { kind: 'video', segments: [{ ...seg }] };
+    throw new AppError('NADA_SELECIONADO');
+  };
+  const removeSel = (p: EditPlan): { plan: EditPlan; seg?: null; el?: null } => {
+    if (selectedEl) return { plan: deleteElement(p, selectedEl), el: null };
+    if (selectedSeg !== null && p.segments[selectedSeg]) return { plan: deleteSegment(p, ctx, selectedSeg), seg: null };
+    throw new AppError('NADA_SELECIONADO');
+  };
+  const tl: TimelineActions = {
+    split: () => run((p) => ({ plan: splitAt(p, ctx, playerRef.current?.currentTime ?? time), seg: null })),
+    copy: () => {
+      try {
+        setClipboard(copySel(history.present));
+        setEditError(null);
+      } catch (err) {
+        setEditError(toAppError(err));
+      }
+    },
+    cut: () => {
+      try {
+        const c = copySel(history.present);
+        if (run(removeSel)) setClipboard(c);
+      } catch (err) {
+        setEditError(toAppError(err));
+      }
+    },
+    paste: () =>
+      run((p) => {
+        if (!clipboard) throw new AppError('NADA_COPIADO');
+        const at = playerRef.current?.currentTime ?? time;
+        if (clipboard.kind === 'video') {
+          const r = insertSegments(p, ctx, clipboard.segments, at);
+          return { plan: r.plan, seg: r.index, el: null };
+        }
+        const r = pasteElement(p, ctx, clipboard.clip, at);
+        return { plan: r.plan, el: { type: 'added', id: r.id }, seg: null };
+      }),
+    duplicate: () =>
+      run((p) => {
+        if (selectedEl) {
+          if (selectedEl.type === 'caption') throw new AppError('LEGENDA_NAO_COPIA');
+          const r = duplicateElement(p, selectedEl);
+          if (!r) throw new AppError('ELEMENTO_SUMIU', elementName(p, selectedEl));
+          return { plan: r.plan, el: { type: 'added', id: r.id } };
+        }
+        if (selectedSeg === null) throw new AppError('NADA_SELECIONADO');
+        const r = duplicateSegment(p, ctx, selectedSeg);
+        return { plan: r.plan, seg: r.index };
+      }),
+    remove: () => run(removeSel),
+    canPaste: !!clipboard,
+  };
+
   /** Pedido de trecho: devolve o erro para o painel do trecho mostrar. */
   const requestRange = (req: RangeRequest): AppError | null => {
     if (!activeSelection) return null;
@@ -309,14 +433,35 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       if (e.ctrlKey || e.metaKey) {
         // enquanto o app trabalha (clipes entrando, exportação), desfazer misturaria o histórico
         if (disabled) return;
+        // texto selecionado na página (ex.: detalhes de um erro): Ctrl+C copia o texto, como sempre
+        const textSelected = !!window.getSelection?.()?.toString();
         if (k === 'z' && !e.shiftKey) doUndo();
         else if ((k === 'z' && e.shiftKey) || k === 'y') doRedo();
+        // sem nada escolhido (ou nada copiado), o atalho fica com o navegador, sem aviso de erro
+        else if (k === 'c' && !textSelected && !e.shiftKey && keys.current.hasSel) keys.current.copy();
+        else if (k === 'x' && !textSelected && !e.shiftKey && keys.current.hasSel) keys.current.cut();
+        else if (k === 'v' && !e.shiftKey && keys.current.canPaste) keys.current.paste();
+        else if (k === 'd' && !e.shiftKey && keys.current.hasSel) keys.current.duplicate();
         else return;
         e.preventDefault();
         return;
       }
       if (e.altKey) return;
       const onControl = (e.target as HTMLElement)?.closest?.('button, a, summary, [role="button"], [role="tab"], label');
+      if (!disabled && k === 's' && !e.shiftKey) {
+        e.preventDefault();
+        keys.current.split();
+        return;
+      }
+      if (!disabled && (k === 'delete' || k === 'backspace') && keys.current.hasSel) {
+        e.preventDefault();
+        keys.current.remove();
+        return;
+      }
+      if (k === 'escape' && keys.current.hasSel) {
+        keys.current.clear();
+        return;
+      }
       if (k === ' ' && !onControl) {
         e.preventDefault();
         togglePlay();
@@ -336,6 +481,17 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [doUndo, doRedo, togglePlay, seek, disabled, history.present.output.fps]);
+
+  // os atalhos leem sempre as ações e a seleção atuais (o ouvinte do teclado não é refeito a cada mudança)
+  const keys = useRef({ ...tl, hasSel: false, clear: () => {} });
+  keys.current = {
+    ...tl,
+    hasSel: selectedSeg !== null || !!selectedEl,
+    clear: () => {
+      setSelectedSeg(null);
+      setSelectedEl(null);
+    },
+  };
 
   useEffect(() => {
     if (selectedCut !== null && selectedCut >= cuts.length) setSelectedCut(null);
@@ -559,7 +715,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <div className="viewer">
           <div className="canvas-box">
             <canvas ref={canvasRef} data-testid="player-canvas" onClick={togglePlay} />
-            <PreviewOverlay plan={plan} time={time} selected={selectedEl} onSelect={setSelectedEl} onChange={(next)=>apply(()=>next)} canvasRef={canvasRef} onEditText={setEditingEl} disabled={off} />
+            <PreviewOverlay plan={plan} time={time} selected={selectedEl} onSelect={selectEl} onChange={(next) => apply(() => next)} canvasRef={canvasRef} onEditText={setEditingEl} disabled={off} />
             {safeZone && (
               <div className="safe-zone" style={{ top: `${SAFE.top}%`, left: `${SAFE.left}%`, right: `${SAFE.right}%`, bottom: `${SAFE.bottom}%` }} aria-hidden>
                 <span>Área segura do Reels</span>
@@ -608,7 +764,32 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           />
         </div>
         {selectedEl ? (
-          <ElementInspector plan={plan} refEl={selectedEl} onChange={(next)=>apply(()=>next)} onClose={()=>setSelectedEl(null)} onEditText={(t)=>apply((p)=>setElementText(p, selectedEl!, t))} editing={editingEl} setEditing={setEditingEl} />
+          <ElementInspector
+            plan={plan}
+            refEl={selectedEl}
+            onApply={apply}
+            actions={tl}
+            onClose={() => setSelectedEl(null)}
+            onEditText={(t) => apply((p) => setElementText(p, selectedEl!, t))}
+            editing={editingEl}
+            setEditing={setEditingEl}
+            onSeek={seek}
+            disabled={off}
+          />
+        ) : selectedSeg !== null && plan.segments[selectedSeg] ? (
+          <SegmentInspector
+            plan={plan}
+            ctx={ctx}
+            index={selectedSeg}
+            time={time}
+            multi={plan.clips.length > 1}
+            onApply={apply}
+            onMove={(to) => run((p) => ({ plan: moveSegment(p, ctx, selectedSeg, to), seg: Math.max(0, Math.min(p.segments.length - 1, to)) }))}
+            actions={tl}
+            onSeek={seek}
+            onClose={() => setSelectedSeg(null)}
+            disabled={off}
+          />
         ) : cut && selectedCut !== null ? (
           <div className="cut-panel card" data-testid="cut-panel">
             <div className="card-head">
@@ -674,7 +855,9 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         ) : (
           <div className="card empty-insp">
             <MousePointerClick size={18} aria-hidden />
-            <p className="hint">Clique num corte (listrado) na linha do tempo para restaurar ou ajustar, ou arraste na faixa Trechos para mudar só um pedaço.</p>
+            <p className="hint">
+              Clique num pedaço do vídeo, numa legenda ou num elemento da linha do tempo para editar. Arraste para mudar de lugar, puxe as pontas para aparar, e use <b>S</b> para dividir na agulha. A tesoura entre dois pedaços abre o corte para restaurar.
+            </p>
 
           </div>
         )}
@@ -682,7 +865,50 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       </aside>
 
       <div className="tl-area">
+        {tlView === 'edicao' ? (
+          <EditTimeline
+            plan={plan}
+            durationSec={ctx.durationSec}
+            peaks={peaks}
+            time={time}
+            playing={playing}
+            cuts={cuts}
+            selectedSeg={selectedSeg}
+            selectedEl={selectedEl}
+            onSeek={seek}
+            onSelectSeg={selectSeg}
+            onSelectEl={selectEl}
+            onSelectCut={(i) => {
+              setSelectedSeg(null);
+              setSelectedEl(null);
+              setSelectedCut(i);
+            }}
+            onTrim={(i, edge, src) => apply((p) => trimSegment(p, ctx, i, edge, src))}
+            onMoveSeg={(from, to) => run((p) => ({ plan: moveSegment(p, ctx, from, to), seg: to }))}
+            onRetime={(ref, out) => apply((p) => retimeElement(p, ref, out))}
+            selection={activeSelection}
+            selectedRange={selectedRange}
+            onSelection={(out) => {
+              setSelectedCut(null);
+              setSelectedSeg(null);
+              setSelectedEl(null);
+              setSelectedRange(null);
+              setSelection(out);
+            }}
+            onPickRange={(id) => {
+              setSelectedCut(null);
+              setSelectedSeg(null);
+              setSelectedEl(null);
+              setSelectedRange(id);
+              setSelection(null);
+            }}
+            actions={tl}
+            viewSwitch={<ViewSwitch view={tlView} onView={setTlView} />}
+            disabled={off || disabled}
+          />
+        ) : (
         <Timeline
+          viewSwitch={<ViewSwitch view={tlView} onView={setTlView} />}
           durationSec={ctx.durationSec}
           plan={plan}
           cuts={cuts}
@@ -692,6 +918,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           selectedCut={selectedCut}
           onSeek={seek}
           onSelectCut={(i) => {
+            setSelectedSeg(null);
+            setSelectedEl(null);
             setSelectedCut(i);
           }}
           selection={activeSelection}
@@ -707,6 +935,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             setSelection(null);
           }}
         />
+        )}
       </div>
 
       <footer className="statusbar">
@@ -716,7 +945,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <span className="status-keys" aria-label="Atalhos de teclado">
           <span className="kbd">Espaço</span> tocar/pausar <span className="kbd">J</span>
           <span className="kbd">L</span> −1 s/+1 s <span className="kbd">←</span>
-          <span className="kbd">→</span> um quadro <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer <span className="kbd">Ctrl</span>+<span className="kbd">Shift</span>+<span className="kbd">Z</span> refazer
+          <span className="kbd">→</span> um quadro <span className="kbd">S</span> dividir <span className="kbd">Ctrl</span>+<span className="kbd">C</span>/<span className="kbd">X</span>/<span className="kbd">V</span> copiar/recortar/colar <span className="kbd">Del</span> apagar <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer
         </span>
         <span className="status-privacy">Tudo no seu aparelho · nada é enviado</span>
       </footer>
@@ -762,55 +991,202 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   );
 }
 
+/** Edição | Original: a linha do tempo do vídeo final (editar) ou a da gravação inteira, com os cortes. */
+function ViewSwitch({ view, onView }: { view: TlView; onView: (v: TlView) => void }) {
+  return (
+    <div className="segmented tl-view" role="group" aria-label="Vista da linha do tempo">
+      <button className="sm" aria-pressed={view === 'edicao'} onClick={() => onView('edicao')} data-testid="tl-view-edit" data-tip="O vídeo final, para editar: dividir, mover, aparar, copiar e colar">
+        Edição
+      </button>
+      <button className="sm" aria-pressed={view === 'original'} onClick={() => onView('original')} data-testid="tl-view-original" data-tip="A gravação inteira, com o que foi cortado (listrado)">
+        Original
+      </button>
+    </div>
+  );
+}
 
+/** Campo de segundos que só aplica ao sair dele ou com Enter (não cria uma entrada do desfazer por tecla). */
+function SecondsField({ label, value, onCommit, testId, disabled }: { label: string; value: number; onCommit: (v: number) => void; testId: string; disabled?: boolean }) {
+  return (
+    <label>
+      {label}
+      <input
+        key={`${testId}${value}`}
+        type="number"
+        step="0.05"
+        min={0}
+        defaultValue={Math.round(value * 100) / 100}
+        data-testid={testId}
+        disabled={disabled}
+        onBlur={(e) => Number.isFinite(e.target.valueAsNumber) && Math.abs(e.target.valueAsNumber - value) > 1e-3 && onCommit(e.target.valueAsNumber)}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+      />
+    </label>
+  );
+}
 
-function ElementInspector({ plan, refEl, onChange, onClose, onEditText, editing, setEditing }: { plan: import('../core/types').EditPlan; refEl: ElementRef; onChange: (n: import('../core/types').EditPlan)=>void; onClose: ()=>void; onEditText: (t:string)=>void; editing: ElementRef|null; setEditing: (r:ElementRef|null)=>void }) {
-  const name = (() => { try { return elementName(plan, refEl); } catch { return 'Elemento'; } })();
-  const [draft, setDraft] = useState('');
-  const isEditing = editing && sameEl(editing, refEl);
-  useEffect(() => {
-    if (isEditing) {
-      try {
-        const { resolvePlan, sceneText } = require('../editorial/elements');
-        const R = resolvePlan(plan);
-        if (refEl.type === 'added') {
-          const a = R.added.find((x:any)=> x.el.id===refEl.id);
-          setDraft(a?.el.text ?? '');
-        } else if (refEl.type === 'scene') {
-          const s = R.scenes.find((x:any)=> x.key===refEl.key);
-          setDraft(s ? (sceneText(s.scene) ?? '') : '');
-        } else {
-          const c = R.captions.find((x:any)=> x.key===refEl.key);
-          setDraft(c?.caption.text ?? c?.base.text ?? '');
-        }
-      } catch { setDraft(''); }
+/** Painel do pedaço do vídeo escolhido na linha do tempo: tempos, zoom, dividir, mover, duplicar, apagar. */
+function SegmentInspector({ plan, ctx, index, time, multi, onApply, onMove, actions, onSeek, onClose, disabled }: { plan: EditPlan; ctx: EditContext; index: number; time: number; multi: boolean; onApply: (op: (p: EditPlan) => EditPlan) => void; onMove: (to: number) => void; actions: TimelineActions; onSeek: (t: number) => void; onClose: () => void; disabled: boolean }) {
+  const s = plan.segments[index]!;
+  const at = segmentOffsets(plan.segments)[index]!;
+  const len = s.srcEnd - s.srcStart;
+  const zoom = segmentZoom(plan, index);
+  const inside = time >= at && time < at + len;
+  const home = multi ? clipAt(plan.clips, s.srcStart) : null;
+  const clip = home ? plan.clips[home.index] : null;
+  return (
+    <div className="card seg-panel" data-testid="segment-panel">
+      <div className="card-head">
+        <h3 className="section-title">
+          <Film size={15} aria-hidden /> Pedaço {index + 1} de {plan.segments.length}
+        </h3>
+        <button className="icon sm ghost" onClick={onClose} aria-label="Fechar">
+          <X size={15} />
+        </button>
+      </div>
+      <p className="hint">
+        No vídeo final: de {fmt(at)} a {fmt(at + len)} ({fmt(len)}). Da gravação{clip ? ` “${clip.name}”` : ''}: {fmt(s.srcStart)} a {fmt(s.srcEnd)}.
+      </p>
+      <div className="row wrap">
+        <button className="sm" onClick={() => onSeek(at)} data-testid="seg-goto">
+          <Play size={13} aria-hidden /> Ir para o início
+        </button>
+        <button className="sm" onClick={actions.split} disabled={disabled || !inside} title={inside ? 'Divide este pedaço na agulha' : 'Coloque a agulha dentro deste pedaço para dividir'} data-testid="seg-split">
+          <SquareSplitHorizontal size={13} aria-hidden /> Dividir na agulha
+        </button>
+      </div>
+      <div className="edges">
+        <SecondsField label="Começa na gravação (s)" value={s.srcStart} testId="seg-start" disabled={disabled} onCommit={(v) => onApply((p) => trimSegment(p, ctx, index, 'start', v))} />
+        <SecondsField label="Termina na gravação (s)" value={s.srcEnd} testId="seg-end" disabled={disabled} onCommit={(v) => onApply((p) => trimSegment(p, ctx, index, 'end', v))} />
+      </div>
+      <label className="seg-zoom">
+        <span className="row-between">
+          <span>Zoom neste pedaço</span>
+          <b className="tnum">{zoom === null ? 'nenhum' : `${zoom.toFixed(2).replace('.', ',')}×`}</b>
+        </span>
+        <input
+          type="range"
+          min={1}
+          max={ZOOM_LIMITS.max}
+          step={0.05}
+          defaultValue={zoom ?? 1}
+          key={`z${index}-${zoom}`}
+          disabled={disabled}
+          aria-label="Zoom neste pedaço"
+          data-testid="seg-zoom"
+          onPointerUp={(e) => onApply((p) => setSegmentZoom(p, index, e.currentTarget.valueAsNumber <= 1.001 ? null : e.currentTarget.valueAsNumber))}
+          onKeyUp={(e) => onApply((p) => setSegmentZoom(p, index, e.currentTarget.valueAsNumber <= 1.001 ? null : e.currentTarget.valueAsNumber))}
+        />
+      </label>
+      <div className="row wrap">
+        <button className="sm" onClick={() => onMove(index - 1)} disabled={disabled || index === 0} data-testid="seg-move-left">
+          <ArrowLeft size={13} aria-hidden /> Mover para antes
+        </button>
+        <button className="sm" onClick={() => onMove(index + 1)} disabled={disabled || index === plan.segments.length - 1} data-testid="seg-move-right">
+          Mover para depois <ArrowRight size={13} aria-hidden />
+        </button>
+      </div>
+      <div className="row wrap">
+        <button className="sm" onClick={actions.copy} disabled={disabled} data-testid="seg-copy">
+          <Copy size={13} aria-hidden /> Copiar
+        </button>
+        <button className="sm" onClick={actions.duplicate} disabled={disabled} data-testid="seg-duplicate">
+          <CopyPlus size={13} aria-hidden /> Duplicar
+        </button>
+        <button className="sm danger" onClick={actions.remove} disabled={disabled || plan.segments.length === 1} data-testid="seg-delete">
+          <Trash2 size={13} aria-hidden /> Apagar pedaço
+        </button>
+      </div>
+      <p className="hint">Apagar faz o resto do vídeo encostar. Na linha do tempo: arraste o pedaço para mudar a ordem e puxe as pontas para aparar.</p>
+    </div>
+  );
+}
+
+/** Painel do elemento escolhido (na prévia ou na linha do tempo): texto, quando aparece, copiar, duplicar, apagar. */
+function ElementInspector({ plan, refEl, onApply, actions, onClose, onEditText, editing, setEditing, onSeek, disabled }: { plan: EditPlan; refEl: ElementRef; onApply: (op: (p: EditPlan) => EditPlan) => void; actions: TimelineActions; onClose: () => void; onEditText: (t: string) => void; editing: ElementRef | null; setEditing: (r: ElementRef | null) => void; onSeek: (t: number) => void; disabled: boolean }) {
+  const name = (() => {
+    try {
+      return elementName(plan, refEl);
+    } catch {
+      return 'Elemento';
     }
-  }, [isEditing, plan, refEl]);
+  })();
+  const [draft, setDraft] = useState('');
+  const isEditing = !!editing && sameEl(editing, refEl);
+  const at = findElement(plan, refEl);
+  const R = resolvePlan(plan);
+  const currentText = (() => {
+    if (refEl.type === 'added') return R.added.find((x) => x.el.id === refEl.id)?.el.text ?? '';
+    if (refEl.type === 'scene') {
+      const sc = R.scenes.find((x) => x.key === refEl.key);
+      return sc ? (sceneText(sc.scene) ?? '') : '';
+    }
+    const c = R.captions.find((x) => x.key === refEl.key);
+    return c?.caption.text ?? '';
+  })();
+  const hasText = refEl.type === 'caption' || refEl.type === 'scene' ? currentText !== '' : R.added.find((x) => x.el.id === refEl.id)?.el.kind === 'text';
+  useEffect(() => {
+    if (isEditing) setDraft(currentText);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing, refEl]);
   return (
     <div className="card" data-testid="element-panel">
       <div className="card-head">
         <h3 className="section-title">{name}</h3>
-        <button className="icon sm ghost" onClick={onClose} aria-label="Fechar"><X size={15} /></button>
+        <button className="icon sm ghost" onClick={onClose} aria-label="Fechar">
+          <X size={15} />
+        </button>
       </div>
-      <p className="hint">Arraste direto no vídeo para mover. Duplo clique para editar texto. Segure Shift para travar eixo.</p>
-      {isEditing ? (
-        <div className="edit-text">
-          <textarea value={draft} onChange={e=>setDraft(e.target.value)} rows={3} data-testid="element-text-input" />
-          <div className="row">
-            <button className="primary sm" onClick={()=>{ onEditText(draft); setEditing(null); }}>Salvar</button>
-            <button className="sm" onClick={()=>setEditing(null)}>Cancelar</button>
+      <p className="hint">Arraste direto no vídeo para mover; duplo clique edita o texto; Shift trava o eixo. Na linha do tempo, arraste para mudar quando aparece.</p>
+      {hasText &&
+        (isEditing ? (
+          <div className="edit-text">
+            <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} data-testid="element-text-input" />
+            <div className="row">
+              <button
+                className="primary sm"
+                onClick={() => {
+                  onEditText(draft);
+                  setEditing(null);
+                }}
+              >
+                Salvar
+              </button>
+              <button className="sm" onClick={() => setEditing(null)}>
+                Cancelar
+              </button>
+            </div>
           </div>
+        ) : (
+          <button className="sm" onClick={() => setEditing(refEl)} disabled={disabled} data-testid="edit-text-btn">
+            Editar texto
+          </button>
+        ))}
+      {at && (
+        <div className="edges">
+          <SecondsField label="Aparece em (s)" value={at.start} testId="el-start" disabled={disabled} onCommit={(v) => onApply((p) => retimeElement(p, refEl, { start: v, end: at.end }))} />
+          <SecondsField label="Some em (s)" value={at.end} testId="el-end" disabled={disabled} onCommit={(v) => onApply((p) => retimeElement(p, refEl, { start: at.start, end: v }))} />
         </div>
-      ) : (
-        <button className="sm" onClick={()=>setEditing(refEl)} data-testid="edit-text-btn">Editar texto</button>
       )}
-      <div className="row" style={{marginTop:8}}>
-        <button className="sm" onClick={()=>{
-          try { const r = duplicateElement(plan, refEl); if (r) onChange(r.plan); } catch {}
-        }} data-testid="duplicate-el">Duplicar</button>
-        <button className="sm danger" onClick={()=>{
-          try { onChange(deleteElement(plan, refEl)); onClose(); } catch {}
-        }} data-testid="delete-el">Apagar</button>
+      <div className="row wrap" style={{ marginTop: 8 }}>
+        {at && (
+          <button className="sm" onClick={() => onSeek(at.start + 0.01)} data-testid="el-goto">
+            <Play size={13} aria-hidden /> Ir até ele
+          </button>
+        )}
+        {refEl.type !== 'caption' && (
+          <>
+            <button className="sm" onClick={actions.copy} disabled={disabled} data-testid="copy-el">
+              <Copy size={13} aria-hidden /> Copiar
+            </button>
+            <button className="sm" onClick={actions.duplicate} disabled={disabled} data-testid="duplicate-el">
+              <CopyPlus size={13} aria-hidden /> Duplicar
+            </button>
+          </>
+        )}
+        <button className="sm danger" onClick={actions.remove} disabled={disabled} data-testid="delete-el">
+          <Trash2 size={13} aria-hidden /> Apagar
+        </button>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import type { Caption, Segment, Word } from '../core/types';
-import { outputToSource, sourceToOutput } from '../engine/timeline';
+import { isSourceOrdered, outputToSource, sourceToOutput, sourceToOutputClamped } from '../engine/timeline';
 
 /**
  * Transcrição em parágrafo (editor de legendas da v0.10): as palavras na ordem da fala, agrupadas
@@ -41,10 +41,12 @@ export function buildTranscript(words: Word[], captions: Caption[], segments: Se
   const byId = new Map(words.map((w) => [w.id, w]));
   const inCaption = new Set(captions.flatMap((c) => c.wordIds));
   const items: { at: number; block: TranscriptBlock }[] = [];
+  // pedaços em ordem própria ou repetidos (v0.17): o roteiro segue o vídeo final, não a gravação
+  const byOutput = !isSourceOrdered(segments);
 
   for (const c of captions) {
     const first = c.wordIds.length ? byId.get(c.wordIds[0]!) : undefined;
-    const at = first?.start ?? outputToSource(segments, c.start) ?? 0;
+    const at = byOutput ? c.start : (first?.start ?? outputToSource(segments, c.start) ?? 0);
     const orig = originalText(c, byId);
     items.push({ at, block: { kind: 'caption', id: c.id, start: c.start, end: c.end, text: c.text, tokens: tokensOf(c), edited: orig !== '' && orig !== c.text } });
   }
@@ -55,7 +57,7 @@ export function buildTranscript(words: Word[], captions: Caption[], segments: Se
     if (!run.length) return;
     const a = run[0]!;
     const b = run.at(-1)!;
-    items.push({ at: a.start, block: { kind: 'cut', key: `x${a.id}`, srcStart: a.start, srcEnd: b.end, words: run.map((w) => w.text) } });
+    items.push({ at: byOutput ? sourceToOutputClamped(segments, a.start) : a.start, block: { kind: 'cut', key: `x${a.id}`, srcStart: a.start, srcEnd: b.end, words: run.map((w) => w.text) } });
     run = [];
   };
   for (const w of [...words].sort((a, b) => a.start - b.start)) {

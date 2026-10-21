@@ -26,6 +26,7 @@ import type { Emoji } from '../core/emoji';
 import { AppError } from '../core/errors';
 import type { EditPlan, Segment, TimeRange } from '../core/types';
 import { outputDuration } from '../engine/timeline';
+import { clipAt, clipLayout } from '../engine/clips';
 import { SCENE_TEXT_MAX, TEXT_SCENES, findElement, outToSrc, resolvePlan, sceneText, type ElementRef } from './elements';
 import { MIN_KEEP_SEC, editCaptionText, withSegments, type EditContext } from './ops';
 
@@ -299,6 +300,47 @@ export function duplicateElement(plan: EditPlan, ref: ElementRef): { plan: EditP
   return { plan: withEdits(plan, { ...plan.edits, added: [...plan.edits.added, el] }), id };
 }
 
+/** Elemento guardado pelo Copiar/Recortar (v0.17): o que ele é e quanto tempo aparece. */
+export interface ElementClip {
+  template: Omit<AddedElement, 'id' | 'srcStart' | 'srcEnd'>;
+  seconds: number;
+}
+
+/**
+ * Copia um elemento para colar depois: adicionado vai como é; título/texto/número gerado vira um texto
+ * com as mesmas palavras; emoji gerado vira emoji. Legenda não copia (M4F-519): ela vem da fala.
+ */
+export function copyElement(plan: EditPlan, ref: ElementRef): ElementClip {
+  if (ref.type === 'caption') throw new AppError('LEGENDA_NAO_COPIA');
+  const at = located(plan, ref);
+  const seconds = Math.max(MIN_ELEMENT_SEC, at.end - at.start);
+  if (ref.type === 'added') {
+    const el = plan.edits.added.find((a) => a.id === ref.id)!;
+    return { template: { kind: el.kind, preset: el.preset, text: el.text, emoji: el.emoji, shape: el.shape, placement: el.placement, look: el.look }, seconds };
+  }
+  const s = resolvePlan(plan).scenes.find((x) => x.key === ref.key)!;
+  const look = s.edit?.look ?? {};
+  const placement = { x: 0.5 + (s.edit?.offset?.dx ?? 0), y: 0.3 + (s.edit?.offset?.dy ?? 0), scale: s.edit?.offset?.scale ?? 1, rotate: s.edit?.offset?.rotate ?? 0 };
+  if (s.scene.kind === 'emoji') return { template: { kind: 'emoji', preset: 'text', text: '', emoji: s.scene.emoji, shape: null, placement: clampPlacement({ ...placement, y: placement.y + 0.3 }), look }, seconds };
+  const text = (sceneText(s.scene) ?? '').split('\n').join(' ').slice(0, TEXT_MAX).trim();
+  if (!text) throw new AppError('ELEMENTO_SUMIU', ref.key);
+  return { template: { kind: 'text', preset: 'title', text, emoji: null, shape: null, placement: clampPlacement(placement), look }, seconds };
+}
+
+/** Cola o elemento copiado a partir do instante `outT`, com a mesma duração (ou até o fim do vídeo). */
+export function pasteElement(plan: EditPlan, ctx: EditContext, clip: ElementClip, outT: number): { plan: EditPlan; id: string } {
+  if (plan.edits.added.length >= MAX_ADDED) throw new AppError('LIMITE_ELEMENTOS');
+  const total = outputDuration(plan.segments);
+  const start = clamp(outT, 0, Math.max(0, total - MIN_ELEMENT_SEC));
+  const end = Math.min(total, start + clip.seconds);
+  if (end - start < MIN_ELEMENT_SEC - 1e-6) throw new AppError('ELEMENTO_CURTO', `${(end - start).toFixed(2)} s`);
+  assertUnlocked(plan, { start, end }, 'elemento colado');
+  const src = outToSrc(plan, { start, end });
+  const id = nextId(plan.edits.added);
+  const el: AddedElement = { ...clip.template, id, srcStart: src.srcStart, srcEnd: Math.min(ctx.durationSec, src.srcEnd) };
+  return { plan: withEdits(plan, { ...plan.edits, added: [...plan.edits.added, el] }), id };
+}
+
 /** Camada de um elemento adicionado: frente/trás um passo, ou tudo para frente/trás. */
 export function moveLayer(plan: EditPlan, id: string, dir: 'up' | 'down' | 'top' | 'bottom'): EditPlan {
   const list = [...plan.edits.added];
@@ -398,16 +440,23 @@ export function deleteSegment(plan: EditPlan, ctx: EditContext, index: number): 
 export function trimSegment(plan: EditPlan, ctx: EditContext, index: number, edge: 'start' | 'end', src: number): EditPlan {
   const s = plan.segments[index];
   if (!s) return plan;
-  const prev = plan.segments[index - 1];
-  const next = plan.segments[index + 1];
+  // o vizinho só limita quando vem antes/depois também no original (v0.17: com a ordem mudada, puxar
+  // a ponta pode reaproveitar imagem que outro pedaço também usa, como num editor profissional)
+  const before = plan.segments[index - 1];
+  const after = plan.segments[index + 1];
+  const prev = before && before.srcEnd <= s.srcStart + 1e-6 ? before : undefined;
+  const next = after && after.srcStart >= s.srcEnd - 1e-6 ? after : undefined;
+  // com vários clipes, o pedaço não passa das pontas do próprio arquivo
+  const home = plan.clips.length > 1 ? clipAt(plan.clips, s.srcStart) : null;
+  const span = home ? clipLayout(plan.clips)[home.index]! : { start: 0, end: ctx.durationSec };
   let seg: Segment;
   if (edge === 'start') {
-    const lo = prev ? prev.srcEnd : 0;
+    const lo = Math.max(span.start, prev ? prev.srcEnd : 0);
     const v = r3(clamp(src, lo, s.srcEnd));
     if (s.srcEnd - v < MIN_KEEP_SEC - 1e-6) throw new AppError('PEDACO_CURTO', `${(s.srcEnd - v).toFixed(2)} s`);
     seg = { srcStart: v, srcEnd: s.srcEnd };
   } else {
-    const hi = next ? next.srcStart : ctx.durationSec;
+    const hi = Math.min(span.end, next ? next.srcStart : ctx.durationSec);
     const v = r3(clamp(src, s.srcStart, hi));
     if (v - s.srcStart < MIN_KEEP_SEC - 1e-6) throw new AppError('PEDACO_CURTO', `${(v - s.srcStart).toFixed(2)} s`);
     seg = { srcStart: s.srcStart, srcEnd: v };
