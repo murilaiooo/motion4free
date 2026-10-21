@@ -49,4 +49,6 @@ Organização proposta, sujeita à spec Superpowers aprovada; evitar importar c�
 ## Atualizações verificadas depois do levantamento inicial
 - [Editonny 19/10/2026 — comparação de commit, código útil e plano de adaptação](../updates/2026-10-19-editonny-guide.md). A atualização mais recente examinada foi concentrada em **guia/React/Next.js e design system**, não no motor de render. Não importar animações de UI dependentes do relógio como se fossem animações de vídeo exportáveis.
 
-\n## Complemento: SupoClip (21/10/2026)\n- [SupoClip: auditoria profunda do motor de clipes longos e integração clean-room](../2026-10-21-supoclip-deep-dive.md): seleção com contexto, janelas sobrepostas, grounding de timestamps, ranking, source-map, render, licenças e riscos. [Spec](../../superpowers/specs/2026-10-21-contextual-longform-clips.md) e [plano TDD](../../superpowers/plans/2026-10-21-contextual-longform-clips.md). **Referência documentada, não integrada ao runtime.**\n
+
+## Complemento: SupoClip (21/10/2026)
+- [SupoClip: auditoria profunda do motor de clipes longos e integração clean-room](../2026-10-21-supoclip-deep-dive.md): seleção com contexto, janelas sobrepostas, grounding de timestamps, ranking, source-map, render, licenças e riscos. [Spec](../../superpowers/specs/2026-10-21-contextual-longform-clips.md) e [plano TDD](../../superpowers/plans/2026-10-21-contextual-longform-clips.md). **Referência documentada, não integrada ao runtime.**
