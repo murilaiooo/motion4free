@@ -1,0 +1,25 @@
+name: QA disk recovery diagnosis
+on:
+  pull_request:
+    paths:
+      - 'src/core/project-library.ts'
+      - 'e2e/qa-untested-privacy-faults.spec.ts'
+      - '.github/workflows/qa-disk-isolated.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disk-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run fixture
+      - run: npx playwright install --with-deps chromium
+      - name: Only the failed disk-full scenario
+        run: npx playwright test e2e/qa-untested-privacy-faults.spec.ts --grep "falha real no write" --workers=1 --reporter=line
