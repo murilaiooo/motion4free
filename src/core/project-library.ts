@@ -206,19 +206,29 @@ export async function listProjects(fs: Fs): Promise<ProjectSummary[]> {
     if (e.kind !== 'dir') continue;
     const id = e.name;
     const sizeBytes = await dirSize(fs, dir(id));
-    const meta = await readMeta(fs, id);
+    let meta = await readMeta(fs, id);
     const video = await fs.readFile([...dir(id), VIDEO]);
     const clipList = await listClipVideos(fs, id);
     const projBlob = await fs.readFile([...dir(id), PROJECT]);
     let expectedClips: { id: string }[] | null = null;
+    let validProject: SavedProject | null = null;
     try {
       const json: unknown = projBlob ? JSON.parse(await projBlob.text()) : null;
       const valid = parseProject(json);
       if (valid.ok) {
+        validProject = valid.project;
         const clips = referencedClips(valid.project);
         if (clips.length > 1 || (clips.length === 1 && clips[0]?.id !== 'c1')) expectedClips = clips;
       }
     } catch { /* projeto corrompido: identificado abaixo */ }
+    // Se o navegador fechou entre salvar project.json e meta.json, recuperar o projeto
+    // válido a partir do próprio JSON, sem oferecer apenas a opção destrutiva Apagar.
+    if (!meta && validProject && isProjectId(id)) {
+      meta = metaFor(validProject, {
+        id, name: nameFromFile(validProject.video.name), createdAt: validProject.savedAt,
+      });
+      await fs.writeFile([...dir(id), META], JSON.stringify(meta)).catch(() => undefined);
+    }
     // Confere os IDs, não a quantidade: arquivos de clipes removidos podem continuar no OPFS.
     // video.bin é o c1 original (não o primeiro clipe da ordem atual).
     const hasVideo = expectedClips
@@ -226,8 +236,7 @@ export async function listProjects(fs: Fs): Promise<ProjectSummary[]> {
       : !!video && !!meta && video.size === meta.video.size;
     const thumb = await fs.readFile([...dir(id), THUMB]);
     if (meta) {
-      const hasProject = !!(await fs.readFile([...dir(id), PROJECT]));
-      out.push({ ...meta, sizeBytes, hasVideo, thumb, broken: !hasProject });
+      out.push({ ...meta, sizeBytes, hasVideo, thumb, broken: !validProject });
     } else {
       out.push({
         format: 1,
