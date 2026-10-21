@@ -1,13 +1,13 @@
 # Roteiro de teste da v0.22 — Clipes de vídeo longo
 
-Confira no rodapé **Motion4Free v0.22.0** (se precisar, aperte Ctrl+Shift+R). Use Chrome ou Edge no computador.
+Confira no rodapé **Motion4Free v0.22.1** (se precisar, aperte Ctrl+Shift+R). Use Chrome ou Edge no computador.
 
 Separe um vídeo falado de **10 a 60 minutos** (podcast, aula, live, entrevista) que seja seu ou que você tenha autorização para cortar. Para o primeiro teste, um de 10 a 20 minutos já basta e é mais rápido.
 
 ## 1. Primeira tela com dois modos
 1. Abra o site. Acima do título aparecem dois botões: **Editar meus vídeos** e **Clipes de vídeo longo**.
 2. Clique em **Clipes de vídeo longo**. O título muda para "Um vídeo longo. Vários clipes prontos." e o botão vira **Escolher vídeo longo**.
-3. Cole um link do YouTube no campo "Tem só o link?" e clique em **Usar link**. Deve aparecer o aviso **M4F-1105** com o passo a passo de como baixar o arquivo.
+3. Abaixo do botão aparecem as três formas de conseguir o arquivo (YouTube Studio, pedir ao dono, gravação da live). Não há mais campo de link.
 4. Clique em **Editar meus vídeos**: tudo volta a ser como antes.
 
 ## 2. Achar os melhores momentos

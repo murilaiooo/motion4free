@@ -1,9 +1,7 @@
 import { useState, type DragEvent, type ReactNode } from 'react';
-import { Captions, Check, Clapperboard, Cpu, FileVideo, Film, HardDrive, History, Layers, Link2, MessageSquareText, Move, RectangleVertical, Scissors, ShieldCheck, Upload, WandSparkles } from 'lucide-react';
+import { Captions, Check, Clapperboard, Cpu, FileVideo, Film, HardDrive, History, Layers, MessageSquareText, Move, RectangleVertical, Scissors, ShieldCheck, Upload, WandSparkles } from 'lucide-react';
 import './landing.css';
 import './clips.css';
-import { AppError } from '../core/errors';
-import { ErrorBox } from './ErrorBox';
 import { PROCESSING_STEPS, processingStep } from '../core/steps';
 import { listTemplates } from '../core/template-gallery';
 import { APP_BUILT_AT, VERSION_LABEL } from '../version';
@@ -76,39 +74,22 @@ const FAQ: [string, string][] = [
 
 export type LandingMode = 'editar' | 'clipes';
 
-/** Link colado no modo Clipes: o app não baixa (ADR-0023), então explica como conseguir o arquivo. */
-function LinkHelp() {
-  const [url, setUrl] = useState('');
-  const [asked, setAsked] = useState<string | null>(null);
+/** Modo Clipes: o app só trabalha com o arquivo (não baixa de links, ADR-0023); diz como consegui-lo. */
+function FileHelp() {
   return (
-    <div className="lp-link" data-testid="link-help">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (url.trim()) setAsked(url.trim());
-        }}
-      >
-        <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Tem só o link? Cole aqui (YouTube, Instagram…)" aria-label="Link do vídeo" data-testid="link-input" />
-        <button type="submit" className="sm" disabled={!url.trim()} data-testid="link-submit">
-          <Link2 size={15} aria-hidden /> Usar link
-        </button>
-      </form>
-      {asked && (
-        <>
-          <ErrorBox error={new AppError('LINK_NAO_BAIXA', asked.slice(0, 120))} kind="warning" onDismiss={() => setAsked(null)} />
-          <ol>
-            <li>
-              <b>Vídeo seu no YouTube:</b> abra o YouTube Studio → Conteúdo → nos três pontinhos do vídeo, <b>Baixar</b>. Depois solte o arquivo aqui.
-            </li>
-            <li>
-              <b>Vídeo de outra pessoa:</b> peça o arquivo ou a autorização ao dono (muitos podcasts liberam cortes) e use o arquivo que ele mandar.
-            </li>
-            <li>
-              <b>Live ou reunião gravada:</b> use o arquivo que o programa salvou no computador (OBS, Zoom, Meet, StreamYard…).
-            </li>
-          </ol>
-        </>
-      )}
+    <div className="lp-link" data-testid="file-help">
+      <p className="hint">Onde conseguir o arquivo do vídeo:</p>
+      <ol>
+        <li>
+          <b>Vídeo seu no YouTube:</b> YouTube Studio → Conteúdo → três pontinhos do vídeo → <b>Baixar</b>.
+        </li>
+        <li>
+          <b>Vídeo de outra pessoa:</b> peça o arquivo ao dono, junto com a autorização (muitos podcasts liberam cortes).
+        </li>
+        <li>
+          <b>Live ou reunião gravada:</b> use o arquivo que o programa salvou no computador (OBS, Zoom, Meet, StreamYard…).
+        </li>
+      </ol>
     </div>
   );
 }
@@ -236,7 +217,7 @@ export function Landing({
               </span>
             </label>
 
-            {clips && <LinkHelp />}
+            {clips && <FileHelp />}
             {options}
 
             <ul className="lp-facts">
