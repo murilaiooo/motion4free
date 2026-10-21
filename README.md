@@ -1,7 +1,7 @@
 # Motion4Free
 
 **Editor de Reels com motion design personalizado que roda no navegador, sem instalação e sem custo.**
-A versão em desenvolvimento é a v0.15.0, com importação de até 30 clipes, edição manual, presets, pedidos por texto e exportação de MP4 no navegador. O status de publicação precisa ser confirmado no GitHub Actions/Cloudflare.
+A versão atual é a v0.15.1, com importação de até 30 clipes, edição manual, presets, pedidos por texto e exportação de MP4 no navegador. O deploy é automático na Cloudflare; a versão pública e os checks do commit podem ser confirmados no GitHub Actions.
 
 > **Visão:** transforme uma gravação sua falando em um Reels bem editado, por linguagem natural ou estilos prontos, preservando a voz, o significado e a privacidade. A IA atua como diretora que escolhe e ajusta um sistema de motion design curado; o motor compõe, valida e renderiza localmente sem executar código vindo do modelo.
 

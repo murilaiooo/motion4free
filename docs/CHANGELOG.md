@@ -2,6 +2,16 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.15.1 — 20/10/2026
+**QA ampliado, recuperação de arquivos inválidos e smoke do deploy real.**
+
+- Vídeos válidos importam mesmo com arquivos corrompidos no lote, incluindo o primeiro; aviso M4F-108; identificação e cópia corretas após reabrir.
+- 100 cenários determinísticos de identidade/tempo/cortes/esquema; testes de limites, arquivos inválidos e persistência.
+- Chromium + FFmpeg/FFprobe valida MP4 real em 9:16, 4:5, 1:1, 16:9, vídeo mudo, remoção/reabertura e undo/redo.
+- Três presets produzem quadros visivelmente distintos para a mesma gravação; isso não prova excelência artística.
+- QA de produção usa o domínio público e verifica o commit realmente implantado. A qualidade do ASR em aparelhos reais, os limites de performance e a avaliação humana continuam pendentes.
+- Ver [QA da v0.15.1](QA-v0.15.1.md).
+
 ## v0.15.0 — 20/10/2026
 **Integração do editor multi-clipe, preservando os projetos e as edições existentes.**
 

@@ -55,10 +55,17 @@ export async function openClips(
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]!;
-    const media = await openMedia(file);
+    let media: OpenedMedia;
+    try {
+      media = await openMedia(file);
+    } catch (err) {
+      warnings.push(new AppError('CLIPE_ILEGIVEL', `${file.name}: ${describeError(err)}`));
+      continue;
+    }
     runningDuration += media.durationSec;
     if (runningDuration > 600) throw new AppError('CLIPES_LONGOS', `${runningDuration.toFixed(1)} s > 600 s`);
-    const id = `c${firstClipNumber + i}`;
+    // Somente arquivos válidos ganham IDs. O primeiro arquivo válido é sempre c1 num projeto novo.
+    const id = `c${firstClipNumber + clips.length}`;
     let audio: DecodedAudio | null = null;
     if (media.audio) {
       try { audio = await decodeAudio(media.audio, media.durationSec); }
@@ -89,6 +96,7 @@ export async function openClips(
     clips.push({ id, file, name: file.name, media, durationSec: media.durationSec, words, silences, audio });
   }
 
+  if (clips.length === 0) throw new AppError('NENHUM_CLIPE', 'Nenhum arquivo de vídeo pôde ser aberto.');
   const refs = buildClipRefs(clips);
   const combinedAudio = combineAudios(refs, audiosByClip);
 
