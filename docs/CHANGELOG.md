@@ -2,6 +2,15 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.30.0 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#102 — Descoberta contextual de clipes ancorada na gravação.** Índice por IDs e frases, janelas sobrepostas que cobrem toda a transcrição e geração local a partir de todos os inícios de frase, com pool limitado. A IA opcional pode propor novos spans fora da lista inicial; IDs, ordem, duração e evidências de setup/payoff são conferidos. Não se aceitam horários/títulos livres como fatos. Título automático usa uma frase curta completa ou rótulo neutro de tempo para evitar omitir negação/condição.
+
+- Revisão de antecedentes e finais/perguntas sinalizados, contextos antes/depois, reprodução de 6 s ao redor, bordas por frase, título editável, cancelamento e propostas novas desmarcadas. Curadoria/seleções existentes são preservadas.
+- Nota é estrutural e estimada, sem promessa de visualizações ou de compreensão semântica. Cobertura parcial de IA por orçamento/falha é informada; análise local continua. Método anterior disponível explicitamente, sem pré-seleção automática.
+- Proveniência local do arquivo derivado persiste no projeto; a EDL atual pode ser mapeada para os tempos da gravação original sem alterá-la. Reabrir contexto além do derivado exige voltar ao Criador de Clipes com a origem.
+- M4F-1110/1111; nenhum teste/build/typecheck/lint, inferência, importação, reprodução, render ou export foi executado. Dataset autorizado, avaliação cega de payoff/fidelidade e paridade temporal/visual aguardam QA.
+
 ## v0.29.1 — 21/10/2026 — IMPLEMENTED — NOT TESTED
 
 **#11 — Revisões assíncronas preservam a edição atual.** Pedidos gerais e de trecho são vinculados ao plano e à seleção que os iniciaram. Editar, desfazer/refazer, mudar o trecho ou sair do editor invalida o resultado pendente; ele não aplica um histórico antigo. Botão Cancelar pedido aborta o envio remoto e impede aplicar resultado local tardio. Downloads compartilhados de modelo local podem continuar, sem alterar a edição.

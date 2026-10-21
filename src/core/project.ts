@@ -31,6 +31,7 @@ export interface SavedProject {
   words: Word[];
   silences: TimeRange[];
   /** Anotações locais de todos os arquivos, inclusive dos clipes guardados no histórico de desfazer. */
+  sourceMaps?: import('../editorial/clip-source-map').ClipOrigins;
   clipAnnotations?: Record<string, { words: Word[]; silences: TimeRange[] }>;
   warnings: SavedWarning[];
   history: { past: EditPlan[]; present: EditPlan; future: EditPlan[] };
@@ -53,6 +54,7 @@ const projectSchema = z.object({
     words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
     silences: z.array(z.object({ start: time, end: time })),
   })).optional(),
+  sourceMaps: z.record(z.string(), z.object({ version: z.literal(1), sourceId: z.string().regex(/^[a-f0-9]{64}$/), sourceOffset: time, sourceDuration: time, derivedDuration: time }).refine((origin) => origin.sourceOffset < origin.sourceDuration && origin.derivedDuration > 0 && origin.sourceOffset + origin.derivedDuration <= origin.sourceDuration + 1)).optional(),
   warnings: z.array(z.object({ key: errorKey, detail: z.string() })),
   // planos v1 (Fase 2) são migrados para v2 ao abrir
   history: z.object({ past: z.array(anyPlanSchema), present: anyPlanSchema, future: z.array(anyPlanSchema) }),

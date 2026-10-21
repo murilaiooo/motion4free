@@ -146,3 +146,8 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 - M4F-1220: cooldown por 429 ou circuito após falhas transitórias. Aguardar o prazo mostrado, continuar localmente; trocar chave não contorna o limite do provedor.
 
 - M4F-527: pedido cancelado ou plano/seleção mudou. Nenhum resultado atrasado é aplicado; enviar novo pedido ao estado atual.
+
+## Descoberta contextual (#102)
+
+- M4F-1110: IDs/tempos da transcrição inválidos ou limite de contexto; preservar a origem e revisar/refazer análise ou escolher arquivo menor.
+- M4F-1111: análise por IA incompleta/sem resposta ancorada válida; candidatos locais continuam disponíveis, com curadoria humana antes da seleção/export.

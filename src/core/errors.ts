@@ -110,6 +110,8 @@ export const ERRORS = {
   LINK_NAO_BAIXA: { code: 'M4F-1105', title: 'O navegador não consegue baixar vídeos de links (YouTube, Instagram, TikTok). Baixe o arquivo e solte aqui.' },
   IA_MOMENTOS_FALHOU: { code: 'M4F-1106', title: 'A IA não conseguiu ordenar os momentos; usei a escolha automática por regras.' },
   SEM_MOMENTOS: { code: 'M4F-1107', title: 'Não achei trechos de fala contínua do tamanho escolhido. Tente clipes mais curtos.' },
+  CLIPES_CONTEXTO_INVALIDO: { code: 'M4F-1110', title: 'A transcrição não tem IDs/tempos válidos ou ultrapassa o limite para análise contextual. Preservei o trabalho; confira a transcrição ou use um arquivo menor.' },
+  CLIPES_IA_CONTEXTO: { code: 'M4F-1111', title: 'A análise contextual por IA ficou incompleta ou sem resposta válida. Mantive candidatos locais; confira o contexto antes de selecionar.' },
   CLIPE_LOTE_FALHOU: { code: 'M4F-1108', title: 'Um dos clipes não pôde ser gerado; os outros continuaram normalmente.' },
   MEMORIA_LONGO: { code: 'M4F-1109', title: 'O aparelho ficou sem memória para ler o áudio do vídeo longo. Feche outras abas ou envie um pedaço menor do vídeo.' },
   IA_SEM_MODELO: { code: 'M4F-1201', title: 'Nenhum modelo de IA foi escolhido. Escolha um em Configurações › IA e provedores; desta vez usei as regras.' },
