@@ -2,6 +2,12 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.29.3 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#6 — Fala ambígua não é apagada só pelo texto.** Padrões conhecidos de alucinação e repetições com energia de fala são preservados e marcados para revisão local na transcrição, com atalhos para ouvir. A marca é heurística, não confiança inventada. Remoção de padrões/laços exige forte sobreposição com silêncio medido. Metadado opcional persiste em projeto e análise de vídeo longo.
+
+O filtro de duração mínima não descarta um trecho curto que contenha palavra reconhecida, inclusive negação no início/fim. Intervalos inválidos são ignorados e cortes limitados à duração da origem. Nenhum teste/build/typecheck/lint ou áudio/vídeo foi executado; precisão e segurança de fala real aguardam QA.
+
 ## v0.27.5 — 21/10/2026
 
 **Conexão de provedores sem catálogo de outra conta nem sucesso de fachada (#73, entrega parcial).** Conectar/substituir/remover uma chave invalida o catálogo daquela conta e a escolha antiga de modelo, sem guardar identificador derivado da chave em armazenamento. Uma resposta atrasada de outra chave é descartada; requisições pendentes são canceladas ao trocar de provedor. Os catálogos ficam por até 30 minutos na memória desta aba, separados por revisão opaca da credencial.

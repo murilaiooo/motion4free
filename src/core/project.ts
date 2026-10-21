@@ -47,10 +47,10 @@ const projectSchema = z.object({
   savedAt: z.string(),
   appVersion: z.string(),
   video: z.object({ name: z.string(), size: z.number().int().nonnegative(), durationSec: time }),
-  words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
+  words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time, needsReview: z.boolean().optional() })),
   silences: z.array(z.object({ start: time, end: time })),
   clipAnnotations: z.record(z.string(), z.object({
-    words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
+    words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time, needsReview: z.boolean().optional() })),
     silences: z.array(z.object({ start: time, end: time })),
   })).optional(),
   warnings: z.array(z.object({ key: errorKey, detail: z.string() })),
