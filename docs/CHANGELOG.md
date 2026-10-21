@@ -1,3 +1,7 @@
+## 0.33.0 — UNTESTED / AWAITING QA
+
+- #10: authorized recording/annotation contract and source/person/content separation across dataset splits; no corpus or measured results fabricated.
+
 ## 0.30.1 — UNTESTED / AWAITING QA
 
 - #7: fichas semânticas e proveniência das onze cenas originais; limites compartilhados para propostas automáticas.

@@ -138,3 +138,5 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 | M4F-1215 | A senha do cofre precisa ter pelo menos 8 caracteres. | Senha curta demais ao criar o cofre. |
 | M4F-1216 | O cofre de chaves deste navegador está danificado e não pode ser aberto. Apague o cofre em Privacidade e segurança e conecte as chaves de novo. | O conteúdo guardado em "m4f-cofre" não está no formato esperado. |
 | M4F-1217 | O serviço aceitou o teste, mas não enviou uma resposta de texto. Não foi possível confirmar que este modelo funciona. | HTTP 200 sem conteúdo de texto útil. A listagem e a autenticação não comprovam a geração; experimente outro modelo ou peça novamente com mais tokens. |
+
+| M4F-809 | Dataset sem contrato/direitos/splits válidos. | Faltam direitos/anotações, IDs/tempos são inválidos ou origem/pessoa/hash cruza conjuntos. Nenhum dado privado é repetido no erro. |
