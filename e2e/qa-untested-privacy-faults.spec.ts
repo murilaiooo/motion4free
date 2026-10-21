@@ -60,3 +60,17 @@ test('falha real no write de video.bin: não mostra falso Salvo e solicita origi
   // Dados do projeto permanecem, mas o arquivo original não foi persistido.
   await expect(page.getByText('Escolha de novo o vídeo original', { exact: false })).toBeVisible({ timeout: 90_000 });
 });
+
+
+test('concorrência: trava nova importação durante análise de clipes e libera ao terminar', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/?asr=vazio');
+  await page.getByTestId('file-input').setInputFiles(MEDIA);
+  await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
+  const chooser = page.locator('[data-testid="clip-list"] input[type=file]');
+  await chooser.setInputFiles('e2e/fixtures/clip-blue.webm');
+  await expect(chooser).toBeDisabled({ timeout: 10_000 });
+  await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
+  await expect(chooser).toBeEnabled({ timeout: 90_000 });
+  await expect(page.getByTestId('clip-c3')).toHaveCount(0);
+});
