@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { GripVertical, Trash2, Plus, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface ClipItem {
@@ -19,6 +19,8 @@ interface Props {
 
 export function ClipList({ clips, onReorder, onRemove, onAdd, max = 30, disabled = false }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
+  const full = clips.length >= max;
   const move = (from: number, to: number) => {
     if (disabled || to < 0 || to >= clips.length) return;
     const next = [...clips];
@@ -38,14 +40,16 @@ export function ClipList({ clips, onReorder, onRemove, onAdd, max = 30, disabled
     <div className="clip-list" data-testid="clip-list">
       <div className="clip-list-head">
         <h3>Clipes ({clips.length}/{max})</h3>
-        <label className="sm ghost" style={{ cursor: 'pointer', border: '1px dashed var(--border)', padding: '4px 8px', borderRadius: 6 }}>
-          <Plus size={14} /> Adicionar
-          <input type="file" accept="video/*" multiple hidden disabled={disabled || clips.length >= max} onChange={(e) => {
-            const files = e.target.files ? Array.from(e.target.files) : [];
-            if (files.length) onAdd(files);
-            e.currentTarget.value = '';
-          }} />
-        </label>
+        {/* botão de verdade (Tab + Enter funcionam); o campo de arquivo fica escondido */}
+        <button type="button" className="sm ghost clip-add" disabled={disabled || full} onClick={() => picker.current?.click()} data-testid="clip-add"
+          title={full ? `Limite de ${max} clipes` : 'Adicionar vídeos ao fim da montagem'}>
+          <Plus size={14} aria-hidden /> Adicionar
+        </button>
+        <input ref={picker} type="file" accept="video/*" multiple hidden disabled={disabled || full} aria-label="Escolher vídeos para adicionar" onChange={(e) => {
+          const files = e.target.files ? Array.from(e.target.files) : [];
+          if (files.length) onAdd(files);
+          e.currentTarget.value = '';
+        }} />
       </div>
       <p className="hint" style={{ margin: '4px 0 8px' }}>Ordem importa: o primeiro vira o início do vídeo. Arraste ou use as setas para reordenar. Até 30 clipes.</p>
       <ol className="clips">
@@ -68,23 +72,11 @@ export function ClipList({ clips, onReorder, onRemove, onAdd, max = 30, disabled
             <span className="clip-actions">
               <button className="icon sm ghost" onClick={() => move(i, i - 1)} disabled={disabled || i === 0} aria-label="Mover para cima"><ArrowUp size={14} /></button>
               <button className="icon sm ghost" onClick={() => move(i, i + 1)} disabled={disabled || i === clips.length - 1} aria-label="Mover para baixo"><ArrowDown size={14} /></button>
-              <button className="icon sm ghost danger" onClick={() => onRemove(c.id)} disabled={disabled || clips.length <= 1} aria-label="Remover"><Trash2 size={14} /></button>
+              <button className="icon sm ghost danger" onClick={() => onRemove(c.id)} disabled={disabled || clips.length <= 1} aria-label="Remover" title={clips.length <= 1 ? 'O vídeo precisa de pelo menos um clipe' : 'Tirar da montagem (dá para desfazer)'}><Trash2 size={14} /></button>
             </span>
           </li>
         ))}
       </ol>
-      <style>{`
-        .clip-list { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--card); }
-        .clip-list-head { display: flex; justify-content: space-between; align-items: center; }
-        .clip-list-head h3 { margin: 0; font-size: 14px; }
-        .clips { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
-        .clip-item.dragging { opacity: 0.48; outline: 2px dashed var(--border); }
-        .clip-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); }
-        .clip-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-        .clip-index { font-weight: 600; font-size: 12px; color: var(--muted-fg); min-width: 16px; }
-        .clip-dur { font-size: 12px; color: var(--muted-fg); }
-        .clip-actions { display: flex; gap: 2px; }
-      `}</style>
     </div>
   );
 }

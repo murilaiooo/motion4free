@@ -108,6 +108,8 @@ export class PlanPlayer {
     if (plan === this.plan && audio === this.audio) return;
     const sameAudio = plan.segments === this.plan.segments && plan.clips === this.plan.clips && audio === this.audio;
     const outputChanged = plan.output.width !== this.plan.output.width || plan.output.height !== this.plan.output.height;
+    // vários clipes: o enquadramento entra no quadro decodificado (SourceFrame), então precisa decodificar de novo
+    const framingChanged = !!this.clipFrames && plan.framing !== this.plan.framing;
     this.plan = plan;
     this.audio = audio;
     if (!sameAudio) this.audioBuffer = null;
@@ -129,7 +131,7 @@ export class PlanPlayer {
     if (this.playing && (!sameAudio || outputChanged)) this.restart(t);
     else if (!this.playing) {
       this.pausedAt = t;
-      if (sameAudio && !outputChanged) this.draw(t);
+      if (sameAudio && !outputChanged && !framingChanged) this.draw(t);
       else void this.renderStill(t);
     }
   }

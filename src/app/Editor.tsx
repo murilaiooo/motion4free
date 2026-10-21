@@ -34,6 +34,7 @@ import { Transcript } from './Transcript';
 import { TopBar, type SaveState } from './TopBar';
 import { VERSION_LABEL, APP_BUILT_AT } from '../version';
 import { FormatSelector } from './FormatSelector';
+import { FramingPanel } from './FramingPanel';
 import { placeWords, totalDuration } from '../engine/clips';
 import { reorderClipPlan } from '../editorial/clip-ops';
 import { combineAudios } from '../media/multi';
@@ -579,6 +580,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <h2 className="insp-title">Detalhes</h2>
         <div className="card" style={{display:'grid',gap:10,marginBottom:12}} data-testid="clip-and-format">
           <FormatSelector plan={plan} onChange={(n)=>apply(()=>n)} disabled={off || disabled} />
+          <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n)=>apply(()=>n)} disabled={off || disabled} />
           <ClipList
             disabled={off || disabled}
             clips={plan.clips.map(c => ({ id:c.id, name:c.name || c.id, duration:c.duration, file: new File([], c.name) }))}
