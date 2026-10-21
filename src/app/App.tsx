@@ -792,11 +792,8 @@ function EditorApp() {
 
   async function duplicate(id: string) {
     if (!fs) return;
-    const source = projects.find((p) => p.id === id);
     try {
-      const est = await storage.quota?.estimate().catch(() => null);
-      const check = spaceCheck(est ?? null, source?.sizeBytes ?? 0);
-      if (!check.ok) throw new Error(`livre ${formatBytes(check.free ?? 0)}; a cópia precisa de ${formatBytes(check.needed)}`);
+      // sem bloquear pelo número do navegador (no Brave ele é menor que o real, #72): se faltar espaço, a cópia falha e avisa
       const copy = await enqueue(() => duplicateProject(fs, id, newProjectId(Date.now()), new Date().toISOString()));
       if (copy) setFlash(`Projeto duplicado: "${copy.name}".`);
     } catch (err) {

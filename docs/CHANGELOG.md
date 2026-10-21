@@ -12,6 +12,7 @@ A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Mo
 - Códigos de erro próprios: edição recusada pela checagem vira M4F-522 e plano inválido na exportação vira M4F-406 (antes os dois apareciam como M4F-1016).
 - O histórico guarda o próprio plano depois de validá-lo (antes guardava uma cópia que podia perder campos).
 - Biblioteca de mídia gera uma miniatura por vez, para 30 clipes não esgotarem a memória.
+- IA no navegador no Brave (issue #72): o app deixa de bloquear o download do modelo pelo número de espaço que o navegador informa (no Brave ele aparece como 2 GB, menor que o real, por privacidade). Tenta baixar e só mostra M4F-1014 se o navegador recusar guardar de verdade; esse erro, antes confundido com falta de placa de vídeo (M4F-1013), agora é reconhecido. A lista de modelos mostra o espaço informado, quais já estão baixados e quais podem não caber. No Criador de Clipes, o aviso mostra a causa real (ex.: M4F-1014) em vez do genérico M4F-1106. Duplicar projeto também não se bloqueia mais pelo número.
 
 ## v0.24.1 — 21/10/2026
 **Configuração por escolhas, sem formulário obrigatório.** Revisão local após feedback do responsável; publicação pendente.

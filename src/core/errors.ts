@@ -88,7 +88,7 @@ export const ERRORS = {
   TRECHO_SEM_ALTERNATIVA: { code: 'M4F-1011', title: 'Não há outra animação possível neste trecho (falta fala ou as animações foram proibidas).' },
   IA_RESPOSTA_INVALIDA_REPARO: { code: 'M4F-1012', title: 'A IA respondeu fora do formato duas vezes (mesmo depois de pedir correção); usei as regras.' },
   IA_MODELO_GRANDE: { code: 'M4F-1013', title: 'Este aparelho não tem memória de vídeo suficiente para o modelo de IA escolhido; usei as regras. Tente o modelo leve.' },
-  IA_SEM_ESPACO: { code: 'M4F-1014', title: 'Falta espaço neste navegador para baixar o modelo de IA; usei as regras. Libere espaço em Armazenamento.' },
+  IA_SEM_ESPACO: { code: 'M4F-1014', title: 'O navegador recusou guardar o modelo de IA por falta de espaço; usei as regras. Escolha um modelo menor ou libere espaço em Armazenamento.' },
   PEDIDO_ELEMENTO_NAO_ENTENDIDO: { code: 'M4F-1015', title: 'Não entendi o pedido para o elemento escolhido; nada mudou. Tente “maior”, “amarelo”, “em cima”, “negrito” ou “apagar”.' },
   IA_CHAVE_RECUSADA: { code: 'M4F-1009', title: 'O serviço recusou a sua chave (confira se ela está certa ou se o limite gratuito acabou); usei as regras.' },
   PRODUCAO_INVALIDA: { code: 'M4F-1016', title: 'A edição planejada não passou na validação. O vídeo original e suas preferências foram preservados. Tente novamente com uma direção mais simples.' },
