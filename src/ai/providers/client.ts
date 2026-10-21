@@ -89,7 +89,9 @@ export function providerCompleter(id: ProviderId, key: string, modelId: string):
 export async function testModel(id: ProviderId, key: string, modelId: string): Promise<void> {
   const spec = PROVIDERS[id];
   const m: AiMessages = { system: 'Responda somente com o JSON {"ok":true}.', examples: [], user: 'Teste de conexão do Motion4Free.' };
-  const body = await send(id, spec.completeRequest(key, modelId, m, 32), key, COMPLETE_TIMEOUT_MS);
-  // modelos que "pensam" podem gastar os 32 tokens pensando e voltar sem texto: a resposta 200 já prova acesso
-  void spec.parseCompletion(body);
+  const body = await send(id, spec.completeRequest(key, modelId, m, 128), key, COMPLETE_TIMEOUT_MS);
+  const response = spec.parseCompletion(body);
+  // HTTP 200 prova só transporte/autorização, não que a IA conseguiu gerar texto.
+  // Alguns modelos consomem os tokens pensando; nunca marcar "Funcionou" sem resposta visível.
+  if (!response?.trim()) throw new AppError('PROVEDOR_SEM_TEXTO', `${spec.host}: pedido aceito, mas não foi possível confirmar uma resposta de texto`);
 }

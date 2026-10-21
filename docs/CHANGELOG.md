@@ -2,6 +2,17 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.27.5 — 21/10/2026
+
+**Conexão de provedores sem catálogo de outra conta nem sucesso de fachada (#73, entrega parcial).** Conectar/substituir/remover uma chave invalida o catálogo daquela conta e a escolha antiga de modelo, sem guardar identificador derivado da chave em armazenamento. Uma resposta atrasada de outra chave é descartada; requisições pendentes são canceladas ao trocar de provedor. Os catálogos ficam por até 30 minutos na memória desta aba, separados por revisão opaca da credencial.
+
+- Um HTTP 200 só valida a execução se o modelo realmente devolver texto. Resposta vazia mostra M4F-1217 e a interface distingue “modelo selecionado” de “resposta confirmada”.
+- Modelos removidos da listagem desmarcam a preferência anterior, com aviso M4F-1209. Caso o serviço não marque nenhum modelo como recomendado, o seletor mostra todos em vez de uma lista vazia.
+- “Preço zero informado” só inclui modelos cuja API devolve preço zero; cotas variáveis agora avisam sobre possível cobrança e exigem confirmação explícita.
+- Novo E2E no Brave com duas contas sintéticas, lista alterada, teste de inferência vazio, troca de chave, cache, revogação e verificação de que nenhuma chave aparece em localStorage. Testes unitários da revisão de credenciais e do teste de modelo.
+
+**Ainda pendente na #73:** modelos por tarefa, orçamento/uso e limite local, roteamento avançado da #9, auditoria CSP/CORS com credenciais reais e consentimento preciso para cada pedido.
+
 ## v0.27.4 — 21/10/2026
 
 **Download de modelos Whisper sem HTTP 403 por URL temporária (#80, complemento do PR #90).** A correção do cache de borda do PR #90 era necessária, mas o arquivo grande do Whisper ainda respondia HTTP 403 no site público após o deploy. Verificação: endpoint do modelo (1.274.403.767 bytes) retornava "Auth failed: credentials expired"; Hugging Face direto e CDN Xet respondiam 200, e o CDN permitia CORS.

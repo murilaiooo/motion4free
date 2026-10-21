@@ -20,10 +20,16 @@ let remembered = new Set<ProviderId>();
 /** chave derivada da senha, só na memória, enquanto o cofre está aberto */
 let unlocked: { key: CryptoKey; salt: Uint8Array<ArrayBuffer>; iterations: number } | null = null;
 let version = 0;
+// Token opaco por provedor: invalida catálogos de outra conta sem guardar hashes ou segredos fora do cofre.
+const credentialVersions = new Map<ProviderId, number>();
+export function credentialRevision(id: ProviderId): number {
+  return credentialVersions.get(id) ?? 0;
+}
 const listeners = new Set<() => void>();
 
-function changed() {
+function changed(ids?: Iterable<ProviderId>) {
   version++;
+  for (const id of ids ?? []) credentialVersions.set(id, credentialRevision(id) + 1);
   for (const l of listeners) l();
 }
 
@@ -61,7 +67,7 @@ export function setSessionKey(id: ProviderId, key: string): void {
   const k = key.trim();
   if (k) session.set(id, k);
   else session.delete(id);
-  changed();
+  changed([id]);
 }
 
 async function writeVault(): Promise<void> {
@@ -97,12 +103,13 @@ export async function unlockVault(password: string): Promise<number> {
   const { secrets, key, salt } = await unseal(v, password);
   unlocked = { key, salt, iterations: v.kdf.iterations };
   remembered = new Set();
+  const newlyOpened: ProviderId[] = [];
   for (const [id, k] of Object.entries(secrets)) {
     if (!isProviderId(id)) continue;
     remembered.add(id);
-    if (!session.has(id)) session.set(id, k);
+    if (!session.has(id)) { session.set(id, k); newlyOpened.push(id); }
   }
-  changed();
+  changed(newlyOpened);
   return remembered.size;
 }
 
@@ -110,7 +117,7 @@ export async function unlockVault(password: string): Promise<number> {
 export function lockVault(): void {
   for (const id of remembered) session.delete(id);
   unlocked = null;
-  changed();
+  changed(remembered);
 }
 
 /** Guarda (ou tira) a chave deste serviço no cofre aberto. */
@@ -132,7 +139,7 @@ export async function rememberKey(id: ProviderId, yes: boolean): Promise<void> {
 export async function forgetKey(id: ProviderId): Promise<void> {
   session.delete(id);
   if (remembered.has(id) && unlocked) await rememberKey(id, false);
-  else changed();
+  changed([id]);
 }
 
 export function deleteVault(): void {
@@ -142,17 +149,19 @@ export function deleteVault(): void {
     // nada guardado
   }
   for (const id of remembered) session.delete(id);
+  const removed = remembered;
   remembered = new Set();
   unlocked = null;
-  changed();
+  changed(removed);
 }
 
 /** "Apagar tudo do Motion4Free": nenhuma chave sobra nesta aba. */
 export function forgetAllKeys(): void {
+  const removed = [...session.keys()];
   session.clear();
   remembered = new Set();
   unlocked = null;
-  changed();
+  changed(removed);
 }
 
 export function vaultAvailable(): boolean {
