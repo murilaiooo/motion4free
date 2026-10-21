@@ -8,14 +8,14 @@ import { adjustCut, applyBrief, applyHook, applyRange, applyReferencePalette, ap
 import type { RangeRequest } from '../editorial/range-interpret';
 import { stylesOf } from '../editorial/ranges';
 import { addVersion, removeVersion, type PlanVersion } from '../core/versions';
-import { canRedo, canUndo, pushHistory, redo, undo, type History as EditHistory } from '../engine/history';
+import { canRedo, canUndo, redo, undo, type History as EditHistory } from '../engine/history';
+import { commitEdit } from '../editorial/commands';
 import { outputDuration, outputToSource } from '../engine/timeline';
 import type { DecodedAudio } from '../media/audio';
 import { exportInBackground } from '../media/export-client';
 import { ensureEmojiFont, ensureFonts } from '../media/fonts';
 import { planUsesEmoji } from '../core/emoji';
 import { DEFAULT_LLM } from '../core/llm-models';
-import { reelsSafeArea } from '../render/layout';
 import { ZOOM_LIMITS } from '../core/edits';
 import { loadKey } from '../ai/own-key';
 import type { AiSettings } from './AiOptions';
@@ -39,6 +39,7 @@ import { Transcript } from './Transcript';
 import { TopBar, type SaveState } from './TopBar';
 import { VERSION_LABEL, APP_BUILT_AT } from '../version';
 import { FormatSelector } from './FormatSelector';
+import { formatOf } from '../core/formats';
 import { FramingPanel } from './FramingPanel';
 import { clipAt, placeWords, totalDuration } from '../engine/clips';
 import { reorderClipPlan } from '../editorial/clip-ops';
@@ -46,6 +47,15 @@ import { combineAudios } from '../media/multi';
 import { buildPeakIndex, waveformPeaks } from '../analysis/waveform';
 import { ClipList } from './ClipList';
 import { CaptionStylePanel, ElementsPanel, TextPanel } from './SidePanels';
+import { DEFAULT_SETUP, type CreativeSetup } from '../core/production';
+import { evaluateDraft, reviseCreativeDirection } from '../editorial/production';
+import { CreativeSetupScreen } from './production/CreativeSetup';
+import { DraftReview } from './production/DraftReview';
+import { Dialog } from './Dialog';
+import { EditorWorkspace, WorkspaceControls } from './workbench/EditorWorkspace';
+import { MediaLibrary } from './workbench/MediaLibrary';
+import { buildExportPreflight } from '../editorial/export-preflight';
+import { CompositionGuideControls, GuideOverlay, useCompositionGuide } from './workbench/CompositionGuides';
 
 export interface Session {
   file: Blob;
@@ -114,10 +124,6 @@ const TABS: { id: TabId; label: string; title: string; about: string; Icon: type
   { id: 'versoes', label: 'Versões', title: 'Versões', about: 'Guarde, compare e volte para versões do vídeo.', Icon: History },
 ];
 
-const SAFE = (() => {
-  const r = reelsSafeArea(1080, 1920);
-  return { top: (100 * r.y) / 1920, left: (100 * r.x) / 1080, right: (100 * (1080 - r.x - r.w)) / 1080, bottom: (100 * (1920 - r.y - r.h)) / 1920 };
-})();
 
 /** O que o Copiar/Recortar guardou: pedaços do vídeo ou um elemento (v0.17). */
 type Clipboard = { kind: 'video'; segments: Segment[] } | { kind: 'element'; clip: ElementClip };
@@ -133,7 +139,7 @@ function loadTlView(): TlView {
 
 const typing = (el: EventTarget | null) => {
   const t = el as HTMLElement | null;
-  return !!t && (['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.isContentEditable);
+  return !!t && (['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || t.isContentEditable || !!t.closest('[role="separator"]'));
 };
 
 interface EditorProps {
@@ -152,10 +158,13 @@ interface EditorProps {
   notices: ReactNode;
   /** menu do projeto na barra do topo (v0.11: renomear, fechar, apagar, armazenamento) */
   projectMenu?: ReactNode;
+  initialReview?: boolean;
 }
 
-export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, projectMenu }: EditorProps) {
+export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, projectMenu, initialReview = false }: EditorProps) {
   const plan = history.present;
+  const [reviewOpen, setReviewOpen] = useState(initialReview);
+  const [directionDraft, setDirectionDraft] = useState<CreativeSetup | null>(null);
   const [tab, setTab] = useState<TabId>('modelos');
   const [selection, setSelection] = useState<TimeRange | null>(null);
   const [selectedRange, setSelectedRange] = useState<string | null>(null);
@@ -183,10 +192,13 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const inspectorRef = useRef<HTMLElement>(null);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [safeZone, setSafeZone] = useState(false);
+  const guide = useCompositionGuide(plan.brief.production?.platform);
   const [selectedCut, setSelectedCut] = useState<number | null>(null);
   const [selectedEl, setSelectedEl] = useState<ElementRef | null>(null);
   const [selectedSeg, setSelectedSeg] = useState<number | null>(null);
+  useEffect(() => {
+    if (selectedCut !== null || selectedEl || selectedSeg !== null || activeSelection) setReviewOpen(false);
+  }, [selectedCut, selectedEl, selectedSeg, activeSelection]);
   const [clipboard, setClipboard] = useState<Clipboard | null>(null);
   const [tlView, setTlViewState] = useState<TlView>(loadTlView);
   const setTlView = (v: TlView) => {
@@ -295,7 +307,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       try {
         const next = op(history.present);
         setEditError(null);
-        onHistory(pushHistory(history, next));
+        onHistory(commitEdit(history, next));
       } catch (err) {
         setEditError(toAppError(err));
       }
@@ -309,7 +321,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       try {
         const r = op(history.present);
         setEditError(null);
-        if (r.plan !== history.present) onHistory(pushHistory(history, r.plan));
+        if (r.plan !== history.present) onHistory(commitEdit(history, r.plan));
         if (r.seg !== undefined) setSelectedSeg(r.seg);
         if (r.el !== undefined) setSelectedEl(r.el);
         return true;
@@ -330,6 +342,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   }, [plan, selectedEl]);
 
   const selectSeg = (i: number | null) => {
+    if (i !== null) setReviewOpen(false);
     setSelectedSeg(i);
     if (i !== null) {
       setSelectedCut(null);
@@ -337,6 +350,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     }
   };
   const selectEl = (ref: ElementRef | null) => {
+    if (ref) setReviewOpen(false);
     setSelectedEl(ref);
     if (ref) {
       setSelectedCut(null);
@@ -414,7 +428,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     try {
       const target = selectedRange ? { id: selectedRange } : activeSelection;
       const r = applyRange(history.present, ctx, target, req);
-      onHistory(pushHistory(history, r.plan));
+      onHistory(commitEdit(history, r.plan));
       setView('depois');
       if (r.rangeId) setSelectedRange(r.rangeId);
       else {
@@ -445,7 +459,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   // ← e → andam um quadro (com Shift, 1 s); Home e End vão ao início e ao fim.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (typing(e.target)) return;
+      if (typing(e.target) || e.isComposing || document.querySelector('[aria-modal="true"]')) return;
       const k = e.key.toLowerCase();
       if (e.ctrlKey || e.metaKey) {
         // enquanto o app trabalha (clipes entrando, exportação), desfazer misturaria o histórico
@@ -475,7 +489,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         keys.current.remove();
         return;
       }
-      if (k === 'escape' && keys.current.hasSel) {
+      // Esc tira qualquer seleção: pedaço, elemento, corte ou trecho (uma seleção só para prévia e linha do tempo)
+      if (k === 'escape' && keys.current.hasAny) {
         keys.current.clear();
         return;
       }
@@ -500,13 +515,17 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   }, [doUndo, doRedo, togglePlay, seek, disabled, history.present.output.fps]);
 
   // os atalhos leem sempre as ações e a seleção atuais (o ouvinte do teclado não é refeito a cada mudança)
-  const keys = useRef({ ...tl, hasSel: false, clear: () => {} });
+  const keys = useRef({ ...tl, hasSel: false, hasAny: false, clear: () => {} });
   keys.current = {
     ...tl,
     hasSel: selectedSeg !== null || !!selectedEl,
+    hasAny: selectedSeg !== null || !!selectedEl || selectedCut !== null || !!activeSelection || selectedRange !== null,
     clear: () => {
       setSelectedSeg(null);
       setSelectedEl(null);
+      setSelectedCut(null);
+      setSelection(null);
+      setSelectedRange(null);
     },
   };
 
@@ -530,6 +549,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       const multiSources = session.clipSources;
       const isMulti = !!multiSources && multiSources.size > 0;
       const multiAudio = session.clipAudios ? combineAudios(plan.clips, Object.fromEntries(session.clipAudios), session.clipSilences) : session.audio;
+      const available = multiSources ? new Set(multiSources.keys()) : new Set([plan.clips[0]!.id]);
+      buildExportPreflight(plan, available, multiAudio !== null);
       const out = isMulti
         ? await (await import('../media/export')).exportPlanMulti(multiSources!, multiAudio, plan, { onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
         : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f));
@@ -575,9 +596,13 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const off = exporting !== null;
   const current = TABS.find((t) => t.id === tab)!;
   const P = plan.style.palette;
+  const openDirection = () => {
+    playerRef.current?.pause();
+    setDirectionDraft({ ...structuredClone(plan.brief.production ?? DEFAULT_SETUP), prompt: plan.brief.prompt, format: formatOf(plan.output), preset: plan.style.id as CreativeSetup['preset'], font: plan.style.type.text.family, motion: plan.style.motion.intensity, transition: plan.style.transition, accent: plan.style.palette.accent.slice(0, 7).toUpperCase() });
+  };
 
   return (
-    <div className="ws">
+    <EditorWorkspace inspectionKey={selectedEl ? JSON.stringify(selectedEl) : selectedSeg !== null ? `segment-${selectedSeg}` : selectedCut !== null ? `cut-${selectedCut}` : reviewOpen ? 'review' : ''}>
       <TopBar
         fileName={session.fileName}
         saveState={saveState}
@@ -591,6 +616,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         exporting={exporting}
         exportDisabled={disabled || off}
         menu={projectMenu}
+        workspaceControls={<WorkspaceControls />}
       />
 
       <nav className="rail" role="tablist" aria-label="Ferramentas" aria-orientation="vertical" onKeyDown={onTabKey}>
@@ -641,6 +667,17 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             </details>
           </div>
           <div role="tabpanel" id="panel-midia" aria-labelledby="tab-midia" hidden={tab !== 'midia'} className="stack" data-testid="clip-and-format">
+            <MediaLibrary assets={plan.clips.map(clip => {
+              const opened = session.openedClips?.find(source => source.id === clip.id);
+              const single = plan.clips.length === 1 && !session.clipSources;
+              return { id: clip.id, name: clip.name || session.fileName, duration: clip.duration, file: opened?.file ?? (single ? session.file : null), media: opened?.media ?? (single ? session.media : null) };
+            })} disabled={off || disabled} onSelect={(id) => {
+              let offset = 0;
+              for (const [index, segment] of plan.segments.entries()) {
+                if (clipAt(plan.clips, segment.srcStart + 0.000001)?.id === id) { selectSeg(index); seek(offset); break; }
+                offset += segment.srcEnd - segment.srcStart;
+              }
+            }} />
             <ClipList
               disabled={off || disabled}
               clips={plan.clips.map((c) => ({ id: c.id, name: c.name || c.id, duration: c.duration, file: new File([], c.name) }))}
@@ -734,6 +771,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
       <main className="stage" aria-label="Prévia">
         <div className="stage-head">
+          {plan.brief.production && <button className="ghost sm" onClick={() => setReviewOpen(value => !value)} data-testid="review-draft">{reviewOpen ? 'Ocultar resumo' : 'Revisar rascunho'}</button>}
           <div className="summary" data-testid="summary">
             <span className="stat">
               <span className="muted">Original</span> <b className="tnum">{ctx.durationSec.toFixed(1)} s</b>
@@ -772,11 +810,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
               onEditText={setEditingEl}
               disabled={off || view === 'antes'}
             />
-            {safeZone && (
-              <div className="safe-zone" style={{ top: `${SAFE.top}%`, left: `${SAFE.left}%`, right: `${SAFE.right}%`, bottom: `${SAFE.bottom}%` }} aria-hidden>
-                <span>Área segura do Reels</span>
-              </div>
-            )}
+            <GuideOverlay state={guide} portrait={plan.output.height > plan.output.width} />
             {view === 'antes' && before && <span className="preview-badge">Antes</span>}
           </div>
         </div>
@@ -794,13 +828,14 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             </span>
           </div>
           <input className="scrub" type="range" min={0} max={Math.max(0.01, total)} step={0.01} value={Math.min(time, total)} onChange={(e) => seek(e.target.valueAsNumber)} aria-label="Posição na prévia" />
-          <button className="icon ghost" aria-pressed={safeZone} onClick={() => setSafeZone(!safeZone)} aria-label="Mostrar área segura do Reels" data-tip="Área segura do Reels">
-            <Scan size={17} />
-          </button>
+          <CompositionGuideControls state={guide} />
         </div>
       </main>
 
       <aside className="inspector" ref={inspectorRef} aria-label="Detalhes">
+        {reviewOpen && <DraftReview editorial={evaluateDraft(plan, ctx)} onCustomize={() => setReviewOpen(false)} onExport={() => void onExport()} onRevise={openDirection} disabled={disabled || off} />}
+        {!reviewOpen && plan.brief.production && <button className="sm" onClick={openDirection} disabled={off}>Direção criativa</button>}
+        <div hidden={reviewOpen}>
         <h2 className="insp-title">Detalhes</h2>
         {selectedEl ? (
           <ElementInspector
@@ -901,6 +936,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           </div>
         )}
         <ChangesPanel before={before} beforeLabel={beforeLabel} plan={plan} view={view} onView={setView} onSeek={seek} time={time} />
+        </div>
       </aside>
 
       <div className="tl-area">
@@ -989,11 +1025,12 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
         <span className="status-keys" aria-label="Atalhos de teclado">
           <span className="kbd">Espaço</span> tocar/pausar <span className="kbd">J</span>
           <span className="kbd">L</span> −1 s/+1 s <span className="kbd">←</span>
-          <span className="kbd">→</span> um quadro <span className="kbd">S</span> dividir <span className="kbd">Ctrl</span>+<span className="kbd">C</span>/<span className="kbd">X</span>/<span className="kbd">V</span> copiar/recortar/colar <span className="kbd">Del</span> apagar <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer
+          <span className="kbd">→</span> um quadro <span className="kbd">S</span> dividir <span className="kbd">Ctrl</span>+<span className="kbd">C</span>/<span className="kbd">X</span>/<span className="kbd">V</span> copiar/recortar/colar <span className="kbd">Del</span> apagar <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer <span className="kbd">Esc</span> tirar seleção <span className="kbd">+</span><span className="kbd">−</span><span className="kbd">0</span> zoom
         </span>
         <span className="status-privacy">Tudo no seu aparelho · nada é enviado</span>
       </footer>
 
+      {directionDraft && <Dialog title="Rever direção criativa" onClose={() => setDirectionDraft(null)} wide testId="direction-dialog"><div className="direction-dialog"><CreativeSetupScreen revision value={directionDraft} onChange={setDirectionDraft} onBack={() => setDirectionDraft(null)} onComplete={(setup) => { apply(currentPlan => reviseCreativeDirection(currentPlan, ctx, setup)); setDirectionDraft(null); setReviewOpen(true); }} /></div></Dialog>}
       {exportOpen && (
         <div className="export-pop card" role="dialog" aria-label="Exportar vídeo" data-testid="export-panel">
           <div className="card-head">
@@ -1011,6 +1048,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             </div>
           )}
           {exportError && <ErrorBox error={exportError} kind="error" />}
+          {!shownAudio && <p className="hint">Este vídeo será exportado sem áudio.</p>}
           {result && exporting === null && (
             <section className="result">
               <video src={result.url} controls playsInline data-testid="result-video" />
@@ -1025,7 +1063,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           )}
         </div>
       )}
-    </div>
+    </EditorWorkspace>
   );
 }
 

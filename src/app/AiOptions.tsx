@@ -1,6 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppError, toAppError } from '../core/errors';
-import { LLM_KEYS, LLM_MODELS, localAiProgress, type LlmKey } from '../core/llm-models';
+import { formatBytes } from '../core/bytes';
+import { LLM_KEYS, LLM_MODELS, localAiProgress, modelFit, type LlmKey } from '../core/llm-models';
+import { cachedRepos } from '../core/storage-report';
+import { storage } from './project-store';
 import type { OnProgress } from '../core/progress';
 import { LOCAL_AI_ENABLED, loadLocalAi, webGpuAvailable } from '../ai/local-ai';
 import { geminiCompleter, saveKey } from '../ai/own-key';
@@ -36,11 +39,31 @@ export async function prepareAi(s: AiSettings, setBusy: OnProgress): Promise<{ a
   return { ai: null, warning: null };
 }
 
+/** Espaço livre para o app e modelos já no cache (issue #72): mede só quando a IA no navegador é escolhida. */
+function useModelSpace(active: boolean): { free: number | null; cached: Set<LlmKey> } | null {
+  const [space, setSpace] = useState<{ free: number | null; cached: Set<LlmKey> } | null>(null);
+  useEffect(() => {
+    if (!active) return;
+    let alive = true;
+    void (async () => {
+      const est = await storage.quota?.estimate().catch(() => null);
+      const repos = await cachedRepos(storage.caches).catch(() => new Set<string>());
+      const cached = new Set(LLM_KEYS.filter((k) => repos.has(LLM_MODELS[k].repo)));
+      if (alive) setSpace({ free: est ? Math.max(0, est.quota - est.usage) : null, cached });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [active]);
+  return space;
+}
+
 const gb = (mb: number) => (mb >= 1000 ? `${(mb / 1000).toFixed(1).replace('.', ',')} GB` : `${mb} MB`);
 
 export function AiOptions({ settings, onChange }: { settings: AiSettings; onChange: (s: AiSettings) => void }) {
   const gpu = useMemo(webGpuAvailable, []);
   const set = (patch: Partial<AiSettings>) => onChange({ ...settings, ...patch });
+  const space = useModelSpace(LOCAL_AI_ENABLED && settings.mode === 'local');
   return (
     <details className="ai-options">
       <summary>IA opcional (avançado): entende pedidos mais livres</summary>
@@ -62,16 +85,23 @@ export function AiOptions({ settings, onChange }: { settings: AiSettings; onChan
       )}
       {LOCAL_AI_ENABLED && settings.mode === 'local' && (
         <div className="key-box" data-testid="ai-models">
+          {space && space.free !== null && (
+            <p className="hint" data-testid="ai-space">
+              O navegador informa <b>{formatBytes(space.free)}</b> livres para o app. Alguns navegadores (como o Brave) informam um número menor que o real para proteger a privacidade; por isso o app tenta baixar mesmo assim e só avisa (M4F-1014) se faltar espaço de verdade.
+            </p>
+          )}
           {LLM_KEYS.map((k) => {
             const m = LLM_MODELS[k];
+            const fit = space ? modelFit(k, space.free, space.cached.has(k)) : 'desconhecido';
             return (
-              <label className="hook" key={k}>
+              <label className="hook" key={k} data-fit={fit}>
                 <input type="radio" name="ai-model" checked={settings.model === k} onChange={() => set({ model: k })} data-testid={`ai-model-${k}`} />
                 <span>
                   {m.label}
                   <small className="hint">
                     {' '}
-                    Download ~{gb(m.downloadMB)} na primeira vez; placa de vídeo com ~{gb(m.vramMB)} livres.
+                    {fit === 'baixado' ? 'Já baixado neste navegador' : `Download ~${gb(m.downloadMB)} na primeira vez`}; placa de vídeo com ~{gb(m.vramMB)} livres.
+                    {fit === 'nao-cabe' && <b> Maior que o espaço que o navegador informa; pode não caber.</b>}
                   </small>
                 </span>
               </label>

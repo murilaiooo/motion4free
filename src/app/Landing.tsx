@@ -109,6 +109,7 @@ export function Landing({
   onMode,
   onLongFile,
   clipResume,
+  onStart,
 }: {
   onFile: (files: File[]) => void;
   busy: boolean;
@@ -123,6 +124,7 @@ export function Landing({
   onLongFile?: (file: File) => void;
   /** aviso "voltar aos clipes" quando há um trabalho de clipes aberto */
   clipResume?: ReactNode;
+  onStart?: () => void;
 }) {
   const [over, setOver] = useState(false);
   // projeto salvo esperando o vídeo original: a entrada é sempre a do editor
@@ -139,6 +141,7 @@ export function Landing({
     else onFile(files);
   };
   const toStart = () => {
+    if (!clips && !pendingName && onStart) { onStart(); return; }
     document.getElementById('comecar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     document.querySelector<HTMLInputElement>('#comecar input[type="file"]')?.focus();
   };
@@ -170,19 +173,24 @@ export function Landing({
               </h1>
             ) : (
               <h1>
-                Grave. Solte aqui.
+                Comece com uma ideia.
                 <br />
-                <em>Poste editado.</em>
+                <em>Crie do seu jeito.</em>
               </h1>
             )}
             <p className="lp-lead">
               {clips
                 ? 'Solte um podcast, aula, live ou entrevista de até 2 horas. O Motion4Free transcreve tudo, acha os melhores momentos e entrega cada corte vertical, com legenda e animação, pronto para postar. Você revê, ajusta e baixa.'
-                : 'O Motion4Free corta as pausas, escreve as legendas e anima seu vídeo em poucos minutos. Depois você ajusta tudo numa linha do tempo de verdade e baixa o MP4. Sem enviar o vídeo para ninguém.'}
+                : 'Defina o que você quer criar. Depois escolha seus vídeos e receba um primeiro rascunho com cortes, legendas e sua identidade. Assista, personalize ou exporte. Tudo no seu navegador.'}
             </p>
 
             {notices}
             {clipResume}
+
+            {!clips && !pendingName && onStart && <div className="lp-creative-start"><button className="primary" onClick={onStart} disabled={busy} data-testid="start-creative"><WandSparkles size={18} aria-hidden /> Começar meu vídeo</button><p>Intenção → direção criativa → seus vídeos → primeiro rascunho</p></div>}
+
+            <div className="lp-quick">
+              {!clips && !pendingName && onStart && <p className="lp-quick-label">Ou solte os vídeos direto aqui: o app usa as últimas escolhas que você fez (ou as escolhas padrão).</p>}
 
             <label
               id="comecar"
@@ -218,6 +226,7 @@ export function Landing({
                 <span className="drop-sub">{clips ? 'ou arraste aqui · de 2 min a 2 horas · MP4, MOV, WebM · use vídeos seus ou com autorização' : 'ou arraste aqui · até 30 clipes de até 3 min · MP4, MOV, WebM'}</span>
               </span>
             </label>
+            </div>
 
             {clips && <FileHelp />}
             {options}
@@ -291,16 +300,16 @@ export function Landing({
           </header>
           <ol className="lp-steps">
             <li>
-              <b>Solte o vídeo</b>
-              <p>Um vídeo falado ou vários clipes curtos, gravados no celular. Nada é enviado.</p>
+              <b>Conte sua intenção</b>
+              <p>Escolha propósito, formato, estilo e ritmo. O briefing orienta a edição; você pode rever as escolhas.</p>
             </li>
             <li>
-              <b>O app edita sozinho</b>
-              <p>Transcreve, corta silêncios, põe legendas, título de abertura, zooms e emojis no ritmo da fala.</p>
+              <b>Escolha seus vídeos</b>
+              <p>O app transcreve e monta um rascunho com cortes e recursos compatíveis com sua direção. Nada da mídia é enviado.</p>
             </li>
             <li>
-              <b>Você ajusta e baixa</b>
-              <p>Troque o modelo, peça mudanças por texto, mexa na linha do tempo e exporte o MP4 pronto.</p>
+              <b>Assista, personalize ou exporte</b>
+              <p>Confira a prévia e as observações. Baixe o MP4 ou refine cada detalhe no editor, com desfazer e versões.</p>
             </li>
           </ol>
         </section>

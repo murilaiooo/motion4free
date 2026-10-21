@@ -73,6 +73,9 @@ export function releaseWork(work: ClipWork | null): void {
   for (const it of work?.items ?? []) if (it.job.kind === 'done') URL.revokeObjectURL(it.job.url);
 }
 
+/** Avisos da IA (preparar ou ordenar): saem quando a IA é pedida de novo ou a lista é refeita. */
+const notAiNotice = (n: AppError) => !n.key.startsWith('IA_');
+
 const seconds = (m: Moment) => Math.round(m.end - m.start);
 
 export function ClipMaker({
@@ -130,7 +133,7 @@ export function ClipMaker({
   function regenerate(length: ClipLength, count: number) {
     if (working) return;
     releaseWork(work);
-    onWork((w) => ({ ...w, length, count, items: buildItems(w.long, length, count), aiUsed: false, notices: w.notices.filter((n) => n.key !== 'IA_MOMENTOS_FALHOU') }));
+    onWork((w) => ({ ...w, length, count, items: buildItems(w.long, length, count), aiUsed: false, notices: w.notices.filter(notAiNotice) }));
   }
 
   /** Muda modelo ou formato: os MP4 já gerados ficam com o visual antigo, então voltam a "não gerado". */
@@ -146,7 +149,7 @@ export function ClipMaker({
     try {
       const { ai: choice, warning } = await prepareAi(ai, setAiBusy);
       if (!choice) {
-        if (warning) onWork((w) => ({ ...w, notices: [...w.notices.filter((n) => n.key !== 'IA_MOMENTOS_FALHOU'), new AppError('IA_MOMENTOS_FALHOU', `${warning.code} ${warning.detail}`)] }));
+        if (warning) onWork((w) => ({ ...w, notices: [...w.notices.filter(notAiNotice), warning] }));
         return;
       }
       setAiBusy({ label: 'A IA está lendo os trechos e escolhendo os melhores', phase: 'ia-ler', fraction: null });
@@ -162,7 +165,7 @@ export function ClipMaker({
           const old = byStart.get(`${m.start}-${m.end}`);
           return { uid: old?.uid ?? `c${++uidSeq}`, m, checked: m.rank <= w.count, job: old?.job ?? { kind: 'idle' } };
         });
-        const notices = w.notices.filter((n) => n.key !== 'IA_MOMENTOS_FALHOU');
+        const notices = w.notices.filter(notAiNotice);
         return { ...w, items: r.warning ? w.items : items, aiUsed: !r.warning, notices: r.warning ? [...notices, r.warning] : notices };
       });
     } finally {

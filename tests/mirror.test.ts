@@ -114,5 +114,7 @@ describe('espelho dos modelos de texto opcionais (WebLLM)', () => {
     expect(localAiErrorKey('GPUOutOfMemoryError: Out of memory')).toBe('IA_MODELO_GRANDE');
     expect(localAiErrorKey('Device was lost during load')).toBe('IA_MODELO_GRANDE');
     expect(localAiErrorKey('Failed to fetch')).toBe('IA_LOCAL_FALHOU');
+    // #72: cota de armazenamento cheia é falta de espaço, não de placa de vídeo
+    expect(localAiErrorKey("QuotaExceededError: Failed to execute 'put' on 'Cache': Quota exceeded.")).toBe('IA_SEM_ESPACO');
   });
 });

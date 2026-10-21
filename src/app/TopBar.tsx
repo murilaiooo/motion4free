@@ -60,9 +60,10 @@ interface Props {
   exportDisabled: boolean;
   /** menu do projeto (nome clicável: renomear, fechar, apagar, armazenamento) */
   menu?: ReactNode;
+  workspaceControls?: ReactNode;
 }
 
-export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, onReplaceFile, busy, onExport, exporting, exportDisabled, menu }: Props) {
+export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, onReplaceFile, busy, onExport, exporting, exportDisabled, menu, workspaceControls }: Props) {
   const project = fileName.replace(/\.[^.]+$/, '');
   return (
     <header className="topbar">
@@ -96,6 +97,7 @@ export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, 
         </div>
       </div>
       <div className="topbar-right">
+        {workspaceControls}
         <button className="icon ghost" onClick={onUndo} disabled={!canUndo} data-testid="undo" aria-label="Desfazer" aria-keyshortcuts="Control+Z" data-tip="Desfazer (Ctrl+Z)">
           <Undo2 size={18} />
         </button>

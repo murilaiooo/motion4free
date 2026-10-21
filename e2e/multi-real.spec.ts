@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { tab } from './ui';
+
+async function openMediaPanel(page: import('@playwright/test').Page) {
+  await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 60_000 });
+  await tab(page, 'Mídia');
+}
 
 const RED = 'e2e/fixtures/clip-red.webm';
 const BLUE = 'e2e/fixtures/clip-blue.webm';
@@ -40,6 +46,7 @@ test('dois vídeos reais: reordenar, exportar MP4, ffprobe verifica vídeo e áu
   test.setTimeout(240_000);
   await page.goto('/?asr=vazio');
   await page.getByTestId('file-input').setInputFiles([RED, BLUE]);
+  await openMediaPanel(page);
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
   await page.getByTestId('clip-c2').getByRole('button', { name: 'Mover para cima' }).click();
@@ -80,6 +87,7 @@ test('editor permite acrescentar clipe mantendo o primeiro e desfazer a inclusã
   test.setTimeout(150_000);
   await page.goto('/?asr=vazio');
   await page.getByTestId('file-input').setInputFiles(RED);
+  await openMediaPanel(page);
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   await page.locator('[data-testid="clip-list"] input[type=file]').setInputFiles(BLUE);
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
@@ -95,10 +103,12 @@ test('salvar, reabrir, remover e desfazer conserva as fontes de todos os clipes'
   test.setTimeout(180_000);
   await page.goto('/?asr=vazio');
   await page.getByTestId('file-input').setInputFiles([RED, BLUE]);
+  await openMediaPanel(page);
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
   await page.getByTestId('clip-c2').getByRole('button', { name: 'Mover para cima' }).click();
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
   await page.reload();
+  await openMediaPanel(page);
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
   expect(await page.locator('[data-testid^="clip-c"]').first().getAttribute('data-testid')).toBe('clip-c2');
 
@@ -106,6 +116,7 @@ test('salvar, reabrir, remover e desfazer conserva as fontes de todos os clipes'
   await expect(page.getByTestId('clip-c1')).toHaveCount(0);
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
   await page.reload();
+  await openMediaPanel(page);
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('clip-c1')).toHaveCount(0);
 
@@ -113,6 +124,7 @@ test('salvar, reabrir, remover e desfazer conserva as fontes de todos os clipes'
   await expect(page.getByTestId('clip-c1')).toBeVisible();
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
   await page.reload();
+  await openMediaPanel(page);
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   await page.getByTestId('redo').click();
   await expect(page.getByTestId('clip-c1')).toHaveCount(0);

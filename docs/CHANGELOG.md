@@ -2,6 +2,42 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.25.0 — 21/10/2026
+**Publica o trabalho local da v0.24 (configuração por escolhas, mesa ajustável, biblioteca, guias, checagem antes de exportar), revisado, e melhora a linha do tempo.** As v0.24.0 e v0.24.1 foram feitas e testadas só no computador do responsável e não chegaram a ser publicadas; esta versão as inclui. Implementado; não testado nesta sessão.
+
+- Mesa: recolher ferramentas, recolher propriedades e restaurar layout viram botões sempre visíveis no topo (antes ficavam num menu fechado).
+- Primeira tela: a área para soltar vídeos fica sempre à vista, com as últimas escolhas salvas (antes escondida embaixo de um texto clicável). Na configuração, os outros formatos aparecem direto e as observações do rascunho ficam abertas.
+- Linha do tempo: altura das faixas de vídeo e áudio em P, M ou G (fica guardada), botão "ver tudo", atalhos + − 0 para zoom e rolagem automática até o item escolhido na prévia.
+- Esc tira qualquer seleção (pedaço, elemento, corte ou trecho).
+- Códigos de erro próprios: edição recusada pela checagem vira M4F-522 e plano inválido na exportação vira M4F-406 (antes os dois apareciam como M4F-1016).
+- O histórico guarda o próprio plano depois de validá-lo (antes guardava uma cópia que podia perder campos).
+- Biblioteca de mídia gera uma miniatura por vez, para 30 clipes não esgotarem a memória.
+- IA no navegador no Brave (issue #72): o app deixa de bloquear o download do modelo pelo número de espaço que o navegador informa (no Brave ele aparece como 2 GB, menor que o real, por privacidade). Tenta baixar e só mostra M4F-1014 se o navegador recusar guardar de verdade; esse erro, antes confundido com falta de placa de vídeo (M4F-1013), agora é reconhecido. A lista de modelos mostra o espaço informado, quais já estão baixados e quais podem não caber. No Criador de Clipes, o aviso mostra a causa real (ex.: M4F-1014) em vez do genérico M4F-1106. Duplicar projeto também não se bloqueia mais pelo número.
+
+## v0.24.1 — 21/10/2026
+**Configuração por escolhas, sem formulário obrigatório.** Revisão local após feedback do responsável; publicação pendente.
+
+- Uma decisão por tela: destino, edição, duração, visual e legendas, seguida de revisão com atalhos para alterar cada escolha.
+- Cartões grandes, textos destacados e explicações concretas: o que corta, o que preserva e como afeta o vídeo. Sem linguagem metafórica na configuração, no upload e na abertura do rascunho.
+- Modos Sem cortes, Natural, Direto e Dinâmico configuram a política de pausas, ritmo e movimento reais. Nenhum campo escrito, select ou slider é obrigatório.
+- Fonte, cor, abertura, CTA, movimento e pedidos escritos ficam em seções opcionais. Exemplos dos visuais usam o renderizador existente sobre fundo neutro, sem personagem ilustrado.
+- Preferências anteriores são mantidas. Navegar ou clicar novamente no destino não apaga formato personalizado; ajustes fora dos modos prontos continuam identificados como personalizados.
+- Revisão dentro do editor não pergunta novamente por cortes ou duração: preserva a montagem e o histórico existentes.
+- Decisões e roteiro em `docs/quality/setup-ux-2026-10-21.md` e `docs/quality/acceptance-v0.24.md`.
+
+## v0.24.0 — 21/10/2026
+**Direção criativa antes da mídia e primeiro rascunho revisável.** Implementação local; validação editorial com vídeos reais e publicação ainda pendentes.
+
+- Jornada principal Começar → intenção → identidade → ritmo → pedido → vídeos → edição → prévia, com Exportar e Personalizar igualmente acessíveis.
+- Briefing versionado e validado controla formato, modelo, tom, ritmo, política de pausas, legenda, tipografia, cor, movimento, transição e CTA. Duração desejada termina em frase completa quando há um limite adequado. Sem fala confiável, preserva a sequência e explica as limitações.
+- Preferências locais recuperáveis; briefing guardado no projeto sem remover dados antigos. Revisão de direção preserva cortes, legendas corrigidas, elementos manuais, cenas editadas/apagadas e travas; entra no desfazer. Pedidos por texto mantêm o contexto de produção.
+- Mesa com três divisórias redimensionáveis, teclado, Escape, reset, recolhimento, persistência validada e propriedades em drawer em telas médias. O canvas/player mantém sua identidade durante resize.
+- Biblioteca com miniaturas locais, metadados, grade/lista, busca e ordenação independente da montagem. Importação e reordenação continuam usando o pipeline existente.
+- Guias sugeridas Reels/TikTok/Shorts e margens personalizadas: só na interface, persistidas; não alteram os pixels do canvas nem o MP4.
+- Transações de edição validadas antes do histórico; preflight compartilhado recusa fontes ausentes/trechos inválidos antes de exportar. Novos códigos M4F-405, 618, 619, 1016 e 1017 documentados.
+- Build de testes compatível com Windows. Nenhuma nova dependência; referências OpenCut usadas conceitualmente, sem copiar código/assets.
+- Evidências e pendências em `docs/quality/transformation-progress.md`; roteiro para o responsável em `docs/quality/acceptance-v0.24.md`. ASR sintético nos E2E não comprova qualidade do Whisper real.
+
 ## v0.23.1 — 21/10/2026
 **Correção da publicação da v0.23.0.** A build da Cloudflare parou por um nome repetido no criador de clipes (TS2451); renomeado. Mesmo conteúdo da v0.23.0. Não testado.
 

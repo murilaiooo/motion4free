@@ -211,6 +211,11 @@ export function StorageScreen({ deps, currentProjectId, onClose, onProjectDelete
                   .
                 </p>
                 {quota !== null && (
+                  <p className="hint" data-testid="storage-quota-note">
+                    Este número vem do navegador. Alguns (como o Brave) mostram um limite menor que o real para proteger a privacidade; o app não se bloqueia por ele e só avisa se o navegador recusar guardar algo.
+                  </p>
+                )}
+                {quota !== null && (
                   <div className="bar st-bar" aria-hidden>
                     <span style={{ width: `${Math.max(1, Math.min(100, (used / quota) * 100))}%` }} />
                   </div>

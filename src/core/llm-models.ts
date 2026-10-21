@@ -72,6 +72,24 @@ export const LLM_MODELS: Record<LlmKey, LlmModel> = {
 
 export const DEFAULT_LLM: LlmKey = 'padrao';
 
+/**
+ * Se o modelo cabe no espaço que o navegador libera para o app (issue #72). Mesma folga de 10% da
+ * checagem feita antes do download (spaceCheck). Já baixado (mesmo em parte) não é bloqueado.
+ */
+export type ModelFit = 'baixado' | 'cabe' | 'nao-cabe' | 'desconhecido';
+export function modelFit(key: LlmKey, freeBytes: number | null, cached: boolean): ModelFit {
+  if (cached) return 'baixado';
+  if (freeBytes === null || !Number.isFinite(freeBytes)) return 'desconhecido';
+  return LLM_MODELS[key].downloadMB * MB * 1.1 <= freeBytes ? 'cabe' : 'nao-cabe';
+}
+
+/** O modelo pedido, se couber; senão o maior que cabe (ou já baixado); null se nenhum cabe. */
+export function bestFittingModel(wanted: LlmKey, freeBytes: number | null, cached: ReadonlySet<LlmKey>): LlmKey | null {
+  if (modelFit(wanted, freeBytes, cached.has(wanted)) !== 'nao-cabe') return wanted;
+  const smaller = LLM_KEYS.slice(0, LLM_KEYS.indexOf(wanted)).reverse();
+  return smaller.find((k) => modelFit(k, freeBytes, cached.has(k)) !== 'nao-cabe') ?? null;
+}
+
 export function isLlmKey(v: unknown): v is LlmKey {
   return typeof v === 'string' && (LLM_KEYS as readonly string[]).includes(v);
 }
@@ -81,6 +99,8 @@ export function isLlmKey(v: unknown): v is LlmKey {
  * carregar, que é como o navegador costuma avisar) vira M4F-1013 com a sugestão do modelo leve.
  */
 export function localAiErrorKey(message: string): ErrorKey {
+  // falta de espaço de verdade ao gravar o modelo (QuotaExceededError): é armazenamento, não placa de vídeo (#72)
+  if (/QuotaExceeded|quota|no space|disk (is )?full|storage (is )?full/i.test(message)) return 'IA_SEM_ESPACO';
   if (/out of memory|outofmemory|\boom\b|insufficient|not enough memory|exceed|device (was )?lost|devicelost|maxBufferSize|maxStorageBufferBindingSize|allocation failed|memory/i.test(message)) return 'IA_MODELO_GRANDE';
   return 'IA_LOCAL_FALHOU';
 }

@@ -1,13 +1,13 @@
 {
   "name": "motion4free",
-  "version": "0.23.1",
+  "version": "0.25.0",
   "private": true,
   "type": "module",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/prune-dist.mjs",
-    "build:e2e": "VITE_FAKE_ASR=1 vite build",
+    "build:e2e": "node scripts/build-e2e.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
