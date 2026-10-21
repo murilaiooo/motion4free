@@ -3,7 +3,6 @@ import { Bot, Captions, Check, Film, HardDrive, Lock, LockOpen, Package, ShieldC
 import { formatBytes } from '../core/bytes';
 import { AppError, toAppError } from '../core/errors';
 import { deleteEverything, deleteItem, measureStorage, type StorageDeps, type StorageItem, type StorageReport } from '../core/storage-report';
-import { Dialog } from './Dialog';
 import { ErrorBox } from './ErrorBox';
 import { ProgressPanel } from './ProgressPanel';
 import type { Progress } from '../core/progress';
@@ -18,7 +17,6 @@ const CONFIRM_WORD = 'APAGAR';
 interface Props {
   deps: StorageDeps;
   currentProjectId: string | null;
-  onClose: () => void;
   /** um projeto saiu (pela lista desta tela) */
   onProjectDeleted: (id: string) => void;
   /** "Apagar tudo" terminou */
@@ -103,10 +101,10 @@ function Section({ title, icon, items, empty, current, onDelete, extra }: { titl
 }
 
 /**
- * Tela "Armazenamento": quanto o Motion4Free ocupa neste navegador (total do navegador e cada item medido),
+ * Seção "Armazenamento" das Configurações (antes era uma janela própria): quanto o Motion4Free ocupa neste navegador (total do navegador e cada item medido),
  * cota, se o armazenamento é permanente, e botões para apagar cada coisa ou tudo.
  */
-export function StorageScreen({ deps, currentProjectId, onClose, onProjectDeleted, onEverythingDeleted }: Props) {
+export function StoragePanel({ deps, currentProjectId, onProjectDeleted, onEverythingDeleted }: Props) {
   const [report, setReport] = useState<StorageReport | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [errors, setErrors] = useState<AppError[]>([]);
@@ -182,7 +180,7 @@ export function StorageScreen({ deps, currentProjectId, onClose, onProjectDelete
   );
 
   return (
-    <Dialog title="Armazenamento" onClose={onClose} wide testId="storage-screen">
+    <div className="stack storage-panel" data-testid="storage-screen">
       <p className="m4f-callout ok st-privacy">
         <ShieldCheck size={16} aria-hidden />
         <span>
@@ -258,7 +256,7 @@ export function StorageScreen({ deps, currentProjectId, onClose, onProjectDelete
 
           <section className="st-danger">
             <h3>Apagar tudo do Motion4Free</h3>
-            <p className="hint">Tira deste navegador todos os projetos, modelos baixados, preferências (tema, precisão da legenda) e a chave de IA, se você guardou uma. Os vídeos originais no computador ficam.</p>
+            <p className="hint">Tira deste navegador todos os projetos, modelos baixados, preferências (tema, precisão da legenda, escolha de IA) e o cofre de chaves de IA, se você criou um. Os vídeos originais no computador ficam.</p>
             {confirmAll ? (
               <form
                 className="st-wipe"
@@ -291,6 +289,6 @@ export function StorageScreen({ deps, currentProjectId, onClose, onProjectDelete
           </section>
         </>
       )}
-    </Dialog>
+    </div>
   );
 }

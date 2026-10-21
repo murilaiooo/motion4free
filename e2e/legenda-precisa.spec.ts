@@ -1,9 +1,13 @@
 import { expect, test } from '@playwright/test';
+import { closeSettings, settings } from './ui';
 
 /** Precisão da legenda (v0.8): opção Rápida/Precisa, aviso de modelo reserva e página ?avaliar. */
 
 test('opção "Precisão da legenda" aparece com o tamanho do download e fica lembrada', async ({ page }) => {
   await page.goto('/');
+  // v0.27: a área de envio mostra o resumo; as opções ficam em Configurações › Transcrição
+  await expect(page.getByTestId('asr-summary')).toContainText('Precisa');
+  await page.getByTestId('asr-change').click();
   const box = page.getByTestId('asr-precision');
   await expect(box).toBeVisible();
   await expect(box).toContainText('Precisa');
@@ -11,7 +15,10 @@ test('opção "Precisão da legenda" aparece com o tamanho do download e fica le
   await expect(box).toContainText(/baixa cerca de \d/);
   await expect(page.getByTestId('asr-precisa')).toBeChecked();
   await page.getByTestId('asr-rapida').check();
+  await closeSettings(page);
+  await expect(page.getByTestId('asr-summary')).toContainText('Rápida');
   await page.reload();
+  await settings(page, 'transcricao');
   await expect(page.getByTestId('asr-rapida')).toBeChecked();
 });
 

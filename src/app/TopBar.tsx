@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { Check, CloudOff, Download, Moon, Redo2, Replace, Sun, Undo2 } from 'lucide-react';
+import { useSyncExternalStore, type ReactNode } from 'react';
+import { Check, CloudOff, Download, Moon, Redo2, Replace, Settings, Sun, Undo2 } from 'lucide-react';
+import { openSettings, type SettingsSection } from './settings/route';
 
 export type SaveState = 'saved' | 'saving' | 'off';
 
-type Theme = 'dark' | 'light';
+export type Theme = 'dark' | 'light';
 const THEME_KEY = 'm4f-tema';
 
 function readTheme(): Theme {
@@ -14,25 +15,48 @@ function readTheme(): Theme {
   }
 }
 
-/** Tema da interface (escuro padrão; claro opcional, lembrado neste navegador). */
+let theme: Theme = typeof localStorage === 'undefined' ? 'dark' : readTheme();
+const themeListeners = new Set<() => void>();
+const subscribeTheme = (l: () => void) => {
+  themeListeners.add(l);
+  return () => {
+    themeListeners.delete(l);
+  };
+};
+
+/** Troca o tema do app inteiro (escuro padrão; claro opcional, lembrado neste navegador). */
+export function setTheme(next: Theme): void {
+  theme = next;
+  document.documentElement.dataset.theme = next;
+  try {
+    localStorage.setItem(THEME_KEY, next);
+  } catch {
+    // sem armazenamento: o tema vale só nesta visita
+  }
+  themeListeners.forEach((l) => l());
+}
+
+/** Tema da interface. Desde a v0.27 a escolha fica em Configurações › Editor e aparência. */
 export function useTheme(): [Theme, () => void] {
-  const [theme, setTheme] = useState<Theme>(readTheme);
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      // sem armazenamento: o tema vale só nesta visita
-    }
-  }, [theme]);
-  return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))];
+  const t = useSyncExternalStore(subscribeTheme, () => theme, () => theme);
+  return [t, () => setTheme(t === 'dark' ? 'light' : 'dark')];
 }
 
 export function ThemeToggle() {
-  const [theme, toggle] = useTheme();
+  const [t, toggle] = useTheme();
   return (
-    <button className="icon ghost theme-toggle" onClick={toggle} aria-label={theme === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'} data-tip={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}>
-      {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+    <button className="icon ghost theme-toggle" onClick={toggle} aria-label={t === 'dark' ? 'Usar tema claro' : 'Usar tema escuro'} data-tip={t === 'dark' ? 'Tema claro' : 'Tema escuro'}>
+      {t === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+    </button>
+  );
+}
+
+/** Botão de Configurações, sempre visível (com nome, não só ícone) em todas as telas. */
+export function SettingsButton({ section, compact = false }: { section?: SettingsSection; compact?: boolean }) {
+  return (
+    <button className="ghost settings-btn" onClick={() => openSettings(section)} data-testid="open-settings" aria-label="Configurações" data-tip="IA, legenda, armazenamento, aparência e privacidade">
+      <Settings size={17} aria-hidden />
+      <span className={compact ? 'sr-only' : 'hide-sm'}>Configurações</span>
     </button>
   );
 }
@@ -110,7 +134,7 @@ export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, 
           <span className="hide-sm">Trocar vídeo</span>
           <input className="sr-only" type="file" accept="video/*" disabled={busy} data-testid="file-input-replace" aria-label="Trocar vídeo (começa um projeto novo; este continua salvo em Meus projetos)" onChange={(e) => e.target.files?.[0] && onReplaceFile(e.target.files[0])} />
         </label>
-        <ThemeToggle />
+        <SettingsButton />
         <button className="primary export-btn" onClick={onExport} disabled={exportDisabled} data-testid="export">
           {exporting !== null ? <span className="spinner dark" aria-hidden /> : <Download size={16} aria-hidden />}
           {exporting !== null ? `Exportando ${Math.round(exporting * 100)}%` : 'Exportar'}

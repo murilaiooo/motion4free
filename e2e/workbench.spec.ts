@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { closeSettings, pickTheme, settings } from './ui';
 
 test('resizing persists, keyboard works, cancel restores and playback canvas stays mounted', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
@@ -26,7 +27,10 @@ test('resizing persists, keyboard works, cancel restores and playback canvas sta
   await page.mouse.up();
   await expect(splitter).toHaveAttribute('aria-valuenow', saved!);
   await expect(canvas).toHaveAttribute('data-mount-proof', 'same-canvas');
-  await page.getByRole('button', { name: 'Restaurar layout' }).click();
+  // v0.27: "Restaurar tamanhos dos painéis" mudou para Configurações › Editor e aparência
+  await settings(page, 'editor');
+  await page.getByTestId('layout-reset').click();
+  await closeSettings(page);
   await expect(splitter).toHaveAttribute('aria-valuenow', '320');
   await page.screenshot({ path: test.info().outputPath('workbench-1366.png') });
 });
@@ -43,7 +47,7 @@ test('workspace remains bounded at compact widths and survives corrupt preferenc
     await page.screenshot({ path: test.info().outputPath(`workbench-${width}.png`) });
   }
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.getByRole('button', { name: 'Usar tema claro' }).click();
+  await pickTheme(page, 'light');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.screenshot({ path: test.info().outputPath('workbench-light.png'), animations: 'disabled' });
   await page.getByRole('button', { name: 'Recolher painel de ferramentas' }).click();

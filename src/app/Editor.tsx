@@ -15,10 +15,9 @@ import type { DecodedAudio } from '../media/audio';
 import { exportInBackground } from '../media/export-client';
 import { ensureEmojiFont, ensureFonts } from '../media/fonts';
 import { planUsesEmoji } from '../core/emoji';
-import { DEFAULT_LLM } from '../core/llm-models';
 import { ZOOM_LIMITS } from '../core/edits';
-import { loadKey } from '../ai/own-key';
-import type { AiSettings } from './AiOptions';
+import { useAiSettings } from './AiOptions';
+import { PROVIDERS } from '../ai/providers/registry';
 import type { OpenedMedia } from '../media/input';
 import { PlanPlayer } from '../media/player';
 import { PreviewOverlay } from './PreviewOverlay';
@@ -241,7 +240,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const [fontError, setFontError] = useState<AppError | null>(null);
   const [emojiError, setEmojiError] = useState<AppError | null>(null);
   // escolha de IA: vale para o pedido geral e para o pedido de trecho
-  const [ai, setAi] = useState<AiSettings>(() => ({ mode: 'regras', model: DEFAULT_LLM, key: loadKey() }));
+  const ai = useAiSettings();
   const shownRef = useRef(shown);
   shownRef.current = shown;
 
@@ -807,7 +806,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
             <AudioPanel plan={plan} loaded={!!music} loading={musicLoading} onPick={onPickMusic ?? (async () => { throw new AppError('MUSICA_NAO_SALVA', 'sem projeto'); })} onApply={apply} disabled={off || disabled} />
           </div>
           <div role="tabpanel" id="panel-ia" aria-labelledby="tab-ia" hidden={tab !== 'ia'} className="stack">
-            <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} disabled={off} ai={ai} onAi={setAi} />
+            <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} disabled={off} />
             <details className="fold" open data-testid="fold-gancho">
               <summary>Gancho: a frase que abre o vídeo</summary>
               <HookPanel plan={plan} words={ctx.words} onHook={(h) => apply((p) => applyHook(p, ctx, h))} disabled={off} />
@@ -1143,7 +1142,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           <span className="kbd">L</span> −1 s/+1 s <span className="kbd">←</span>
           <span className="kbd">→</span> um quadro <span className="kbd">S</span> dividir <span className="kbd">Ctrl</span>+<span className="kbd">C</span>/<span className="kbd">X</span>/<span className="kbd">V</span> copiar/recortar/colar <span className="kbd">Del</span> apagar <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer <span className="kbd">Esc</span> tirar seleção <span className="kbd">+</span><span className="kbd">−</span><span className="kbd">0</span> zoom
         </span>
-        <span className="status-privacy">Tudo no seu aparelho · nada é enviado</span>
+        <span className="status-privacy" data-testid="status-privacy">{ai.mode === 'provedor' && ai.provider ? `Vídeo no seu aparelho · pedidos por texto vão para ${PROVIDERS[ai.provider].name}` : 'Tudo no seu aparelho · nada é enviado'}</span>
       </footer>
 
       {directionDraft && <Dialog title="Rever direção criativa" onClose={() => setDirectionDraft(null)} wide testId="direction-dialog"><div className="direction-dialog"><CreativeSetupScreen revision value={directionDraft} onChange={setDirectionDraft} onBack={() => setDirectionDraft(null)} onComplete={(setup) => { apply(currentPlan => reviseCreativeDirection(currentPlan, ctx, setup)); setDirectionDraft(null); setReviewOpen(true); }} /></div></Dialog>}

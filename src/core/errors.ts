@@ -3,7 +3,7 @@
  * O código aparece na tela para quem testa e identifica a causa sem ambiguidade.
  * Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx edição e trechos,
  * 6xx projeto salvo e armazenamento, 7xx player, 8xx estilo e animações, 9xx desconhecido, 10xx pedido por texto e IA,
- * 11xx criador de clipes de vídeo longo.
+ * 11xx criador de clipes de vídeo longo, 12xx configurações, serviços de IA com chave própria e cofre de chaves.
  */
 export const ERRORS = {
   FORMATO_DESCONHECIDO: { code: 'M4F-101', title: 'Formato de arquivo não reconhecido.' },
@@ -112,6 +112,22 @@ export const ERRORS = {
   SEM_MOMENTOS: { code: 'M4F-1107', title: 'Não achei trechos de fala contínua do tamanho escolhido. Tente clipes mais curtos.' },
   CLIPE_LOTE_FALHOU: { code: 'M4F-1108', title: 'Um dos clipes não pôde ser gerado; os outros continuaram normalmente.' },
   MEMORIA_LONGO: { code: 'M4F-1109', title: 'O aparelho ficou sem memória para ler o áudio do vídeo longo. Feche outras abas ou envie um pedaço menor do vídeo.' },
+  IA_SEM_MODELO: { code: 'M4F-1201', title: 'Nenhum modelo de IA foi escolhido. Escolha um em Configurações › IA e provedores; desta vez usei as regras.' },
+  IA_SEM_CHAVE: { code: 'M4F-1202', title: 'A chave do serviço de IA não está aberta nesta aba (ela some ao fechar a aba, ou o cofre está trancado). Abra Configurações › IA e provedores; desta vez usei as regras.' },
+  IA_SEM_AUTORIZACAO: { code: 'M4F-1203', title: 'Você ainda não autorizou enviar texto para este serviço de IA. Autorize em Configurações › IA e provedores; desta vez usei as regras.' },
+  PROVEDOR_CHAVE_INVALIDA: { code: 'M4F-1204', title: 'O serviço de IA não aceitou a chave. Ela pode estar errada, incompleta, apagada ou vencida. Confira a chave em Configurações.' },
+  PROVEDOR_SEM_PERMISSAO: { code: 'M4F-1205', title: 'A chave foi aceita, mas não tem permissão para este modelo ou recurso (configuração da conta, região ou do próprio serviço).' },
+  PROVEDOR_LIMITE: { code: 'M4F-1206', title: 'O serviço de IA pediu para esperar: o limite de uso da sua conta foi atingido por agora. Tente daqui a pouco ou escolha outro modelo.' },
+  PROVEDOR_SEM_CREDITO: { code: 'M4F-1207', title: 'A conta deste serviço de IA está sem crédito ou saldo para uso por chave (API). Isso é resolvido na conta do serviço, não no Motion4Free.' },
+  PROVEDOR_BLOQUEADO: { code: 'M4F-1208', title: 'Não foi possível falar com o serviço de IA direto deste navegador. Pode ser falta de internet, uma extensão bloqueando ou o serviço não aceitar conexão direta do navegador.' },
+  PROVEDOR_MODELO_SUMIU: { code: 'M4F-1209', title: 'O modelo escolhido não existe mais ou não está liberado para a sua chave. Escolha outro em Configurações › IA e provedores.' },
+  PROVEDOR_DEMOROU: { code: 'M4F-1210', title: 'O serviço de IA demorou demais para responder. Tente de novo ou escolha outro modelo.' },
+  PROVEDOR_ERRO: { code: 'M4F-1211', title: 'O serviço de IA respondeu com um erro do lado dele. Tente de novo mais tarde.' },
+  PROVEDOR_LISTA_FALHOU: { code: 'M4F-1212', title: 'O serviço respondeu, mas a lista de modelos veio num formato que o app não reconhece.' },
+  COFRE_SENHA_ERRADA: { code: 'M4F-1213', title: 'Senha do cofre errada. As chaves continuam guardadas e trancadas; tente de novo.' },
+  COFRE_INDISPONIVEL: { code: 'M4F-1214', title: 'Este navegador não permite guardar chaves cifradas. A chave vale só até fechar a aba.' },
+  COFRE_SENHA_CURTA: { code: 'M4F-1215', title: 'A senha do cofre precisa ter pelo menos 8 caracteres.' },
+  COFRE_CORROMPIDO: { code: 'M4F-1216', title: 'O cofre de chaves deste navegador está danificado e não pode ser aberto. Apague o cofre em Privacidade e segurança e conecte as chaves de novo.' },
   DESCONHECIDO: { code: 'M4F-999', title: 'Erro inesperado.' },
 } as const;
 

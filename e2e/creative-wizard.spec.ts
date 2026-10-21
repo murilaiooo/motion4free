@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
+import { pickTheme } from './ui';
 
 test('creator chooses the complete edit with large cards, without filling a form', async ({ page }, info) => {
   await page.goto('/');
@@ -90,7 +91,7 @@ test('mobile and keyboard choices persist, custom settings are not overwritten b
 test('custom output survives reselecting its platform and an invalid optional call remains recoverable', async ({ page }, info) => {
   await page.goto('/');
   await page.getByTestId('start-creative').click();
-  await page.getByRole('button', { name: 'Usar tema claro', exact: true }).click();
+  await pickTheme(page, 'light');
   await page.getByRole('button', { name: 'YouTube', exact: true }).click();
   await page.getByRole('button', { name: 'Quadrado', exact: true }).click();
   await page.getByRole('button', { name: 'YouTube', exact: true }).click();

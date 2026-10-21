@@ -49,11 +49,14 @@ import { analyzeLong, type PreparedClip } from './clip-pipeline';
 import { ProjectMenu } from './ProjectMenu';
 import { ProgressPanel } from './ProgressPanel';
 import { ProjectsList } from './Projects';
-import { StorageScreen } from './Storage';
+import { SettingsHost } from './settings/SettingsScreen';
+import { openSettings } from './settings/route';
+import { forgetAllKeys } from '../ai/credentials/keys';
+import { resetAiSettings } from './AiOptions';
 import { Logo, type SaveState } from './TopBar';
 import { analyze, openWithAudio } from './pipeline';
 import { useAsrPrecision } from './asr-precision';
-import { AsrPrecisionOption } from './AsrPrecisionOption';
+import { AsrPrecisionSummary } from './AsrPrecisionOption';
 import { Evaluate } from './Evaluate';
 import { projectFs, storage, storageAvailable } from './project-store';
 import { creativeSetupSchema, type CreativeSetup } from '../core/production';
@@ -149,7 +152,6 @@ function EditorApp() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState('');
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [storageOpen, setStorageOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [spaceWarn, setSpaceWarn] = useState<{ files: File[]; error: AppError } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
@@ -856,11 +858,17 @@ function EditorApp() {
 
   /** Algo foi apagado pela tela Armazenamento. */
   async function storageChanged(deletedProject: string | null, everything: boolean) {
+    if (everything) {
+      // "Apagar tudo" limpou o localStorage; a memória da aba também esquece chaves e escolha de IA
+      forgetAllKeys();
+      resetAiSettings();
+    }
     if (everything || (deletedProject && deletedProject === projectId)) resetSession();
     await refreshProjects();
   }
 
   const busy = status.kind === 'working';
+  const openStorage = () => openSettings('armazenamento');
   const saved = !!history && savedFor === history && versionsSaved === versions && copy === 'done';
   const saveState: SaveState = saved ? 'saved' : storageAvailable() && copy !== 'failed' ? 'saving' : 'off';
 
@@ -895,7 +903,7 @@ function EditorApp() {
             <button className="sm primary" onClick={() => void onFile(spaceWarn.files, true)} data-testid="space-continue">
               Continuar mesmo assim
             </button>
-            <button className="sm" onClick={() => setStorageOpen(true)} data-testid="space-storage">
+            <button className="sm" onClick={openStorage} data-testid="space-storage">
               Liberar espaço (Armazenamento)
             </button>
             <button className="sm ghost" onClick={() => setSpaceWarn(null)} data-testid="space-cancel">
@@ -909,15 +917,13 @@ function EditorApp() {
 
   const overlays = (
     <>
-      {storageOpen && (
-        <StorageScreen
-          deps={storage}
-          currentProjectId={projectId}
-          onClose={() => setStorageOpen(false)}
-          onProjectDeleted={(id) => void storageChanged(id, false)}
-          onEverythingDeleted={() => void storageChanged(null, true)}
-        />
-      )}
+      <SettingsHost
+        precision={precision}
+        storage={storage}
+        currentProjectId={projectId}
+        onProjectDeleted={(id) => void storageChanged(id, false)}
+        onEverythingDeleted={() => void storageChanged(null, true)}
+      />
       {deleteTarget && <DeleteProjectDialog target={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={() => confirmDelete(deleteTarget)} />}
     </>
   );
@@ -949,7 +955,7 @@ function EditorApp() {
               onReplaceFile={(f) => void onFile(Array.isArray(f) ? f : [f] as any)}
               onClose={() => void closeProject()}
               onDelete={() => projectId && void askDelete({ id: projectId, name: projectName || nameFromFile(session.fileName), videoName: session.fileName, sizeBytes: null })}
-              onStorage={() => setStorageOpen(true)}
+              onStorage={openStorage}
             />
           }
           notices={
@@ -993,7 +999,7 @@ function EditorApp() {
             setMode('clipes');
             void refreshProjects();
           }}
-          onStorage={() => setStorageOpen(true)}
+          onStorage={openStorage}
         />
         {overlays}
       </>
@@ -1003,7 +1009,7 @@ function EditorApp() {
     {overlays}
   </>;
   if (!pending && creativePhase === 'upload') return <>
-    <ProductionUpload setup={creativeSetup} onBack={() => setCreativePhase('home')} onRevise={() => setCreativePhase('setup')} onFile={(files) => void onFile(files)} notices={appNotices} options={<AsrPrecisionOption precision={precision} disabled={busy} />} />
+    <ProductionUpload setup={creativeSetup} onBack={() => setCreativePhase('home')} onRevise={() => setCreativePhase('setup')} onFile={(files) => void onFile(files)} notices={appNotices} options={<AsrPrecisionSummary precision={precision} disabled={busy} />} />
     {overlays}
   </>;
   return (
@@ -1014,8 +1020,8 @@ function EditorApp() {
         busy={busy}
         pendingName={pending?.project.video.name ?? null}
         pendingClipCount={pendingMulti ? pendingClips.length : undefined}
-        options={!pending && <AsrPrecisionOption precision={precision} disabled={busy} />}
-        onStorage={() => setStorageOpen(true)}
+        options={!pending && <AsrPrecisionSummary precision={precision} disabled={busy} />}
+        onStorage={openStorage}
         mode={mode}
         onMode={setMode}
         onLongFile={(f) => void onLongFile(f)}
@@ -1050,7 +1056,7 @@ function EditorApp() {
               onRename={(id, n) => void rename(id, n)}
               onDuplicate={(id) => void duplicate(id)}
               onDelete={(p) => void askDelete({ id: p.id, name: p.name, videoName: p.video.name, sizeBytes: p.sizeBytes })}
-              onStorage={() => setStorageOpen(true)}
+              onStorage={openStorage}
             />
           )
         }

@@ -83,12 +83,15 @@ test('o que o app ainda não faz aparece em "Ainda não sei fazer" sem impedir o
 
 test('escolha do modelo de IA mostra os três tamanhos com download e memória', async ({ page }) => {
   await openVideo(page);
-  await page.getByText('IA opcional (avançado)').click();
+  // v0.27: a aba IA mostra só "IA: … · Alterar"; as opções ficam em Configurações › IA e provedores
+  await expect(page.getByTestId('ai-status')).toContainText('só regras');
+  await page.getByTestId('ai-change').click();
+  await expect(page.getByTestId('settings-section-ia')).toBeVisible();
   await expect(page.getByTestId('ai-rules')).toBeChecked();
   const local = page.getByTestId('ai-local');
   // sem WebGPU no navegador de teste a opção fica desabilitada e explica o porquê
   if (await local.isDisabled()) {
-    await expect(page.getByText('Indisponível: este navegador não tem WebGPU.')).toBeVisible();
+    await expect(page.getByText('Indisponível aqui: este navegador não tem WebGPU')).toBeVisible();
     return;
   }
   await local.check();

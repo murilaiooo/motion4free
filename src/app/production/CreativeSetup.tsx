@@ -5,7 +5,7 @@ import { FORMAT_IDS, OUTPUT_FORMATS } from '../../core/formats';
 import { creativeSetupSchema, PLATFORM_LABELS, type CreativeSetup } from '../../core/production';
 import { TEMPLATE_NAMES, type TemplateId } from '../../core/templates';
 import { ErrorBox } from '../ErrorBox';
-import { Logo, ThemeToggle } from '../TopBar';
+import { Logo, SettingsButton } from '../TopBar';
 import { SetupAdjustments } from './SetupAdjustments';
 import { SetupChoices, type SetupChoice } from './SetupChoices';
 import { CaptionDemo, CutDemo, DurationDemo, FormatDemo, StyleDemo, type CutMode } from './SetupDemos';
@@ -45,7 +45,7 @@ const editingMode = (setup: CreativeSetup) => EDITING_MODES.find(mode => Object.
 const editingLabel = (setup: CreativeSetup) => editingMode(setup)?.label ?? 'Personalizada';
 
 export function ProductionHeader({ onBack, backLabel = 'Voltar' }: { onBack: () => void; backLabel?: string }) {
-  return <header className="production-header"><button className="ghost" onClick={onBack}><ArrowLeft size={16} aria-hidden /> {backLabel}</button><span className="brand"><Logo size={24} /> Motion4Free</span><ThemeToggle /></header>;
+  return <header className="production-header"><button className="ghost" onClick={onBack}><ArrowLeft size={16} aria-hidden /> {backLabel}</button><span className="brand"><Logo size={24} /> Motion4Free</span><SettingsButton /></header>;
 }
 
 export function SetupSummary({ setup }: { setup: CreativeSetup }) {

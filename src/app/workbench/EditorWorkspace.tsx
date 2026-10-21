@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
-import { PanelLeftClose, PanelRightClose, RotateCcw } from 'lucide-react';
+import { PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { clampWorkbenchLayout, DEFAULT_LAYOUT, LAYOUT_KEY, parseWorkbenchLayout, resizeWorkbench, type ResizePane, type WorkbenchLayout } from './layout';
 import './workbench.css';
 
@@ -14,6 +14,19 @@ function initialLayout(): WorkbenchLayout {
   try { return parseWorkbenchLayout(localStorage.getItem(LAYOUT_KEY)); } catch { return { ...DEFAULT_LAYOUT }; }
 }
 
+const RESET_EVENT = 'm4f-layout-reset';
+
+/** "Restaurar tamanhos dos painéis" (Configurações › Editor e aparência): vale na mesa aberta e na próxima. */
+export function resetWorkbenchLayout(): boolean {
+  window.dispatchEvent(new Event(RESET_EVENT));
+  try {
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify(DEFAULT_LAYOUT));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Botões da mesa sempre visíveis na barra do topo (regra do app: nada escondido em menu). */
 export function WorkspaceControls() {
   const workspace = useContext(Workspace);
@@ -22,7 +35,6 @@ export function WorkspaceControls() {
   return <div className="wb-controls" role="group" aria-label="Layout da mesa" data-testid="workspace-menu">
     <button className="icon ghost" aria-pressed={!layout.libraryCollapsed} aria-label={layout.libraryCollapsed ? 'Mostrar painel de ferramentas' : 'Recolher painel de ferramentas'} data-tip={layout.libraryCollapsed ? 'Mostrar ferramentas' : 'Recolher ferramentas'} onClick={() => setLayout({ ...layout, libraryCollapsed: !layout.libraryCollapsed })}><PanelLeftClose size={17} aria-hidden /></button>
     <button className="icon ghost" aria-pressed={!layout.inspectorCollapsed} aria-label={layout.inspectorCollapsed ? 'Mostrar propriedades' : 'Recolher propriedades'} data-tip={layout.inspectorCollapsed ? 'Mostrar propriedades' : 'Recolher propriedades'} onClick={() => setLayout({ ...layout, inspectorCollapsed: !layout.inspectorCollapsed })}><PanelRightClose size={17} aria-hidden /></button>
-    <button className="icon ghost" aria-label="Restaurar layout" data-tip="Restaurar tamanhos dos painéis" onClick={() => setLayout({ ...DEFAULT_LAYOUT })}><RotateCcw size={17} aria-hidden /></button>
     {message && <span className="sr-only" role="status">{message}</span>}
   </div>;
 }
@@ -46,6 +58,11 @@ export function EditorWorkspace({ children, inspectionKey }: { children: ReactNo
     const observer = new ResizeObserver(entries => { const rect = entries[0]?.contentRect; if (rect) setSize({ width: rect.width, height: rect.height }); });
     observer.observe(root.current);
     return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const reset = () => setStored({ ...DEFAULT_LAYOUT });
+    window.addEventListener(RESET_EVENT, reset);
+    return () => window.removeEventListener(RESET_EVENT, reset);
   }, []);
   useEffect(() => {
     if (inspectionKey) setStored(current => ({ ...current, inspectorCollapsed: false }));

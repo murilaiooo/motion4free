@@ -2,6 +2,22 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.27.0 — 21/10/2026
+**Configurações e IA com a sua própria chave.** Pedido do responsável: um painel de Configurações e uma mesa de edição só com ferramentas de edição, tudo explicado para quem não é técnico (issue #73, [ADR-0028](decisions/0028-configuracoes-e-ia-com-chave-propria.md)). Implementado; não testado nesta sessão.
+
+- Novo botão **Configurações** no topo de todas as telas. Abre por cima da tela atual e, ao fechar, tudo continua como estava (projeto, linha do tempo, clipes).
+- Seis seções: **IA e provedores**, **Transcrição**, **Armazenamento**, **Editor e aparência**, **Privacidade e segurança** e **Sobre e diagnóstico**, cada uma explicando o que cada opção faz, com exemplos animados.
+- A mesa de edição ficou só com edição: saíram o botão de tema, o botão Armazenamento, "Restaurar layout" e as opções técnicas de IA. A aba IA mostra "IA: (em uso) · Alterar"; a área de envio mostra "Precisão da legenda: (escolhida) · Alterar".
+- **IA com a sua chave:** OpenRouter, Groq, Google Gemini, OpenAI (API) e Claude (API). Passo a passo para criar a chave, link oficial, aviso de custo (assinatura ChatGPT ou Claude Pro não inclui API), lista de modelos buscada do próprio serviço com filtro "sugeridos / sem cobrança / todos", confirmação para modelo pago, autorização de envio por serviço com exemplo do texto enviado e "Testar resposta do modelo".
+- O navegador fala direto com o serviço escolhido; o Motion4Free não tem servidor e não recebe chave nem texto. Só o texto do pedido e trechos da fala vão para o serviço; vídeo e áudio nunca.
+- A chave fica só na memória da aba. Opcional: "Lembrar neste navegador" guarda a chave cifrada com uma senha sua (cofre). A chave antiga do Gemini, que ficava sem proteção, só muda de lugar com o seu clique e a cópia antiga é apagada.
+- A escolha de IA agora fica lembrada e vale para o editor, o pedido de trecho e o criador de clipes.
+- Privacidade: desenho do que sai do computador, lista de chaves abertas e guardadas, trancar e apagar o cofre, tirar autorizações e baixar as configurações sem chaves.
+- Sobre: versão, recursos do navegador (placa de vídeo, codificador de vídeo, armazenamento, criptografia) e "Copiar diagnóstico" sem dados pessoais.
+- "Apagar tudo" agora também apaga a precisão da legenda, que ficava para trás.
+- Rodapé do editor diz para qual serviço vão os pedidos quando a IA com chave está ligada.
+- Códigos novos: M4F-1201 a M4F-1216 (IA com chave e cofre).
+
 ## v0.26.0 — 21/10/2026
 **Música de fundo, legenda .srt, escolher vários, animação por pontos e máscara.** Melhorias da comparação com o OpenCut, todas numa versão, a pedido do responsável ([ADR-0026](decisions/0026-musica-e-legenda-srt.md), [ADR-0027](decisions/0027-varios-pontos-mascara.md)). Implementado; não testado nesta sessão.
 

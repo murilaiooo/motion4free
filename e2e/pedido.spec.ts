@@ -108,8 +108,13 @@ test('pedido e gancho voltam depois de recarregar; a chave própria avisa que s�
   await expect(page.getByTestId('hook-0')).toBeChecked();
 
   await tab(page, 'Pedido');
-  await page.getByText('IA opcional (avançado)').click();
+  // v0.27: serviço com chave própria fica em Configurações; sem chave, a mesa avisa e o pedido usa as regras
+  await page.getByTestId('ai-change').click();
   await page.getByTestId('ai-key').check();
-  await expect(page.getByTestId('key-notice')).toContainText('O vídeo nunca sai do seu aparelho');
-  await expect(page.getByTestId('ai-rules')).toBeVisible();
+  await expect(page.getByTestId('provider-setup')).toContainText('o Motion4Free não tem servidor');
+  await page.getByTestId('provider-gemini').click();
+  await expect(page.getByTestId('provider-panel-gemini')).toContainText('Google AI Studio');
+  await expect(page.getByTestId('key-input')).toHaveAttribute('type', 'password');
+  await page.getByTestId('settings-screen').getByRole('button', { name: 'Fechar' }).first().click();
+  await expect(page.getByTestId('ai-status')).toContainText('Falta escolher um modelo');
 });
