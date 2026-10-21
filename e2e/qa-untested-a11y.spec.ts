@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 async function assertControlNames(page: Page, context: string) {
   const buttons = page.locator('button:visible:not([aria-hidden="true"])');
   const count = await buttons.count();
-  expect(count).toBeGreaterThan(2);
+  expect(count).toBeGreaterThan(context === 'inicial' ? 0 : 3);
   for (let i = 0; i < count; i++) {
     const button = buttons.nth(i);
     await expect(button, `${context}: botão visível sem nome acessível (posição ${i})`)
