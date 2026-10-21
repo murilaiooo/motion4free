@@ -16,9 +16,9 @@ const seconds = async (page: Page) => Number((await page.getByTestId('player-tim
 test('primeira tela: promessa, área para soltar o vídeo, privacidade e exemplos de modelos desenhados', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('sem enviar seu vídeo');
-  await expect(page.getByText('Arraste seu vídeo aqui')).toBeVisible();
+  await expect(page.getByText('Escolher vídeos').first()).toBeVisible();
   await expect(page.getByText('Seu vídeo nunca sai deste aparelho')).toBeVisible();
-  const thumbs = page.locator('.showcase canvas');
+  const thumbs = page.locator('.lp-reel canvas');
   await expect(thumbs.first()).toHaveAttribute('data-ready', '1', { timeout: 30_000 });
   // o quadro de exemplo não é vazio (drawFrame desenhou)
   const lit = await thumbs.first().evaluate((c: HTMLCanvasElement) => {

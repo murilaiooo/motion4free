@@ -16,7 +16,7 @@ test('QA de produção: domínio público carrega a versão publicada e a interf
     await page.goto(`${url}?qa=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
     await expect(page.getByTestId('version')).toContainText(expectedCommit!, { timeout: 10_000 });
   }).toPass({ timeout: 240_000, intervals: [5_000, 10_000, 15_000] });
-  await expect(page.locator('.showcase canvas').first()).toHaveAttribute('data-ready', '1', { timeout: 60_000 });
+  await expect(page.locator('.lp-reel canvas').first()).toHaveAttribute('data-ready', '1', { timeout: 60_000 });
   await expect(page.getByText('Seu vídeo nunca sai deste aparelho')).toBeVisible();
   // Acesso a galeria sem backend / login. Não envia arquivos reais para nenhum serviço.
   await page.getByRole('link', { name: 'Modelos' }).click();
