@@ -169,28 +169,29 @@ export function Landing({ onFile, busy, pendingName, pendingClipCount, notices, 
                 <div className="lp-stage">{hero && <TemplateThumb styleId={hero.id} t={4.6} width={220} playing />}</div>
               </div>
               <div className="lp-tracks" aria-hidden>
-                <div className="lp-track">
-                  <b>Texto</b>
-                  <span style={{ left: '6%', width: '22%' }} className="c1" />
-                  <span style={{ left: '58%', width: '16%' }} className="c1" />
+                {(
+                  [
+                    ['Texto', 'c1', [[6, 22], [58, 16]]],
+                    ['Legendas', 'c2', [0, 1, 2, 3, 4, 5, 6].map((i) => [2 + i * 14, 12])],
+                    ['Vídeo', 'c3', [[0, 32], [33, 28], [62, 38]]],
+                    ['Áudio', 'c4', [[0, 100]]],
+                  ] as [string, string, number[][]][]
+                ).map(([name, cls, bars]) => (
+                  <div key={name} className="lp-track">
+                    <b>{name}</b>
+                    <div className="lp-lane">
+                      {bars.map(([l, w]) => (
+                        <span key={l} className={cls} style={{ left: `${l}%`, width: `${w}%` }} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="lp-track lp-head-track">
+                  <b />
+                  <div className="lp-lane">
+                    <i className="lp-head" />
+                  </div>
                 </div>
-                <div className="lp-track">
-                  <b>Legendas</b>
-                  {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                    <span key={i} style={{ left: `${4 + i * 13.4}%`, width: '11.5%' }} className="c2" />
-                  ))}
-                </div>
-                <div className="lp-track">
-                  <b>Vídeo</b>
-                  <span style={{ left: '2%', width: '31%' }} className="c3" />
-                  <span style={{ left: '34%', width: '27%' }} className="c3" />
-                  <span style={{ left: '62%', width: '36%' }} className="c3" />
-                </div>
-                <div className="lp-track wave">
-                  <b>Áudio</b>
-                  <span style={{ left: '2%', width: '96%' }} className="c4" />
-                </div>
-                <i className="lp-head" />
               </div>
             </div>
           </div>

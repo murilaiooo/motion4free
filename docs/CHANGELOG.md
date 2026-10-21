@@ -2,6 +2,13 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.21.1 — 21/10/2026
+**Revisão da primeira tela.** Implementado; não testado.
+
+- As faixas da linha do tempo de exemplo passavam da borda da janela; agora ficam dentro, com a agulha no lugar.
+- Fundo liso, sem manchas coloridas; janela do editor reta (sem inclinação); botão de escolher vídeos sem brilho exagerado e com cursor de clique.
+- Título legível no tema claro.
+
 ## v0.21.0 — 21/10/2026
 **Primeira tela nova, do zero.** Implementado; não testado. (Publicação reenviada.)
 
