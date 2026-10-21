@@ -60,7 +60,7 @@ describe('diffPlans', () => {
     expect(diffPlans(withTitle, base).changes.map((c) => c.text)).toContainEqual(expect.stringContaining('− título “Título novo”'));
 
     const adjusted = { ...withTitle, edits: { ...withTitle.edits, video: { ...withTitle.edits.video, x: 0.2 } } };
-    expect(diffPlans(withTitle, adjusted).changes.map((c) => c.text)).toContainEqual(expect.stringContaining('Enquadramento manual'));
+    expect(diffPlans(withTitle, adjusted).changes.map((c) => c.text)).toContainEqual(expect.stringContaining('enquadramento manual'));
     expect(diffPlans(adjusted, adjusted).changes).toHaveLength(0);
   });
 
