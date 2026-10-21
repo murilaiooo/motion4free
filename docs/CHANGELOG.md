@@ -2,6 +2,9 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.23.1 — 21/10/2026
+**Correção da publicação da v0.23.0.** A build da Cloudflare parou por um nome repetido no criador de clipes (TS2451); renomeado. Mesmo conteúdo da v0.23.0. Não testado.
+
 ## v0.23.0 — 21/10/2026
 **Progresso detalhado em todas as esperas.** Implementado; não testado.
 
