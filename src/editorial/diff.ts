@@ -1,12 +1,13 @@
+import type { AddedElement } from '../core/edits';
 import type { EditPlan, SceneInstance, TimeRange } from '../core/types';
-import { outputDuration } from '../engine/timeline';
+import { outputDuration, sourceToOutputClamped } from '../engine/timeline';
 
 /**
  * "O que mudou": compara dois planos e descreve as diferenças em português simples, no tempo do
  * vídeo editado. Puro: serve para a lista da tela e para os testes.
  */
 
-export type ChangeKind = 'added' | 'removed' | 'caption' | 'style' | 'colors' | 'cuts' | 'range';
+export type ChangeKind = 'added' | 'removed' | 'caption' | 'style' | 'colors' | 'cuts' | 'range' | 'manual';
 
 export interface PlanChange {
   kind: ChangeKind;
@@ -52,6 +53,9 @@ export function describeScene(s: SceneInstance): string {
 }
 
 const sceneKey = ({ id: _id, ...rest }: SceneInstance) => JSON.stringify(rest);
+const addedName = (el: AddedElement) => el.kind === 'text'
+  ? `${el.preset === 'title' ? 'título' : 'texto'} ${quote(el.text)}`
+  : el.kind === 'emoji' ? `emoji ${el.emoji}` : `forma ${el.shape}`;
 
 export const MAX_CHANGES = 40;
 
@@ -119,6 +123,49 @@ export function diffPlans(before: EditPlan, after: EditPlan): PlanDiff {
   }
   sceneChanges.sort((a, b) => a.at! - b.at! || (a.kind === 'removed' ? -1 : 1));
 
+  // Elementos e ajustes manuais pertencem à composição, mesmo que não alterem cenas geradas.
+  // Sem isto, guardar A, adicionar um título B e comparar/restaurar A exibia "Nada mudou".
+  const manualChanges: PlanChange[] = [];
+  const oldAdded = new Map(before.edits.added.map((el) => [el.id, el]));
+  const newAdded = new Map(after.edits.added.map((el) => [el.id, el]));
+  const changedElement = (kind: ChangeKind, text: string, plan: EditPlan, el: AddedElement) => {
+    const start = sourceToOutputClamped(plan.segments, el.srcStart);
+    const end = sourceToOutputClamped(plan.segments, el.srcEnd);
+    manualChanges.push({ kind, at: start, text: `${text} em ${fmt(start)}` });
+    times.push(start, end);
+  };
+  for (const el of after.edits.added) {
+    const old = oldAdded.get(el.id);
+    if (!old) changedElement('added', `+ ${addedName(el)}`, after, el);
+    else if (JSON.stringify(old) !== JSON.stringify(el)) changedElement('manual', `Ajustado: ${addedName(el)}`, after, el);
+  }
+  for (const el of before.edits.added) {
+    if (!newAdded.has(el.id)) changedElement('removed', `− ${addedName(el)}`, before, el);
+  }
+  if (before.edits.added.map((el) => el.id).join('|') !== after.edits.added.map((el) => el.id).join('|')
+    && oldAdded.size === newAdded.size && [...oldAdded.keys()].every((id) => newAdded.has(id))) {
+    manualChanges.push({ kind: 'manual', at: null, text: 'Ordem das camadas alterada' });
+  }
+  const manualFields: { label: string; old: unknown; next: unknown }[] = [
+    { label: 'Posição geral das legendas', old: before.edits.captionPlacement, next: after.edits.captionPlacement },
+    { label: 'Aparência das legendas', old: before.edits.captionLook, next: after.edits.captionLook },
+    { label: 'Ajustes individuais das legendas', old: before.edits.captions, next: after.edits.captions },
+    { label: 'Ajustes manuais das animações', old: before.edits.scenes, next: after.edits.scenes },
+    { label: 'Enquadramento manual', old: before.edits.video, next: after.edits.video },
+    { label: 'Zooms manuais', old: before.edits.zooms, next: after.edits.zooms },
+    { label: 'Máscara de vídeo', old: before.edits.mask ?? null, next: after.edits.mask ?? null },
+    { label: 'Ordem e enquadramento dos clipes', old: before.clips, next: after.clips },
+    { label: 'Formato de saída', old: before.output, next: after.output },
+    { label: 'Enquadramento automático', old: before.framing, next: after.framing },
+    { label: 'Música de fundo', old: before.music ?? null, next: after.music ?? null },
+    { label: 'Direção criativa', old: before.brief, next: after.brief },
+  ];
+  for (const field of manualFields) {
+    if (JSON.stringify(field.old) !== JSON.stringify(field.next)) {
+      manualChanges.push({ kind: 'manual', at: null, text: `Alteração em: ${field.label.toLowerCase()}` });
+    }
+  }
+
   // legendas: pelo id; texto corrigido aparece um a um, tempos só no total
   const capBefore = new Map(before.captions.map((c) => [c.id, c]));
   const capChanges: PlanChange[] = [];
@@ -140,7 +187,7 @@ export function diffPlans(before: EditPlan, after: EditPlan): PlanDiff {
     capChanges.push({ kind: 'caption', at: firstRetimed, text: `Legendas reagrupadas ou com tempo novo (${before.captions.length} → ${after.captions.length} legendas)` });
   }
 
-  const all = [...changes, ...sceneChanges, ...capChanges];
+  const all = [...changes, ...sceneChanges, ...manualChanges, ...capChanges];
   const shown = all.slice(0, MAX_CHANGES);
   if (all.length > MAX_CHANGES) shown.push({ kind: 'added', at: null, text: `… e mais ${all.length - MAX_CHANGES} mudanças` });
   return { changes: shown, span: times.length ? { start: Math.min(...times), end: Math.max(...times) } : null };
