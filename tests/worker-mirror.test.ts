@@ -3,6 +3,7 @@ import worker from '../worker/index';
 
 const origin = 'https://motion4free.murdokmurilo1.workers.dev';
 const model = '/hf/onnx-community/whisper-large-v3-turbo_timestamped/resolve/main/onnx/encoder_model_fp16.onnx';
+const proxyModel = '/hf/onnx-community/whisper-base_timestamped/resolve/main/onnx/encoder_model_quantized.onnx';
 const env = { ASSETS: { fetch: vi.fn(async () => new Response('app', { status: 200 })) } };
 
 afterEach(() => {
@@ -16,11 +17,11 @@ describe('Cloudflare mirror: signed Hugging Face model URLs (#80)', () => {
       status: 206,
       headers: { 'content-type': 'application/octet-stream', 'content-range': 'bytes 0-0/1274403767', 'accept-ranges': 'bytes', 'content-length': '1' },
     }));
-    const request = new Request(origin + model, { headers: { Range: 'bytes=0-0' } });
+    const request = new Request(origin + proxyModel, { headers: { Range: 'bytes=0-0' } });
     const result = await worker.fetch(request, env);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [upstream, init] = fetchMock.mock.calls[0]!;
-    expect(upstream).toBe('https://huggingface.co/' + model.slice('/hf/'.length));
+    expect(upstream).toBe('https://huggingface.co/' + proxyModel.slice('/hf/'.length));
     expect((init as RequestInit & { cf: { cacheEverything: boolean; cacheTtl: number } }).cf).toEqual({ cacheEverything: false, cacheTtl: 0 });
     expect(new Headers(init?.headers).get('range')).toBe('bytes=0-0');
     expect(init?.redirect).toBe('follow');
@@ -35,11 +36,37 @@ describe('Cloudflare mirror: signed Hugging Face model URLs (#80)', () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, {
       headers: { 'content-length': '1274403767', 'accept-ranges': 'bytes' },
     }));
-    const response = await worker.fetch(new Request(origin + model, { method: 'HEAD' }), env);
+    const response = await worker.fetch(new Request(origin + proxyModel, { method: 'HEAD' }), env);
     expect(fetchMock.mock.calls[0]![1]?.method).toBe('HEAD');
     expect(response.headers.get('content-length')).toBe('1274403767');
     expect(response.headers.get('accept-ranges')).toBe('bytes');
     expect(await response.text()).toBe('');
+  });
+
+  it('directs large turbo ONNX files to a freshly signed HTTPS CDN URL, never proxying gigabytes', async () => {
+    const signed = 'https://us.aws.cdn.hf.co/xet-bridge-us/encoder?Expires=1792626000&Signature=fresh';
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, {
+      status: 302, headers: { location: signed },
+    }));
+    const response = await worker.fetch(new Request(origin + model, { headers: { Range: 'bytes=0-0' } }), env);
+    const [upstream, init] = fetchMock.mock.calls[0]!;
+    expect(upstream).toBe('https://huggingface.co/' + model.slice('/hf/'.length) + '?download=true');
+    expect(init?.redirect).toBe('manual');
+    expect(new Headers(init?.headers).get('range')).toBe('bytes=0-0');
+    expect((init as RequestInit & { cf: { cacheEverything: boolean; cacheTtl: number } }).cf.cacheTtl).toBe(0);
+    expect(response.status).toBe(302);
+    expect(response.headers.get('location')).toBe(signed);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await response.text()).toBe('');
+  });
+
+  it('refuses an unexpected signed redirect host', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(null, {
+      status: 302, headers: { location: 'https://unexpected.example/weights.onnx' },
+    }));
+    const response = await worker.fetch(new Request(origin + model), env);
+    expect(response.status).toBe(502);
+    expect(response.headers.get('location')).toBeNull();
   });
 
   it('still caches safe static CDN assets at the edge', async () => {
