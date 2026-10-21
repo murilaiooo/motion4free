@@ -215,12 +215,17 @@ export async function listProjects(fs: Fs): Promise<ProjectSummary[]> {
     try {
       const json: unknown = projBlob ? JSON.parse(await projBlob.text()) : null;
       const valid = parseProject(json);
+      if (!valid.ok && import.meta.env.VITE_FAKE_ASR === '1') console.warn('QA_PROJECT_PARSE_ERRORS', id, valid.errors);
       if (valid.ok) {
         validProject = valid.project;
         const clips = referencedClips(valid.project);
         if (clips.length > 1 || (clips.length === 1 && clips[0]?.id !== 'c1')) expectedClips = clips;
       }
     } catch { /* projeto corrompido: identificado abaixo */ }
+    if (!meta && import.meta.env.VITE_FAKE_ASR === '1') {
+      const metaBlob = await fs.readFile([...dir(id), META]);
+      console.warn('QA_PROJECT_META_ERRORS', id, metaBlob ? (await metaBlob.text()).slice(0, 450) : '<missing>', !!validProject);
+    }
     // Se o navegador fechou entre salvar project.json e meta.json, recuperar o projeto
     // válido a partir do próprio JSON, sem oferecer apenas a opção destrutiva Apagar.
     if (!meta && validProject && isProjectId(id)) {
