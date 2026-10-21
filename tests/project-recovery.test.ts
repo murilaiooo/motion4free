@@ -130,7 +130,7 @@ describe('recuperação de projetos interrompidos', () => {
       writeFile: (p, d) => mem.writeFile(p, d),
       remove: (p) => mem.remove(p),
       readFile: async (p) => {
-        if (p.includes('p-ruim1') && p.at(-1) === 'project.json') throw new DOMException('disco', 'NotReadableError');
+        if (p.includes('p-ruim1') && p[p.length - 1] === 'project.json') throw new DOMException('disco', 'NotReadableError');
         return mem.readFile(p);
       },
     };
