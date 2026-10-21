@@ -1,3 +1,4 @@
+import { catalogRejection } from '../motion/catalog';
 import type { StyleDNA } from '../core/style';
 import type { Emphasis } from '../core/brief';
 import type { SceneInstance, SceneKind, Segment, Word } from '../core/types';
@@ -379,7 +380,8 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   return [...progress, ...transitions, ...zooms, ...accepted, ...highlights, ...emojis]
     .filter((s) => s.end - s.start > 0.05 && !opts.forbid.has(s.kind))
     .sort((a, b) => a.start - b.start || a.kind.localeCompare(b.kind))
-    .map((s, i) => ({ ...s, id: `s${i + 1}` }) as SceneInstance);
+    .map((s, i) => ({ ...s, id: `s${i + 1}` }) as SceneInstance)
+    .filter((scene) => catalogRejection(scene, total) === null);
 }
 
 /** Escolhe as cenas de sobreposição respeitando prioridade, intervalo, orçamento e anti-repetição. */

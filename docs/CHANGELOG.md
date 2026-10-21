@@ -1,3 +1,7 @@
+## 0.30.1 — UNTESTED / AWAITING QA
+
+- #7: fichas semânticas e proveniência das onze cenas originais; limites compartilhados para propostas automáticas.
+
 # Histórico de versões
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
