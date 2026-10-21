@@ -6,6 +6,8 @@ import { RANGE_PROMPT_MAX, type RangeRequest } from '../editorial/range-interpre
 import { interpretRangeLayered } from '../editorial/range-ai';
 import { prepareAi, type AiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
+import { ProgressPanel } from './ProgressPanel';
+import type { Progress } from '../core/progress';
 
 const EXAMPLES = ['mais calmo aqui', 'sem animação aqui', 'troca essa animação', 'destaque isso', 'trava esse pedaço', 'legenda vermelha aqui'];
 
@@ -52,7 +54,7 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
   const [notes, setNotes] = useState<string[]>([]);
   const [warning, setWarning] = useState<AppError | null>(null);
   const [notDone, setNotDone] = useState<string[]>([]);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState<Progress | null>(null);
   useEffect(() => {
     setError(null);
     setNotes([]);
@@ -65,7 +67,7 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
     setNotes([]);
     setWarning(null);
     setNotDone([]);
-    setBusy('Entendendo o pedido…');
+    setBusy({ label: 'Entendendo o pedido', phase: 'pedido', fraction: null });
     try {
       const prepared = await prepareAi(ai, setBusy);
       const { req, warning: w } = await interpretRangeLayered(t, words, prepared.ai);
@@ -156,11 +158,7 @@ export function RangePanel({ selection, range, total, onSelection, onRequest, on
           ))}
         </ul>
       )}
-      {busy && (
-        <p className="status" role="status">
-          {busy}
-        </p>
-      )}
+      <ProgressPanel progress={busy} compact testId="ai-progress" />
       {notDone.length > 0 && (
         <p className="hint" data-testid="range-unsupported">
           <b>Ainda não sei fazer:</b> {notDone.join('; ')}

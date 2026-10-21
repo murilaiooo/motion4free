@@ -92,6 +92,8 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
     await videoSource.add(f / fps, 1 / fps);
   }
 
+  // quadros prontos: o resto é o áudio e o fechamento do arquivo (a tela mostra "Fechando o arquivo MP4")
+  opts.onProgress?.(0.95);
   if (audio && audioSource) {
     const trimmed = trimSegments(plan.segments, duration);
     const spliced = spliceAudio(audio.channels, audio.sampleRate, trimmed);
@@ -168,6 +170,8 @@ async function exportPlanUnsafeMulti(
     }
   }
 
+  // quadros prontos: o resto é o áudio e o fechamento do arquivo (a tela mostra "Fechando o arquivo MP4")
+  opts.onProgress?.(0.95);
   if (audio && audioSource) {
     const trimmed = trimSegments(plan.segments, duration);
     const joins = { clips: clipLayout(plan.clips).map(c => ({ start: c.start, end: c.end })), crossfadeSec: CLIP_CROSSFADE_SEC };

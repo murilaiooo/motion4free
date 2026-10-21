@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { AppError, toAppError } from '../core/errors';
-import { LLM_KEYS, LLM_MODELS, type LlmKey } from '../core/llm-models';
+import { LLM_KEYS, LLM_MODELS, localAiProgress, type LlmKey } from '../core/llm-models';
+import type { OnProgress } from '../core/progress';
 import { LOCAL_AI_ENABLED, loadLocalAi, webGpuAvailable } from '../ai/local-ai';
 import { geminiCompleter, saveKey } from '../ai/own-key';
 import type { AiChoice } from '../editorial/ai-brief';
@@ -18,18 +19,18 @@ export interface AiSettings {
  * Prepara a IA escolhida. Falha ao carregar a IA do navegador não impede o pedido: devolve o aviso
  * e o pedido segue pelas regras.
  */
-export async function prepareAi(s: AiSettings, setBusy: (text: string) => void): Promise<{ ai: AiChoice | null; warning: AppError | null }> {
+export async function prepareAi(s: AiSettings, setBusy: OnProgress): Promise<{ ai: AiChoice | null; warning: AppError | null }> {
   if (s.mode === 'local') {
     try {
-      const local = await loadLocalAi(s.model, (f, t) => setBusy(`Preparando a IA no navegador (só na primeira vez): ${Math.round(f * 100)}% ${t.slice(0, 60)}`));
-      setBusy('A IA no navegador está lendo o pedido…');
+      const local = await loadLocalAi(s.model, (f, t) => setBusy(localAiProgress(s.model, f, t)));
+      setBusy({ label: 'A IA no navegador está lendo o pedido', phase: 'ia-ler', fraction: null, detail: `pode levar até ${LLM_MODELS[s.model].timeoutSec} s` });
       return { ai: { complete: local.complete, source: 'ia-local' }, warning: null };
     } catch (err) {
       return { ai: null, warning: toAppError(err, 'IA_LOCAL_FALHOU') };
     }
   }
   if (s.mode === 'chave' && s.key.trim()) {
-    setBusy('Consultando o serviço da sua chave (só texto)…');
+    setBusy({ label: 'Consultando o serviço da sua chave (só texto)', phase: 'ia-chave', fraction: null });
     return { ai: { complete: geminiCompleter(s.key.trim()), source: 'ia-chave' }, warning: null };
   }
   return { ai: null, warning: null };

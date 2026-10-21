@@ -17,6 +17,8 @@ import { exportInBackground, type BackgroundExport } from '../media/export-clien
 import { openMedia, type OpenedMedia } from '../media/input';
 import { decodeMono16k } from '../media/long-audio';
 import { APP_VERSION } from '../version';
+import { formatClock } from '../core/bytes';
+import { exportProgress, type OnProgress } from '../core/progress';
 import { openWithAudio } from './pipeline';
 
 /** Criador de clipes (v0.22, ADR-0023): análise do vídeo longo e produção de cada clipe. */
@@ -39,11 +41,11 @@ export interface LongAnalysis {
   reused: boolean;
 }
 
-type Step = (label: string, fraction: number) => void;
+type Step = OnProgress;
 
 /** Abre o vídeo longo, lê o áudio em mono 16 kHz, acha silêncios e energia e transcreve. Guarda o resultado. */
 export async function analyzeLong(file: File, transcriber: Transcriber, onStep: Step, opts: { asrMode: AsrMode; fs: Fs | null }): Promise<LongAnalysis> {
-  onStep('Abrindo o vídeo', 0);
+  onStep({ label: 'Abrindo o vídeo', phase: 'abrir', fraction: null });
   const media = await openMedia(file, { maxSec: LONG_MAX_SEC });
   try {
     if (media.durationSec < LONG_MIN_SEC) throw new AppError('LONGO_CURTO', `duração ${media.durationSec.toFixed(1)} s`);
@@ -55,9 +57,11 @@ export async function analyzeLong(file: File, transcriber: Transcriber, onStep: 
     }
 
     if (!media.audio) throw new AppError('LONGO_SEM_FALA', 'o vídeo não tem faixa de áudio');
-    onStep('Lendo o áudio', 0);
-    const mono = await decodeMono16k(media.audio, media.durationSec, (f) => onStep('Lendo o áudio', f));
-    onStep('Procurando silêncios', 0);
+    const reading = (fraction: number) =>
+      onStep({ label: 'Lendo o áudio do vídeo inteiro', phase: 'audio', fraction, detail: `${formatClock(fraction * media.durationSec)} de ${formatClock(media.durationSec)} lidos` });
+    reading(0);
+    const mono = await decodeMono16k(media.audio, media.durationSec, reading);
+    onStep({ label: 'Procurando silêncios e os trechos com mais energia na voz', phase: 'silencios', fraction: null });
     const silences = findSilences(mono, 16000);
     const energy = energyEnvelope(mono, 16000, ENERGY_STEP_SEC);
     // o áudio vai inteiro para a transcrição (transferido, sem cópia): silêncios e energia já foram medidos
@@ -80,6 +84,7 @@ export async function analyzeLong(file: File, transcriber: Transcriber, onStep: 
         warnings: warnings.map((w) => ({ key: w.key, detail: w.detail })),
       };
       // sem espaço para guardar a análise, os clipes continuam; só não dá para pular a análise depois
+      onStep({ label: 'Guardando a análise para não repetir da próxima vez', phase: 'montar', fraction: null });
       await saveClipJob(opts.fs, job).catch((err) => console.warn('Análise do vídeo longo não foi guardada', err));
     }
     return { ...base, words, silences, energy, energyStep: ENERGY_STEP_SEC, warnings, asrModel: r.model, reused: false };
@@ -108,10 +113,11 @@ export interface PreparedClip {
 
 /** `index`: número do clipe na lista (1, 2…), usado no nome do arquivo. */
 export async function prepareClip(long: LongAnalysis, m: Moment, index: number, settings: ClipSettings, onStep: Step): Promise<PreparedClip> {
-  onStep('Recortando o trecho', 0);
-  const blob = await cutRange(long.file, m.start, m.end, (f) => onStep('Recortando o trecho', f));
+  const cutting = (fraction: number) => onStep({ label: 'Recortando o trecho do vídeo longo', phase: 'recortar', fraction, detail: `${formatClock(m.end - m.start)} de vídeo` });
+  cutting(0);
+  const blob = await cutRange(long.file, m.start, m.end, cutting);
   const file = new File([blob], clipFileName(long.file.name, index, m.title), { type: 'video/mp4' });
-  onStep('Montando a edição', 0);
+  onStep({ label: 'Montando a edição do clipe', phase: 'montar', fraction: null });
   const { media, audio } = await openWithAudio(file, () => undefined);
   const slice = sliceForClip({ start: m.start, end: m.end }, media.durationSec, long.words, long.silences);
   return { file, media, audio, plan: clipPlan(slice, settings.style, settings.output), words: slice.words, silences: slice.silences };
@@ -121,8 +127,7 @@ export async function prepareClip(long: LongAnalysis, m: Moment, index: number, 
 export async function renderClip(long: LongAnalysis, m: Moment, index: number, settings: ClipSettings, onStep: Step): Promise<{ blob: Blob; name: string; result: BackgroundExport }> {
   const p = await prepareClip(long, m, index, settings, onStep);
   try {
-    onStep('Gerando o vídeo', 0);
-    const result = await exportInBackground(p.file, p.media, p.audio, p.plan, (f) => onStep('Gerando o vídeo', f));
+    const result = await exportInBackground(p.file, p.media, p.audio, p.plan, (f) => onStep(exportProgress(f)));
     return { blob: result.blob, name: clipFileName(long.file.name, index, m.title), result };
   } finally {
     p.media.input.dispose();

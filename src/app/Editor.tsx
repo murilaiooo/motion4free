@@ -27,6 +27,8 @@ import { duplicateSegment, insertSegments, moveSegment, segmentOffsets } from '.
 import type { ElementRef } from '../editorial/elements';
 import { elementName, findElement, resolvePlan, sceneText, sameRef as sameEl } from '../editorial/elements';
 import { ErrorBox } from './ErrorBox';
+import { ProgressView, useProgressClock } from './ProgressPanel';
+import { exportProgress } from '../core/progress';
 import { BriefPanel, HookPanel } from './BriefPanel';
 import { TemplateGallery } from './Templates';
 import { Timeline } from './Timeline';
@@ -199,6 +201,9 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
   const [editError, setEditError] = useState<AppError | null>(null);
   const [playerError, setPlayerError] = useState<AppError | null>(null);
   const [exporting, setExporting] = useState<number | null>(null);
+  const exportProgressInfo = useMemo(() => (exporting === null ? null : exportProgress(exporting, 'Gerando o vídeo final')), [exporting]);
+  // relógio aqui (não no painel): fechar e abrir o painel não zera o "passou"/"falta"
+  const exportSnap = useProgressClock(exportProgressInfo);
   const [exportError, setExportError] = useState<AppError | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
@@ -999,15 +1004,9 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
               <X size={15} />
             </button>
           </div>
-          {exporting !== null && (
-            <div className="export-progress" role="status">
-              <div className="row-between">
-                <span>Gerando o vídeo final…</span>
-                <b className="tnum">{Math.round(exporting * 100)}%</b>
-              </div>
-              <div className="bar">
-                <span style={{ width: `${Math.max(2, exporting * 100)}%` }} />
-              </div>
+          {exportSnap && (
+            <div className="export-progress">
+              <ProgressView snap={exportSnap} testId="export-progress" />
               <p className="hint">Você pode continuar mexendo na página.</p>
             </div>
           )}

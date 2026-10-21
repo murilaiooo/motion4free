@@ -236,6 +236,19 @@ label { cursor: pointer; }
 @keyframes m4f-indet { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--bg-4); border-top-color: var(--brand); animation: m4f-spin 0.8s linear infinite; flex: none; }
 @keyframes m4f-spin { to { transform: rotate(360deg); } }
+/* painel único de progresso (v0.23): título + %, barra, "passou · falta · tamanho · velocidade" */
+.progress-panel { display: grid; gap: 6px; min-width: 0; }
+.progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-2); min-width: 0; }
+.progress-title { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.progress-step { font-weight: 400; }
+.progress-pct { font-size: var(--fs-md, 1rem); flex: none; }
+.progress-facts { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; font-size: var(--fs-xs); }
+.progress-facts > span + span::before { content: '·'; margin-right: 12px; opacity: 0.5; }
+.progress-stall { margin: 0; color: var(--amber); font-size: var(--fs-xs); }
+.progress-panel.compact { gap: 4px; }
+.progress-panel.compact .progress-pct { font-size: var(--fs-sm, 0.875rem); }
+.progress-panel.compact .bar { height: 4px; }
+.notice.progress-notice { display: block; border-color: var(--line); background: var(--bg-2); }
 
 /* ---------- dica (tooltip) ---------- */
 [data-tip] { position: relative; }

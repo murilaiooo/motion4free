@@ -44,7 +44,7 @@
 .clip-actions .btn, .clip-actions button { justify-content: center; white-space: nowrap; }
 
 .clips-bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--lp-pad); background: color-mix(in srgb, var(--bg-1) 92%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--line); z-index: 5; }
-.clips-bar > .hint:first-child { flex: 1; min-width: 0; }
+.clips-bar > .hint:first-child, .clips-bar-progress { flex: 1; min-width: 0; }
 .clips-version { font-family: var(--mono); font-size: var(--fs-2xs); }
 
 /* Escolha de modo e link na primeira tela */
