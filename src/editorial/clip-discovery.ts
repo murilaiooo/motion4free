@@ -39,6 +39,8 @@ export async function discoverContextualMoments(words: readonly Word[], duration
         if (first === undefined || last === undefined || titleFirst === undefined || titleLast === undefined || first < window.firstWord || last > window.lastWord || first > last || titleFirst < first || titleLast > last || titleFirst > titleLast) continue;
         const evidence = [...proposal.setupWordIds, ...proposal.payoffWordIds];
         if (!evidence.every((id) => { const position = index.positions.get(id); return position !== undefined && position >= first && position <= last; })) continue;
+        const ordered = (ids: string[]) => ids.every((id, i) => i === 0 || index.positions.get(id)! > index.positions.get(ids[i - 1]!)!);
+        if (!ordered(proposal.setupWordIds) || !ordered(proposal.payoffWordIds)) continue;
         const lastSetup = Math.max(...proposal.setupWordIds.map((id) => index.positions.get(id)!));
         const firstPayoff = Math.min(...proposal.payoffWordIds.map((id) => index.positions.get(id)!));
         if (firstPayoff <= lastSetup) continue;

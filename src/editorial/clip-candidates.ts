@@ -52,13 +52,22 @@ export function findContextualMoments(words: readonly Word[], duration: number, 
   const index = buildTranscriptIndex(words, duration);
   const limit = CLIP_LENGTHS[opts.length];
   let pool: Moment[] = [];
+  // Monotone search keys tolerate overlapping ASR word ends without an all-pairs loop.
+  let furthest = 0;
+  const ends = index.sentences.map(sentence => (furthest = Math.max(furthest, index.words[sentence.last]!.end)));
   for (let a = 0; a < index.sentences.length; a++) {
     const first = index.sentences[a]!.first;
-    for (let b = a; b < index.sentences.length; b++) {
+    const choices = new Set<number>();
+    for (const target of [limit.min, limit.ideal, limit.max]) {
+      let lo = a, hi = ends.length;
+      const at = index.words[first]!.start + target;
+      while (lo < hi) { const mid = (lo + hi) >>> 1; if (ends[mid]! < at) lo = mid + 1; else hi = mid; }
+      for (const b of [lo - 1, lo, lo + 1]) if (b >= a && b < ends.length) choices.add(b);
+    }
+    for (const b of choices) {
       const last = index.sentences[b]!.last;
       const seconds = index.words[last]!.end - index.words[first]!.start;
-      if (seconds > limit.max) break;
-      if (seconds < limit.min) continue;
+      if (seconds < limit.min || seconds > limit.max) continue;
       const moment = groundedMoment(index, first, last, opts);
       if (moment) pool.push(moment);
     }

@@ -17,13 +17,16 @@ export function originalOutputSpans(plan: Pick<EditPlan, 'clips' | 'segments'>, 
       const end = Math.min(segment.srcEnd, clip.end);
       if (end <= start) continue;
       const origin = origins[clip.id];
-      if (origin) result.push({
-        sourceId: origin.sourceId,
-        sourceStart: origin.sourceOffset + start - clip.start,
-        sourceEnd: Math.min(origin.sourceDuration, origin.sourceOffset + end - clip.start),
-        outputStart: output + start - segment.srcStart,
-        outputEnd: output + end - segment.srcStart,
-      });
+      if (origin) {
+        // Encoder padding beyond the original or recorded derived duration has no source span.
+        const localStart = start - clip.start;
+        const localEnd = Math.min(end - clip.start, origin.derivedDuration, origin.sourceDuration - origin.sourceOffset);
+        if (localEnd <= localStart) continue;
+        result.push({ sourceId: origin.sourceId,
+          sourceStart: origin.sourceOffset + localStart, sourceEnd: origin.sourceOffset + localEnd,
+          outputStart: output + start - segment.srcStart,
+          outputEnd: output + start - segment.srcStart + localEnd - localStart });
+      }
     }
     output += segment.srcEnd - segment.srcStart;
   }
