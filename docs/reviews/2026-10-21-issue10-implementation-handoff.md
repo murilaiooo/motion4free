@@ -1,0 +1,11 @@
+# #10 — IMPLEMENTED — NOT TESTED / AWAITING QA
+
+Root cause: existing corpus covered prompt interpretation but did not represent rights-bearing real recordings, human word-span labels or enforce leakage separation between development/validation/holdout.
+
+Implemented src/quality/dataset.ts: strict bounded recording/rights/word/annotation contract, real allowed scene kinds from catalog, per-record source/speaker/content-hash groups and cross-split rejection. Grounded labels require ordered existing word IDs and actual duration; rights evidence is an opaque private reference and local-evaluation authorization is explicit. Public-media and public-annotation permissions are separate. Errors contain no source data. Pure summary emits counts only. Depends on #106; no model, inference, media downloader or benchmark runner added.
+
+Changes: dataset module, error catalog/docs, manifests/changelog and this handoff. The subsequent #30 review intake consumes this contract. It is not a populated corpus or proof of dataset rights: no real recordings, identities, private rights documents or invented annotations were added.
+
+Concrete blocker: authorized recordings plus human reference annotations/rights evidence have not been supplied to this implementation session. Existing test fixtures and prompt examples cannot be relabeled as a licensed creative-quality corpus. Models, Promptfoo/DSPy measurements and blind assessments are QA execution and prohibited here. A curator must gather the authorized set (target 50–100, start smaller), assign origin/person groups and freeze holdout before tuning. Do not publish media or transcripts merely because a local manifest exists.
+
+QA: independently exercise same speaker across sources, identical SHA across renamed copies, shared origin, chains of multiple speakers, duplicate word/record IDs, missing/reversed/out-of-range annotation anchors, unknown scene kinds, absent rights evidence, empty/oversize corpora and explicit public-rights flags. Confirm errors reveal no transcript or private evidence. Then use actual labeled material for model/baseline metrics. No tests, checks, app or benchmark execution occurred; existing tests unchanged. Keep issue open.

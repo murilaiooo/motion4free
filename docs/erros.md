@@ -167,3 +167,4 @@ O limite local não substitui os limites da conta de API. Não há fallback para
 - M4F-112: nenhum rosto confiável em um ou mais clipes; enquadramento central, ajustável manualmente.
 - M4F-113: análise cancelada; nenhuma alteração parcial de enquadramento aplicada.
 - M4F-114: mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual.
+| M4F-809 | Dataset sem contrato/direitos/splits válidos. | Faltam direitos/anotações, IDs/tempos são inválidos ou origem/pessoa/hash cruza conjuntos. Nenhum dado privado é repetido no erro. |

@@ -90,6 +90,7 @@ export const ERRORS = {
   LISTA_FALHOU: { code: 'M4F-614', title: 'Não foi possível ler a lista de projetos salvos neste navegador.' },
   PLAYER_FALHOU: { code: 'M4F-701', title: 'Não foi possível tocar a prévia.' },
   PLAYER_CLIPE: { code: 'M4F-702', title: 'A prévia não conseguiu ler um dos clipes; esse pedaço aparece preto na prévia.' },
+  QUALIDADE_DATASET: { code: 'M4F-809', title: 'O dataset precisa de direitos e anotações válidos, com origem, pessoas e conteúdo separados entre os conjuntos.' },
   FONTE_FALHOU: { code: 'M4F-801', title: 'As fontes do estilo não carregaram; o vídeo usa uma fonte reserva.' },
   ESTILO_DESCONHECIDO: { code: 'M4F-802', title: 'Este estilo não existe nesta versão do app.' },
   IMAGEM_FALHOU: { code: 'M4F-803', title: 'Não foi possível ler esta imagem. Use uma foto JPG, PNG ou WebP.' },
