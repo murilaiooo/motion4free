@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
-import { editCaption, tab } from './ui';
+import { editCaption, originalView, tab } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
@@ -18,6 +18,9 @@ test('edita legenda, desfaz e refaz', async ({ page }) => {
   await expect(page.getByTestId('caption-c2')).toHaveText('Primeira dica.');
   await editCaption(page, 'c2', 'Primeira dica de ouro!');
   await expect(page.getByTestId('caption-c2')).toHaveText('Primeira dica de ouro!');
+  // a legenda corrigida aparece nas duas vistas da linha do tempo
+  await expect(page.getByTestId('tl-cap-c2')).toHaveText('Primeira dica de ouro!');
+  await originalView(page);
   await expect(page.getByTestId('caption-chip-c2')).toHaveText('Primeira dica de ouro!');
 
   await page.getByTestId('undo').click();
@@ -40,6 +43,7 @@ test('edita legenda, desfaz e refaz', async ({ page }) => {
 test('restaura e ajusta um corte, com desfazer', async ({ page }) => {
   await openVideo(page);
   const before = await seconds(page);
+  await originalView(page);
   await expect(page.getByTestId('waveform')).toBeVisible();
   await expect(page.getByTestId('kept-segment')).toHaveCount(2);
 
@@ -80,6 +84,7 @@ test('player toca a edição e o tempo avança', async ({ page }) => {
 test('projeto volta depois de recarregar a página', async ({ page }) => {
   await openVideo(page);
   await editCaption(page, 'c1', 'Três dicas salvas.');
+  await originalView(page);
   await page.getByTestId('cut-1').click();
   await page.getByTestId('restore-cut').click();
   const edited = await seconds(page);
@@ -117,6 +122,7 @@ test('sem a cópia do vídeo, pede o arquivo de novo (M4F-604) e continua o proj
 
 test('exporta a versão editada (corte restaurado) num MP4 válido', async ({ page }, info) => {
   await openVideo(page);
+  await originalView(page);
   await page.getByTestId('cut-0').click();
   await page.getByTestId('restore-cut').click();
   const shown = await seconds(page);

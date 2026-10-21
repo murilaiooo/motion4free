@@ -126,7 +126,7 @@
   grid-template-areas: 'top top top top' 'rail panel stage insp' 'tl tl tl tl' 'status status status status';
   background: var(--bg-0);
 }
-@media (min-width: 1680px) { .ws { --panel-w: 400px; --insp-w: 360px; --timeline-h: 252px; } }
+@media (min-width: 1680px) { .ws { --panel-w: 400px; --insp-w: 360px; --timeline-h: 292px; } }
 
 /* barra do topo */
 .topbar { grid-area: top; display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); padding: 0 var(--s-3) 0 var(--s-4); background: var(--bg-1); border-bottom: 1px solid var(--line); min-width: 0; }
@@ -368,7 +368,7 @@
   .export-btn { min-width: 0; }
   .stage { order: 1; }
   .viewer { height: min(62vh, 560px); }
-  .tl-area { order: 2; height: 210px; flex: none; }
+  .tl-area { order: 2; height: 280px; flex: none; }
   .panel { order: 3; border-right: 0; scroll-margin-top: var(--topbar-h); }
   .panel-body { overflow: visible; }
   .inspector { order: 4; border-left: 0; border-top: 1px solid var(--line); max-height: none; overflow: visible; scroll-margin-top: var(--topbar-h); }
@@ -421,3 +421,55 @@
 .clip-dur { font-size: 12px; color: var(--text-3); }
 .clip-actions { display: flex; gap: 2px; }
 .clip-add { border: 1px dashed var(--line); padding: 4px 8px; border-radius: 6px; }
+
+/* Linha do tempo Edição (v0.17): pedaços em blocos no tempo do vídeo final, elementos e legendas editáveis */
+.row { display: flex; align-items: center; gap: 6px; }
+.row.wrap { flex-wrap: wrap; }
+.tl-view button { min-height: 24px; padding: 0 10px; font-size: var(--fs-2xs); }
+.tl-tools { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; }
+.tl-tools .sm { min-height: 28px; }
+.tl-tools-sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; flex: none; }
+.etl-lanes { gap: 4px; }
+.etl-labels { gap: 4px; }
+.etl-video, .etl-lane { position: relative; border-radius: var(--r-sm); background: var(--bg-2); }
+.etl-video { background: var(--bg-3); overflow: visible; }
+.etl-wave { z-index: 0; border-radius: var(--r-sm); }
+.etl-seg { position: absolute; top: 0; bottom: 0; z-index: 1; border-radius: var(--r-xs); background: color-mix(in srgb, var(--blue) 26%, transparent); border: 1px solid color-mix(in srgb, var(--blue) 70%, transparent); cursor: grab; touch-action: none; overflow: hidden; outline: none; }
+.etl-seg:hover { background: color-mix(in srgb, var(--blue) 36%, transparent); }
+.etl-seg:focus-visible { box-shadow: 0 0 0 2px var(--brand); }
+.etl-seg.selected { border: 2px solid var(--brand); background: color-mix(in srgb, var(--brand) 22%, transparent); z-index: 2; }
+.etl-seg.moving { opacity: 0.75; cursor: grabbing; z-index: 4; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
+.etl-seg.clip-tint-1 { background: color-mix(in srgb, var(--violet) 26%, transparent); border-color: color-mix(in srgb, var(--violet) 70%, transparent); }
+.etl-seg.clip-tint-2 { background: color-mix(in srgb, var(--green) 24%, transparent); border-color: color-mix(in srgb, var(--green) 70%, transparent); }
+.etl-seg.clip-tint-3 { background: color-mix(in srgb, var(--amber) 24%, transparent); border-color: color-mix(in srgb, var(--amber) 70%, transparent); }
+.etl-seg.clip-tint-4 { background: color-mix(in srgb, var(--red) 22%, transparent); border-color: color-mix(in srgb, var(--red) 65%, transparent); }
+.etl-seg.clip-tint-5 { background: color-mix(in srgb, var(--text-2) 20%, transparent); border-color: color-mix(in srgb, var(--text-2) 55%, transparent); }
+.etl-seg.selected[class*='clip-tint'] { border-color: var(--brand); }
+.etl-seg-label { position: absolute; left: 10px; top: 3px; right: 10px; display: flex; gap: 6px; align-items: center; font-size: var(--fs-2xs); color: var(--text-1); white-space: nowrap; overflow: hidden; pointer-events: none; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45); }
+.etl-badge { padding: 0 5px; border-radius: 999px; background: var(--bg-1); color: var(--text-2); text-shadow: none; }
+.etl-handle { position: absolute; top: 0; bottom: 0; width: 8px; cursor: ew-resize; z-index: 3; touch-action: none; }
+.etl-handle.start { left: 0; }
+.etl-handle.end { right: 0; }
+.etl-seg:hover .etl-handle, .etl-seg.selected .etl-handle, .etl-chip:hover .etl-handle, .etl-chip.selected .etl-handle { background: color-mix(in srgb, var(--brand) 70%, transparent); }
+.etl-join { position: absolute; top: -7px; z-index: 3; width: 16px; height: 16px; min-height: 0; padding: 0; transform: translateX(-8px); border-radius: 999px; border: 1px solid var(--red); background: var(--bg-1); color: var(--red); display: grid; place-items: center; cursor: pointer; }
+.etl-join:hover:not(:disabled) { background: var(--red); color: #fff; }
+.etl-drop { position: absolute; top: -4px; bottom: -4px; width: 3px; transform: translateX(-1.5px); background: var(--brand); border-radius: 2px; z-index: 5; pointer-events: none; }
+.etl-chip { position: absolute; height: 22px; z-index: 1; display: flex; align-items: center; padding: 0 8px; border-radius: var(--r-xs); font-size: var(--fs-2xs); font-weight: 550; color: var(--text-1); cursor: grab; touch-action: none; overflow: hidden; outline: none; }
+.etl-chip:focus-visible { box-shadow: 0 0 0 2px var(--brand); }
+.etl-chip-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; pointer-events: none; }
+.etl-el { background: color-mix(in srgb, var(--violet) 30%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--violet) 60%, transparent); }
+.etl-el[class*='kind-added'] { background: color-mix(in srgb, var(--green) 26%, var(--bg-2)); border-color: color-mix(in srgb, var(--green) 60%, transparent); }
+.etl-cap { top: 2px; background: color-mix(in srgb, var(--brand) 22%, var(--bg-2)); border: 1px solid color-mix(in srgb, var(--brand) 45%, transparent); }
+.etl-cap.locked { border-style: dashed; }
+.etl-chip.selected { border: 2px solid var(--brand); z-index: 2; }
+.seg-panel .edges, .card .edges { margin-top: 8px; }
+.seg-zoom { display: grid; gap: 4px; margin: 8px 0; font-size: var(--fs-xs); }
+.seg-panel .row.wrap { margin-top: 8px; }
+@media (max-width: 899px) {
+  .tl-tool-label { display: none; }
+  .tl-tools { overflow-x: auto; }
+}
+.edit-tl .tl-scroll { overflow-y: auto; }
+@media (max-width: 899px) {
+  .edit-tl .tl-head { flex-wrap: wrap; row-gap: 4px; }
+}

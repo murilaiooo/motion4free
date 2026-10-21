@@ -1,6 +1,6 @@
 import { AppError } from '../core/errors';
 import type { Caption, EditPlan, Segment, TimeRange, Word } from '../core/types';
-import { outputDuration } from '../engine/timeline';
+import { isSourceOrdered, outputDuration } from '../engine/timeline';
 import { clipJoins, splitAtClips } from '../engine/clips';
 import { presetById } from '../core/presets';
 import type { StyleDNA } from '../core/style';
@@ -39,7 +39,8 @@ const ms = (x: number) => Math.round(x * 1000) / 1000;
 export function listCuts(segments: Segment[], durationSec: number): TimeRange[] {
   const cuts: TimeRange[] = [];
   let cursor = 0;
-  for (const s of segments) {
+  // pedaços fora de ordem ou colados duas vezes (v0.17): o corte é o que nenhum pedaço usa
+  for (const s of isSourceOrdered(segments) ? segments : [...segments].sort((a, b) => a.srcStart - b.srcStart)) {
     if (s.srcStart - cursor > EPS) cuts.push({ start: cursor, end: s.srcStart });
     cursor = Math.max(cursor, s.srcEnd);
   }
@@ -173,6 +174,8 @@ export function applyHook(plan: EditPlan, ctx: EditContext, hook: Hook | null): 
 export function adjustCut(plan: EditPlan, ctx: EditContext, index: number, range: TimeRange): EditPlan {
   const cuts = listCuts(plan.segments, ctx.durationSec);
   if (!cuts[index]) return plan;
+  // refazer os pedaços a partir dos cortes desfaria a ordem escolhida na linha do tempo Edição
+  if (!isSourceOrdered(plan.segments)) throw new AppError('ORDEM_PROPRIA', 'ajustar a ponta de um corte');
   const prev = cuts[index - 1];
   const next = cuts[index + 1];
   const lower = prev ? prev.end + MIN_KEEP_SEC : 0;
@@ -188,7 +191,17 @@ export function adjustCut(plan: EditPlan, ctx: EditContext, index: number, range
 /** Devolve ao vídeo o trecho cortado `index`. */
 export function restoreCut(plan: EditPlan, ctx: EditContext, index: number): EditPlan {
   const cuts = listCuts(plan.segments, ctx.durationSec);
-  if (!cuts[index]) return plan;
+  const cut = cuts[index];
+  if (!cut) return plan;
+  if (!isSourceOrdered(plan.segments)) {
+    // ordem própria (v0.17): o trecho volta logo depois do pedaço que termina onde ele começa
+    // (ou antes do que começa onde ele termina); sem vizinho, vai para o fim. A ordem escolhida fica.
+    const piece = { srcStart: ms(cut.start), srcEnd: ms(cut.end) };
+    const after = plan.segments.findIndex((s) => Math.abs(s.srcEnd - cut.start) < EPS);
+    const before = plan.segments.findIndex((s) => Math.abs(s.srcStart - cut.end) < EPS);
+    const at = after >= 0 ? after + 1 : before >= 0 ? before : plan.segments.length;
+    return withSegments(plan, ctx, [...plan.segments.slice(0, at), piece, ...plan.segments.slice(at)]);
+  }
   return withSegments(
     plan,
     ctx,
