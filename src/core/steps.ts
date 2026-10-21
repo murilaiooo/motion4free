@@ -6,7 +6,14 @@ export const PROCESSING_STEPS = [
   { id: 'estilo', label: 'Montando legendas e estilo' },
 ] as const;
 
-export function processingStep(label: string): number {
+/** Em qual dos passos estamos. `phase` (v0.23) vale mais que o texto: "tentando outro modelo" também é transcrição. */
+export function processingStep(label: string, phase?: string): number {
+  if (phase) {
+    if (/^(modelo|preparar|transcrever|reserva)-/.test(phase)) return 2;
+    if (phase === 'silencios') return 1;
+    if (phase === 'montar') return 3;
+    if (phase === 'abrir' || phase === 'audio') return 0;
+  }
   const l = label.toLowerCase();
   if (l.includes('silêncio')) return 1;
   if (l.includes('transcr') || l.includes('modelo')) return 2;

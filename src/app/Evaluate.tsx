@@ -9,6 +9,8 @@ import { toAppError, type AppError } from '../core/errors';
 import { toMono16k } from '../media/audio';
 import { VERSION_LABEL } from '../version';
 import { ErrorBox } from './ErrorBox';
+import { ProgressPanel } from './ProgressPanel';
+import type { Progress } from '../core/progress';
 import { openWithAudio } from './pipeline';
 
 type Choice = AsrMode | AsrCandidateId;
@@ -66,7 +68,7 @@ export function Evaluate() {
   const [file, setFile] = useState<File | null>(null);
   const [reference, setReference] = useState('');
   const [choice, setChoice] = useState<Choice>('precisa');
-  const [progress, setProgress] = useState<{ label: string; fraction: number } | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<AppError | null>(null);
 
@@ -76,7 +78,7 @@ export function Evaluate() {
     setError(null);
     const t0 = performance.now();
     try {
-      const step = (label: string, fraction: number) => setProgress({ label, fraction });
+      const step = (p: Progress) => setProgress(p);
       const { media, audio } = await openWithAudio(file, step);
       if (!audio) throw toAppError(new Error('vídeo sem áudio'), 'SEM_AUDIO');
       const mono = await toMono16k(audio);
@@ -134,12 +136,7 @@ export function Evaluate() {
           Transcrever e medir
         </button>
       </p>
-      {progress && (
-        <div className="status" role="status">
-          <span>{progress.label}…</span>
-          <progress value={progress.fraction} max={1} />
-        </div>
-      )}
+      <ProgressPanel progress={progress} />
       {error && <ErrorBox error={error} kind="error" />}
       {outcome && (
         <section data-testid="eval-result">

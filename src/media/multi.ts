@@ -10,6 +10,7 @@ import { clipGains, peakOf, speechLevelDb } from '../analysis/loudness';
 import { cleanTranscript, toWords } from '../analysis/asr-merge';
 import { planAsr } from '../analysis/asr-windows';
 import type { Transcriber } from '../asr/transcriber';
+import type { OnProgress } from '../core/progress';
 import { DEFAULT_FRAMING } from '../core/types';
 
 export interface OpenedClip {
@@ -39,7 +40,7 @@ export interface MultiSessionInput {
 export async function openClips(
   files: File[],
   transcriber?: Transcriber,
-  onStep?: (label: string, fraction: number) => void,
+  onStep?: OnProgress,
   asrMode?: string,
   firstClipNumber = 1,
 ): Promise<MultiSessionInput> {
@@ -56,6 +57,10 @@ export async function openClips(
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]!;
+    const which = `clipe ${i + 1} de ${files.length}`;
+    // cada etapa de dentro (ler áudio, baixar modelo, transcrever) diz também em qual clipe está
+    const inner: OnProgress = (p) => onStep?.({ ...p, detail: p.detail ? `${which} · ${p.detail}` : which });
+    onStep?.({ label: `Abrindo os vídeos`, phase: 'abrir', fraction: i / files.length, detail: `${which} · ${file.name}` });
     let media: OpenedMedia;
     try {
       media = await openMedia(file);
@@ -69,7 +74,7 @@ export async function openClips(
     const id = `c${firstClipNumber + clips.length}`;
     let audio: DecodedAudio | null = null;
     if (media.audio) {
-      try { audio = await decodeAudio(media.audio, media.durationSec); }
+      try { audio = await decodeAudio(media.audio, media.durationSec, (fraction) => inner({ label: 'Lendo o áudio', phase: 'audio', fraction })); }
       catch (e) { warnings.push(new AppError('AUDIO_FALHOU', `${file.name}: ${describeError(e)}`)); }
     } else {
       warnings.push(new AppError('SEM_AUDIO', file.name));
@@ -79,10 +84,10 @@ export async function openClips(
     if (audio) {
       try {
         const mono = await toMono16k(audio);
+        inner({ label: 'Procurando silêncios', phase: 'silencios', fraction: null });
         silences = findSilences(mono, 16000);
         if (transcriber) {
-          onStep?.(`Transcrevendo clipe ${i+1}/${files.length}`, 0);
-          const r = await transcriber.transcribe(mono.slice(), media.durationSec, planAsr(silences, media.durationSec), onStep ?? (()=>{}), asrMode as any);
+          const r = await transcriber.transcribe(mono.slice(), media.durationSec, planAsr(silences, media.durationSec), inner, asrMode as any);
           words = toWords(cleanTranscript(r.words, silences)).map((w) => ({ ...w, id: `${id}:${w.id}` })); // IDs únicos entre clipes
           asrModel ??= r.model;
           warnings.push(...r.notices);

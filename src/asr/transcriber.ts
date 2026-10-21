@@ -1,7 +1,9 @@
 import { groupPieces, mergeWindows, type RawWord } from '../analysis/asr-merge';
 import type { AsrWindow } from '../analysis/asr-windows';
-import { ASR_CANDIDATES, asrLadder, estimateMinutes, formatMB, type AsrCandidateId, type AsrMode } from '../core/asr-models';
+import { ASR_CANDIDATES, asrLadder, estimateMinutes, type AsrCandidateId, type AsrMode } from '../core/asr-models';
 import { AppError } from '../core/errors';
+import { formatClock } from '../core/bytes';
+import type { OnProgress } from '../core/progress';
 import { detectAsrCapability } from './capability';
 import type { FromWorker } from './protocol';
 import type { AsrChunk } from './words';
@@ -17,13 +19,13 @@ export interface TranscriptResult {
 
 export interface Transcriber {
   /** `mode`: Rápida/Precisa (escada pela capacidade do aparelho) ou uma escada explícita (página ?avaliar). */
-  transcribe(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: (label: string, fraction: number) => void, mode?: AsrMode | AsrCandidateId[]): Promise<TranscriptResult>;
+  transcribe(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: OnProgress, mode?: AsrMode | AsrCandidateId[]): Promise<TranscriptResult>;
 }
 
 const label = (id: AsrCandidateId) => ASR_CANDIDATES[id].label;
 
 export class WhisperTranscriber implements Transcriber {
-  async transcribe(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: (label: string, fraction: number) => void, mode: AsrMode | AsrCandidateId[] = 'precisa'): Promise<TranscriptResult> {
+  async transcribe(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: OnProgress, mode: AsrMode | AsrCandidateId[] = 'precisa'): Promise<TranscriptResult> {
     const ladder = Array.isArray(mode) ? mode : asrLadder(mode, await detectAsrCapability());
     const worker = new Worker(new URL('./whisper.worker.ts', import.meta.url), { type: 'module' });
     const notices: AppError[] = [];
@@ -33,14 +35,29 @@ export class WhisperTranscriber implements Transcriber {
         const m = e.data;
         if (m.type === 'progress' && m.stage === 'download') {
           const c = ASR_CANDIDATES[m.model];
-          onProgress(`Baixando o modelo de legenda ${label(m.model)} (cerca de ${formatMB(c.downloadMB)}, só na primeira vez)`, m.fraction);
+          onProgress({
+            label: m.cached ? `Carregando o modelo de legenda ${label(m.model)}, já guardado neste aparelho` : `Baixando o modelo de legenda ${label(m.model)} (só na primeira vez)`,
+            phase: `modelo-${m.model}`,
+            fraction: m.fraction,
+            // sem o tamanho do servidor, usa o tamanho conhecido do modelo
+            bytes: { loaded: m.loaded, total: m.total > 0 ? m.total : c.downloadMB * 1024 * 1024 },
+          });
+        }
+        if (m.type === 'progress' && m.stage === 'prepare') {
+          onProgress({ label: `Preparando o modelo ${label(m.model)} para transcrever (pode levar até 1 min sem mexer a barra)`, phase: `preparar-${m.model}`, fraction: null });
         }
         if (m.type === 'progress' && m.stage === 'transcribe') {
-          onProgress(`Transcrevendo a fala com ${label(m.model)} — trecho ${m.window} de ${m.windows} (uns ${estimateMinutes(m.model, durationSec)} min no total)`, m.fraction);
+          onProgress({
+            label: `Transcrevendo a fala com ${label(m.model)}`,
+            phase: `transcrever-${m.model}`,
+            fraction: m.fraction,
+            detail: `trecho ${m.window} de ${m.windows} · ${formatClock(m.doneSec)} de ${formatClock(m.totalSec)} de fala ouvidos`,
+            expectedSec: estimateMinutes(m.model, durationSec) * 60,
+          });
         }
         if (m.type === 'fallback') {
           fallbacks.push(`${label(m.from)} falhou (${m.detail}); tentei ${label(m.to)}`);
-          onProgress(`${label(m.from)} não funcionou aqui; tentando ${label(m.to)}`, 0);
+          onProgress({ label: `${label(m.from)} não funcionou aqui; tentando ${label(m.to)}`, phase: `reserva-${m.to}`, fraction: null });
         }
         if (m.type === 'done') {
           worker.terminate();

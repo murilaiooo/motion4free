@@ -26,6 +26,7 @@ import {
 } from '../core/project-library';
 import { dirSize } from '../core/storage-fs';
 import { cachedRepos, spaceCheck } from '../core/storage-report';
+import type { Progress } from '../core/progress';
 import type { EditPlan } from '../core/types';
 import { createHistory, pushHistory, type History } from '../engine/history';
 import { appendClipsToPlan } from '../editorial/clip-append';
@@ -42,6 +43,7 @@ import { Landing, Processing, type LandingMode } from './Landing';
 import { ClipMaker, newClipWork, releaseWork, type ClipWork } from './ClipMaker';
 import { analyzeLong, type PreparedClip } from './clip-pipeline';
 import { ProjectMenu } from './ProjectMenu';
+import { ProgressPanel } from './ProgressPanel';
 import { ProjectsList } from './Projects';
 import { StorageScreen } from './Storage';
 import { Logo, type SaveState } from './TopBar';
@@ -53,7 +55,7 @@ import { projectFs, storage, storageAvailable } from './project-store';
 
 const fs = projectFs;
 
-type Status = { kind: 'idle' } | { kind: 'working'; label: string; fraction: number } | { kind: 'ready' } | { kind: 'error'; error: AppError };
+type Status = { kind: 'idle' } | { kind: 'working'; progress: Progress } | { kind: 'ready' } | { kind: 'error'; error: AppError };
 type CopyState = 'pending' | 'done' | 'failed';
 
 const PEAK_COLUMNS = 1200;
@@ -133,6 +135,7 @@ function EditorApp() {
   const [versions, setVersions] = useState<PlanVersion[]>([]);
   const [versionsSaved, setVersionsSaved] = useState<PlanVersion[]>([]);
   const [copy, setCopy] = useState<CopyState>('pending');
+  const [copyProgress, setCopyProgress] = useState<Progress | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   // v0.11: vários projetos
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -159,7 +162,7 @@ function EditorApp() {
     return run;
   }
 
-  const step = (label: string, fraction: number) => setStatus({ kind: 'working', label, fraction });
+  const step = (progress: Progress) => setStatus({ kind: 'working', progress });
   const fail = (err: unknown) => setStatus({ kind: 'error', error: toAppError(err) });
   const notify = (e: AppError) => setNotices((list) => (list.some((n) => n.code === e.code) ? list : [...list, e]));
 
@@ -251,7 +254,7 @@ function EditorApp() {
   }
 
   async function resumeMulti(id: string, project: SavedProject, clipMap: Map<string, Blob>, copyExists: boolean): Promise<import('../media/multi').OpenedClip[]> {
-    step('Abrindo o projeto salvo (multi)', 0);
+    step({ label: 'Abrindo o projeto salvo', phase: 'abrir-projeto', fraction: 0 });
     setAsrModel(null);
     const { openMedia } = await import('../media/input');
     const { decodeAudio } = await import('../media/audio');
@@ -265,10 +268,11 @@ function EditorApp() {
     for (const [index, c] of allRefs.entries()) {
       const blob = clipMap.get(c.id);
       if (!blob) throw new AppError('CLIPES_AUSENTES', c.id);
-      step(`Abrindo clipe ${index + 1}/${allRefs.length}`, index / allRefs.length);
+      const which = `clipe ${index + 1} de ${allRefs.length}`;
+      step({ label: 'Abrindo o projeto salvo', phase: 'abrir-projeto', fraction: index / allRefs.length, detail: `${which} · ${c.name}` });
       const media = await openMedia(blob);
       const audio = media.audio
-        ? await decodeAudio(media.audio, media.durationSec).catch((err): null => {
+        ? await decodeAudio(media.audio, media.durationSec, (f) => step({ label: 'Lendo o áudio dos clipes', phase: 'abrir-projeto', fraction: (index + f) / allRefs.length, detail: which })).catch((err): null => {
             audioWarnings.push(new AppError('AUDIO_FALHOU', `${c.name}: ${describeError(err)}`));
             return null;
           })
@@ -313,7 +317,7 @@ function EditorApp() {
 
   async function resume(id: string, project: SavedProject, file: Blob, copyExists: boolean) {
     setFileName(project.video.name);
-    step('Abrindo o projeto salvo', 0);
+    step({ label: 'Abrindo o projeto salvo', phase: 'abrir', fraction: null });
     setAsrModel(null);
     const { media, audio } = await openWithAudio(file, step);
     if (!sameVideo(project.video, { size: file.size, durationSec: media.durationSec })) {
@@ -346,23 +350,33 @@ function EditorApp() {
   function storeMultiCopies(id: string, clips: import('../media/multi').OpenedClip[]) {
     if (!fs) return;
     setCopy('pending');
+    const total = clips.reduce((sum, c) => sum + c.file.size, 0);
     void enqueue(async () => {
       const { saveClipVideo } = await import('../core/project-library');
-      for (const clip of clips) {
+      let before = 0;
+      for (const [i, clip] of clips.entries()) {
+        const onBytes = (written: number) => showCopy(before + written, total, `clipe ${i + 1} de ${clips.length}`);
         // c1 fica em video.bin para poupar espaço e manter projetos anteriores compatíveis.
-        if (clip.id === 'c1') await saveVideo(fs, id, clip.file);
-        else await saveClipVideo(fs, id, clip.id, clip.file);
+        if (clip.id === 'c1') await saveVideo(fs, id, clip.file, onBytes);
+        else await saveClipVideo(fs, id, clip.id, clip.file, onBytes);
+        before += clip.file.size;
       }
     }).then(() => setCopy('done')).catch((err) => {
       setCopy('failed');
       notify(new AppError('SALVAR_FALHOU', `Não foi possível guardar todos os clipes: ${describeError(err)}`));
-    });
+    }).finally(() => setCopyProgress(null));
+  }
+
+  /** Progresso da cópia do vídeo para o navegador (vídeo grande leva vários segundos). */
+  function showCopy(written: number, total: number, detail?: string) {
+    setCopyProgress({ label: 'Guardando uma cópia do vídeo neste navegador', phase: 'copia', fraction: total > 0 ? written / total : null, bytes: { loaded: written, total }, ...(detail ? { detail } : {}) });
   }
 
   function storeCopy(id: string, file: Blob) {
     if (!fs) return;
     setCopy('pending');
-    enqueue(() => saveVideo(fs, id, file))
+    enqueue(() => saveVideo(fs, id, file, (written, total) => showCopy(written, total)))
+      .finally(() => setCopyProgress(null))
       .then(() => setCopy('done'))
       .catch((err) => {
         // sem a cópia o projeto continua salvo; ao reabrir o app pede o vídeo de novo (M4F-604)
@@ -582,7 +596,7 @@ function EditorApp() {
   async function onAddClips(files: File[]): Promise<void> {
     if (!session || !history || !files.length || addingClips.current) return;
     addingClips.current = true;
-    step('Adicionando clipes ao projeto', 0);
+    step({ label: 'Adicionando clipes ao projeto', phase: 'abrir', fraction: null });
     const initialSession = session;
     const initialHistory = history;
     if (initialHistory.present.clips.length + files.length > 30) {
@@ -858,6 +872,16 @@ function EditorApp() {
           }
           notices={
             <>
+              {status.kind === 'working' && (
+                <div className="notice progress-notice">
+                  <ProgressPanel progress={status.progress} compact testId="editor-work-progress" />
+                </div>
+              )}
+              {copyProgress && (
+                <div className="notice progress-notice">
+                  <ProgressPanel progress={copyProgress} compact testId="copy-progress" />
+                </div>
+              )}
               {appNotices}
               {session.warnings.map((w, index) => (
                 <ErrorBox key={`${w.code}-${index}`} error={w} kind="warning" />
@@ -871,9 +895,9 @@ function EditorApp() {
   }
   if (status.kind === 'working')
     return longWork ? (
-      <Processing label={status.label} fraction={status.fraction} fileName={fileName} title="Procurando os melhores momentos" note="Vídeo longo: transcrever leva de alguns minutos a quase uma hora, conforme o computador. Deixe a aba aberta; se fechar, a análise que já terminou fica guardada e o mesmo arquivo abre direto." />
+      <Processing progress={status.progress} fileName={fileName} title="Procurando os melhores momentos" note="Vídeo longo: transcrever leva de alguns minutos a quase uma hora, conforme o computador. Deixe a aba aberta; se fechar, a análise que já terminou fica guardada e o mesmo arquivo abre direto." />
     ) : (
-      <Processing label={status.label} fraction={status.fraction} fileName={fileName} />
+      <Processing progress={status.progress} fileName={fileName} />
     );
   if (clipView && clipWork)
     return (

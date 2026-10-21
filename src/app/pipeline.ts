@@ -8,6 +8,8 @@ import { autoEdit } from '../editorial/auto-edit';
 import { decodeAudio, toMono16k, type DecodedAudio } from '../media/audio';
 import { openMedia, type OpenedMedia } from '../media/input';
 import type { Transcriber } from '../asr/transcriber';
+import type { OnProgress } from '../core/progress';
+import { formatClock } from '../core/bytes';
 
 export interface Analysis {
   media: OpenedMedia;
@@ -22,20 +24,22 @@ export interface Analysis {
 }
 
 /** Abre o vídeo e decodifica o áudio (usado na primeira análise e ao reabrir um projeto). */
-export async function openWithAudio(file: Blob, onStep: (label: string, fraction: number) => void): Promise<{ media: OpenedMedia; audio: DecodedAudio | null }> {
-  onStep('Abrindo o vídeo', 0);
+export async function openWithAudio(file: Blob, onStep: OnProgress): Promise<{ media: OpenedMedia; audio: DecodedAudio | null }> {
+  onStep({ label: 'Abrindo o vídeo', phase: 'abrir', fraction: null });
   const media = await openMedia(file);
   if (!media.audio) return { media, audio: null };
-  onStep('Lendo o áudio', 0);
+  const audioTrack = media.audio;
+  const reading = (fraction: number) => onStep({ label: 'Lendo o áudio', phase: 'audio', fraction, detail: `${formatClock(fraction * media.durationSec)} de ${formatClock(media.durationSec)} do áudio lidos` });
+  reading(0);
   try {
-    return { media, audio: await decodeAudio(media.audio, media.durationSec) };
+    return { media, audio: await decodeAudio(audioTrack, media.durationSec, reading) };
   } catch (err) {
     throw toAppError(err, 'AUDIO_FALHOU');
   }
 }
 
 /** Passo a passo da edição automática: abrir -> áudio -> silêncios -> transcrição -> plano. */
-export async function analyze(file: File, transcriber: Transcriber, onStep: (label: string, fraction: number) => void, opts: { asrMode?: AsrMode } = {}): Promise<Analysis> {
+export async function analyze(file: File, transcriber: Transcriber, onStep: OnProgress, opts: { asrMode?: AsrMode } = {}): Promise<Analysis> {
   const { media, audio } = await openWithAudio(file, onStep);
   if (!audio) {
     const plan = autoEdit(media.durationSec, [], []);
@@ -43,13 +47,14 @@ export async function analyze(file: File, transcriber: Transcriber, onStep: (lab
   }
 
   let mono: Float32Array;
+  onStep({ label: 'Preparando o áudio para a análise', phase: 'audio-16k', fraction: null });
   try {
     mono = await toMono16k(audio);
   } catch (err) {
     throw toAppError(err, 'AUDIO_FALHOU');
   }
 
-  onStep('Procurando silêncios', 0);
+  onStep({ label: 'Procurando silêncios', phase: 'silencios', fraction: null });
   const silences = findSilences(mono, 16000);
 
   // Sem transcrição o vídeo ainda pode ser cortado e exportado, só sem legendas e sem título.
@@ -67,7 +72,7 @@ export async function analyze(file: File, transcriber: Transcriber, onStep: (lab
   }
   if (asrModel !== null && words.length === 0) warnings.push(new AppError('SEM_FALA', `${silences.length} silêncios em ${media.durationSec.toFixed(1)} s`));
 
-  onStep('Montando a edição', 0);
+  onStep({ label: 'Montando a edição', phase: 'montar', fraction: null });
   const plan = autoEdit(media.durationSec, silences, words);
   return { media, audio, plan, words, silences, warnings, asrModel };
 }

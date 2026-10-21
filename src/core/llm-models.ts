@@ -1,4 +1,6 @@
+import { MB } from './bytes';
 import type { ErrorKey } from './errors';
+import type { Progress } from './progress';
 
 /**
  * Modelos de texto que a "IA no navegador" pode usar (WebLLM 0.2.85, lista oficial `prebuiltAppConfig`).
@@ -81,4 +83,20 @@ export function isLlmKey(v: unknown): v is LlmKey {
 export function localAiErrorKey(message: string): ErrorKey {
   if (/out of memory|outofmemory|\boom\b|insufficient|not enough memory|exceed|device (was )?lost|devicelost|maxBufferSize|maxStorageBufferBindingSize|allocation failed|memory/i.test(message)) return 'IA_MODELO_GRANDE';
   return 'IA_LOCAL_FALHOU';
+}
+
+/**
+ * Texto do WebLLM ao preparar a IA → progresso da tela (v0.23). O WebLLM manda frases como
+ * "Fetching param cache[5/38]: 312MB fetched. 13% completed…" (baixando), "Loading model from cache[…]: 120MB loaded"
+ * (já guardada) e "Loading GPU shader modules[…]" (montando na placa de vídeo). O total é o tamanho conhecido do modelo.
+ */
+export function localAiProgress(key: LlmKey, fraction: number, text: string): Progress {
+  const m = LLM_MODELS[key];
+  const name = m.label.split(' — ')[0]!;
+  const mb = /(\d+(?:\.\d+)?)\s*MB\s+(?:fetched|loaded)/i.exec(text);
+  const bytes = mb ? { bytes: { loaded: Number(mb[1]) * MB, total: Math.max(m.downloadMB * MB, Number(mb[1]) * MB) } } : {};
+  if (/fetching/i.test(text)) return { label: `Baixando a IA ${name} (só na primeira vez)`, phase: `ia-baixar-${key}`, fraction, ...bytes };
+  if (/cache/i.test(text)) return { label: `Carregando a IA ${name}, já guardada neste aparelho`, phase: `ia-cache-${key}`, fraction, ...bytes };
+  if (/shader|gpu/i.test(text)) return { label: 'Preparando a IA na placa de vídeo', phase: `ia-gpu-${key}`, fraction };
+  return { label: `Preparando a IA ${name}`, phase: `ia-preparar-${key}`, fraction };
 }

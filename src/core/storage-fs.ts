@@ -16,8 +16,9 @@ export interface Fs {
   /**
    * Cria as pastas que faltarem e grava (substitui) o arquivo. Se a gravação falhar, o conteúdo
    * anterior fica como estava, e um arquivo que não existia antes não fica para trás vazio.
+   * `onProgress` (v0.23): bytes já gravados, para a tela mostrar a cópia de um vídeo grande andando.
    */
-  writeFile(path: string[], data: Blob | string): Promise<void>;
+  writeFile(path: string[], data: Blob | string, onProgress?: (written: number, total: number) => void): Promise<void>;
   /** Apaga arquivo ou pasta inteira; não falha se não existir. */
   remove(path: string[]): Promise<void>;
 }

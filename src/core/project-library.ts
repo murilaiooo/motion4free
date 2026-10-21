@@ -181,12 +181,12 @@ export async function saveProjectData(fs: Fs, id: string, project: SavedProject,
   return meta;
 }
 
-export async function saveVideo(fs: Fs, id: string, video: Blob): Promise<void> {
-  await fs.writeFile([...dir(id), VIDEO], video);
+export async function saveVideo(fs: Fs, id: string, video: Blob, onProgress?: (written: number, total: number) => void): Promise<void> {
+  await fs.writeFile([...dir(id), VIDEO], video, onProgress);
 }
 
-export async function saveClipVideo(fs: Fs, id: string, clipId: string, video: Blob): Promise<void> {
-  await fs.writeFile([...dir(id), VIDEO_DIR, `${clipId}.bin`], video);
+export async function saveClipVideo(fs: Fs, id: string, clipId: string, video: Blob, onProgress?: (written: number, total: number) => void): Promise<void> {
+  await fs.writeFile([...dir(id), VIDEO_DIR, `${clipId}.bin`], video, onProgress);
 }
 
 export async function loadClipVideo(fs: Fs, id: string, clipId: string): Promise<Blob | null> {

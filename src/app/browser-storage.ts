@@ -32,6 +32,8 @@ async function walk(path: string[], create: boolean): Promise<DirHandle | null> 
   return dir;
 }
 
+const WRITE_CHUNK = 16 * 1024 * 1024;
+
 export class OpfsFs implements Fs {
   async list(dir: string[]): Promise<FsEntry[] | null> {
     const handle = await walk(dir, false);
@@ -53,7 +55,7 @@ export class OpfsFs implements Fs {
     }
   }
 
-  async writeFile(path: string[], data: Blob | string): Promise<void> {
+  async writeFile(path: string[], data: Blob | string, onProgress?: (written: number, total: number) => void): Promise<void> {
     const dir = await walk(path.slice(0, -1), true);
     if (!dir) throw new Error(`pasta ${path.slice(0, -1).join('/')} indisponível`);
     const name = path[path.length - 1]!;
@@ -64,7 +66,13 @@ export class OpfsFs implements Fs {
       // O navegador grava numa cópia à parte e só troca no close(): ou fica o arquivo novo inteiro, ou o antigo.
       const w = await handle.createWritable();
       try {
-        await w.write(data);
+        if (onProgress && typeof data !== 'string') {
+          // em pedaços, para mostrar o progresso; o arquivo só troca no close(), igual a uma gravação única
+          for (let at = 0; at < data.size; at += WRITE_CHUNK) {
+            await w.write(data.slice(at, Math.min(data.size, at + WRITE_CHUNK)));
+            onProgress(Math.min(data.size, at + WRITE_CHUNK), data.size);
+          }
+        } else await w.write(data);
         await w.close();
       } catch (err) {
         await w.abort().catch(() => undefined);

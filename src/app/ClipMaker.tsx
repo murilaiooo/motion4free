@@ -12,6 +12,8 @@ import { loadKey } from '../ai/own-key';
 import { VERSION_LABEL } from '../version';
 import { AiOptions, prepareAi, type AiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
+import { ProgressPanel } from './ProgressPanel';
+import { clipJobFraction, type Progress } from '../core/progress';
 import { TemplateThumb } from './Templates';
 import { Logo, ThemeToggle } from './TopBar';
 import { downloadBlob, prepareClip, renderClip, type ClipSettings, type LongAnalysis, type PreparedClip } from './clip-pipeline';
@@ -24,7 +26,7 @@ import { downloadBlob, prepareClip, renderClip, type ClipSettings, type LongAnal
 
 export type ClipJobState =
   | { kind: 'idle' }
-  | { kind: 'working'; label: string; fraction: number }
+  | { kind: 'working'; progress: Progress }
   | { kind: 'done'; url: string; name: string; degraded: boolean }
   | { kind: 'error'; error: AppError };
 
@@ -89,7 +91,7 @@ export function ClipMaker({
   const { long } = work;
   const templates = useMemo(listTemplates, []);
   const [ai, setAi] = useState<AiSettings>(() => ({ mode: 'regras', model: DEFAULT_LLM, key: loadKey() }));
-  const [aiBusy, setAiBusy] = useState<string | null>(null);
+  const [aiBusy, setAiBusy] = useState<Progress | null>(null);
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
   const [opening, setOpening] = useState(false);
   const stopBatch = useRef(false);
@@ -100,6 +102,20 @@ export function ClipMaker({
   useEffect(() => () => URL.revokeObjectURL(videoUrl), [videoUrl]);
 
   const working = work.items.some((it) => it.job.kind === 'working') || batch !== null || opening || aiBusy !== null;
+  // lote: um relógio só para todos os clipes (o "falta" é do lote inteiro, não só do clipe atual)
+  const current = work.items.find((it) => it.job.kind === 'working');
+  const batchProgress = useMemo((): Progress | null => {
+    if (!batch) return null;
+    const cj = current?.job;
+    const job = cj && cj.kind === 'working' ? cj.progress : null;
+    const now = Math.min(batch.done + 1, batch.total);
+    return {
+      label: `Gerando o clipe ${now} de ${batch.total}`,
+      phase: 'lote',
+      fraction: (batch.done + (job ? clipJobFraction(job) : 0)) / batch.total,
+      detail: job ? `${job.label} · pode deixar a aba aberta e fazer outra coisa` : 'pode deixar a aba aberta e fazer outra coisa',
+    };
+  }, [batch, current]);
   const selected = work.items.filter((it) => it.checked);
   const settings = (): ClipSettings => ({ style: presetById(work.templateId) ?? DEFAULT_STYLE, output: profileFor(work.format) });
 
@@ -126,14 +142,14 @@ export function ClipMaker({
 
   async function askAi() {
     if (working) return;
-    setAiBusy('Preparando a IA…');
+    setAiBusy({ label: 'Preparando a IA', phase: 'ia-preparar', fraction: null });
     try {
-      const { ai: choice, warning } = await prepareAi(ai, (t) => setAiBusy(t));
+      const { ai: choice, warning } = await prepareAi(ai, setAiBusy);
       if (!choice) {
         if (warning) onWork((w) => ({ ...w, notices: [...w.notices.filter((n) => n.key !== 'IA_MOMENTOS_FALHOU'), new AppError('IA_MOMENTOS_FALHOU', `${warning.code} ${warning.detail}`)] }));
         return;
       }
-      setAiBusy('A IA está lendo os trechos…');
+      setAiBusy({ label: 'A IA está lendo os trechos e escolhendo os melhores', phase: 'ia-ler', fraction: null });
       const r = await rankMomentsWithAi(
         work.items.map((it) => it.m),
         work.count,
@@ -155,9 +171,9 @@ export function ClipMaker({
   }
 
   async function renderOne(it: ClipItem, index: number): Promise<boolean> {
-    setJob(it.uid, { kind: 'working', label: 'Começando', fraction: 0 });
+    setJob(it.uid, { kind: 'working', progress: { label: 'Começando', phase: 'recortar', fraction: 0 } });
     try {
-      const out = await renderClip(long, it.m, index, settings(), (label, fraction) => setJob(it.uid, { kind: 'working', label, fraction }));
+      const out = await renderClip(long, it.m, index, settings(), (progress) => setJob(it.uid, { kind: 'working', progress }));
       const url = URL.createObjectURL(out.blob);
       setJob(it.uid, { kind: 'done', url, name: out.name, degraded: out.result.degraded });
       downloadBlob(url, out.name);
@@ -188,9 +204,9 @@ export function ClipMaker({
   async function openInEditor(it: ClipItem, index: number) {
     if (working) return;
     setOpening(true);
-    setJob(it.uid, { kind: 'working', label: 'Preparando para o editor', fraction: 0 });
+    setJob(it.uid, { kind: 'working', progress: { label: 'Preparando para o editor', phase: 'recortar', fraction: 0 } });
     try {
-      const p = await prepareClip(long, it.m, index, settings(), (label, fraction) => setJob(it.uid, { kind: 'working', label, fraction }));
+      const p = await prepareClip(long, it.m, index, settings(), (progress) => setJob(it.uid, { kind: 'working', progress }));
       setJob(it.uid, { kind: 'idle' });
       onOpenInEditor(p, it.m.title);
     } catch (err) {
@@ -304,11 +320,7 @@ export function ClipMaker({
                 <Sparkles size={15} aria-hidden /> Pedir para a IA escolher e dar títulos
               </button>
             )}
-            {aiBusy && (
-              <p className="hint" role="status">
-                <span className="spinner" /> {aiBusy}
-              </p>
-            )}
+            <ProgressPanel progress={aiBusy} compact testId="clips-ai-progress" />
           </div>
         </section>
 
@@ -364,14 +376,7 @@ export function ClipMaker({
                       +3 s
                     </button>
                   </div>
-                  {it.job.kind === 'working' && (
-                    <div className="clip-progress" role="status">
-                      <span className="hint">{it.job.label}…</span>
-                      <div className="bar">
-                        <span style={{ width: `${Math.max(3, it.job.fraction * 100)}%` }} />
-                      </div>
-                    </div>
-                  )}
+                  {it.job.kind === 'working' && <ProgressPanel progress={it.job.progress} compact testId="clip-progress" />}
                   {it.job.kind === 'error' && <ErrorBox error={it.job.error} kind="error" onDismiss={() => setJob(it.uid, { kind: 'idle' })} />}
                   {it.job.kind === 'done' && (
                     <p className="clip-done" data-testid="clip-done">
@@ -404,18 +409,16 @@ export function ClipMaker({
       </main>
 
       <footer className="clips-bar">
-        <span className="hint">
-          {batch ? (
-            <>
-              Gerando {Math.min(batch.done + 1, batch.total)} de {batch.total}… pode deixar a aba aberta e fazer outra coisa.
-            </>
-          ) : (
-            <>
-              {selected.length} escolhido{selected.length === 1 ? '' : 's'}
-              {doneCount > 0 ? ` · ${doneCount} pronto${doneCount === 1 ? '' : 's'}` : ''} · use vídeos seus ou com autorização do dono
-            </>
-          )}
-        </span>
+        {batch ? (
+          <div className="clips-bar-progress">
+            <ProgressPanel progress={batchProgress} compact testId="clips-batch-progress" />
+          </div>
+        ) : (
+          <span className="hint">
+            {selected.length} escolhido{selected.length === 1 ? '' : 's'}
+            {doneCount > 0 ? ` · ${doneCount} pronto${doneCount === 1 ? '' : 's'}` : ''} · use vídeos seus ou com autorização do dono
+          </span>
+        )}
         {batch ? (
           <button className="sm" onClick={() => (stopBatch.current = true)} data-testid="clips-stop">
             Parar depois deste

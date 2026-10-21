@@ -5,7 +5,12 @@ import { AppError, toAppError } from '../core/errors';
 import { deleteEverything, deleteItem, measureStorage, type StorageDeps, type StorageItem, type StorageReport } from '../core/storage-report';
 import { Dialog } from './Dialog';
 import { ErrorBox } from './ErrorBox';
+import { ProgressPanel } from './ProgressPanel';
+import type { Progress } from '../core/progress';
 import './library.css';
+
+/** Medir percorre todos os projetos e o cache dos modelos: em aparelhos com muita coisa leva alguns segundos. */
+const MEASURING: Progress = { label: 'Medindo o espaço usado (projetos, modelos e cache)', phase: 'medir', fraction: null };
 
 const testId = (id: string) => id.replace(/[^a-zA-Z0-9]+/g, '-');
 const CONFIRM_WORD = 'APAGAR';
@@ -186,9 +191,9 @@ export function StorageScreen({ deps, currentProjectId, onClose, onProjectDelete
       </p>
 
       {!r ? (
-        <p className="hint st-loading">
-          <span className="spinner" aria-hidden /> Medindo…
-        </p>
+        <div className="st-loading">
+          <ProgressPanel progress={MEASURING} compact testId="storage-measuring" />
+        </div>
       ) : (
         <>
           <div className="st-summary card">

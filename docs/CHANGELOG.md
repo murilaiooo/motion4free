@@ -2,6 +2,19 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.23.0 — 21/10/2026
+**Progresso detalhado em todas as esperas.** Implementado; não testado.
+
+- Toda etapa demorada mostra a porcentagem, quanto tempo já passou e quanto falta, com o nome do que está fazendo em palavras simples.
+- Downloads (modelo de legenda, inclusive o de ~1,4 GB do modo Precisa, e a IA no navegador) mostram velocidade (MB/s) e "baixado de total". Se o modelo já estava guardado, aparece "carregando, já guardado neste aparelho".
+- Transcrição: trecho atual, minutos de fala já ouvidos e tempo restante (primeiro uma previsão, depois a medida real).
+- Etapas sem total conhecido (abrir vídeo, procurar silêncios, preparar o modelo na placa de vídeo) mostram barra andando e o tempo passado; depois de 45 s sem notícia, um aviso de que está demorando.
+- Tela de processamento: a porcentagem não volta mais para trás; mostra "Etapa X de 4".
+- Exportar: porcentagem, tempo restante e "Fechando o arquivo MP4" no fim. Fechar e abrir o painel não zera o relógio.
+- Criador de clipes: progresso por clipe e do lote inteiro, com tempo restante do lote.
+- Cópia do vídeo para o navegador, adicionar clipes, pedidos à IA e Armazenamento ganharam o mesmo painel.
+- Decisões em `docs/decisions/0024-progresso-detalhado.md`.
+
 ## v0.22.0 — 21/10/2026
 **Novo modo: Clipes de vídeo longo.** Implementado; não testado. (Publicação reenviada porque a Cloudflare não pegou o primeiro envio.)
 

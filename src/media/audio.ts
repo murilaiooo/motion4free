@@ -6,13 +6,19 @@ export interface DecodedAudio {
 }
 
 /** Decodifica o áudio inteiro (limite de 3 min na Fase 1 mantém isso em memória). */
-export async function decodeAudio(track: InputAudioTrack, durationSec: number): Promise<DecodedAudio> {
+export async function decodeAudio(track: InputAudioTrack, durationSec: number, onProgress?: (fraction: number) => void): Promise<DecodedAudio> {
   const sampleRate = track.sampleRate;
   const numCh = Math.min(2, track.numberOfChannels);
   const total = Math.ceil(durationSec * sampleRate);
   const channels = Array.from({ length: numCh }, () => new Float32Array(total));
   const sink = new AudioBufferSink(track);
+  let shown = -1;
   for await (const { buffer, timestamp } of sink.buffers()) {
+    const pct = Math.floor((timestamp / Math.max(0.001, durationSec)) * 100);
+    if (onProgress && pct !== shown) {
+      shown = pct;
+      onProgress(Math.min(1, pct / 100));
+    }
     const offset = Math.round(timestamp * sampleRate);
     for (let c = 0; c < numCh; c++) {
       const data = buffer.getChannelData(Math.min(c, buffer.numberOfChannels - 1));

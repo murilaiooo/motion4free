@@ -7,6 +7,8 @@ import { findHooks } from '../editorial/hooks';
 import { Check, Sparkles } from 'lucide-react';
 import { AiOptions, prepareAi, type AiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
+import { ProgressPanel } from './ProgressPanel';
+import type { Progress } from '../core/progress';
 
 const EXAMPLES = [
   'gancho diferenciado e criativo, legenda verde e amarela, emojis a cada 3 segundos',
@@ -24,7 +26,7 @@ const hookKey = (h: Pick<Hook, 'wordIds'> | null) => (h ? h.wordIds.join('|') : 
  */
 export function BriefPanel({ plan, words, onBrief, disabled, ai, onAi }: { plan: EditPlan; words: Word[]; onBrief: (b: CreativeBrief) => void; disabled: boolean; ai: AiSettings; onAi: (s: AiSettings) => void }) {
   const [text, setText] = useState(plan.brief.prompt);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState<Progress | null>(null);
   const [error, setError] = useState<AppError | null>(null);
   const [warning, setWarning] = useState<AppError | null>(null);
   const [notDone, setNotDone] = useState<string[]>([]);
@@ -37,7 +39,7 @@ export function BriefPanel({ plan, words, onBrief, disabled, ai, onAi }: { plan:
     setError(null);
     setWarning(null);
     setNotDone([]);
-    setBusy('Entendendo o pedido…');
+    setBusy({ label: 'Entendendo o pedido', phase: 'pedido', fraction: null });
     try {
       const { ai: choice, warning: aiWarning } = await prepareAi(ai, setBusy);
       const r = await interpretLayered(text, words, choice);
@@ -90,11 +92,7 @@ export function BriefPanel({ plan, words, onBrief, disabled, ai, onAi }: { plan:
           </button>
         ))}
       </div>
-      {busy && (
-        <p className="busy" role="status">
-          <span className="spinner" aria-hidden /> {busy}
-        </p>
-      )}
+      <ProgressPanel progress={busy} compact testId="ai-progress" />
       {error && <ErrorBox error={error} kind="error" />}
       {warning && <ErrorBox error={warning} kind="warning" />}
 

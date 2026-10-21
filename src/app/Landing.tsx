@@ -5,6 +5,8 @@ import './clips.css';
 import { AppError } from '../core/errors';
 import { ErrorBox } from './ErrorBox';
 import { PROCESSING_STEPS, processingStep } from '../core/steps';
+import type { Progress } from '../core/progress';
+import { ProgressView, useProgressClock } from './ProgressPanel';
 import { listTemplates } from '../core/template-gallery';
 import { APP_BUILT_AT, VERSION_LABEL } from '../version';
 import { TemplateThumb } from './Templates';
@@ -406,15 +408,15 @@ export function Landing({
   );
 }
 
-/** Tela de processamento: passos com o que já foi feito, o atual e a barra de progresso. */
-export function Processing({ label, fraction, fileName, title = 'Editando seu vídeo', note }: { label: string; fraction: number; fileName: string | null; title?: string; note?: string }) {
-  const step = processingStep(label);
-  const overall = (step + Math.min(1, Math.max(0, fraction))) / PROCESSING_STEPS.length;
+/** Tela de processamento: passos com o que já foi feito, o atual e o progresso detalhado da etapa (v0.23). */
+export function Processing({ progress, fileName, title = 'Editando seu vídeo', note }: { progress: Progress; fileName: string | null; title?: string; note?: string }) {
+  const step = processingStep(progress.label, progress.phase);
+  const snap = useProgressClock(progress);
   return (
     <div className="land">
       <Header />
       <main className="processing">
-        <div className="proc-card card" role="status" aria-live="polite" data-testid="processing">
+        <div className="proc-card card" data-testid="processing">
           <div className="proc-head">
             <span className="proc-icon" aria-hidden>
               <WandSparkles size={22} />
@@ -423,11 +425,11 @@ export function Processing({ label, fraction, fileName, title = 'Editando seu v�
               <h1>{title}</h1>
               {fileName && <p className="hint proc-file">{fileName}</p>}
             </div>
-            <b className="proc-pct tnum">{Math.round(overall * 100)}%</b>
+            <b className="proc-stage tnum">
+              Etapa {step + 1} de {PROCESSING_STEPS.length}
+            </b>
           </div>
-          <div className="bar">
-            <span style={{ width: `${Math.max(3, overall * 100)}%` }} />
-          </div>
+          {snap && <ProgressView snap={snap} testId="processing-progress" />}
           <ol className="proc-steps">
             {PROCESSING_STEPS.map((s, i) => (
               <li key={s.id} className={i < step ? 'done' : i === step ? 'active' : ''}>
@@ -436,7 +438,6 @@ export function Processing({ label, fraction, fileName, title = 'Editando seu v�
                 </span>
                 <span>
                   {s.label}
-                  {i === step && <small className="hint">{label}…</small>}
                 </span>
               </li>
             ))}

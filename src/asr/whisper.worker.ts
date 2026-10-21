@@ -51,16 +51,32 @@ const SOURCES: Source[] = [
   { name: 'direto', remoteHost: 'https://huggingface.co/', wasmPaths: directWasm },
 ];
 
+/** O modelo já está no cache do navegador? (só muda o texto: "carregando" em vez de "baixando") */
+async function repoCached(repo: string): Promise<boolean> {
+  try {
+    for (const name of await caches.keys()) {
+      const keys = await (await caches.open(name)).keys();
+      if (keys.some((r) => r.url.includes(`/${repo}/`))) return true;
+    }
+  } catch {
+    // sem Cache Storage: trata como download
+  }
+  return false;
+}
+
 /** Carrega um degrau da escada, tentando o espelho e depois o servidor original. */
 async function load(id: AsrCandidateId): Promise<AutomaticSpeechRecognitionPipeline> {
   const c = ASR_CANDIDATES[id];
   if (c.device === 'webgpu' && !('gpu' in navigator)) throw new AppError('MODELO_CARREGAR', `${id}: navegador sem WebGPU`);
-  const files = new Map<string, number>();
-  const progress_callback = (p: { status: string; file?: string; progress?: number }) => {
-    if (p.status === 'progress' && p.file) {
-      files.set(p.file, p.progress ?? 0);
-      const avg = [...files.values()].reduce((a, b) => a + b, 0) / files.size / 100;
-      post({ type: 'progress', stage: 'download', fraction: avg, model: id });
+  const cached = await repoCached(c.repo);
+  let prepared = false;
+  // `progress_total` (Transformers.js 4.x) soma bytes de todos os arquivos do modelo: dá tamanho e velocidade reais
+  const progress_callback = (p: { status: string; loaded?: number; total?: number }) => {
+    if (p.status !== 'progress_total' || typeof p.loaded !== 'number' || typeof p.total !== 'number') return;
+    post({ type: 'progress', stage: 'download', fraction: p.total > 0 ? p.loaded / p.total : 0, model: id, loaded: p.loaded, total: p.total, cached });
+    if (!prepared && p.total > 0 && p.loaded >= p.total) {
+      prepared = true;
+      post({ type: 'progress', stage: 'prepare', model: id });
     }
   };
   const networkFailures: AppError[] = [];
@@ -131,6 +147,10 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
     return !!to;
   };
 
+  // progresso pelos segundos de áudio, não pelo número de janelas (janelas têm tamanhos diferentes)
+  const spoken = (w: AsrWindow) => (w.skip ? 0 : Math.max(0, w.own.end - w.own.start));
+  const totalSec = windows.reduce((sum, w) => sum + spoken(w), 0);
+  let doneSec = 0;
   let i = 0;
   while (i < windows.length) {
     const w = windows[i]!;
@@ -149,11 +169,12 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
         return;
       }
     }
-    post({ type: 'progress', stage: 'transcribe', fraction: i / windows.length, model: ladder[step]!, window: i + 1, windows: windows.length });
+    post({ type: 'progress', stage: 'transcribe', fraction: totalSec > 0 ? doneSec / totalSec : i / windows.length, model: ladder[step]!, window: i + 1, windows: windows.length, doneSec, totalSec });
     try {
       const r = await transcribeWindow(asr, audio, w);
       results.push({ window: w, chunks: r.chunks });
       if (r.retried) retried++;
+      doneSec += spoken(w);
       i++;
     } catch (err) {
       // Falha no meio (memória da placa de vídeo, modelo sem atenção cruzada…): continua desta janela com o próximo modelo.
