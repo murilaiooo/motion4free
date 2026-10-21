@@ -13,7 +13,12 @@ Chegar a um editor de Reels/Shorts com comportamento previsível, controle criat
 5. [05-architecture-and-qa.md](05-architecture-and-qa.md): contratos de engine e plano de provas técnicas/visuais.
 6. [06-licenses-and-provenance.md](06-licenses-and-provenance.md): permissões, restrições, atribuição e regras de reutilização.
 7. [07-source-map.md](07-source-map.md): caminhos exatos do GitHub para retomar cada inspeção sem repetir a pesquisa.
-8. [08-opencut-deep-dive.md](08-opencut-deep-dive.md): avaliação detalhada de OpenCut Classic e rewrite, módulos úteis, lacunas e integração segura.
+8. [08-opencut-deep-dive.md](08-opencut-deep-dive.md): avaliação inicial de OpenCut Classic e rewrite, módulos úteis, lacunas e integração segura.
+9. [opencut-integration/README.md](opencut-integration/README.md): **dossiê executável ampliado com 11 documentos**, UX da mesa de edição, roteiro passo a passo por feature, testes, licenças e handoff para IA.
+
+## Adendo 21/10: OpenCut profundo (baseline Motion4Free v0.22.1)
+
+Após nova leitura de código e arquitetura dos dois OpenCut, foi publicado um **plano técnico executável para reestruturar primeiro o workspace**: [índice de implementação](opencut-integration/README.md), [wireframe e comportamento](opencut-integration/02-workbench-ux-spec.md), [playbook React/CSS](opencut-integration/03-workbench-build-playbook.md), [roadmap em PRs](opencut-integration/08-execution-roadmap.md), [testes anti-loop](opencut-integration/10-qa-matrix.md) e [handoff para IA](opencut-integration/09-agent-handoff.md). O baseline foi atualizado para a `main` v0.22.1 (`e9321ec`), mantendo inalterado o recorte histórico anterior. O dossiê documenta o que é código real no Classic, o que é apenas placeholder no rewrite e as lacunas do M4F, sem substituir a stack.
 
 ## Adendo 21/10: OpenCut
 

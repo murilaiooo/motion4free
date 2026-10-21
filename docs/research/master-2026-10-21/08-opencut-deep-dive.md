@@ -60,6 +60,10 @@
 | Integer/rational media time | `src/engine/timeline.ts` usa `number` segundos; `OutputProfile.fps` | eliminar arredondamentos acumulativos sem destruir projetos |
 | Rust GPU compositor | render em Canvas2D + WebCodecs/Mediabunny | **não obrigatório**; prova isolada antes de adoção |
 
+## Especificação de execução aprofundada (adendo 21/10)
+
+Para orientar uma IA com instruções por módulo, decisões de layout, arquivos exatos, contratos de eventos, persistência, passos de PR, testes e licença, usar o [dossiê detalhado OpenCut](opencut-integration/README.md). A auditoria curta neste arquivo é uma introdução; a análise profunda cobre também inspector, tool rail, UI responsive e plano de reorganização da mesa de edição Motion4Free.
+
 ## Recomendações concretas
 
 1. **Agora:** enriquecer MASTER-01 com ticks inteiros e taxas racionais; estudar masks/guide UI com critérios de MVP; manter FreeCut e Cutaway como comparativos.

@@ -67,6 +67,10 @@
 3. `MASTER-07`: protótipo de keyframe em objeto `added` de `core/edits.ts`, fora do render final até prova WYSIWYG.
 4. `MASTER-10`: só após ações separadas, interface workspace/resizable sobre CSS existente.
 
+## Plano de execução detalhado OpenCut (adendo 21/10)
+
+A pesquisa adicional de duas gerações do OpenCut criou **subtarefas OCU-01 a OCU-22** (mais OCU-23/24 futuros) sob os épicos MASTER existentes: [mapa de execução](opencut-integration/08-execution-roadmap.md). **Não são 24 épicos novos nem funcionalidades já implementadas.** O primeiro conjunto de maior valor visual é OCU-01/02/03/04/05: shell resizable, layout persistido, biblioteca, inspector e legibilidade da timeline. Este conjunto se encaixa em **MASTER-10 / MASTER-09 / MASTER-11**. As etapas com schema/engine keyframes, máscaras, efeitos e mídia dependem dos gates MASTER-01/02/03/04. [Playbook de UI](opencut-integration/03-workbench-build-playbook.md), [matriz de QA](opencut-integration/10-qa-matrix.md), [proveniência](opencut-integration/11-source-map-and-licenses.md).
+
 ## Anti-backlog: o que não pedir novamente
 
 - Recriar importação multi-clipe, quatro proporções, OPFS, história/versões, seleção de cenas ou correção de legendas. Já existem.
