@@ -752,7 +752,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           {editError && <ErrorBox error={editError} kind="error" />}
         </div>
         <div className="viewer">
-          <div className="canvas-box">
+          <div className="canvas-box" style={{ ['--ar' as string]: plan.output.width / plan.output.height }} data-format={`${plan.output.width}x${plan.output.height}`}>
             <canvas ref={canvasRef} data-testid="player-canvas" onClick={togglePlay} />
             <PreviewOverlay
               plan={plan}
