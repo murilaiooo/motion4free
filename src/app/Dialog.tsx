@@ -2,9 +2,11 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import './library.css';
 
+const FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])';
+
 /**
  * Janela por cima da tela (diálogo modal): fundo escurecido, Esc ou o X fecham, foco vai para dentro
- * ao abrir e volta para onde estava ao fechar.
+ * ao abrir, Tab circula só dentro dela, e o foco volta para onde estava ao fechar.
  */
 export function Dialog({ title, onClose, children, wide = false, testId }: { title: ReactNode; onClose: () => void; children: ReactNode; wide?: boolean; testId?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -17,6 +19,22 @@ export function Dialog({ title, onClose, children, wide = false, testId }: { tit
       if (e.key === 'Escape') {
         e.stopPropagation();
         onClose();
+        return;
+      }
+      // Tab fica dentro da janela (senão o foco ia parar nos botões escondidos atrás do fundo escuro)
+      if (e.key === 'Tab' && ref.current) {
+        const items = [...ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => !el.hasAttribute('disabled') && el.offsetParent !== null);
+        if (items.length === 0) return;
+        const firstItem = items[0]!;
+        const last = items[items.length - 1]!;
+        const active = document.activeElement;
+        if (e.shiftKey && (active === firstItem || active === ref.current)) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          firstItem.focus();
+        }
       }
     };
     window.addEventListener('keydown', onKey, true);

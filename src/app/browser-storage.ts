@@ -13,13 +13,20 @@ export function opfsAvailable(): boolean {
   return typeof navigator !== 'undefined' && !!navigator.storage?.getDirectory;
 }
 
+/** "Não existe" (ou é pasta onde se esperava arquivo): o resto é falha de verdade e sobe como erro. */
+const absent = (err: unknown) => {
+  const name = (err as DOMException)?.name;
+  return name === 'NotFoundError' || name === 'TypeMismatchError';
+};
+
 async function walk(path: string[], create: boolean): Promise<DirHandle | null> {
   let dir = (await navigator.storage.getDirectory()) as DirHandle;
   for (const name of path) {
     try {
       dir = (await dir.getDirectoryHandle(name, { create })) as DirHandle;
-    } catch {
-      return null;
+    } catch (err) {
+      if (!create && absent(err)) return null;
+      throw err;
     }
   }
   return dir;
@@ -39,22 +46,33 @@ export class OpfsFs implements Fs {
     if (!dir) return null;
     try {
       return await (await dir.getFileHandle(path[path.length - 1]!)).getFile();
-    } catch {
-      return null;
+    } catch (err) {
+      // Antes, qualquer falha virava "não existe" e um projeto salvo parecia sumido ou estragado.
+      if (absent(err)) return null;
+      throw err;
     }
   }
 
   async writeFile(path: string[], data: Blob | string): Promise<void> {
     const dir = await walk(path.slice(0, -1), true);
     if (!dir) throw new Error(`pasta ${path.slice(0, -1).join('/')} indisponível`);
-    const handle = await dir.getFileHandle(path[path.length - 1]!, { create: true });
-    if (!('createWritable' in handle)) throw new Error('createWritable indisponível neste navegador');
-    const w = await handle.createWritable();
+    const name = path[path.length - 1]!;
+    const existed = await dir.getFileHandle(name).then(() => true, () => false);
     try {
-      await w.write(data);
-      await w.close();
+      const handle = await dir.getFileHandle(name, { create: true });
+      if (!('createWritable' in handle)) throw new Error('createWritable indisponível neste navegador');
+      // O navegador grava numa cópia à parte e só troca no close(): ou fica o arquivo novo inteiro, ou o antigo.
+      const w = await handle.createWritable();
+      try {
+        await w.write(data);
+        await w.close();
+      } catch (err) {
+        await w.abort().catch(() => undefined);
+        throw err;
+      }
     } catch (err) {
-      await w.abort().catch(() => undefined);
+      // getFileHandle(create) já criou um arquivo vazio: sem isso, um video.bin de 0 bytes parecia uma cópia.
+      if (!existed) await dir.removeEntry(name).catch(() => undefined);
       throw err;
     }
   }

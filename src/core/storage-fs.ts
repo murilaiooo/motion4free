@@ -11,9 +11,12 @@ export interface FsEntry {
 export interface Fs {
   /** Itens da pasta, ou null se ela não existe. */
   list(dir: string[]): Promise<FsEntry[] | null>;
-  /** Conteúdo do arquivo, ou null se ele não existe. */
+  /** Conteúdo do arquivo, ou null se ele não existe. Outras falhas de leitura lançam erro (não são "não existe"). */
   readFile(path: string[]): Promise<Blob | null>;
-  /** Cria as pastas que faltarem e grava (substitui) o arquivo. */
+  /**
+   * Cria as pastas que faltarem e grava (substitui) o arquivo. Se a gravação falhar, o conteúdo
+   * anterior fica como estava, e um arquivo que não existia antes não fica para trás vazio.
+   */
   writeFile(path: string[], data: Blob | string): Promise<void>;
   /** Apaga arquivo ou pasta inteira; não falha se não existir. */
   remove(path: string[]): Promise<void>;
@@ -26,7 +29,8 @@ export async function dirSize(fs: Fs, dir: string[]): Promise<number> {
   let total = 0;
   for (const e of entries) {
     if (e.kind === 'dir') total += await dirSize(fs, [...dir, e.name]);
-    else total += (await fs.readFile([...dir, e.name]))?.size ?? 0;
+    // um arquivo ilegível conta 0, mas não impede medir (nem apagar) o resto
+    else total += (await fs.readFile([...dir, e.name]).catch(() => null))?.size ?? 0;
   }
   return total;
 }

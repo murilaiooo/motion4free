@@ -2,6 +2,17 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.16.0 — 21/10/2026
+**Projetos que não se perdem, volume igual entre clipes, enquadramento na tela e polimento do editor.** Implementado; os testes automáticos e manuais desta versão ainda não foram executados.
+
+- **Recuperação de projetos (achado do QA do PR #55):** a cópia do vídeo era gravada antes das edições, então fechar a aba durante a cópia deixava uma pasta sem dados, mostrada como "Projeto que não abre". Agora as edições (project.json e meta.json) são gravadas primeiro. A lista separa projeto sem a cópia do vídeo (abre e pede o original, M4F-604), resumo perdido (refeito a partir dos dados), **importação interrompida** (cartão próprio e aviso novo M4F-617) e dados realmente danificados (M4F-602, com o motivo). No OPFS, uma gravação que falha não deixa arquivo vazio, e erro de leitura não é mais confundido com "arquivo não existe". O teste do #55 esperava com `waitForFunction` e função async, que passa na hora; o teste novo (`e2e/project-recovery.spec.ts`) usa `expect.poll`.
+- **Volume igual entre clipes (#53):** prévia, MP4, adicionar clipes e reabrir usam o mesmo ganho por clipe (mediana da fala, ±9 dB, pico 0,97), sempre calculado do áudio original. Um áudio mais longo que o clipe não vaza mais para o clipe seguinte.
+- **Enquadramento na tela:** Preencher a tela ou Mostrar inteiro (com o vídeo desfocado atrás), aproximar, mover e centralizar, para o vídeo todo ou só um clipe. Antes o motor tinha isso, mas não havia controle. "Seguir o rosto" (#54) continua **não implementado**: sem detector de rosto, o recorte fica no centro, e a tela não promete o contrário.
+- **Exportação mais rápida:** os quadros são lidos em sequência (`canvasesAtTimestamps`), não com uma busca por quadro.
+- **Motion:** o título de abertura pula cumprimentos ("Oi gente, tudo bem?") em vez de mostrar "Oi" gigante.
+- **Editor:** avisos com botão para dispensar; "Copiar detalhes" com plano B quando o navegador não deixa copiar; Tab preso dentro das janelas; setas andam um quadro (Shift, 1 s), Home/End; desfazer pelo teclado bloqueado enquanto o app trabalha; trava contra adicionar clipes duas vezes ao mesmo tempo (do PR #55); lista de clipes com as cores do tema (usava variáveis inexistentes) e botão Adicionar acessível pelo teclado.
+- **Qualidade (#30):** kit de avaliação cega em [qualidade/avaliacao-cega.md](qualidade/avaliacao-cega.md). Nada nesta versão prova qualidade de motion designer profissional.
+
 ## v0.15.1 — 20/10/2026
 **QA ampliado, recuperação de arquivos inválidos e smoke do deploy real.**
 

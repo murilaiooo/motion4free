@@ -49,6 +49,7 @@ export const ERRORS = {
   VIDEO_DIFERENTE: { code: 'M4F-603', title: 'Este não é o mesmo vídeo do projeto salvo.' },
   VIDEO_AUSENTE: { code: 'M4F-604', title: 'Para continuar o projeto salvo, escolha de novo o vídeo original.' },
   CLIPES_AUSENTES: { code: 'M4F-615', title: 'Faltam vídeos do projeto salvo neste navegador. Escolha de novo os vídeos originais.' },
+  IMPORTACAO_INTERROMPIDA: { code: 'M4F-617', title: 'A última importação parou antes de salvar a primeira edição (a aba foi fechada ou faltou espaço). Nada do seu vídeo original foi perdido: abra o vídeo de novo.' },
   CLIPE_DIFERENTE: { code: 'M4F-616', title: 'Um dos vídeos escolhidos não é de nenhum clipe do projeto salvo; ele foi ignorado.' },
   VERSAO_LIMITE: { code: 'M4F-605', title: 'Limite de 20 versões guardadas. Apague uma para guardar outra.' },
   ESPACO_INSUFICIENTE: { code: 'M4F-606', title: 'Pode faltar espaço neste navegador para guardar este vídeo (e o modelo de legenda, se ainda não foi baixado). Libere espaço em Armazenamento ou continue mesmo assim.' },

@@ -17,6 +17,7 @@
 - [v0.8 — legenda precisa: Whisper large-v3-turbo com reserva automática, janelas com folga, limpeza e medida de acerto](decisions/0013-legenda-precisa.md) (ADR-0013) e [como medir o acerto da legenda](ai/avaliar-legenda.md).
 - [v0.10 — novo visual: editor em tela cheia](decisions/0015-novo-visual.md) (ADR-0015) e [sistema visual da interface](design-system.md).
 - [Roteiro de teste consolidado (tudo até a v0.10, com o novo visual), para quem testa](roteiro-de-teste.md).
+- [v0.16 — recuperação de projetos, volume igual entre clipes e enquadramento](CHANGELOG.md), [roteiro de teste da v0.16](roteiro-de-teste-v0.16.md) e [kit de avaliação cega da qualidade do motion](qualidade/avaliacao-cega.md) (issue #30).
 
 ## Contexto e histórico
 - [Visão do produto](vision.md): público, problema, proposta de valor e princípios.

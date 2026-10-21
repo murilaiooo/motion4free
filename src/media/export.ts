@@ -2,7 +2,7 @@ import { stylesOf } from '../editorial/ranges';
 import { AudioSample, AudioSampleSource, BufferTarget, CanvasSink, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH } from 'mediabunny';
 import { toAppError } from '../core/errors';
 import type { EditPlan } from '../core/types';
-import { outputDuration } from '../engine/timeline';
+import { outputDuration, outputToSource } from '../engine/timeline';
 import { drawFrame } from '../render/frame';
 import type { DecodedAudio } from './audio';
 import { chooseCodecs } from './codecs';
@@ -74,14 +74,22 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
 
   const srcSize = decodeSize(media.width, media.height, EXPORT_MAX_SIDE);
   const sink = new CanvasSink(media.video, { ...srcSize, fit: 'fill', poolSize: 2 });
-  for (let f = 0; f < frames; f++) {
+  // Um pedido só com todos os instantes (em ordem): o decodificador lê cada pedaço do arquivo uma vez.
+  // Antes era um getCanvas por quadro, que pode voltar ao quadro-chave a cada quadro (exportação lenta).
+  const times = Array.from({ length: frames }, (_, f) => outputToSource(plan.segments, f / fps) ?? 0);
+  let f = 0;
+  for await (const wrapped of sink.canvasesAtTimestamps(times)) {
+    if (f >= frames) break;
     const t = f / fps;
-    const { outputToSource } = await import('../engine/timeline');
-    const src = outputToSource(plan.segments, t) ?? 0;
-    const wrapped = await sink.getCanvas(src);
     drawFrame(ctx as any, plan, t, (wrapped?.canvas as any) ?? null);
     await videoSource.add(t, 1 / fps);
     if (f % 10 === 0) opts.onProgress?.((f / frames) * 0.95);
+    f++;
+  }
+  // o vídeo acabou antes do previsto (arquivo cortado): o resto sai só com o desenho do modelo, sem buraco no tempo
+  for (; f < frames; f++) {
+    drawFrame(ctx as any, plan, f / fps, null);
+    await videoSource.add(f / fps, 1 / fps);
   }
 
   if (audio && audioSource) {
@@ -129,25 +137,35 @@ async function exportPlanUnsafeMulti(
   await output.start();
 
   const clipFrames = new ClipFrames(clipSources, { maxSide: EXPORT_MAX_SIDE, poolSize: 2 });
-  // Build layout for quick mapping
-  let layout = new Map<string, { start: number; end: number }>();
-  let acc = 0;
-  for (const c of plan.clips) { layout.set(c.id, { start: acc, end: acc + c.duration }); acc += c.duration; }
-
-  for (let f = 0; f < frames; f++) {
-    const t = f / fps;
-    const info = outputToClip(plan.segments, plan.clips, t);
-    let frame: any = null;
-    if (info) {
-      const sink = clipFrames.sink(info.clipId);
-      if (sink) {
-        const wrapped = await sink.getCanvas(info.local);
-        if (wrapped?.canvas) frame = clipFrames.frame(plan, info.clipId, wrapped.canvas as any, info.local);
+  // Quadros agrupados em sequências do mesmo clipe; cada sequência é lida de uma vez, em ordem (ver acima).
+  const infos = Array.from({ length: frames }, (_, f) => outputToClip(plan.segments, plan.clips, f / fps));
+  let f = 0;
+  while (f < frames) {
+    const info = infos[f];
+    const sink = info ? clipFrames.sink(info.clipId) : null;
+    let end = f + 1;
+    while (end < frames && infos[end]?.clipId === info?.clipId) end++;
+    if (!info || !sink) {
+      for (; f < end; f++) {
+        drawFrame(ctx as any, plan, f / fps, null);
+        await videoSource.add(f / fps, 1 / fps);
       }
+      continue;
     }
-    drawFrame(ctx as any, plan, t, frame);
-    await videoSource.add(t, 1 / fps);
-    if (f % 10 === 0) opts.onProgress?.((f / frames) * 0.95);
+    const locals = infos.slice(f, end).map((i) => i!.local);
+    for await (const wrapped of sink.canvasesAtTimestamps(locals)) {
+      if (f >= end) break;
+      const t = f / fps;
+      const frame = wrapped?.canvas ? clipFrames.frame(plan, info.clipId, wrapped.canvas as any, infos[f]!.local) : null;
+      drawFrame(ctx as any, plan, t, frame);
+      await videoSource.add(t, 1 / fps);
+      if (f % 10 === 0) opts.onProgress?.((f / frames) * 0.95);
+      f++;
+    }
+    for (; f < end; f++) {
+      drawFrame(ctx as any, plan, f / fps, null);
+      await videoSource.add(f / fps, 1 / fps);
+    }
   }
 
   if (audio && audioSource) {

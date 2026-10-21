@@ -42,7 +42,7 @@ export function FormatSelector({ plan, onChange, disabled }: Props) {
         onChange={(e) => setFormat(e.target.value as OutputFormatId)}
         disabled={disabled}
         data-testid="format-select"
-        style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)' }}
+        style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--line)' }}
       >
         {FORMAT_IDS.map((id) => (
           <option key={id} value={id}>
