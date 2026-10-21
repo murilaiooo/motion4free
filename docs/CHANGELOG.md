@@ -15,6 +15,11 @@ A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Mo
 - Cópia do vídeo para o navegador, adicionar clipes, pedidos à IA e Armazenamento ganharam o mesmo painel.
 - Decisões em `docs/decisions/0024-progresso-detalhado.md`.
 
+## v0.22.1 — 21/10/2026
+**Sem campo de link no modo Clipes.** Implementado; não testado.
+
+- O campo "Cole o link" saiu: como o app não baixa de links, ele só confundia. No lugar ficam, sempre à vista, as três formas de conseguir o arquivo (YouTube Studio, pedir ao dono, gravação da live).
+
 ## v0.22.0 — 21/10/2026
 **Novo modo: Clipes de vídeo longo.** Implementado; não testado. (Publicação reenviada porque a Cloudflare não pegou o primeiro envio.)
 
