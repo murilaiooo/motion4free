@@ -1,0 +1,7 @@
+# Production static assets only. Worker-generated mirror responses have separate headers.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval' https://cdn.jsdelivr.net; worker-src 'self' blob:; connect-src 'self' blob: https://huggingface.co https://*.huggingface.co https://*.hf.co https://cdn.jsdelivr.net https://raw.githubusercontent.com https://storage.googleapis.com https://openrouter.ai https://api.groq.com https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com; style-src 'self' 'unsafe-inline'; font-src 'self' blob: data:; img-src 'self' blob: data:; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

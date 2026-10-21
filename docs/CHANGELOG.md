@@ -1,3 +1,7 @@
+## 0.31.2 — UNTESTED / AWAITING QA
+
+- #12: production static security headers, current privacy/reporting policy and explicit hosting/settings evidence gaps.
+
 # Histórico de versões
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
