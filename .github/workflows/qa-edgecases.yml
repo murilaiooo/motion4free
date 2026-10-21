@@ -1,0 +1,32 @@
+name: QA novel edge cases
+on:
+  pull_request:
+    paths:
+      - 'e2e/qa-untested-*.spec.ts'
+      - 'tests/qa-heterogeneous-audio.test.ts'
+      - 'src/app/App.tsx'
+      - 'src/app/Editor.tsx'
+      - 'src/app/ClipList.tsx'
+      - 'scripts/make-fixture.sh'
+      - '.github/workflows/qa-edgecases.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  untouched:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vitest run tests/qa-heterogeneous-audio.test.ts
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: npm run fixture
+      - run: npx playwright install --with-deps chromium
+      - name: Run only previously untested browser scenarios
+        run: npx playwright test e2e/qa-untested-a11y.spec.ts e2e/qa-untested-privacy-faults.spec.ts e2e/qa-untested-resampling.spec.ts --workers=1
