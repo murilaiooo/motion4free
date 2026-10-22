@@ -6,7 +6,7 @@ export interface TranscriptIndex {
   version: 1; words: readonly Word[]; sentences: ContextSentence[];
   positions: ReadonlyMap<string, number>; sentenceAt: readonly number[]; duration: number;
 }
-export interface ContextWindow { id: string; firstSentence: number; lastSentence: number; firstWord: number; lastWord: number; body: string }
+export interface ContextWindow { id: string; firstSentence: number; lastSentence: number; firstWord: number; lastWord: number; body: string; insufficientOverlap?: boolean }
 const textOf = (words: readonly Word[]) => words.map((word) => word.text.trim()).join(' ');
 const terminal = (text: string) => /[.!?…]["”')]*$/.test(text.trim());
 const backReference = /^(?:isso|isto|esse|essa|esses|essas|ele|ela|eles|elas|aquilo|portanto|então|como (?:eu )?falei|this|that|it|he|she|they|as i said)\b/iu;
@@ -40,27 +40,48 @@ export function buildTranscriptIndex(words: readonly Word[], duration: number): 
   return { version: 1, words, sentences, positions, sentenceAt, duration };
 }
 
-/** Every sentence belongs to a window; one full sentence overlaps for antecedent/answer context. */
-export function partitionContextWindows(index: TranscriptIndex, maxChars = 5000, signal?: AbortSignal): ContextWindow[] {
-  if (!Number.isFinite(maxChars) || maxChars < 2500 || maxChars > 32_000) throw new AppError('CLIPES_CONTEXTO_INVALIDO');
+/** UTF-8 upper bound after the transcript delimiter escaping used by AI requests. */
+export function escapedUtf8Bytes(text: string): number {
+  let bytes = 0;
+  for (const c of text) {
+    const code = c.codePointAt(0)!;
+    bytes += c === '<' || c === '>' ? 3 : code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
+  }
+  return bytes;
+}
+
+/** Bounded payloads, with a full possible clip of temporal overlap whenever the byte budget allows. */
+export function partitionContextWindows(index: TranscriptIndex, maxBytes = 5000, signal?: AbortSignal, overlapSeconds = 0): ContextWindow[] {
+  if (!Number.isFinite(maxBytes) || maxBytes < 512 || maxBytes > 32_000 || !Number.isFinite(overlapSeconds) || overlapSeconds < 0) throw new AppError('CLIPES_CONTEXTO_INVALIDO');
+  const lines = index.sentences.map(sentence => JSON.stringify({ sentence: sentence.id, boundary: sentence.complete ? 'punctuation' : 'uncertain',
+    start: index.words[sentence.first]!.start, end: index.words[sentence.last]!.end,
+    words: index.words.slice(sentence.first, sentence.last + 1).map(word => [word.id, word.text]) }));
+  const costs = lines.map(escapedUtf8Bytes);
   const out: ContextWindow[] = [];
   let first = 0;
   while (first < index.sentences.length) {
     if (signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
-    let last = first;
-    let body = '';
+    if (out.length >= 2048) throw new AppError('CLIPES_CONTEXTO_INVALIDO', 'O limite de janelas foi atingido; preservei candidatos locais.');
+    let last = first, bytes = 0;
+    const start = index.words[index.sentences[first]!.first]!.start;
     while (last < index.sentences.length) {
-      const sentence = index.sentences[last]!;
-      const line = JSON.stringify({ sentence: sentence.id, boundary: sentence.complete ? 'punctuation' : 'uncertain', words: index.words.slice(sentence.first, sentence.last + 1).map((word) => [word.id, word.text]) });
-      if (line.length > maxChars) throw new AppError('CLIPES_CONTEXTO_INVALIDO', 'uma frase ultrapassa o limite de contexto');
-      if (body && body.length + line.length + 1 > maxChars) break;
-      body += (body ? '\n' : '') + line;
-      last++;
+      if (costs[last]! > maxBytes) throw new AppError('CLIPES_CONTEXTO_INVALIDO', 'Uma frase excede o contexto disponível; preservei candidatos locais.');
+      const end = index.words[index.sentences[last]!.last]!.end;
+      if (last > first && (bytes + costs[last]! + 1 > maxBytes || (overlapSeconds > 0 && end - start > overlapSeconds * 2 + 24))) break;
+      bytes += costs[last]! + (last > first ? 1 : 0); last++;
     }
-    const end = last - 1;
-    out.push({ id: `window-${first}-${end}`, firstSentence: first, lastSentence: end, firstWord: index.sentences[first]!.first, lastWord: index.sentences[end]!.last, body });
+    const end = last - 1, endTime = index.words[index.sentences[end]!.last]!.end;
+    let next = end > first ? end : last;
+    if (overlapSeconds > 0 && last < index.sentences.length) {
+      next = first + 1;
+      while (next < end && index.words[index.sentences[next]!.first]!.start < endTime - overlapSeconds) next++;
+    }
+    const overlap = next < last ? endTime - index.words[index.sentences[next]!.first]!.start : 0;
+    out.push({ id: `window-${first}-${end}`, firstSentence: first, lastSentence: end,
+      firstWord: index.sentences[first]!.first, lastWord: index.sentences[end]!.last, body: lines.slice(first, last).join('\n'),
+      insufficientOverlap: overlapSeconds > 0 && last < index.sentences.length && overlap < overlapSeconds });
     if (last >= index.sentences.length) break;
-    first = end > first ? end : last;
+    first = next;
   }
   return out;
 }

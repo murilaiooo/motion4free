@@ -1,4 +1,4 @@
-import { REVIEW_AXES, readBlindPackage, reviewerOrder, readBlindReview } from '../../src/quality/blind-review.ts';
+import { REVIEW_AXES, readBlindPackage, reviewerOrder, readBlindReview, readBlindRating } from '../../src/quality/blind-review.ts';
 import { AppError, describeError } from '../../src/core/errors.ts';
 import { $, readJson, download, element } from './common.mjs';
 let pack, order = [], index = 0, activeUrl = null, identity = null; const ratings = new Map(), preferences = new Map();
@@ -39,18 +39,46 @@ function show() {
 $('start').addEventListener('click', async () => { try { const candidate = readBlindPackage(await readJson($('package').files[0])); const nextOrder = reviewerOrder(candidate, $('reviewer').value); identity = {reviewerId:$('reviewer').value, expertise:$('expertise').value}; pack = candidate; order = nextOrder; index = 0; ratings.clear(); preferences.clear(); $('export').disabled = true; show(); $('status').textContent = 'Rodada iniciada. Notas e preferências ficam só nesta aba até baixar JSON.'; } catch(err) { error(err); } });
 $('save').addEventListener('click', () => { try {
   const variant = pack.variants.find(v => v.id === order[index]); let rating;
-  if ($('abstain').checked) { const reason = $('abstain-reason').value.trim(); if (!reason) throw new AppError('QUALIDADE_NOTAS'); rating = {status:'abstain',variantId:variant.id,reason}; }
-  else {
-    if (!$('video').src || $('video').readyState < 1) throw new AppError('QUALIDADE_NOTAS');
-    const scores = {}; for (const axis of Object.keys(REVIEW_AXES)) { const score = $('score-'+axis).value, time = $('time-'+axis).value, note = $('note-'+axis).value.trim(); if (score === '' || time === '' || !note || Number(time) > $('video').duration) throw new AppError('QUALIDADE_NOTAS'); scores[axis] = {score:Number(score),second:Number(time),note}; }
-    const severe = []; if ($('severe').value) { if ($('severe-time').value === '' || !$('severe-note').value.trim() || Number($('severe-time').value) > $('video').duration) throw new AppError('QUALIDADE_NOTAS'); severe.push({kind:$('severe').value,second:Number($('severe-time').value),note:$('severe-note').value}); }
+  const invalid = (field, message) => { $(field).focus(); throw new AppError('QUALIDADE_NOTAS', message); };
+  const timestamp = (field, label) => {
+    const raw = $(field).value, value = Number(raw);
+    if (raw === '' || !Number.isFinite(value) || value < 0 || value > 14400 || value > $('video').duration) invalid(field, `${label}: informe um tempo entre zero e a duração do vídeo.`);
+    return value;
+  };
+  if ($('abstain').checked) {
+    const reason = $('abstain-reason').value.trim();
+    if (!reason) invalid('abstain-reason', 'Explique o motivo da abstenção.');
+    rating = {status:'abstain',variantId:variant.id,reason};
+  } else {
+    if (!$('video').src || $('video').readyState < 1 || !Number.isFinite($('video').duration)) throw new AppError('QUALIDADE_NOTAS', 'Selecione o vídeo e aguarde sua duração antes de avaliar.');
+    const scores = {};
+    for (const [axis, label] of Object.entries(REVIEW_AXES)) {
+      const raw = $('score-'+axis).value, score = Number(raw), note = $('note-'+axis).value.trim();
+      if (raw === '' || !Number.isInteger(score) || score < 0 || score > 5) invalid('score-'+axis, `${label}: escolha uma nota de zero a cinco.`);
+      const second = timestamp('time-'+axis, label);
+      if (!note) invalid('note-'+axis, `${label}: descreva a evidência.`);
+      scores[axis] = {score,second,note};
+    }
+    const severe = [];
+    if ($('severe').value) {
+      const second = timestamp('severe-time', 'Erro severo'), note = $('severe-note').value.trim();
+      if (!note) invalid('severe-note', 'Descreva o erro severo observado.');
+      severe.push({kind:$('severe').value,second,note});
+    }
     rating = {status:'rated',variantId:variant.id,scores,severe};
   }
-  ratings.set(variant.id, rating);
+  const nextRating = readBlindRating(rating);
   const preference = $('preference').value, reason = $('preference-reason').value.trim();
-  if (preference && reason) preferences.set(variant.caseId, {caseId:variant.caseId,variantId:preference === 'abstain' ? null : preference,reason});
+  if (preference && !reason) invalid('preference-reason', 'Justifique a preferência ou a abstenção.');
+  if (!preference && reason) invalid('preference', 'Escolha uma preferência ou apague a justificativa para removê-la.');
+  const preferredRating = preference === variant.id ? nextRating : ratings.get(preference);
+  if (preferredRating?.status === 'abstain') invalid('preference', 'Escolha uma versão avaliada ou registre abstenção para este conteúdo.');
+  // Commit both answers only after every field is valid; clearing the choice really removes it.
+  ratings.set(variant.id, nextRating);
+  if (preference) preferences.set(variant.caseId, {caseId:variant.caseId,variantId:preference === 'abstain' ? null : preference,reason});
+  else preferences.delete(variant.caseId);
   if (index + 1 < order.length) { index++; show(); } else { $('save').disabled = true; $('export').disabled = false; $('status').textContent = 'Respostas guardadas na aba. Baixar exige todos os eixos ou abstenção, e preferência justificada para cada conteúdo.'; }
 } catch(err) { error(err); } });
 $('previous').addEventListener('click', () => { if (index > 0) { index--; show(); } });
-$('export').addEventListener('click', () => { try { const review = readBlindReview({version:1,...identity,ratings:[...ratings.values()],preferences:[...preferences.values()]},pack); download(`review-${identity.reviewerId}.json`,review); } catch(err) { error(err); } });
+$('export').addEventListener('click', () => { try { const review = readBlindReview({version:2,packageId:pack.packageId,...identity,ratings:[...ratings.values()],preferences:[...preferences.values()]},pack); download(`review-${identity.reviewerId}.json`,review); } catch(err) { error(err); } });
 window.addEventListener('pagehide', () => { $('video').removeAttribute('src'); $('video').load(); if (activeUrl) URL.revokeObjectURL(activeUrl); ratings.clear(); preferences.clear(); });

@@ -1,0 +1,76 @@
+# Revisão detalhada das implementações — 21/10/2026
+
+**IMPLEMENTED — NOT TESTED / UNTESTED / AWAITING QA.** Esta entrega corrige defeitos encontrados por leitura; não certifica funcionamento ou ausência de defeitos.
+
+## Alvo de QA e preservação
+
+Branch: `review/integration-static-hardening`, versão proposta `0.34.0`, baseada em `main` 84e13c644cbf556021ccf76b89feeb93d2d8c7e3. Metadados GitHub e main foram relidos antes da publicação; os heads originais continuavam iguais. Os merges abaixo são locais, somente na branch isolada. Nenhum PR foi mergeado no GitHub, nenhuma issue fechada, nenhum main ou trabalho alheio foi sobrescrito.
+
+Esta branch contém os heads originais dos Drafts #97, #98, #99, #100, #103, #104, #105, #106, #107, #108, #109, #110, #111, #112, #113, #114 e #115. As correções desta revisão estão **somente neste head combinado**. Os heads dos PRs anteriores permanecem como histórico e não devem ser aprovados presumindo que contêm estes ajustes. A lista original de commits/escopos está no [handoff anterior](2026-10-21-implementation-only-backlog-handoff.md). PR #101 e branches de outras sessões não foram integrados.
+
+Use o commit exato do Draft desta branch para QA. Se a integração for dividida depois, reavalie os contratos compartilhados e repita o QA no head final. Resolver conflito só pelo último lado dos arquivos de projeto teria apagado `faceTracks` ou `sourceMaps`; ambos foram preservados em sessão, schema, abertura e snapshot. Imports editoriais e versões de package/lock também foram reconciliados.
+
+## Método e limite da revisão
+
+Revisão do implementador e três frentes independentes por leitura: IA/segurança; mídia/clipes/persistência; editorial/pesquisa. Houve releituras depois das correções até a última rodada não apontar novo defeito concreto nos caminhos revistos. Isso é evidência de inspeção, não evidência de execução.
+
+Foram lidos código, diffs, schemas, testes existentes e documentação. O pacote público exato MediaPipe Tasks Vision 1.1.1 foi obtido apenas como artefato fonte numa pasta ignorada: loaders, declarações e fontes JS foram lidos sem instalação nem scripts. AAC, WebLLM e ONNX instalados também foram inspecionados como texto. Avisos MIT Microsoft foram obtidos das fontes upstream fixadas. Nenhum segredo ou conteúdo de projeto foi enviado a provedores.
+
+**Não foram executados testes, runners, Playwright, Vitest, build, typecheck, lint, validações, benchmark, aplicação/browser de produto, mídia, inferência, API de provedor ou workflows. Nenhum teste existente foi alterado.** Hooks de commit foram desativados só para estes commits e mensagens usam `[skip ci]`; não se afirma controle de integrações externas. A CLI CodeRabbit não estava disponível; não há resultado CodeRabbit nem alegação de aprovação automática.
+
+## Defeitos e correções implementadas
+
+| Área/issues | Causa encontrada por leitura | Correção e arquivos principais |
+|---|---|---|
+| Integração #54/#102 | Branches adicionavam campos distintos no mesmo contrato/snapshot | Preservação de ambos em `src/app/App.tsx`, `src/core/project.ts`; imports da produção e manifests compostos |
+| Rosto/histórico #54 | Banco por ID de clipe era sobrescrito fora do histórico; undo/reanálise alteravam versões antigas | Banco imutável e `ClipRef.faceTrackId` opcional/nulo, resolução única, retenção por past/present/future/versões; `core/{types,schema}`, `render/framing`, `media/sources`, `app/Editor` |
+| Rosto concorrente #54/#11 | Resultado atrasado podia aplicar enquadramento depois de outra edição | Comparação do histórico e da mídia antes do commit; descarte com M4F-527; `app/Editor` |
+| Painel de rosto #54 | Vídeo único mostrava edits.video enquanto o render usava framing do clipe | Painel lê o caminho ativo, ativação aproveita geometria manual compatível, mínimo 1 explícito e seek preservado ao recriar player; `FramingPanel`, `Editor` |
+| Curadoria #102 | Reanálise descartava itens desmarcados já titulados/ajustados/gerados | Mesclagem por limites e retenção de trabalho; `selectionEdited` separa defaults de escolha humana; `ClipMaker`, `highlights` |
+| Ajuste de limites #102 | Clique sem mudança invalidava MP4; margens podiam exceder 30/60/90/180s | No-op mantém o mesmo momento/job/URL; margens cabem no limite final sem descartar fala; `clip-candidates`, `ClipMaker` |
+| Abrir no editor #102 | Progresso substituía done e revogava o download existente | Estado separado para progresso/erro de abertura; job e URL permanecem; `ClipMaker` |
+| Proveniência #102 | Mapa conhecia offset/duração, mas não fim solicitado; padding apontava conteúdo posterior inexistente | `sourceEnd` opcional persistido e limite das correspondências; `clip-pipeline`, `clip-source-map`, `core/project` |
+| Janelas #102 | Limite de caracteres e uma frase de overlap não comportavam histórias longas; não limitava chamadas locais | Bytes UTF-8 após escape, tempos por frase, overlap temporal quando cabe, limite de 2.048 janelas planejadas/32 chamadas amostradas, descarte de janelas curtas e aviso de cobertura parcial; `clip-context`, `clip-discovery`, `ClipMaker` |
+| Transcrição #6 | Retry com supressão de repetição e deduplicação textual de junção removiam ênfase legítima | Preservar primeira transcrição e palavras próximas; marcar ambiguidade, ordenar tempos e propagar needsReview; `asr-merge`, `whisper.worker` |
+| Consentimento #73/#9 | Preferências não ouviam storage; callback de chave podia restaurar estado antigo | Releitura antes de patch, sincronização entre abas, limpeza de cache e cancelamento imediato também da verificação do modelo; `AiOptions`, `AiSection` |
+| Cofre #73 | Lista de membros mudava antes da cifra ser gravada; lock podia perder a propriedade temporária da chave | Commit da lista só após sucesso e rastreamento separado de propriedade de sessão; lock/delete revogam a união; `ai/credentials/keys` |
+| Catálogo #73 | Continuação de conectar/lembrar podia buscar modelos depois de sair da tela | Guardas de montagem, revisão da credencial/chave e abort no cleanup; `AiSection` |
+| Roteamento #9 | Rota local persistida ignorava feature flag; storage velho escondia falhas em memória | Guardas no roteamento/preparo, timestamp validado para health e cooldown conservador; `AiOptions`, `ai/routing` |
+| Cache #9 | TTL só impedia reutilização, sem apagar texto de aba ociosa | Timer da entrada mais antiga e limpeza em reset/revogação; `ai/routing` |
+| Precedência #27 | Intensidade qualitativa perdia para look.motion guiado e podia anunciar override proibido | Resolver movimento explícito antes dos avisos e respeitar restrições fortes; `editorial/production` |
+| Contexto #8 | “no” inglês era confundido com a preposição portuguesa; remoção global deixava negativas inglesas passar | Contexto lexical conservador com pistas inglesas e contrações portuguesas; heurística declarada, sem alegação de compreensão semântica; `context-policy` |
+| Custo editorial #8/#29 | Relatório era recalculado em cada frame e filtrava toda a transcrição por segmento/cena | Memoização por plano/contexto, índice ordenado/prefixo e teto de 512 inspeções por cena com aviso; `Editor`, `decision-evidence` |
+| Rodadas #30 | A001/case-1 eram reutilizados; resposta não identificava o pacote | UUID por preparação em pacote/chave/resposta/resumo v2; rejeição cruzada, recriação de v1; `quality/blind-review`, `research/blind-review` |
+| Formulário #30 | Tempos negativos só falhavam no export; nota era salva antes da preferência; apagar escolha preservava a antiga | Validação da versão antes de mutar mapas, erro por campo, commit conjunto e remoção explícita; mesmos arquivos |
+| Avisos #2/#54 | Link emoji apontava fonte não publicada; ONNX tinha placeholder; MediaPipe não constava no inventário anterior | Link público, MIT upstream incorporado e entrada parcial MediaPipe; `public/{asset-provenance.json,licencas-runtime.txt}`, `docs/licencas.md` |
+
+Demais arquivos de suporte: `src/app/clip-pipeline.ts`, `src/core/project.ts`, `src/editorial/highlights.ts`, manifests, changelog, ADR-0033, README da avaliação e handoffs. O diff do Draft contém a lista exata. Nenhuma dependência nova foi adicionada pela revisão; a integração preserva a MediaPipe 1.1.1 da entrega #98.
+
+## O que QA deve verificar — somente pelo QA
+
+Brave é o navegador principal. Usar cópias autorizadas de mídia e credenciais de QA; preservar originais e nunca publicar segredos/transcrições. Registrar commit, browser/OS/hardware, resultado observado e artefatos sanitizados de cada cenário.
+
+1. **Gate técnico:** executar os checks do repositório e gerar o pacote de produção pelo processo autorizado do QA. Inspecionar compilação de todos os contratos e aplicação real dos headers; nenhum check foi executado pelo implementador. Não concluir só por esse gate: os casos abaixo exigem comportamento real.
+2. **Projeto combinado:** salvar/reabrir vídeo único e montagem com sourceMaps e faceTracks; incluir undo/redo e versões nomeadas. Reordenar, aparar, mudar formato e confirmar que legenda/áudio/proveniência e enquadramento usam os mesmos tempos. Abrir projetos antigos sem os novos campos.
+3. **Rostos:** analisar duas vezes com pessoas/sem pessoas/buracos e comparar versão A/B, undo, redo, nomear versão, salvar e reabrir. Deve restaurar a análise anterior. Iniciar análise e editar/desfazer/trocar projeto: resultado atrasado não deve sobrescrever. Mover playhead antes de analisar e observar sua preservação. Começar de fit/zoom<1, ler aviso de ativação, conferir controles de smart, substituir manualmente e desfazer. Preview e export precisam concordar no mesmo tempo.
+4. **Curadoria:** partir de cinco sugestões automáticas, pedir três e mudar duração; defaults devem ser substituídos. Marcar/desmarcar manualmente, titular, ajustar bounds e gerar um item; refazer IA/defaults sem perder trabalho. Seleções manuais preservadas podem exceder o novo número solicitado. Clique de borda sem mudança deve manter download. Abrir item pronto no editor, voltar e baixar de novo; repetir com falha de preparação.
+5. **Duração/origem:** palavras perto de 30/60/90 e 180 segundos; margens não podem exceder limite nem cortar fala. Verificar arquivo efetivamente recortado, padding de encoder, duração do container e abertura no editor. Mapa não deve atribuir padding a conteúdo posterior ao fim solicitado. Aparar/reordenar e comparar o relógio do original.
+6. **Contexto longo:** histórias de 60–90s cruzando limites, transcrição densa, caracteres Unicode/<>, pergunta/resposta, antecedente, condição e negação. A proposta só pode usar IDs válidos; título deve ser fiel. Conferir máximo de chamadas, amostragem distribuída, janelas curtas, falta de contexto e aviso parcial; progresso deve manter denominador. Indisponibilidade/quota/cancelamento devem manter candidatos locais e não causar troca paga silenciosa.
+7. **ASR/áudio:** repetição enfática (“não, não”), repetições perto de junção de janelas, fala baixa, palavra curta entre pausas, música e silêncio. Nenhuma remoção pode se basear apenas em repetição de texto. Revisão deve ficar visível e sobreviver a salvar/reabrir; conferir timestamps, A/V sync e cortes reais. A política conservadora pode manter duplicatas para revisão humana.
+8. **Credenciais/consentimento:** duas abas; revogar consentimento numa enquanto a outra aguarda autorização/resposta. Não deve iniciar novo envio com estado antigo; abort não pode retirar dados já enviados. Trocar chave durante catálogo/cifra, trancar/apagar cofre durante lembrar, falha de storage e sair da tela durante conectar. Chave antiga não deve voltar por callback; catálogo e sucesso de conexão devem pertencer à chave/modelo atuais. Cofre deve continuar cifrado, sem texto/logs/URLs com segredo.
+9. **Orçamento/local/cache:** feature flag local desligada com rotas antigas globais/projeto; sem carregar modelo. Falhas de gravação com health antigo devem manter streak/cooldown em memória. Conferir limites concorrentes, cooldown e reinício, expiração/limpeza do cache, silêncio de rede quando regras estão selecionadas. Suspensão da aba pode atrasar timers; validade precisa ser conferida ao acesso.
+10. **Editorial:** prompt “muito movimento” contra opção guiada diferente; “muito movimento, sem efeitos”; opção movimento zero; “No vídeo mostro 3 passos.” e “No 50% discount is available.”. Proibições prevalecem, avisos refletem resultado e destaques preservam sentido. A heurística pode sinalizar casos ambíguos; avaliar conteúdo real. Reproduzir com revisão aberta e transcrição longa; medir custo/responsividade, truncamento visível e relatório estável.
+11. **Rodadas cegas:** duas preparações com mesma seed/mesmos A001; mistura de respostas deve ser rejeitada pelo packageId. Recriar v1. Testar tempo negativo, não finito, acima do vídeo, campos ausentes, preferência sem justificativa, abstenção, voltar/revisar/apagar escolha e exportar. Campo inválido não deve guardar metade da alteração. Conferir cálculos com notas humanas reais e que pacote do avaliador não contém chave privada/produtor/origem. O UUID não prova anonimização de mídia.
+12. **Produção/CSP/licenças:** implantar pelo processo do QA e inspecionar console/headers/imports/WASM de ASR, AAC fallback, WebLLM e MediaPipe. Nenhum `unsafe-eval` amplo foi introduzido por suposição. Confirmar URLs públicas das licenças, assets emitidos, bibliotecas remotas e inventário do pacote. Pesquisa Canvas/Three e avaliação cega têm entradas próprias; verificar separadamente, sem interpretar POCs como exportador de produção.
+
+## Riscos e bloqueios que continuam abertos
+
+- Nenhuma garantia de compilação, execução, qualidade visual/semântica, sync, hardware/CORS/CSP/quotas ou estabilidade sem QA independente. A última releitura sem novo achado não elimina defeitos não detectados.
+- A invocação do helper dinâmico do ONNX no backend selecionado não pôde ser determinada só por leitura; compatibilidade com CSP requer QA. MediaPipe/AAC/WebLLM tiveram caminhos de loader lidos, não executados.
+- O inventário correspondente do FFmpeg embutido no AAC fallback, transientes e modelos remotos permanece bloqueio de lançamento/licença. O inventário público é parcial; textos de licença não equivalem à auditoria de todos os binários.
+- Rostos, seleção de contexto/negação e planos criativos continuam heurísticos/experimentais. Sem identificação de falante, embeddings semânticos integrados, corpus autorizado, comparação de 20 gravações, métricas ou certificação de qualidade profissional.
+- POCs #26/#28 não têm áudio/MP4 integrado nem vencedor de engine medido. Comparador OpenReel #5 continua não implementado conforme ADR-0032. #3/#4 dependem de prova de execução pelo QA, não de novo README.
+- Pacotes cegos v1 precisam ser recriados; não associar respostas antigas a uma rodada por inferência. Nenhum dataset, nota humana ou benchmark foi inventado.
+- #80 já estava fechado por outra sessão com comentário de aceite; não houve requisição de produção, reabertura ou nova alegação de verificação aqui.
+
+Próximo responsável: QA do Draft combinado. Manter issues abertas e todos os PRs sem merge até aceite independente. A revisão resolve os achados implementáveis; as lacunas de prova/escopo acima permanecem explicitamente pendentes.

@@ -54,6 +54,7 @@ import { MaskPanel } from './MaskPanel';
 import { planCues, toSrt } from '../editorial/subtitles';
 import { DEFAULT_SETUP, type CreativeSetup } from '../core/production';
 import { StoryboardReview } from './production/StoryboardReview';
+import { faceTrackFor, faceTracksForPlans } from '../render/framing';
 import { applyCreativeFinding } from '../editorial/creative-plan';
 import { evaluateDraft, reviseCreativeDirection } from '../editorial/production';
 import { CreativeSetupScreen } from './production/CreativeSetup';
@@ -187,8 +188,8 @@ interface EditorProps {
 
 export function Editor({ session, history, onHistory, onFaceTracks, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, noticeCount = 0, projectMenu, initialReview = false, music = null, onPickMusic, musicLoading = false }: EditorProps) {
   const plan = history.present;
-  const latestFaceContext = useRef({ history, session, onFaceTracks, onHistory });
-  latestFaceContext.current = { history, session, onFaceTracks, onHistory };
+  const latestFaceContext = useRef({ history, session, versions, onFaceTracks, onHistory });
+  latestFaceContext.current = { history, session, versions, onFaceTracks, onHistory };
   const [faceProgress, setFaceProgress] = useState<number | null>(null);
   const [faceError, setFaceError] = useState<AppError | null>(null);
   const faceAbort = useRef<AbortController | null>(null);
@@ -204,9 +205,10 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
   const before = comparedVersion?.plan ?? history.past.at(-1) ?? null;
   const beforeLabel = comparedVersion ? `a versão “${comparedVersion.name}”` : 'antes da última mudança';
   const shown = view === 'antes' && before ? before : plan;
-  const ctx = session.clipWords
+  const ctx = useMemo(() => session.clipWords
     ? { durationSec: totalDuration(plan.clips), words: placeWords(plan.clips, session.clipWords) }
-    : session.ctx;
+    : session.ctx, [session.clipWords, session.ctx, plan.clips]);
+  const editorialReview = useMemo(() => reviewOpen ? evaluateDraft(plan, ctx) : null, [reviewOpen, plan, ctx]);
   const shownAudio = useMemo(() => {
     if (!session.clipAudios) return session.audio;
     return combineAudios(shown.clips, Object.fromEntries(session.clipAudios), session.clipSilences);
@@ -283,6 +285,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
     };
     player.onError = setPlayerError;
     playerRef.current = player;
+    if (time > 0) void player.seek(time);
     return () => {
       player.destroy();
       playerRef.current = null;
@@ -557,16 +560,27 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
       if (ctrl.signal.aborted) return;
       const latest = latestFaceContext.current;
       if (latest.session.media !== session.media) return;
+      if (latest.history !== history) { setFaceError(new AppError('PEDIDO_CANCELADO')); return; }
+      // Append immutable analyses: every past/future/named plan keeps its own track selection.
       const tracks = { ...latest.session.faceTracks };
-      for (const id of ids) delete tracks[id];
-      Object.assign(tracks, result.tracks);
+      const selectedTracks = new Map<string, string | null>();
+      for (const id of ids) {
+        const track = result.tracks[id];
+        const trackId = track ? `ft-${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${id}-${Object.keys(tracks).length}`}` : null;
+        if (track && trackId) tracks[trackId] = track;
+        selectedTracks.set(id, trackId);
+      }
       if (result.withoutFaces.length) setFaceError(new AppError('ROSTOS_AUSENTES', result.withoutFaces.join(', ')));
       const current = latest.history.present;
+      if (!current.clips.some(clip => ids.has(clip.id))) return;
       const nextHistory = commitEdit(latest.history, { ...current, clips: current.clips.map((clip) => {
         if (!ids.has(clip.id)) return clip;
-        return { ...clip, framing: { ...(clip.framing ?? current.framing), mode: result.tracks[clip.id] ? 'smart' as const : 'fill' as const } };
+        const wasTracked = (clip.framing ?? current.framing).mode === 'smart' && !!faceTrackFor(current, clip.id, latest.session.faceTracks ?? {});
+        const singleManual = !latest.session.clipSources?.size && !wasTracked;
+        const base = singleManual ? { ...current.framing, zoom: Math.max(1, current.edits.video.scale), x: current.edits.video.x, y: current.edits.video.y } : clip.framing ?? current.framing;
+        return { ...clip, faceTrackId: selectedTracks.get(clip.id) ?? null, framing: { ...base, mode: result.tracks[clip.id] ? 'smart' as const : 'fill' as const } };
       }) });
-      latest.onFaceTracks(tracks);
+      latest.onFaceTracks(faceTracksForPlans(tracks, [...nextHistory.past, nextHistory.present, ...nextHistory.future, ...latest.versions.map(version => version.plan)]));
       latest.onHistory(nextHistory);
     } catch (err) {
       if (!ctrl.signal.aborted) setFaceError(toAppError(err, 'ROSTOS_FALHOU'));
@@ -850,7 +864,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
               {originalOutputSpans(plan, session.sourceMaps).map((span, i) => <p className="hint" key={i}>{fmt(span.sourceStart)}–{fmt(span.sourceEnd)} no original → {fmt(span.outputStart)}–{fmt(span.outputEnd)} nesta edição.</p>)}
             </details>}
             <FormatSelector plan={plan} onChange={(n) => apply(() => n)} disabled={off || disabled} />
-            <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} hasFaceTracks={!!session.faceTracks && Object.keys(session.faceTracks).length > 0} onTrackFaces={(target) => void trackFaces(target)} faceProgress={faceProgress} onCancelFaces={() => faceAbort.current?.abort()} disabled={off || disabled || faceProgress !== null} />
+            <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} trackedClipIds={plan.clips.filter(clip => !!faceTrackFor(plan, clip.id, session.faceTracks ?? {})).map(clip => clip.id)} onTrackFaces={(target) => void trackFaces(target)} faceProgress={faceProgress} onCancelFaces={() => faceAbort.current?.abort()} disabled={off || disabled || faceProgress !== null} />
             {faceError && <ErrorBox error={faceError} kind="warning" onDismiss={() => setFaceError(null)} />}
             <MaskPanel plan={plan} onApply={apply} disabled={off || disabled} />
           </div>
@@ -996,7 +1010,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
       </main>
 
       <aside className="inspector" ref={inspectorRef} aria-label="Detalhes">
-        {reviewOpen && <DraftReview editorial={evaluateDraft(plan, ctx)} onCustomize={() => setReviewOpen(false)} onExport={() => void onExport()} onRevise={openDirection} disabled={disabled || off} />}
+        {reviewOpen && editorialReview && <DraftReview editorial={editorialReview} onCustomize={() => setReviewOpen(false)} onExport={() => void onExport()} onRevise={openDirection} disabled={disabled || off} />}
         {reviewOpen && <StoryboardReview plan={plan} onSeek={seek} onApply={id => apply(p => applyCreativeFinding(p, id))} disabled={disabled || off} />}
         {!reviewOpen && plan.brief.production && <button className="sm" onClick={openDirection} disabled={off}>Direção criativa</button>}
         <div hidden={reviewOpen}>

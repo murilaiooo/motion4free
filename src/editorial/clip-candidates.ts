@@ -12,8 +12,11 @@ export function groundedMoment(index: TranscriptIndex, first: number, last: numb
   if (duration < limit.min || duration > limit.max) return null;
   const text = words.map((word) => word.text.trim()).join(' ');
   const previous = index.words[bounds.first - 1]; const next = index.words[bounds.last + 1];
-  const start = Math.min(a.start, Math.max(0, a.start - LEAD_SEC, previous ? previous.end + 0.02 : 0));
-  const end = Math.max(b.end, Math.min(index.duration, b.end + TAIL_SEC, next ? next.start - 0.02 : Infinity));
+  const requestedStart = Math.min(a.start, Math.max(0, a.start - LEAD_SEC, previous ? previous.end + 0.02 : 0));
+  const requestedEnd = Math.max(b.end, Math.min(index.duration, b.end + TAIL_SEC, next ? next.start - 0.02 : Infinity));
+  const lead = a.start - requestedStart, tail = requestedEnd - b.end;
+  const paddingScale = lead + tail > 0 ? Math.min(1, Math.max(0, limit.max - duration) / (lead + tail)) : 0;
+  const start = a.start - lead * paddingScale, end = Math.min(start + limit.max, b.end + tail * paddingScale);
   const questions = text.includes('?');
   const specificity = Math.min(10, (text.match(/\d+/g)?.length ?? 0) * 2);
   const score = Math.max(0, Math.min(100, 65 + specificity + (questions ? 4 : 0) + (source === 'ai-context' ? 3 : 0) - bounds.flags.length * 20));
@@ -89,5 +92,6 @@ export function nudgeContextMoment(moment: Moment, words: readonly Word[], durat
   const b = index.sentenceAt[last]! + (edge === 'end' ? direction : 0);
   if (a < 0 || b >= index.sentences.length || a > b) return moment;
   const next = groundedMoment(index, index.sentences[a]!.first, index.sentences[b]!.last, { length: 'longo', count: 1 }, 'local-context', undefined, true);
-  return next ? { ...next, rank: moment.rank, title: moment.userTitle ? moment.title : next.title, userTitle: moment.userTitle, reasons: ['bordas ajustadas manualmente por frase; confira o contexto', ...next.reasons] } : moment;
+  if (next && next.start === moment.start && next.end === moment.end) return moment;
+  return next ? { ...next, rank: moment.rank, userBounds: true, title: moment.userTitle ? moment.title : next.title, userTitle: moment.userTitle, reasons: ['bordas ajustadas manualmente por frase; confira o contexto', ...next.reasons] } : moment;
 }

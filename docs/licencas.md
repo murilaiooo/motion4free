@@ -89,3 +89,7 @@ Cenas, transições, estilos e a interface (layout, CSS, componentes) foram escr
 ## Detector local de rostos (#54, implementação não testada)
 
 MediaPipe Tasks Vision 1.1.1: Apache-2.0, Google. BlazeFace short-range float16 v1: Apache-2.0 conforme [model card oficial](https://storage.googleapis.com/mediapipe-assets/MediaPipe%20BlazeFace%20Model%20Card%20(Short%20Range).pdf), página 1. Uso opcional e local; sem reconhecimento de identidade. Código do pacote é dependência sem modificação; WASM/modelo são baixados de URLs fixas. Ver [ADR-0029](decisions/0029-rastreamento-local-de-rostos.md) para proveniência, versões e limites. Licença Apache distribuída em `public/licencas-rostos.txt`.
+
+## Revisão estática de integração (21/10/2026)
+
+O inventário agora inclui MediaPipe 1.1.1 e o link público da licença do subconjunto emoji. O aviso MIT de Microsoft foi incorporado de `onnxruntime` na revisão 8d85527a0 (runtime web fixado) e da tag v1.30.0 (common), em vez do placeholder de arquivo ausente. Isto não conclui o inventário de terceiros embutidos. Nenhum build, modelo, WASM ou aplicação foi executado. Continuam pendentes os arquivos/fonte correspondentes do FFmpeg embutido, hashes/revisões dos modelos e o inventário real do pacote de produção pelo QA. O detector opcional exige a mesma revisão de artefatos remotos antes de lançamento público.

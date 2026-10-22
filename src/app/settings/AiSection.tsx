@@ -26,7 +26,7 @@ import { authorizeRequest } from '../../ai/providers/consent';
 import { onCredentialChange } from '../../ai/credentials/keys';
 import { PRICING_LABEL, PROVIDERS, PROVIDER_IDS, keyLooksWrong, priceText, type ModelInfo, type ProviderId } from '../../ai/providers/registry';
 import { ErrorBox } from '../ErrorBox';
-import { LocalModelPicker, activeAiScope, getAiSettings, setAiSettings, useAiSettings, useWebGpu, type AiMode } from '../AiOptions';
+import { LocalModelPicker, activeAiScope, getAiSettings, onAiSettingsChange, setAiSettings, useAiSettings, useWebGpu, type AiMode } from '../AiOptions';
 
 /**
  * Configurações › IA e provedores (v0.27, issue #73): como o app entende os pedidos por texto.
@@ -228,9 +228,11 @@ function ProviderPanel({ id }: { id: ProviderId }) {
   const [draft, setDraft] = useState('');
   const [show, setShow] = useState(false);
   const [loaded, setLoaded] = useState<CatalogEntry | null>(() => catalog.get(id) ?? null);
+  const mounted = useRef(true);
   const activeRequest = useRef<AbortController | null>(null);
   const activeTest = useRef<AbortController | null>(null);
   useEffect(() => {
+    mounted.current = true;
     const stop = onCredentialChange((provider) => {
       if (provider !== id) return;
       activeRequest.current?.abort();
@@ -240,7 +242,8 @@ function ProviderPanel({ id }: { id: ProviderId }) {
       setTest({ kind: 'idle' });
       setConfirmPaid(null);
     });
-    return () => { stop(); activeRequest.current?.abort(); activeTest.current?.abort(); };
+    const stopSettings = onAiSettingsChange(() => { activeTest.current?.abort(); setTest({ kind: 'idle' }); });
+    return () => { mounted.current = false; stop(); stopSettings(); activeRequest.current?.abort(); activeTest.current?.abort(); };
   }, [id]);
   const revision = credentialRevision(id);
   // Uma listagem só pertence à chave que a buscou; trocar/revogar a chave a invalida sem guardar o segredo no cache.
@@ -261,6 +264,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
   }, [chosen?.id, consent]);
 
   async function load(k: string) {
+    if (!mounted.current || getKey(id) !== k) return;
     activeRequest.current?.abort();
     const ctrl = new AbortController();
     activeRequest.current = ctrl;
@@ -306,6 +310,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
       setAiSettings({ remote: null });
     }
     setSessionKey(id, k);
+    const connectedRevision = credentialRevision(id);
     setDraft('');
     setShow(false);
     // chave trocada de um serviço que estava no cofre: o cofre guarda a nova
@@ -313,6 +318,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
       try { await rememberKey(id, true); }
       catch (err) { setError(toAppError(err, 'COFRE_INDISPONIVEL')); return; }
     }
+    if (!mounted.current || connectedRevision !== credentialRevision(id) || getKey(id) !== k) return;
     await load(k);
   }
 

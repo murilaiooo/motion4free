@@ -1,7 +1,7 @@
 import { CanvasSink, type InputVideoTrack } from 'mediabunny';
 import type { EditPlan } from '../core/types';
 import type { SourceFrame } from '../render/frame';
-import { framingFor, trackAt, type FaceTrack } from '../render/framing';
+import { faceTrackFor, framingFor, trackAt, type FaceTrack } from '../render/framing';
 
 /**
  * Quadros dos clipes para o player e a exportação (v0.14). Um `CanvasSink` por clipe, criado só quando
@@ -66,17 +66,18 @@ export class ClipFrames {
   /** Quadro decodificado → quadro com o que o enquadramento precisa (foco do rosto, fundo desfocado). */
   frame(plan: Pick<EditPlan, 'framing' | 'clips'>, id: string, image: HTMLCanvasElement | OffscreenCanvas, local: number): SourceFrame {
     const framing = framingFor(plan, id);
+    const track = faceTrackFor(plan, id, this.tracks);
     const width = image.width;
     const height = image.height;
     return {
       kind: 'clip',
       legacySingle: this.opts.legacySingle,
-      hasFaceTrack: !!this.tracks[id],
+      hasFaceTrack: !!track,
       image,
       width,
       height,
       clipId: id,
-      focus: framing.mode === 'smart' ? trackAt(this.tracks[id], local) : null,
+      focus: framing.mode === 'smart' ? trackAt(track, local) : null,
       backdrop: framing.mode === 'fit' && framing.fill === 'blur' ? this.backdrop(image) : null,
     };
   }

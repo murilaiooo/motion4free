@@ -17,6 +17,8 @@ export const LEGACY_GEMINI_KEY = 'm4f-gemini-key';
 const session = new Map<ProviderId, string>();
 /** serviços cuja chave está no cofre */
 let remembered = new Set<ProviderId>();
+/** Session credentials opened from any vault remain revocable until explicitly made session-only. */
+const vaultSession = new Set<ProviderId>();
 /** chave derivada da senha, só na memória, enquanto o cofre está aberto */
 let unlocked: { key: CryptoKey; salt: Uint8Array<ArrayBuffer>; iterations: number } | null = null;
 let version = 0;
@@ -83,13 +85,13 @@ export function setSessionKey(id: ProviderId, key: string): void {
   changed([id]);
 }
 
-async function writeVault(): Promise<void> {
+async function writeVault(members: ReadonlySet<ProviderId> = remembered): Promise<void> {
   if (!unlocked) throw new AppError('COFRE_INDISPONIVEL', 'cofre trancado');
   const opening = unlocked;
   const epoch = vaultEpoch;
   const previousRaw = readRaw(VAULT_KEY);
   const secrets: Record<string, string> = {};
-  for (const id of remembered) {
+  for (const id of members) {
     const k = session.get(id);
     if (k) secrets[id] = k;
   }
@@ -135,7 +137,7 @@ export async function unlockVault(password: string): Promise<number> {
   for (const [id, k] of Object.entries(secrets)) {
     if (!isProviderId(id)) continue;
     remembered.add(id);
-    if (!session.has(id)) { session.set(id, k); newlyOpened.push(id); }
+    if (!session.has(id)) { session.set(id, k); vaultSession.add(id); newlyOpened.push(id); }
   }
   changed(newlyOpened);
   return remembered.size;
@@ -144,31 +146,33 @@ export async function unlockVault(password: string): Promise<number> {
 /** Tranca: esquece a senha e as chaves do cofre nesta aba (as que não estão no cofre continuam até fechar a aba). */
 export function lockVault(): void {
   vaultEpoch++;
-  for (const id of remembered) session.delete(id);
+  const revoked = new Set([...remembered, ...vaultSession]);
+  for (const id of revoked) session.delete(id);
+  vaultSession.clear();
   unlocked = null;
-  changed(remembered);
+  changed(revoked);
 }
 
 /** Guarda (ou tira) a chave deste serviço no cofre aberto. */
 export async function rememberKey(id: ProviderId, yes: boolean): Promise<void> {
   const epoch = ++vaultEpoch;
-  const before = new Set(remembered);
-  if (yes) remembered.add(id);
-  else remembered.delete(id);
+  const next = new Set(remembered);
+  if (yes) next.add(id); else next.delete(id);
+  // Membership describes committed ciphertext until the asynchronous write succeeds.
+  // Lock/delete during encryption can still find and revoke every vault-owned key.
   try {
-    await writeVault();
-  } catch (err) {
-    if (vaultEpoch === epoch) remembered = before;
-    throw err;
-  } finally {
-    changed();
-  }
+    await writeVault(next);
+    if (vaultEpoch !== epoch) throw new AppError('COFRE_INDISPONIVEL', 'operação de cofre cancelada');
+    remembered = next;
+    if (yes) vaultSession.add(id); else vaultSession.delete(id);
+  } finally { changed(); }
 }
 
 /** Esquece a chave deste serviço: na aba e no cofre (se estiver aberto). */
 export async function forgetKey(id: ProviderId): Promise<void> {
   vaultEpoch++;
   session.delete(id);
+  vaultSession.delete(id);
   // Revogar imediatamente, mesmo se gravar o cofre falhar.
   changed([id]);
   if (remembered.has(id) && unlocked) await rememberKey(id, false);
@@ -181,8 +185,9 @@ export function deleteVault(): void {
   } catch {
     // nada guardado
   }
-  for (const id of remembered) session.delete(id);
-  const removed = remembered;
+  const removed = new Set([...remembered, ...vaultSession]);
+  for (const id of removed) session.delete(id);
+  vaultSession.clear();
   remembered = new Set();
   unlocked = null;
   changed(removed);
@@ -193,6 +198,7 @@ export function forgetAllKeys(): void {
   vaultEpoch++;
   const removed = [...session.keys()];
   session.clear();
+  vaultSession.clear();
   remembered = new Set();
   unlocked = null;
   changed(removed);

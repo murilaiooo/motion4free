@@ -1,3 +1,12 @@
+## 0.34.0 — IMPLEMENTED — NOT TESTED / AWAITING QA
+
+- Integra os incrementos Draft #97–#100 e #103–#115 em uma branch de revisão; resolve conflitos de metadados de rostos/origem, imports editoriais e versão do manifesto, sem alterar main.
+- Corrige revisão de estado: caminhos de rosto imutáveis no histórico, resultados concorrentes descartados, geometria do painel, curadoria de clipes, duração com margens, download ao abrir no editor e limites do mapeamento ao original.
+- Preserva repetições ambíguas na transcrição; sincroniza revogação entre abas, escrita do cofre, catálogo, flag de IA local, cooldown e expiração do cache.
+- Limita janelas da IA por bytes/tempo/chamadas com cobertura parcial explícita; corrige precedência de movimento e negação bilíngue heurística; evita recalcular a revisão editorial a cada frame.
+- Vincula avaliações cegas v2 a uma rodada UUID, valida campos antes de guardar e remove preferências apagadas. Atualiza avisos/licenças parciais e roteiro de QA.
+- Revisão somente por leitura de código, diffs e artefatos fonte fixados. Nenhum teste, build, typecheck, lint, app, mídia, API de provedor ou workflow executado.
+
 ## 0.31.0 — UNTESTED / AWAITING QA
 
 - #29: structural storyboard and allowlisted current-edit graph; bounded repetition review with explicit undoable action.

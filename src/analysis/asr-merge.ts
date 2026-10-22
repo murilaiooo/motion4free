@@ -3,6 +3,7 @@ import type { AsrWindow } from './asr-windows';
 
 /** Saída crua do Whisper por palavra (ou pedaço de palavra), em segundos da janela. */
 export interface AsrChunk {
+  needsReview?: boolean;
   text: string;
   timestamp: [number, number | null];
 }
@@ -42,10 +43,11 @@ export function groupPieces(chunks: AsrChunk[], offset = 0, firstIsNew = true): 
     const isNew = /^\s/.test(c.text) || (firstIsNew && i === 0);
     if (prev && !isNew) {
       prev.text += text;
+      if (c.needsReview) prev.needsReview = true;
       prev.end = Math.max(prev.end, end);
       continue;
     }
-    words.push({ text, start, end });
+    words.push({ text, start, end, ...(c.needsReview ? { needsReview: true } : {}) });
   }
   return words;
 }
@@ -58,8 +60,8 @@ export interface WindowResult {
 /**
  * Junta as janelas numa transcrição só, em segundos do vídeo.
  * Cada janela ouviu uma folga de cada lado (`feed`), mas só responde pelas palavras cujo meio cai
- * no seu pedaço (`own`): a palavra da junção entra uma vez só. Se mesmo assim a mesma palavra aparecer
- * dos dois lados da junção (tempos estimados diferentes), a repetida sai.
+ * no seu pedaço (`own`). Repetições próximas à junção podem ser fala legítima: preservar e sinalizar,
+ * sem apagar palavras só por texto igual e proximidade temporal.
  */
 export function mergeWindows(results: WindowResult[], durationSec: number): RawWord[] {
   const out: RawWord[] = [];
@@ -72,12 +74,13 @@ export function mergeWindows(results: WindowResult[], durationSec: number): RawW
     });
     for (const [k, w] of words.entries()) {
       const prev = out[out.length - 1];
-      // Só na junção: a primeira palavra desta janela igual à última da anterior, no mesmo instante.
-      if (k === 0 && prev && normalizeWord(prev.text) === normalizeWord(w.text) && w.start < prev.end + 0.15) continue;
-      out.push({ text: w.text, start: Math.max(0, w.start), end: Math.min(durationSec, w.end) });
+      // Ownership handles normal overlap. Timing drift cannot distinguish duplicate from emphasis.
+      const ambiguousSeam = k === 0 && prev && normalizeWord(prev.text) === normalizeWord(w.text) && w.start < prev.end + 0.15;
+      if (ambiguousSeam) prev.needsReview = true;
+      out.push({ text: w.text, start: Math.max(0, w.start), end: Math.min(durationSec, w.end), ...(w.needsReview || ambiguousSeam ? { needsReview: true } : {}) });
     }
   }
-  return out.filter((w) => w.end > w.start);
+  return out.filter((w) => w.end > w.start).sort((a, b) => a.start - b.start);
 }
 
 export function toWords(raw: RawWord[]): Word[] {
@@ -194,7 +197,7 @@ export function collapseLoops(words: RawWord[], silences?: TimeRange[]): RawWord
 
 /**
  * Janela com cara de laço ou de texto inventado: muitas palavras por segundo, ou o laço tomou boa parte
- * do texto. O Worker transcreve essa janela de novo proibindo repetições (no_repeat_ngram_size).
+ * do texto. O Worker preserva a transcrição e a sinaliza para revisão; não suprime repetições legítimas.
  */
 export function looksDegenerate(words: RawWord[], speechSec: number): boolean {
   if (words.length < 8) return false;

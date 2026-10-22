@@ -616,7 +616,7 @@
       "version": "5.3.2",
       "license": "OFL-1.1",
       "source": "https://www.npmjs.com/package/@fontsource/noto-color-emoji/v/5.3.2",
-      "notice": "src/assets/emoji/OFL.txt",
+      "notice": "/licencas-fontes.txt",
       "usedBy": [
         "src/media/fonts.ts"
       ],
@@ -765,7 +765,9 @@
         "url": "https://github.com/Microsoft/onnxruntime.git",
         "type": "git"
       },
-      "noticeFiles": [],
+      "noticeFiles": [
+        "https://github.com/microsoft/onnxruntime/blob/8d85527a0/LICENSE"
+      ],
       "status": "package metadata and notices only; embedded third parties require separate review"
     },
     {
@@ -776,7 +778,9 @@
         "url": "https://github.com/Microsoft/onnxruntime.git",
         "type": "git"
       },
-      "noticeFiles": [],
+      "noticeFiles": [
+        "https://github.com/microsoft/onnxruntime/blob/v1.30.0/LICENSE"
+      ],
       "status": "package metadata and notices only; embedded third parties require separate review"
     },
     {
@@ -804,6 +808,16 @@
         "LICENSE-MIT"
       ],
       "status": "package metadata and notices only; embedded third parties require separate review"
+    },
+    {
+      "package": "@mediapipe/tasks-vision",
+      "version": "1.1.1",
+      "declaredLicense": "Apache-2.0",
+      "source": "https://registry.npmjs.org/@mediapipe/tasks-vision/-/tasks-vision-1.1.1.tgz",
+      "noticeFiles": [
+        "/licencas-rostos.txt"
+      ],
+      "status": "Pinned package source/declarations read without execution; remote WASM/model digests and embedded third parties remain pending"
     }
   ],
   "notDistributed": [
@@ -815,6 +829,7 @@
     "Exact embedded FFmpeg revision, configuration, corresponding source and redistribution obligations of AAC fallback",
     "Remote model file inventories, immutable revisions and converter provenance (Whisper/Qwen/MLC/ONNX)",
     "Complete bundled transitive license mapping from an actual QA build",
-    "Any later MediaPipe/model addition (#98) must extend this main-based inventory"
+    "Remote MediaPipe 1.1.1 WASM and BlazeFace model binary digests and embedded third-party notices",
+    "Research-only Three.js 0.180.0 license accompanies the POC documentation; research is outside this production inventory"
   ]
 }

@@ -55,7 +55,7 @@ const projectSchema = z.object({
     words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time, needsReview: z.boolean().optional() })),
     silences: z.array(z.object({ start: time, end: time })),
   })).optional(),
-  sourceMaps: z.record(z.string(), z.object({ version: z.literal(1), sourceId: z.string().regex(/^[a-f0-9]{64}$/), sourceOffset: time, sourceDuration: time, derivedDuration: time }).refine((origin) => origin.sourceOffset < origin.sourceDuration && origin.derivedDuration > 0 && origin.sourceOffset + origin.derivedDuration <= origin.sourceDuration + 1)).optional(),
+  sourceMaps: z.record(z.string(), z.object({ version: z.literal(1), sourceId: z.string().regex(/^[a-f0-9]{64}$/), sourceOffset: time, sourceEnd: time.optional(), sourceDuration: time, derivedDuration: time }).refine((origin) => (origin.sourceEnd === undefined || (origin.sourceEnd > origin.sourceOffset && origin.sourceEnd <= origin.sourceDuration)) && origin.sourceOffset < origin.sourceDuration && origin.derivedDuration > 0 && origin.sourceOffset + origin.derivedDuration <= origin.sourceDuration + 1)).optional(),
   faceTracks: z.record(z.string(), z.object({
     step: z.number().finite().min(0.05).max(5),
     xs: z.array(z.number().finite().min(0).max(1)).min(1).max(54001),

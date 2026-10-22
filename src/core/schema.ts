@@ -121,6 +121,7 @@ const clipRef = z.object({
   name: z.string().max(200),
   duration: z.number().finite().positive(),
   framing: framingSchema.nullable(),
+  faceTrackId: z.string().regex(/^[a-zA-Z0-9-]{1,80}$/).nullable().optional(),
 });
 
 const planV5Fields = {

@@ -1,3 +1,5 @@
+> Revisão posterior: `review/integration-static-hardening` integra estes heads e contém correções adicionais. Use [a revisão detalhada](2026-10-21-detailed-static-review.md) para o head de QA e os bloqueios atuais. A matriz abaixo descreve as entregas originais; os respectivos heads não receberam individualmente as correções da revisão. Nenhum PR foi mergeado, nenhuma issue foi fechada e nada foi testado nesta revisão.
+
 # Motion4Free — implementation-only handoff
 
 **UNTESTED / AWAITING QA.** Snapshot 2026-10-21; inspected main `84e13c644cbf556021ccf76b89feeb93d2d8c7e3`. Sixteen code Draft PRs, plus this documentation handoff. No issue closed or PR merged by this implementation session. No tests, builds, typechecks, lint, validation commands, browser/app/manual QA, media imports/render/playback/exports, model inference/provider credential requests, benchmarks or Actions dispatch executed. Existing tests were not modified. Commit messages include `[skip ci]` and commit hooks were disabled for these commits; this is not a claim about every external integration's behavior.

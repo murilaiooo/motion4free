@@ -26,6 +26,17 @@ export const FACE_ROW = 0.4;
 
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
 
+export function faceTrackFor(plan: Pick<EditPlan, 'clips'>, clipId: string, tracks: Readonly<Record<string, FaceTrack | null | undefined>>): FaceTrack | null {
+  const selected = plan.clips.find(clip => clip.id === clipId)?.faceTrackId;
+  return selected === null ? null : tracks[selected === undefined ? clipId : selected] ?? null;
+}
+
+/** Keep analyses referenced by undo, redo and named versions, including legacy clip-keyed tracks. */
+export function faceTracksForPlans(tracks: Readonly<Record<string, FaceTrack>>, plans: readonly Pick<EditPlan, 'clips'>[]): Record<string, FaceTrack> {
+  const ids = new Set(plans.flatMap(plan => plan.clips.flatMap(clip => clip.faceTrackId === null ? [] : [clip.faceTrackId ?? clip.id])));
+  return Object.fromEntries(Object.entries(tracks).filter(([id]) => ids.has(id)));
+}
+
 export function framingFor(plan: Pick<EditPlan, 'framing' | 'clips'>, clipId: string | null | undefined): Framing {
   const clip = clipId ? plan.clips.find((c) => c.id === clipId) : undefined;
   return clip?.framing ?? plan.framing ?? DEFAULT_FRAMING;

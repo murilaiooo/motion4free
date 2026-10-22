@@ -114,10 +114,9 @@ async function transcribeWindow(asr: AutomaticSpeechRecognitionPipeline, audio: 
   const sec = w.feed.end - w.feed.start;
   const firstWords = groupPieces(first);
   if (!looksDegenerate(firstWords, sec)) return { chunks: first, retried: false };
-  // Cara de laço ("e aí e aí e aí…"): mais uma tentativa proibindo repetição; fica a melhor das duas.
-  const second = await run(true);
-  const secondWords = groupPieces(second);
-  return { chunks: !looksDegenerate(secondWords, sec) || secondWords.length < firstWords.length ? second : first, retried: true };
+  // Text repetition alone cannot distinguish hallucination from deliberate spoken repetition.
+  // Keep the original tokens; silence-aware cleanup and human review own any removal.
+  return { chunks: first.map(chunk => ({ ...chunk, needsReview: true })), retried: false };
 }
 
 async function dispose(asr: AutomaticSpeechRecognitionPipeline | null) {

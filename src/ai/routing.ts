@@ -55,6 +55,17 @@ const memoryUsage = new Map<string, Usage>();
 const CACHE_TTL_MS = 10 * 60_000;
 const cache = new Map<string, { text: string; at: number }>();
 const inflight = new Map<string, Promise<string>>();
+let expiryTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleCacheExpiry(): void {
+  if (expiryTimer !== undefined) clearTimeout(expiryTimer);
+  expiryTimer = undefined;
+  if (!cache.size) return;
+  const due = Math.min(...[...cache.values()].map(entry => entry.at + CACHE_TTL_MS));
+  expiryTimer = setTimeout(() => {
+    for (const [key, entry] of cache) if (Date.now() - entry.at >= CACHE_TTL_MS) cache.delete(key);
+    scheduleCacheExpiry(); emit();
+  }, Math.max(1, due - Date.now()));
+}
 let cacheHits = 0;
 let cacheEpoch = 0;
 let revision = 0;
@@ -97,17 +108,23 @@ export async function reserveRequest(project: string, body: string, policy: AiPo
   else reserve();
 }
 
-interface Health { failures: number; until: number }
+interface Health { failures: number; until: number; updatedAt?: number }
 const health = new Map<ProviderId, Health>();
 const healthKey = (provider: ProviderId) => `m4f-ai-health:${provider}`;
 function getHealth(provider: ProviderId): Health {
+  const memory = health.get(provider);
+  let stored: Health | undefined;
   try {
     const raw = JSON.parse(localStorage.getItem(healthKey(provider)) ?? 'null') as Health | null;
-    if (raw && Number.isFinite(raw.until) && Number.isFinite(raw.failures)) return raw;
+    if (raw && Number.isFinite(raw.until) && Number.isFinite(raw.failures) && raw.failures >= 0 && (raw.updatedAt === undefined || (Number.isFinite(raw.updatedAt) && raw.updatedAt >= 0))) stored = raw;
   } catch { /* session-only on restricted storage */ }
-  return health.get(provider) ?? { failures: 0, until: 0 };
+  if (!memory) return stored ?? { failures: 0, until: 0 };
+  if (!stored) return memory;
+  const newest = (memory.updatedAt ?? 0) >= (stored.updatedAt ?? 0) ? memory : stored;
+  return { ...newest, until: Math.max(memory.until, stored.until) };
 }
 function saveHealth(provider: ProviderId, state: Health) {
+  state = { ...state, updatedAt: Math.max(Date.now(), (getHealth(provider).updatedAt ?? 0) + 1) };
   health.set(provider, state);
   try { localStorage.setItem(healthKey(provider), JSON.stringify(state)); } catch { /* session-only */ }
   emit();
@@ -151,13 +168,14 @@ export async function cachedCompletion(context: { project: string; task: AiTask;
       cache.delete(key);
       while (cache.size >= 20) cache.delete(cache.keys().next().value!);
       cache.set(key, { text, at: Date.now() });
+      scheduleCacheExpiry();
     }
     return text;
   }).finally(() => { if (inflight.get(key) === pending) inflight.delete(key); emit(); });
   inflight.set(key, pending);
   return pending;
 }
-export function clearResponseCache(): void { cacheEpoch++; cache.clear(); inflight.clear(); emit(); }
+export function clearResponseCache(): void { cacheEpoch++; cache.clear(); scheduleCacheExpiry(); inflight.clear(); emit(); }
 export function resetRoutingSession(): void {
-  cacheEpoch++; cache.clear(); inflight.clear(); memoryUsage.clear(); health.clear(); sessionUsage = emptyUsage(); cacheHits = 0; emit();
+  cacheEpoch++; cache.clear(); scheduleCacheExpiry(); inflight.clear(); memoryUsage.clear(); health.clear(); sessionUsage = emptyUsage(); cacheHits = 0; emit();
 }

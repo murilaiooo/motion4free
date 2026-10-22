@@ -148,6 +148,8 @@ export interface ClipRef {
   duration: number;
   /** enquadramento só deste clipe; null = o do vídeo */
   framing: Framing | null;
+  /** Immutable face-analysis bank entry. Undefined reads legacy clip-ID tracks; null explicitly disables. */
+  faceTrackId?: string | null;
 }
 
 export interface EditPlan {

@@ -37,6 +37,7 @@ export const MOMENT_GAP_SEC = 1;
 export interface Moment {
   sourceEvidence?: { firstWordId: string; lastWordId: string; review: string[]; source: 'local-context' | 'ai-context' };
   userTitle?: boolean;
+  userBounds?: boolean;
   /** 'm1', 'm2'… na ordem da nota */
   id: string;
   /** 1 = melhor */

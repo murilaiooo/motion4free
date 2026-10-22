@@ -39,9 +39,9 @@ export interface AiSettings {
 const PREFS_KEY = 'm4f-ia';
 const DEFAULTS: AiSettings = { mode: 'regras', model: DEFAULT_LLM, provider: null, remote: null, consent: [] };
 
-function read(): AiSettings {
+function read(value?: string | null): AiSettings {
   try {
-    const raw = JSON.parse(localStorage.getItem(PREFS_KEY) ?? 'null') as Partial<AiSettings> | null;
+    const raw = JSON.parse((value === undefined ? localStorage.getItem(PREFS_KEY) : value) ?? 'null') as Partial<AiSettings> | null;
     if (!raw || typeof raw !== 'object') return DEFAULTS;
     const mode: AiMode = raw.mode === 'local' || raw.mode === 'provedor' ? raw.mode : 'regras';
     const remote = raw.remote && typeof raw.remote.id === 'string' && typeof raw.remote.label === 'string' ? { id: raw.remote.id, label: raw.remote.label, pricing: raw.remote.pricing ?? 'desconhecido' } : null;
@@ -60,16 +60,33 @@ function read(): AiSettings {
   }
 }
 
-let prefs: AiSettings = read();
+function storedPreferences(): string | null | undefined {
+  try { return localStorage.getItem(PREFS_KEY); } catch { return undefined; }
+}
+let lastStoredPreferences = storedPreferences();
+let prefs: AiSettings = read(lastStoredPreferences ?? null);
 const listeners = new Set<() => void>();
-const subscribe = (l: () => void) => {
+export const onAiSettingsChange = (l: () => void) => {
   listeners.add(l);
   return () => {
     listeners.delete(l);
   };
 };
 
+function refreshPreferences(notify = true): void {
+  const raw = storedPreferences();
+  if (raw === undefined || raw === lastStoredPreferences) return;
+  lastStoredPreferences = raw;
+  prefs = read(raw);
+  clearResponseCache();
+  if (notify) listeners.forEach(listener => listener());
+}
+if (typeof window !== 'undefined') window.addEventListener('storage', event => {
+  if (event.key === PREFS_KEY || event.key === null) refreshPreferences();
+});
+
 onCredentialChange((id) => {
+  refreshPreferences(false);
   clearResponseCache();
   setAiSettings({
     ...(prefs.provider === id ? { remote: null } : {}),
@@ -89,15 +106,18 @@ function routed(s: AiSettings, task: AiTask, project: string): AiSettings {
   const choice = s.projectRoutes?.[project]?.[task] ?? s.taskRoutes?.[task];
   if (!choice) return s;
   if (choice.kind === 'rules') return { ...s, mode: 'regras' };
-  if (choice.kind === 'local') return { ...s, mode: 'local', model: choice.model };
+  if (choice.kind === 'local') return { ...s, mode: LOCAL_AI_ENABLED ? 'local' : 'regras', model: choice.model };
   return { ...s, mode: 'provedor', provider: choice.provider, remote: choice.remote };
 }
 
 /** Muda a escolha de IA (e guarda neste navegador, sem nenhuma chave). */
 export function setAiSettings(patch: Partial<AiSettings>): void {
+  refreshPreferences(false);
   prefs = { ...prefs, ...patch };
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    const serialized = JSON.stringify(prefs);
+    localStorage.setItem(PREFS_KEY, serialized);
+    lastStoredPreferences = serialized;
   } catch {
     // sem armazenamento: vale até fechar a aba
   }
@@ -105,18 +125,20 @@ export function setAiSettings(patch: Partial<AiSettings>): void {
 }
 
 export function getAiSettings(): AiSettings {
+  refreshPreferences();
   return prefs;
 }
 
 /** Depois de "Apagar tudo": volta ao padrão (só regras), sem tocar no localStorage já limpo. */
 export function resetAiSettings(): void {
   prefs = DEFAULTS;
+  lastStoredPreferences = storedPreferences();
   resetRoutingSession();
   listeners.forEach((l) => l());
 }
 
 export function useAiSettings(): AiSettings {
-  return useSyncExternalStore(subscribe, () => prefs, () => prefs);
+  return useSyncExternalStore(onAiSettingsChange, () => prefs, () => prefs);
 }
 
 /**
@@ -126,6 +148,7 @@ export function useAiSettings(): AiSettings {
 export async function prepareAi(s: AiSettings, setBusy: OnProgress, task: AiTask = 'creative-brief', project = activeAiProject, signal?: AbortSignal): Promise<{ ai: AiChoice | null; warning: AppError | null }> {
   if (signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
   s = routed(s, task, project);
+  if (s.mode === 'local' && !LOCAL_AI_ENABLED) return { ai: null, warning: null };
   if (s.mode === 'local') {
     try {
       const capacity = await localModelCapacity();

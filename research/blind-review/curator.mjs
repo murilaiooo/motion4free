@@ -2,7 +2,7 @@ import { prepareBlindPackage, readBlindPackage, summarizeBlindReviews } from '..
 import { AppError, describeError } from '../../src/core/errors.ts';
 import { $, readJson, download } from './common.mjs';
 $('prepare').addEventListener('click', async () => { $('prepare').disabled = true; try {
-  const result = prepareBlindPackage(await readJson($('dataset').files[0]), await readJson($('outputs').files[0]), $('seed').value);
+  const result = prepareBlindPackage(await readJson($('dataset').files[0]), await readJson($('outputs').files[0]), $('seed').value, crypto.randomUUID());
   download('reviewer-package.json', result.pack); download('PRIVATE-curator-key.json', result.privateKey);
   $('status').textContent = 'Pacotes preparados. Nenhuma avaliação foi realizada; os vídeos não foram renomeados ou enviados.';
 } catch (error) { $('status').textContent = describeError(error instanceof AppError ? error : new AppError('QUALIDADE_PACOTE')); }

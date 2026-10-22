@@ -47,7 +47,12 @@ export function compileCreativeBrief(input: CreativeSetup): CreativeBrief {
   };
   compareLook(guidedLook as Record<string, unknown>, free.look as Record<string, unknown>);
   const look = mergeLook(guidedLook, free.look);
-  if (setup.motion === 0 && (free.look.motion ?? 0) > 0) conflicts.push('Movimento desligado nas opções: mantive sem efeitos apesar do pedido de movimento.');
+  if (free.intensity !== null && free.look.motion === undefined && !forbid.includes('efeitos')) {
+    look.motion = { baixa: 0.2, media: 0.5, alta: 0.85 }[free.intensity];
+    mention('Movimento', setup.motion, look.motion);
+  }
+  const requestedMotion = free.look.motion ?? (free.intensity === null ? 0 : { baixa: 0.2, media: 0.5, alta: 0.85 }[free.intensity]);
+  if (forbid.includes('efeitos') && requestedMotion > 0) conflicts.push(setup.motion === 0 ? 'Movimento desligado nas opções: mantive sem efeitos apesar do pedido de movimento.' : 'A restrição sem efeitos prevalece sobre o pedido de movimento.');
   if (forbid.includes('efeitos')) look.motion = 0;
   if (forbid.includes('efeitos') || forbid.includes('transicoes')) look.transition = 'none';
   if (!setup.hook && free.wantsHook) conflicts.push('Abertura desligada nas opções: mantive sem título de gancho.');
