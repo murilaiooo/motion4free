@@ -42,6 +42,11 @@ M4F-527 explica o cancelamento; progresso e erros atrasados não substituem o no
 - Progresso e cancelamento; falha preserva o enquadramento anterior, e ausência de rosto usa enquadramento central com aviso próprio. Controles manuais substituem o acompanhamento; a ativação é uma edição com desfazer/refazer.
 - Projeto antigo continua abrindo sem nova análise. A volta ao modo manual preserva a moldura de vídeo único. Uma análise concluída usa o histórico atual, preservando edições feitas enquanto o Worker trabalhava.
 - Limite de 12.000 amostras, um quadro de até 640 px por vez, amostragem a cada 0,5 s. Qualidade, CPU/memória e compatibilidade ainda não medidas; QA independente obrigatória. Nenhum teste/build/typecheck/lint foi executado.
+## v0.29.2 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#27 — Prompt e opções guiadas compilam com precedência explícita.** Campos reconhecidos do pedido escrito agora prevalecem sobre a base guiada de preset, objetivo, público, tom, ritmo, cores, fonte, legenda, movimento e chamada. Campos não mencionados preservam a escolha guiada. As proibições se somam; desligar movimento/abertura e a política de cortes permanecem restrições explícitas, com conflito explicado.
+
+O resumo usa os conflitos reais do CreativeBrief; referência continua com a precedência já corrigida no #84. Sem contrato paralelo, migração de projeto, reanálise de mídia ou alteração de cenas manuais. Diferença criativa e paridade visual dependem de QA; nenhum teste/build/typecheck/lint foi executado.
 
 ## v0.27.5 — 21/10/2026
 
