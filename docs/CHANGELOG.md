@@ -47,6 +47,11 @@ M4F-527 explica o cancelamento; progresso e erros atrasados não substituem o no
 **#27 — Prompt e opções guiadas compilam com precedência explícita.** Campos reconhecidos do pedido escrito agora prevalecem sobre a base guiada de preset, objetivo, público, tom, ritmo, cores, fonte, legenda, movimento e chamada. Campos não mencionados preservam a escolha guiada. As proibições se somam; desligar movimento/abertura e a política de cortes permanecem restrições explícitas, com conflito explicado.
 
 O resumo usa os conflitos reais do CreativeBrief; referência continua com a precedência já corrigida no #84. Sem contrato paralelo, migração de projeto, reanálise de mídia ou alteração de cenas manuais. Diferença criativa e paridade visual dependem de QA; nenhum teste/build/typecheck/lint foi executado.
+## v0.29.3 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#6 — Fala ambígua não é apagada só pelo texto.** Padrões conhecidos de alucinação e repetições com energia de fala são preservados e marcados para revisão local na transcrição, com atalhos para ouvir. A marca é heurística, não confiança inventada. Remoção de padrões/laços exige forte sobreposição com silêncio medido. Metadado opcional persiste em projeto e análise de vídeo longo.
+
+O filtro de duração mínima não descarta um trecho curto que contenha palavra reconhecida, inclusive negação no início/fim. Intervalos inválidos são ignorados e cortes limitados à duração da origem. Nenhum teste/build/typecheck/lint ou áudio/vídeo foi executado; precisão e segurança de fala real aguardam QA.
 
 ## v0.27.5 — 21/10/2026
 

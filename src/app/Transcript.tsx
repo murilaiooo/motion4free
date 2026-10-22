@@ -1,3 +1,4 @@
+import { sourceToOutput } from '../engine/timeline';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Caption, Segment, Word } from '../core/types';
@@ -24,6 +25,7 @@ interface Props {
  * aparecem riscadas. Vídeos longos são paginados.
  */
 export function Transcript({ words, captions, segments, time, playing, onSeek, onEdit, disabled }: Props) {
+  const review = useMemo(() => words.filter((word) => word.needsReview).map((word) => ({ ...word, out: sourceToOutput(segments, word.start) })).filter((word) => word.out !== null), [words, segments]);
   const blocks = useMemo(() => buildTranscript(words, captions, segments), [words, captions, segments]);
   const pages = useMemo(() => paginate(blocks, PER_PAGE), [blocks]);
   const [page, setPage] = useState(0);
@@ -74,6 +76,12 @@ export function Transcript({ words, captions, segments, time, playing, onSeek, o
   const current = pages[Math.min(page, pages.length - 1)] ?? [];
   return (
     <div className="transcript-wrap">
+      {review.length > 0 && <details className="fold">
+        <summary>Revisar {review.length} palavras sinalizadas na transcrição</summary>
+        <p className="hint">Padrões que o reconhecimento às vezes confunde. Mantive a fala e as repetições fora do silêncio; esta marca não é uma pontuação de confiança. Ouça antes de corrigir ou cortar.</p>
+        <div className="examples">{review.slice(0, 24).map((word) => <button type="button" className="example" key={word.id} onClick={() => onSeek(word.out! + 0.001)}>{fmt(word.out!)}: {word.text}</button>)}</div>
+        {review.length > 24 && <p className="hint">Primeiras 24 marcações; revise também as demais legendas.</p>}
+      </details>}
       <p className="hint transcript-legend">
         <span className="kbd">Enter</span> confirma · <span className="kbd">Esc</span> cancela · <s>riscado</s> = trecho cortado
       </p>
