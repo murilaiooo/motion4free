@@ -151,3 +151,9 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 
 - M4F-1110: IDs/tempos da transcrição inválidos ou limite de contexto; preservar a origem e revisar/refazer análise ou escolher arquivo menor.
 - M4F-1111: análise por IA incompleta/sem resposta ancorada válida; candidatos locais continuam disponíveis, com curadoria humana antes da seleção/export.
+## Análise local de rostos (#54, não testada)
+
+- M4F-308: detector/runtime/decodificação indisponível. Preserva enquadramento; escolher manual ou tentar novamente.
+- M4F-309: nenhum rosto confiável em um ou mais clipes; enquadramento central, ajustável manualmente.
+- M4F-310: análise cancelada; nenhuma alteração parcial de enquadramento aplicada.
+- M4F-311: mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual.

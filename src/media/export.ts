@@ -16,6 +16,8 @@ import { clipLayout, outputToClip } from '../engine/clips';
 import { mixMusic } from '../engine/music-mix';
 
 export interface ExportOptions {
+  faceTracks?: import('./face-analysis').FaceTracks;
+  legacySingle?: boolean;
   maxDurationSec?: number;
   scale?: number;
   onProgress?: (fraction: number) => void;
@@ -35,6 +37,10 @@ export interface ExportResult {
 export async function exportPlan(media: OpenedMedia, audio: DecodedAudio | null, plan: EditPlan, opts: ExportOptions = {}): Promise<ExportResult> {
   try {
     buildExportPreflight(plan, new Set([plan.clips[0]?.id ?? 'c1']), audio !== null);
+    if (opts.faceTracks && Object.keys(opts.faceTracks).length) {
+      const id = plan.clips[0]?.id ?? 'c1';
+      return await exportPlanUnsafeMulti(new Map([[id, { id, video: media.video, width: media.width, height: media.height }]]), audio, plan, { ...opts, legacySingle: true });
+    }
     return await exportPlanUnsafe(media, audio, plan, opts);
   } catch (err) {
     throw toAppError(err, 'EXPORTACAO_FALHOU');
@@ -141,7 +147,7 @@ async function exportPlanUnsafeMulti(
   if (audioSource) output.addAudioTrack(audioSource);
   await output.start();
 
-  const clipFrames = new ClipFrames(clipSources, { maxSide: EXPORT_MAX_SIDE, poolSize: 2 });
+  const clipFrames = new ClipFrames(clipSources, { maxSide: EXPORT_MAX_SIDE, poolSize: 2, legacySingle: opts.legacySingle }, opts.faceTracks);
   // Quadros agrupados em sequências do mesmo clipe; cada sequência é lida de uma vez, em ordem (ver acima).
   const infos = Array.from({ length: frames }, (_, f) => outputToClip(plan.segments, plan.clips, f / fps));
   let f = 0;

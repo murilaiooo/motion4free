@@ -35,6 +35,13 @@ M4F-527 explica o cancelamento; progresso e erros atrasados não substituem o no
 - Paginação incompleta falha explicitamente sem apresentar um catálogo truncado como completo.
 - Escritas e desbloqueios de cofre são descartados depois de lock/delete ou alteração em outra aba, preservando a revisão mais recente.
 - Nada foi executado para verificar estas mudanças. Testes existentes preservados; QA independente obrigatória.
+## v0.28.0 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#54 — Análise local de rostos ligada ao enquadramento.** A aba Mídia permite analisar um ou todos os clipes com MediaPipe/BlazeFace em Worker local. Os quadros não saem do computador; só runtime/modelo públicos são baixados. O caminho suavizado é guardado por ID de clipe e usado no mesmo relógio da prévia, seek e exportação (incluindo Worker de exportação e reserva).
+
+- Progresso e cancelamento; falha preserva o enquadramento anterior, e ausência de rosto usa enquadramento central com aviso próprio. Controles manuais substituem o acompanhamento; a ativação é uma edição com desfazer/refazer.
+- Projeto antigo continua abrindo sem nova análise. A volta ao modo manual preserva a moldura de vídeo único. Uma análise concluída usa o histórico atual, preservando edições feitas enquanto o Worker trabalhava.
+- Limite de 12.000 amostras, um quadro de até 640 px por vez, amostragem a cada 0,5 s. Qualidade, CPU/memória e compatibilidade ainda não medidas; QA independente obrigatória. Nenhum teste/build/typecheck/lint foi executado.
 
 ## v0.27.5 — 21/10/2026
 

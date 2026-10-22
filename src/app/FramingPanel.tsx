@@ -11,6 +11,10 @@ interface Props {
   multi: boolean;
   onChange: (next: EditPlan) => void;
   disabled?: boolean;
+  hasFaceTracks?: boolean;
+  onTrackFaces?: (clipId: string | null) => void;
+  faceProgress?: number | null;
+  onCancelFaces?: () => void;
 }
 
 /**
@@ -18,7 +22,7 @@ interface Props {
  * (com o próprio vídeo desfocado atrás), aproximar e mover. Essencial para vídeo deitado virar Reels e vice-versa.
  * Os controles deslizantes só gravam ao soltar, para o desfazer não ganhar um passo por pixel.
  */
-export function FramingPanel({ plan, multi, onChange, disabled }: Props) {
+export function FramingPanel({ plan, multi, onChange, disabled, hasFaceTracks = false, onTrackFaces, faceProgress = null, onCancelFaces }: Props) {
   const [clipId, setClipId] = useState<string | null>(null);
   const target = multi && clipId && plan.clips.some((c) => c.id === clipId) ? clipId : null;
   const saved = framingView(plan, multi, target);
@@ -26,9 +30,11 @@ export function FramingPanel({ plan, multi, onChange, disabled }: Props) {
   const key = JSON.stringify(saved);
   useEffect(() => setDraft(saved), [key]);
 
+  const smart = hasFaceTracks && (target ? plan.clips.find((clip) => clip.id === target)?.framing?.mode === 'smart' : plan.clips.some((clip) => (clip.framing ?? plan.framing).mode === 'smart'));
   const commit = (v: FramingView) => {
-    if (JSON.stringify(v) === key) return;
-    onChange(applyFramingView(plan, multi, target, v));
+    if (JSON.stringify(v) === key && !smart) return;
+    const manual = { ...plan, framing: target ? plan.framing : { ...plan.framing, mode: 'fill' as const }, clips: plan.clips.map((clip) => (!target || clip.id === target) && clip.framing?.mode === 'smart' ? { ...clip, framing: { ...clip.framing, mode: 'fill' as const } } : clip) };
+    onChange(applyFramingView(manual, multi, target, v));
   };
   const centered = draft.zoom === 1 && draft.x === 0 && draft.y === 0;
   const zoomMin = multi ? 1 : VIDEO_SCALE.min;
@@ -66,6 +72,14 @@ export function FramingPanel({ plan, multi, onChange, disabled }: Props) {
           </select>
         )}
       </div>
+      {onTrackFaces && <div className="stack">
+        <p className="hint">Enquadramento de rosto (experimental): analisa quadros neste computador, sem enviar o vídeo. Na primeira vez baixa o detector. Prefere um rosto próximo; não identifica quem fala. A qualidade ainda aguarda QA.</p>
+        <div className="notice-row">
+          <button type="button" className="sm" disabled={disabled} onClick={() => onTrackFaces(target)}>Analisar rostos {target ? 'deste clipe' : 'dos clipes'}</button>
+          {faceProgress !== null && <><span role="status">Analisando: {Math.round(faceProgress * 100)}%</span><button type="button" className="sm ghost" onClick={onCancelFaces}>Cancelar análise</button></>}
+          {smart && <span className="hint">Caminho de rosto ativo; controles manuais abaixo substituem o acompanhamento.</span>}
+        </div>
+      </div>}
       <div className="segmented" role="group" aria-label="Como o vídeo ocupa a tela">
         <button type="button" aria-pressed={!draft.whole} disabled={disabled} onClick={() => commit({ ...draft, whole: false, zoom: Math.max(1, draft.zoom) })} data-testid="framing-fill">
           Preencher a tela

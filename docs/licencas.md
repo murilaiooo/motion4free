@@ -81,3 +81,7 @@ O texto da licença Apache-2.0 acompanha o pacote npm (`node_modules/@mlc-ai/web
 
 ## Nada mais
 Cenas, transições, estilos e a interface (layout, CSS, componentes) foram escritos do zero para o Motion4Free (sem código, preset ou asset copiado de outros projetos). As ideias de cenas do Editonny foram apenas referência de nomes de categorias (ver `docs/research/upstream-implementation/INDEX.md`).
+
+## Detector local de rostos (#54, implementação não testada)
+
+MediaPipe Tasks Vision 1.1.1: Apache-2.0, Google. BlazeFace short-range float16 v1: Apache-2.0 conforme [model card oficial](https://storage.googleapis.com/mediapipe-assets/MediaPipe%20BlazeFace%20Model%20Card%20(Short%20Range).pdf), página 1. Uso opcional e local; sem reconhecimento de identidade. Código do pacote é dependência sem modificação; WASM/modelo são baixados de URLs fixas. Ver [ADR-0029](decisions/0029-rastreamento-local-de-rostos.md) para proveniência, versões e limites. Licença Apache distribuída em `public/licencas-rostos.txt`.
