@@ -40,7 +40,7 @@ function Footer() {
         e{' '}
         <a href="licencas-icones.txt" target="_blank" rel="noreferrer">
           dos ícones
-        </a>
+        </a>{' '}·{' '}<a href="licencas-runtime.txt" target="_blank" rel="noreferrer">bibliotecas</a>{' '}·{' '}<a href="asset-provenance.json" target="_blank" rel="noreferrer">proveniência</a>
       </span>
     </footer>
   );

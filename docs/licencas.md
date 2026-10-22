@@ -1,3 +1,7 @@
+# Inventário por arquivo e avisos de runtime — parcial
+
+Desde 0.31.1: `public/asset-provenance.json` registra fontes importadas por arquivo; `public/licencas-runtime.txt` publica avisos das bibliotecas identificadas. O rodapé oferece ambos. A auditoria completa permanece aberta, em particular a proveniência do FFmpeg embutido no fallback AAC e os arquivos remotos de modelos. Ver `docs/reviews/2026-10-21-issue2-implementation-handoff.md`. UNTESTED / AWAITING QA.
+
 # Licenças de recursos de terceiros incluídos no app
 
 Cada recurso copiado para o app passa por verificação de licença e procedência (AGENTS.md). Esta página lista o que é distribuído junto com o site.

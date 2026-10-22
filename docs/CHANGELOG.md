@@ -9,6 +9,9 @@
 ## 0.30.1 — UNTESTED / AWAITING QA
 
 - #7: fichas semânticas e proveniência das onze cenas originais; limites compartilhados para propostas automáticas.
+## 0.31.1 — UNTESTED / AWAITING QA
+
+- #2: file-level imported font provenance and accessible runtime notices; record embedded AAC/FFmpeg source audit blocker.
 
 # Histórico de versões
 
