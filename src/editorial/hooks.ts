@@ -1,3 +1,4 @@
+import { contextFlags } from './context-policy';
 import type { Hook } from '../core/brief';
 import type { HookStyle } from '../core/look';
 import type { Word } from '../core/types';
@@ -47,6 +48,8 @@ export function findHooks(words: Word[], max = 5): HookCandidate[] {
   sentences.forEach((s, idx) => {
     const toks = s.words.map((w) => w.text.trim());
     const text = toks.join(' ');
+    // Keep full negations/conditions in a hook, but do not detach a referring sentence.
+    if (contextFlags(text).includes('reference') || s.byPause) return;
     if (toks.length < HOOK_MIN_WORDS || toks.length > HOOK_MAX_WORDS || text.length > HOOK_MAX_CHARS) return;
     const reasons: string[] = [];
     let score = 0;

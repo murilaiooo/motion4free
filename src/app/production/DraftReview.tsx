@@ -8,6 +8,7 @@ export function DraftReview({ editorial, onCustomize, onExport, onRevise, disabl
     <button className="ghost sm" onClick={onRevise} disabled={disabled}>Rever direção criativa</button>
     <div className="draft-metrics"><span><b>{editorial.metrics.outputSeconds.toFixed(1)} s</b>de vídeo</span><span><b>{editorial.metrics.captionCount}</b>legendas</span><span><b>{editorial.metrics.removedSeconds.toFixed(1)} s</b>removidos</span></div>
     <details className="draft-limits" open><summary>O que foi editado</summary><ul className="draft-decisions">{editorial.decisions.map(decision => <li key={decision.kind}>{decision.description}</li>)}</ul></details>
+    {!!editorial.sceneEvidence?.length && <details className="draft-limits"><summary>Contexto das cenas · até 32 elementos</summary><ul>{editorial.sceneEvidence.map(scene => <li key={scene.sceneId}><b>{scene.name} · {scene.start.toFixed(1)}–{scene.end.toFixed(1)} s</b><p>{scene.coverage === 'nearby-speech' ? 'Há fala próxima deste elemento.' : 'Elemento configurado ou manual, sem fala próxima.'}</p>{scene.notes.map(note => <p key={note}>{note}</p>)}</li>)}</ul></details>}
     {editorial.warnings.length > 0 && <details className="draft-limits" open><summary>Revisar antes de publicar · {editorial.warnings.length} observações</summary><ul>{editorial.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul></details>}
   </section>;
 }

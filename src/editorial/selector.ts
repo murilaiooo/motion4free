@@ -1,3 +1,5 @@
+import { contextFlags } from './context-policy';
+import { catalogRejection } from '../motion/catalog';
 import type { StyleDNA } from '../core/style';
 import type { Emphasis } from '../core/brief';
 import type { SceneInstance, SceneKind, Segment, Word } from '../core/types';
@@ -222,6 +224,8 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     if (ordinalOf(ws[i]!.raw) !== null) continue;
     const num = parseNumberAt(tokens, i);
     if (!num) continue;
+    // A single number/label cannot safely represent negated, conditional or comparative claims.
+    if (contextFlags(sentenceOf.get(i)!.map(k => tokens[k]!).join(' ')).length) continue;
     const special = /[%$]/.test(num.value);
     const lastOfNumber = i + num.consumed - 1;
     const label = endsSentence(ws[lastOfNumber]!.raw) ? '' : phrase(ws, i + num.consumed, 5, 28).text.toLowerCase();
@@ -239,7 +243,10 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   }
 
   // título de abertura: não quando a fala abre com apresentação ou com um número
-  const title = openingTitleSkippingGreeting(ws.map((w) => ({ text: w.raw })));
+  const opening = (sentences[0] ?? []).map(k => tokens[k]!);
+  // Only a complete short sentence; never truncate a later negation or condition.
+  const title = opening.length <= 14 && opening.join(' ').length <= 60 && /[.!?…][\"”']?$/.test(opening.at(-1)?.trim() ?? '') && !contextFlags(opening.join(' ')).includes('reference')
+    ? openingTitleSkippingGreeting(opening.map(text => ({ text })), 14) : null;
   const opensWithNumber = numbers.some((n) => n.scene.start < 1);
   const opensWithName = !!nameAt && nameAt.start < 3;
   const opensWithQuestion = sentences.length > 0 && isQuestion(sentences[0]!.map((k) => tokens[k]!));
@@ -325,6 +332,7 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   let lastKw = -Infinity;
   let lastZoom = -Infinity;
   for (const sent of sentences) {
+    if (contextFlags(sent.map(k => tokens[k]!).join(' ')).length) continue;
     let best = -1;
     let bestScore = 0;
     for (const k of sent) {
@@ -379,7 +387,8 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   return [...progress, ...transitions, ...zooms, ...accepted, ...highlights, ...emojis]
     .filter((s) => s.end - s.start > 0.05 && !opts.forbid.has(s.kind))
     .sort((a, b) => a.start - b.start || a.kind.localeCompare(b.kind))
-    .map((s, i) => ({ ...s, id: `s${i + 1}` }) as SceneInstance);
+    .map((s, i) => ({ ...s, id: `s${i + 1}` }) as SceneInstance)
+    .filter((scene) => catalogRejection(scene, total) === null);
 }
 
 /** Escolhe as cenas de sobreposição respeitando prioridade, intervalo, orçamento e anti-repetição. */
