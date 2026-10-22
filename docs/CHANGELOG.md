@@ -15,6 +15,13 @@
 ## 0.31.2 — UNTESTED / AWAITING QA
 
 - #12: production static security headers, current privacy/reporting policy and explicit hosting/settings evidence gaps.
+## 0.32.1 — UNTESTED / AWAITING QA
+
+- #26: three original structural POC compositions with shared annotations, optional local source and guarded same-time frame capture.
+
+## 0.32.0 — UNTESTED / AWAITING QA
+
+- #28: isolated Canvas2D/Three.js comparison implementation with common bounded SceneGraph and absolute-time sampling; no production engine change.
 
 # Histórico de versões
 

@@ -157,3 +157,7 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 - M4F-309: nenhum rosto confiável em um ou mais clipes; enquadramento central, ajustável manualmente.
 - M4F-310: análise cancelada; nenhuma alteração parcial de enquadramento aplicada.
 - M4F-311: mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual.
+| M4F-806 | Grafo da POC fora dos limites. | Schema fechado, IDs únicos e tempos limitados. |
+| M4F-807 | Adaptador Three indisponível na POC. | Falha no módulo fixo ou WebGL; Canvas permanece. |
+
+| M4F-808 | Fonte local/seek da POC indisponível. | Vídeo menor que 12 s, decoder, timeout ou captura ficou obsoleta. |
