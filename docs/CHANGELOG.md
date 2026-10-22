@@ -12,6 +12,9 @@
 ## 0.31.1 — UNTESTED / AWAITING QA
 
 - #2: file-level imported font provenance and accessible runtime notices; record embedded AAC/FFmpeg source audit blocker.
+## 0.31.2 — UNTESTED / AWAITING QA
+
+- #12: production static security headers, current privacy/reporting policy and explicit hosting/settings evidence gaps.
 
 # Histórico de versões
 
