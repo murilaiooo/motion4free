@@ -63,7 +63,7 @@ function SettingsScreen({ precision, storage, currentProjectId, onProjectDeleted
             <h3>{current.title}</h3>
             <p className="hint">{current.sub}</p>
           </header>
-          {section === 'ia' && <AiSection />}
+          {section === 'ia' && <AiSection currentProjectId={currentProjectId} />}
           {section === 'transcricao' && <TranscriptionSection precision={precision} />}
           {section === 'armazenamento' && <StoragePanel deps={storage} currentProjectId={currentProjectId} onProjectDeleted={onProjectDeleted} onEverythingDeleted={onEverythingDeleted} />}
           {section === 'editor' && <AppearanceSection />}
