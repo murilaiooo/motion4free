@@ -63,6 +63,18 @@ describe('issue #102 QA: long source context, bounded calls, manual edits and so
     expect(nudgeContextMoment(first, words, 36, 'start', -1)).toBe(first);
   });
 
+  it('does not discard the final third when equally sound suggestions span the full recording', () => {
+    const words = transcript(2400);
+    const moments = findContextualMoments(words, 1201, { length: 'curto', count: 8 });
+    expect(moments.length).toBe(8);
+    expect(moments.some(moment => moment.start > 800)).toBe(true);
+    expect(moments.some(moment => moment.start < 400)).toBe(true);
+    for (const a of moments) for (const b of moments) if (a !== b) {
+      const overlap = Math.max(0, Math.min(a.end, b.end) - Math.max(a.start, b.start));
+      expect(overlap / Math.min(a.end - a.start, b.end - b.start)).toBeLessThanOrEqual(0.5);
+    }
+  });
+
   it('clips provenance to actual requested end, omitting encoder padding', () => {
     const plan = { clips: [{ id: 'c1', duration: 12 }], segments: [{ srcStart: 0, srcEnd: 12 }] };
     const spans = originalOutputSpans(plan as any, { c1: { version: 1, sourceId: 'a'.repeat(64),

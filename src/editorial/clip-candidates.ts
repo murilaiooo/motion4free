@@ -35,17 +35,37 @@ export function groundedMoment(index: TranscriptIndex, first: number, last: numb
   };
 }
 
+/** Review-worthy quality stays first, but near-equal moments should not all come
+ * from the beginning of a long recording. The first 20 picks use small temporal
+ * novelty (max +14 points); everything else is filled by the original ranking.
+ * This is NOT an estimate of views or semantic understanding.
+ */
 export function rankContextualMoments(input: readonly Moment[], count: number): Moment[] {
   const sorted = [...input].sort((a, b) => (a.sourceEvidence?.review.length ?? 0) - (b.sourceEvidence?.review.length ?? 0) || b.score - a.score || a.start - b.start);
+  const limit = Math.min(600, Math.max(1, count));
   const selected: Moment[] = [];
-  for (const moment of sorted) {
-    const duplicate = selected.some((other) => {
-      const overlap = Math.max(0, Math.min(moment.end, other.end) - Math.max(moment.start, other.start));
-      return overlap / Math.max(0.001, Math.min(moment.end - moment.start, other.end - other.start)) > 0.5;
-    });
-    if (duplicate) continue;
-    selected.push(moment);
-    if (selected.length >= Math.min(600, Math.max(1, count))) break;
+  const midpoint = (moment: Moment) => (moment.start + moment.end) / 2;
+  const temporalSpan = sorted.length ? Math.max(1, midpoint(sorted.at(-1)!) - midpoint(sorted[0]!)) : 1;
+  const noOverlap = (candidate: Moment) => selected.every(other => {
+    const overlap = Math.max(0, Math.min(candidate.end, other.end) - Math.max(candidate.start, other.start));
+    return overlap / Math.max(0.001, Math.min(candidate.end - candidate.start, other.end - other.start)) <= 0.5;
+  });
+  for (let i = 0; i < Math.min(limit, 20); i++) {
+    let choice: Moment | null = null;
+    let value = -Infinity;
+    for (const candidate of sorted) {
+      if (selected.includes(candidate) || !noOverlap(candidate)) continue;
+      const distance = selected.length ? Math.min(...selected.map(s => Math.abs(midpoint(s) - midpoint(candidate)))) : 0;
+      const novelty = selected.length ? 14 * distance / temporalSpan : 0;
+      const score = candidate.score - (candidate.sourceEvidence?.review.length ?? 0) * 120 + novelty;
+      if (score > value) { choice = candidate; value = score; }
+    }
+    if (!choice) break;
+    selected.push(choice);
+  }
+  for (const candidate of sorted) {
+    if (selected.length >= limit) break;
+    if (!selected.includes(candidate) && noOverlap(candidate)) selected.push(candidate);
   }
   return selected.map((moment, i) => ({ ...moment, rank: i + 1 }));
 }
