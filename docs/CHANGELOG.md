@@ -2,6 +2,14 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.30.0 — 22/10/2026 — #102 (QA pendente, não publicar automaticamente)
+
+**Descoberta contextual de clipes por transcrição completa:** propostas locais por frases e IDs de palavras da gravação, sugestões opcionais de IA com limites de custo e contexto, curadoria com preservação de escolhas, títulos e arquivos gerados; contexto e mapa dos cortes originais disponíveis no editor.
+
+- Integração limpa baseada diretamente na main depois da #73. Sem código, assets, servidor ou runtime AGPL do SupoClip. IA remota apenas com chave/consentimento existentes.
+- A revisão de 21/10 preserva itens editados em reanálises, limita análise remota a até 32 janelas distribuídas e evita padding não pertencente à gravação original. Adicionadas verificações automatizadas específicas para duração, origem, janelas e IDs inválidos.
+- **Ainda não é release testada.** O GitHub Actions encerrou os jobs antes de executar steps; faltam testes executados no Brave, export MP4 com áudio, QA da linha do tempo e benchmark cego de gravações reais autorizadas. Nenhuma estimativa afirma chance de viralização.
+
 ## v0.29.1 — 22/10/2026 — QA independente da issue #73
 
 **Configurações/IA com chave própria: consentimento real, cofre e cancelamento validados.** Corrigida a sincronização de credenciais e preferências entre abas, preservado o cancelamento de pedidos quando a autorização muda e adicionada política CSP aos arquivos estáticos distribuídos pela Cloudflare Worker. Documentados M4F-1218/1219/1220 exatamente como exibidos pelo app.
