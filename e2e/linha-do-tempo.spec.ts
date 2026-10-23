@@ -89,6 +89,7 @@ test('a vista Original continua lá e a escolha fica guardada', async ({ page })
   await openVideo(page);
   await page.getByTestId('tl-view-original').click();
   await expect(page.getByTestId('kept-segment')).toHaveCount(2);
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 30_000 });
   await page.reload();
   await expect(page.getByTestId('timeline')).toHaveAttribute('data-view', 'original', { timeout: 60_000 });
   await page.getByTestId('tl-view-edit').click();

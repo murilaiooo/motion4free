@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { HOOK_STYLES, lookIsEmpty, lookSchema, type HookStyle, type Look } from './look';
 import { TEMPLATE_IDS, TEMPLATE_NAMES, type TemplateId } from './templates';
 import { NICHE_IDS, NICHE_NAMES, type NicheId } from './niches';
+import { creativeSetupSchema } from './production';
 
 /**
  * CreativeBrief: o que a pessoa pediu, já entendido e em campos fechados.
@@ -118,6 +119,7 @@ export const briefV1Schema = z.object({ version: z.literal(1), ...briefV1Fields 
 
 export const briefSchema = z.object({
   version: z.literal(BRIEF_VERSION),
+  production: creativeSetupSchema.optional(),
   ...briefV1Fields,
   /** cores, legenda, emojis, cortes, transição, cenas ligadas/desligadas (v2, ADR-0011) */
   look: lookSchema,

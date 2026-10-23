@@ -1,4 +1,5 @@
 import { stylesOf } from '../editorial/ranges';
+import { buildExportPreflight } from '../editorial/export-preflight';
 import { AudioSample, AudioSampleSource, BufferTarget, CanvasSink, CanvasSource, Mp4OutputFormat, Output, QUALITY_HIGH } from 'mediabunny';
 import { toAppError } from '../core/errors';
 import type { EditPlan } from '../core/types';
@@ -30,6 +31,7 @@ export interface ExportResult {
 // Keep single-media export for backward compat, but also support multi via clipSources
 export async function exportPlan(media: OpenedMedia, audio: DecodedAudio | null, plan: EditPlan, opts: ExportOptions = {}): Promise<ExportResult> {
   try {
+    buildExportPreflight(plan, new Set([plan.clips[0]?.id ?? 'c1']), audio !== null);
     return await exportPlanUnsafe(media, audio, plan, opts);
   } catch (err) {
     throw toAppError(err, 'EXPORTACAO_FALHOU');
@@ -44,6 +46,7 @@ export async function exportPlanMulti(
   opts: ExportOptions = {},
 ): Promise<ExportResult> {
   try {
+    buildExportPreflight(plan, new Set(clipSources.keys()), audio !== null);
     return await exportPlanUnsafeMulti(clipSources, audio, plan, opts);
   } catch (err) {
     throw toAppError(err, 'EXPORTACAO_FALHOU');

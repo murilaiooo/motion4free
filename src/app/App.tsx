@@ -28,7 +28,8 @@ import { dirSize } from '../core/storage-fs';
 import { cachedRepos, spaceCheck } from '../core/storage-report';
 import type { Progress } from '../core/progress';
 import type { EditPlan } from '../core/types';
-import { createHistory, pushHistory, type History } from '../engine/history';
+import { createHistory, type History } from '../engine/history';
+import { commitEdit } from '../editorial/commands';
 import { appendClipsToPlan } from '../editorial/clip-append';
 import { placeWords, placeRanges, unplaceWords, unplaceRanges, totalDuration } from '../engine/clips';
 import type { PlanVersion } from '../core/versions';
@@ -52,6 +53,10 @@ import { useAsrPrecision } from './asr-precision';
 import { AsrPrecisionOption } from './AsrPrecisionOption';
 import { Evaluate } from './Evaluate';
 import { projectFs, storage, storageAvailable } from './project-store';
+import { creativeSetupSchema, type CreativeSetup } from '../core/production';
+import { produceFirstDraft } from '../editorial/production';
+import { CreativeSetupScreen, ProductionUpload } from './production/CreativeSetup';
+import { readSetup, saveSetup } from './production/preferences';
 
 const fs = projectFs;
 
@@ -150,6 +155,9 @@ function EditorApp() {
   const [clipWork, setClipWork] = useState<ClipWork | null>(null);
   const [clipView, setClipView] = useState(false);
   const [longWork, setLongWork] = useState(false);
+  const [creativeSetup, setCreativeSetup] = useState(readSetup);
+  const [creativePhase, setCreativePhase] = useState<'home' | 'setup' | 'upload'>('home');
+  const [firstDraft, setFirstDraft] = useState(false);
   const saveFailed = useRef(false);
   /** A análise e a inclusão de clipes são uma operação única; duas chamadas não podem usar o mesmo histórico inicial. */
   const addingClips = useRef(false);
@@ -165,6 +173,11 @@ function EditorApp() {
   const step = (progress: Progress) => setStatus({ kind: 'working', progress });
   const fail = (err: unknown) => setStatus({ kind: 'error', error: toAppError(err) });
   const notify = (e: AppError) => setNotices((list) => (list.some((n) => n.code === e.code) ? list : [...list, e]));
+
+  function updateSetup(setup: CreativeSetup) {
+    setCreativeSetup(setup);
+    if (!saveSetup(setup)) notify(new AppError('PREFERENCIAS_FALHOU'));
+  }
 
   async function refreshProjects() {
     if (!fs) return;
@@ -191,6 +204,8 @@ function EditorApp() {
   }, []);
 
   function resetSession() {
+    setCreativePhase('home');
+    setFirstDraft(false);
     setPending(null);
     setSession(null);
     setHistory(null);
@@ -208,6 +223,8 @@ function EditorApp() {
 
   async function openProject(id: string) {
     if (!fs) return;
+    setFirstDraft(false);
+    setCreativePhase('home');
     setFlash(null);
     setStatus({ kind: 'idle' });
     const loaded = await enqueue(() => loadProject(fs, id)).catch((err) => ({ kind: 'corrupt' as const, detail: describeError(err) }));
@@ -413,6 +430,7 @@ function EditorApp() {
     setStatus({ kind: 'idle' });
     setFlash(null);
     const files = Array.isArray(f) ? f : [f];
+    if (!files.length) return;
     const primary = files[0]!;
     if (pending) {
       const savedClips = referencedClips(pending.project);
@@ -439,6 +457,11 @@ function EditorApp() {
       } catch (err) {
         fail(err);
       }
+      return;
+    }
+    if (!creativeSetupSchema.safeParse(creativeSetup).success) {
+      fail(new AppError('BRIEF_INVALIDO'));
+      setCreativePhase('setup');
       return;
     }
     if (!force) {
@@ -477,6 +500,11 @@ function EditorApp() {
         a = { media: clips[0]!.media, audio: combinedAudio, words: allWords, silences: allSilences, warnings, asrModel, plan } as any;
         (a as any).__multi = { clips, refs, combinedAudio, wordsByClip, silencesByClip };
       }
+      step({ label: 'Aplicando sua direção criativa', phase: 'montar', fraction: null });
+      const durationSec = a.plan.clips.reduce((total, clip) => total + clip.duration, 0);
+      a.plan = produceFirstDraft(a.plan, { durationSec, words: a.words }, a.silences, creativeSetup).plan;
+      setFirstDraft(true);
+      setCreativePhase('home');
       startProject(a, primary);
     } catch (err) {
       fail(err);
@@ -619,6 +647,7 @@ function EditorApp() {
       const allWords = { ...oldWords, ...opened.wordsByClip };
       const allSilences = { ...oldSilences, ...opened.silencesByClip };
       const nextPlan = appendClipsToPlan(initialHistory.present, extraRefs, allWords, allSilences);
+      const nextHistory = commitEdit(initialHistory, nextPlan);
       const sources = new Map(initialSession.clipSources ?? [
         [existingClips[0]!.id, {
           id: existingClips[0]!.id,
@@ -652,7 +681,7 @@ function EditorApp() {
         ctx: { durationSec: totalDuration(nextPlan.clips), words: placeWords(nextPlan.clips, allWords) },
         silences: placeRanges(nextPlan.clips, allSilences),
       });
-      setHistory(pushHistory(initialHistory, nextPlan));
+      setHistory(nextHistory);
       if (opened.asrModel) setAsrModel(opened.asrModel);
       setCopy('pending');
       if (fs && projectId) {
@@ -856,6 +885,7 @@ function EditorApp() {
           disabled={busy}
           saveState={saveState}
           asrModel={asrModel}
+          initialReview={firstDraft}
           onReplaceFile={(f: File|File[]) => void onFile(f as any)}
           onAddClips={(files: File[]) => void onAddClips(files)}
           projectMenu={
@@ -916,9 +946,18 @@ function EditorApp() {
         {overlays}
       </>
     );
+  if (!pending && creativePhase === 'setup') return <>
+    <CreativeSetupScreen value={creativeSetup} onChange={updateSetup} onComplete={(setup) => { updateSetup(setup); setCreativePhase('upload'); }} onBack={() => setCreativePhase('home')} />
+    {overlays}
+  </>;
+  if (!pending && creativePhase === 'upload') return <>
+    <ProductionUpload setup={creativeSetup} onBack={() => setCreativePhase('home')} onRevise={() => setCreativePhase('setup')} onFile={(files) => void onFile(files)} notices={appNotices} options={<AsrPrecisionOption precision={precision} disabled={busy} />} />
+    {overlays}
+  </>;
   return (
     <>
       <Landing
+        onStart={() => setCreativePhase('setup')}
         onFile={(f) => void onFile(f)}
         busy={busy}
         pendingName={pending?.project.video.name ?? null}

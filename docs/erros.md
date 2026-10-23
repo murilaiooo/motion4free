@@ -5,6 +5,11 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 
 | Código | Mensagem | O que costuma significar |
 |---|---|---|
+| M4F-405 | Falta um vídeo usado na montagem. Reconecte o arquivo original antes de exportar; suas edições continuam salvas. | O preflight não encontrou uma fonte exigida pela timeline ou encontrou um trecho atravessando arquivos. Nenhum quadro preto é exportado como se estivesse correto. |
+| M4F-618 | Não foi possível guardar suas preferências neste navegador. Você pode continuar; elas valem nesta visita. | localStorage bloqueado ou cheio. O briefing continua em memória; os arquivos originais permanecem intactos. |
+| M4F-619 | Não foi possível guardar o layout. A organização da mesa vale nesta visita. | A mesa funciona, mas os tamanhos dos painéis não puderam ser persistidos. |
+| M4F-1016 | A edição planejada não passou na validação. O vídeo original e suas preferências foram preservados. Tente novamente com uma direção mais simples. | Plano inválido ou timeline vazia. A operação é recusada antes de salvar ou exportar. |
+| M4F-1017 | Revise os campos da direção criativa antes de continuar. Use texto simples na chamada final e respeite os limites indicados. | Preferências fora do esquema, por exemplo chamada com caracteres não suportados. Nenhuma análise de mídia é iniciada. |
 | M4F-101 | Formato de arquivo não reconhecido. | O arquivo não é um vídeo ou está corrompido. Tente outro arquivo. |
 | M4F-102 | O arquivo não tem faixa de vídeo. | O arquivo só tem áudio ou imagem. |
 | M4F-103 | Este navegador não consegue ler o vídeo deste arquivo. | Codec do vídeo não suportado pelo navegador. Teste no Chrome/Edge atualizados. |
