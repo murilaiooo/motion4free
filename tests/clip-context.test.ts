@@ -19,7 +19,7 @@ describe('clip context previews, issue #102', () => {
       { id: 'g', text: 'Later.', start: 40, end: 40.4 },
     ];
     const index = buildTranscriptIndex(words, 50);
-    for (const [start, end] of [[0, 0.4], [1.5, 12], [12.5, 13], [38, 42]]) {
+    for (const [start, end] of [[0, 0.4], [1.5, 12], [12.5, 13], [38, 42]] as const) {
       expect(contextAround(index, start, end)).toEqual(reference(words, start, end));
     }
   });
@@ -41,7 +41,7 @@ describe('clip context previews, issue #102', () => {
       id: `w-${i}`, text: `palavra${i}`, start: i * 0.12, end: i * 0.12 + 0.1,
     }));
     const index = buildTranscriptIndex(words, words.at(-1)!.end + 1);
-    for (const [start, end] of [[0, 4], [120, 129], [2395.5, 2420.6], [4780, 4797]]) {
+    for (const [start, end] of [[0, 4], [120, 129], [2395.5, 2420.6], [4780, 4797]] as const) {
       expect(contextAround(index, start, end)).toEqual(reference(words, start, end));
     }
   });
