@@ -85,8 +85,28 @@ export function sentenceBounds(index: TranscriptIndex, first: number, last: numb
   return { first: start.first, last: end.last, flags };
 }
 
+/** Avoid scanning an entire two-hour transcript for each candidate preview.
+ * The index guarantees nondecreasing word.start, even when ASR word ends overlap.
+ */
 export function contextAround(index: TranscriptIndex, start: number, end: number): { before: string; after: string } {
-  const before = index.words.filter((word) => word.end <= start && word.start >= start - 12);
-  const after = index.words.filter((word) => word.start >= end && word.end <= end + 12);
+  const words = index.words;
+  const firstStartingAt = (time: number): number => {
+    let lo = 0;
+    let hi = words.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (words[mid]!.start < time) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  };
+  const before: Word[] = [];
+  for (let i = firstStartingAt(start - 12); i < words.length && words[i]!.start <= start; i++) {
+    if (words[i]!.end <= start) before.push(words[i]!);
+  }
+  const after: Word[] = [];
+  for (let i = firstStartingAt(end); i < words.length && words[i]!.start <= end + 12; i++) {
+    if (words[i]!.end <= end + 12) after.push(words[i]!);
+  }
   return { before: textOf(before), after: textOf(after) };
 }
