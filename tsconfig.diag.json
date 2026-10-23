@@ -8,7 +8,6 @@
   ],
   "exclude": [
     "e2e",
-    "tests/clip-context.test.ts",
     "tests/clip-context-release.test.ts"
   ]
 }
