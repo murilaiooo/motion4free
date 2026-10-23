@@ -1,3 +1,4 @@
+import { originalOutputSpans } from '../editorial/clip-source-map';
 import { planSummary } from '../core/text';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Captions, FileText, Music, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Clapperboard, MousePointerClick, Palette, Smile, Type, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
@@ -62,6 +63,7 @@ import { buildExportPreflight } from '../editorial/export-preflight';
 import { CompositionGuideControls, GuideOverlay, useCompositionGuide } from './workbench/CompositionGuides';
 
 export interface Session {
+  sourceMaps?: import('../editorial/clip-source-map').ClipOrigins;
   file: Blob;
   fileName: string;
   media: OpenedMedia;
@@ -800,6 +802,10 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
               }}
               onAdd={onAddClips}
             />
+            {session.sourceMaps && <details className="fold"><summary>Onde este clipe aparece na gravação original</summary>
+              <p className="hint">A gravação original não foi alterada. Para ampliar além deste arquivo derivado, volte ao Criador de Clipes com a gravação original.</p>
+              {originalOutputSpans(plan, session.sourceMaps).map((span, i) => <p className="hint" key={i}>{fmt(span.sourceStart)}–{fmt(span.sourceEnd)} no original → {fmt(span.outputStart)}–{fmt(span.outputEnd)} nesta edição.</p>)}
+            </details>}
             <FormatSelector plan={plan} onChange={(n) => apply(() => n)} disabled={off || disabled} />
             <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} disabled={off || disabled} />
             <MaskPanel plan={plan} onApply={apply} disabled={off || disabled} />
