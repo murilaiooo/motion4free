@@ -37,6 +37,7 @@ export interface ClipItem {
   uid: string;
   m: Moment;
   checked: boolean;
+  selectionEdited?: boolean;
   job: ClipJobState;
 }
 
@@ -72,13 +73,25 @@ export function newClipWork(long: LongAnalysis): ClipWork {
   return { long, length, count, templateId: DEFAULT_STYLE.id, format: 'vertical', items: buildItems(long, length, count), notices: long.warnings, aiUsed: false };
 }
 
+/** Refresh suggestions without discarding selections, manual bounds/titles or generated downloads. */
+function preserveCuration(previous: readonly ClipItem[], proposed: readonly ClipItem[], keepAutomatic = false): ClipItem[] {
+  const byBounds = new Map(previous.map(item => [`${item.m.start}-${item.m.end}`, item]));
+  const curated = (item: ClipItem) => item.selectionEdited || item.m.userTitle || item.m.userBounds || item.job.kind === 'done';
+  const items = proposed.map(item => {
+    const old = byBounds.get(`${item.m.start}-${item.m.end}`);
+    return old ? { ...old, checked: keepAutomatic || curated(old) ? old.checked : item.checked,
+      m: old.m.userBounds || old.job.kind === 'done' ? old.m : old.m.userTitle ? { ...item.m, title: old.m.title, userTitle: true } : item.m } : item;
+  });
+  return [...items, ...previous.filter(item => (curated(item) || (keepAutomatic && item.checked)) && !items.some(next => next.uid === item.uid))];
+}
+
 /** Libera os MP4 gerados (quando a lista é refeita ou o trabalho é fechado). */
 export function releaseWork(work: ClipWork | null): void {
   for (const it of work?.items ?? []) if (it.job.kind === 'done') URL.revokeObjectURL(it.job.url);
 }
 
 /** Avisos da IA (preparar ou ordenar): saem quando a IA é pedida de novo ou a lista é refeita. */
-const notAiNotice = (n: AppError) => !n.key.startsWith('IA_') && !n.key.startsWith('PROVEDOR_');
+const notAiNotice = (n: AppError) => !n.key.startsWith('IA_') && !n.key.startsWith('PROVEDOR_') && n.key !== 'CLIPES_IA_CONTEXTO' && n.key !== 'CLIPES_CONTEXTO_INVALIDO';
 
 const seconds = (m: Moment) => Math.round(m.end - m.start);
 
@@ -104,7 +117,8 @@ export function ClipMaker({
   const previewLimit = useRef<number | null>(null);
   const [contextPreview, setContextPreview] = useState(false);
   const [batch, setBatch] = useState<{ done: number; total: number } | null>(null);
-  const [opening, setOpening] = useState(false);
+  const [opening, setOpening] = useState<{ uid: string; progress: Progress } | null>(null);
+  const [openingError, setOpeningError] = useState<{ uid: string; error: AppError } | null>(null);
   const stopBatch = useRef(false);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -112,7 +126,7 @@ export function ClipMaker({
   const videoUrl = useMemo(() => URL.createObjectURL(long.file), [long.file]);
   useEffect(() => () => URL.revokeObjectURL(videoUrl), [videoUrl]);
 
-  const working = work.items.some((it) => it.job.kind === 'working') || batch !== null || opening || aiBusy !== null;
+  const working = work.items.some((it) => it.job.kind === 'working') || batch !== null || opening !== null || aiBusy !== null;
   // lote: um relógio só para todos os clipes (o "falta" é do lote inteiro, não só do clipe atual)
   const rendering = work.items.find((it) => it.job.kind === 'working');
   const batchProgress = useMemo((): Progress | null => {
@@ -137,6 +151,10 @@ export function ClipMaker({
       if (it.job.kind === 'done' && delta.job && delta.job !== it.job) URL.revokeObjectURL(it.job.url);
       return { ...it, ...delta };
     }) }));
+  const nudgeItem = (uid: string, edge: 'start' | 'end', direction: -1 | 1) => setItem(uid, item => {
+    const next = nudgeContextMoment(item.m, long.words, long.durationSec, edge, direction);
+    return next === item.m ? {} : { m: next, job: item.job.kind === 'done' ? { kind: 'idle' } : item.job };
+  });
   const setJob = (uid: string, job: ClipJobState) =>
     setItem(uid, (it) => {
       return { job };
@@ -144,8 +162,7 @@ export function ClipMaker({
 
   function regenerate(length: ClipLength, count: number, baseline = false) {
     if (working) return;
-    releaseWork(work);
-    onWork((w) => ({ ...w, length, count, items: buildItems(w.long, length, count, baseline), aiUsed: false, notices: w.notices.filter(notAiNotice) }));
+    onWork((w) => ({ ...w, length, count, items: preserveCuration(w.items, buildItems(w.long, length, count, baseline)), aiUsed: false, notices: w.notices.filter(notAiNotice) }));
   }
 
   /** Muda modelo ou formato: os MP4 já gerados ficam com o visual antigo, então voltam a "não gerado". */
@@ -172,17 +189,9 @@ export function ClipMaker({
         : { moments: findContextualMoments(long.words, long.durationSec, options), warning, covered: 0, total: 0 };
       if (!request.current()) return;
       onWork((current) => {
-        const byStart = new Map(current.items.map((item) => [`${item.m.start}-${item.m.end}`, item]));
-        const items = result.moments.map((moment): ClipItem => {
-          const old = byStart.get(`${moment.start}-${moment.end}`);
-          return old ? { ...old, m: old.m.userTitle ? { ...moment, title: old.m.title, userTitle: true } : moment }
-            : { uid: `c${++uidSeq}`, m: moment, checked: false, job: { kind: 'idle' } };
-        });
-        // New proposals are unselected; keep manual selections and artifacts rather than overwriting curation.
-        const retained = current.items.filter((item) => item.checked && !items.some((candidate) => candidate.uid === item.uid));
-        for (const item of current.items) if (!retained.includes(item) && !items.some((candidate) => candidate.uid === item.uid) && item.job.kind === 'done') URL.revokeObjectURL(item.job.url);
-        return { ...current, items: [...items, ...retained], aiUsed: !!choice && result.covered > 0,
-          notices: [...current.notices.filter(notAiNotice), ...(result.warning ? [result.warning] : []), ...(choice && result.covered < result.total ? [new AppError('CLIPES_IA_CONTEXTO', `${result.covered}/${result.total} janelas; a análise local cobre a transcrição inteira`)] : [])] };
+        const items = preserveCuration(current.items, result.moments.map((moment): ClipItem => ({ uid: `c${++uidSeq}`, m: moment, checked: false, job: { kind: 'idle' } })), true);
+        return { ...current, items, aiUsed: !!choice && result.covered > 0,
+          notices: [...current.notices.filter(notAiNotice), ...(result.warning ? [result.warning] : [])] };
       });
     } catch (error) {
       if (request.current()) onWork((current) => ({ ...current, notices: [...current.notices, toAppError(error, 'CLIPES_IA_CONTEXTO')] }));
@@ -225,16 +234,15 @@ export function ClipMaker({
 
   async function openInEditor(it: ClipItem, index: number) {
     if (working) return;
-    setOpening(true);
-    setJob(it.uid, { kind: 'working', progress: { label: 'Preparando para o editor', phase: 'recortar', fraction: 0 } });
+    setOpeningError(null);
+    setOpening({ uid: it.uid, progress: { label: 'Preparando para o editor', phase: 'recortar', fraction: 0 } });
     try {
-      const p = await prepareClip(long, it.m, index, settings(), (progress) => setJob(it.uid, { kind: 'working', progress }));
-      setJob(it.uid, { kind: 'idle' });
+      const p = await prepareClip(long, it.m, index, settings(), (progress) => setOpening({ uid: it.uid, progress }));
       onOpenInEditor(p, it.m.title);
     } catch (err) {
-      setJob(it.uid, { kind: 'error', error: toAppError(err, 'CORTE_FALHOU') });
+      setOpeningError({ uid: it.uid, error: toAppError(err, 'CORTE_FALHOU') });
     } finally {
-      setOpening(false);
+      setOpening(null);
     }
   }
 
@@ -373,7 +381,7 @@ export function ClipMaker({
             {work.items.map((it, i) => (
               <article key={it.uid} className={`clip-card ${it.checked ? 'on' : ''}`} data-testid="clip-card">
                 <label className="clip-check">
-                  <input type="checkbox" checked={it.checked} disabled={working} onChange={(e) => setItem(it.uid, () => ({ checked: e.target.checked }))} data-testid="clip-check" />
+                  <input type="checkbox" checked={it.checked} disabled={working} onChange={(e) => setItem(it.uid, () => ({ checked: e.target.checked, selectionEdited: true }))} data-testid="clip-check" />
                   <span className="clip-rank tnum">{i + 1}</span>
                 </label>
                 <div className="clip-info">
@@ -395,20 +403,22 @@ export function ClipMaker({
                   </details>
                   <div className="clip-edges" role="group" aria-label="Ajustar começo e fim">
                     <span className="hint">Começo</span>
-                    <button className="sm ghost" disabled={working} onClick={() => setItem(it.uid, (x) => ({ m: nudgeContextMoment(x.m, long.words, long.durationSec, 'start', -1), job: x.job.kind === 'done' ? { kind: 'idle' } : x.job }))} title="Começar na frase anterior">
+                    <button className="sm ghost" disabled={working} onClick={() => nudgeItem(it.uid, 'start', -1)} title="Começar na frase anterior">
                       Frase anterior
                     </button>
-                    <button className="sm ghost" disabled={working} onClick={() => setItem(it.uid, (x) => ({ m: nudgeContextMoment(x.m, long.words, long.durationSec, 'start', 1), job: x.job.kind === 'done' ? { kind: 'idle' } : x.job }))} title="Começar na frase seguinte">
+                    <button className="sm ghost" disabled={working} onClick={() => nudgeItem(it.uid, 'start', 1)} title="Começar na frase seguinte">
                       Frase seguinte
                     </button>
                     <span className="hint">Fim</span>
-                    <button className="sm ghost" disabled={working} onClick={() => setItem(it.uid, (x) => ({ m: nudgeContextMoment(x.m, long.words, long.durationSec, 'end', -1), job: x.job.kind === 'done' ? { kind: 'idle' } : x.job }))} title="Terminar na frase anterior">
+                    <button className="sm ghost" disabled={working} onClick={() => nudgeItem(it.uid, 'end', -1)} title="Terminar na frase anterior">
                       Frase anterior
                     </button>
-                    <button className="sm ghost" disabled={working} onClick={() => setItem(it.uid, (x) => ({ m: nudgeContextMoment(x.m, long.words, long.durationSec, 'end', 1), job: x.job.kind === 'done' ? { kind: 'idle' } : x.job }))} title="Terminar na frase seguinte">
+                    <button className="sm ghost" disabled={working} onClick={() => nudgeItem(it.uid, 'end', 1)} title="Terminar na frase seguinte">
                       Frase seguinte
                     </button>
                   </div>
+                  {opening?.uid === it.uid && <ProgressPanel progress={opening.progress} compact testId="clip-opening-progress" />}
+                  {openingError?.uid === it.uid && <ErrorBox error={openingError.error} kind="error" onDismiss={() => setOpeningError(null)} />}
                   {it.job.kind === 'working' && <ProgressPanel progress={it.job.progress} compact testId="clip-progress" />}
                   {it.job.kind === 'error' && <ErrorBox error={it.job.error} kind="error" onDismiss={() => setJob(it.uid, { kind: 'idle' })} />}
                   {it.job.kind === 'done' && (

@@ -124,7 +124,7 @@ export async function prepareClip(long: LongAnalysis, m: Moment, index: number, 
   const { media, audio } = await openWithAudio(file, () => undefined);
   const slice = sliceForClip({ start: m.start, end: m.end }, media.durationSec, long.words, long.silences);
   const sourceId = await fingerprint({ name: long.file.name, size: long.file.size, modified: long.file.lastModified, duration: long.durationSec });
-  return { file, media, audio, plan: clipPlan(slice, settings.style, settings.output), words: slice.words, silences: slice.silences, sourceMaps: { c1: { version: 1, sourceId, sourceOffset: m.start, sourceDuration: long.durationSec, derivedDuration: media.durationSec } } };
+  return { file, media, audio, plan: clipPlan(slice, settings.style, settings.output), words: slice.words, silences: slice.silences, sourceMaps: { c1: { version: 1, sourceId, sourceOffset: m.start, sourceEnd: m.end, sourceDuration: long.durationSec, derivedDuration: media.durationSec } } };
 }
 
 /** Recorta, monta e exporta: devolve o MP4 final e o nome do arquivo. */

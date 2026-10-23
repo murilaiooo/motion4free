@@ -2,7 +2,7 @@ import { clipLayout } from '../engine/clips';
 import type { EditPlan } from '../core/types';
 
 /** Provenance of a derived clip; original media remains untouched and local. */
-export interface ClipOrigin { version: 1; sourceId: string; sourceOffset: number; sourceDuration: number; derivedDuration: number }
+export interface ClipOrigin { version: 1; sourceId: string; sourceOffset: number; sourceEnd?: number; sourceDuration: number; derivedDuration: number }
 export type ClipOrigins = Record<string, ClipOrigin>;
 export interface OriginalSpan { sourceId: string; sourceStart: number; sourceEnd: number; outputStart: number; outputEnd: number }
 
@@ -20,7 +20,7 @@ export function originalOutputSpans(plan: Pick<EditPlan, 'clips' | 'segments'>, 
       if (origin) {
         // Encoder padding beyond the original or recorded derived duration has no source span.
         const localStart = start - clip.start;
-        const localEnd = Math.min(end - clip.start, origin.derivedDuration, origin.sourceDuration - origin.sourceOffset);
+        const localEnd = Math.min(end - clip.start, (origin.sourceEnd ?? origin.sourceDuration) - origin.sourceOffset, origin.derivedDuration, origin.sourceDuration - origin.sourceOffset);
         if (localEnd <= localStart) continue;
         result.push({ sourceId: origin.sourceId,
           sourceStart: origin.sourceOffset + localStart, sourceEnd: origin.sourceOffset + localEnd,

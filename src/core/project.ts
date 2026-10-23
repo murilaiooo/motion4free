@@ -54,7 +54,7 @@ const projectSchema = z.object({
     words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
     silences: z.array(z.object({ start: time, end: time })),
   })).optional(),
-  sourceMaps: z.record(z.string(), z.object({ version: z.literal(1), sourceId: z.string().regex(/^[a-f0-9]{64}$/), sourceOffset: time, sourceDuration: time, derivedDuration: time }).refine((origin) => origin.sourceOffset < origin.sourceDuration && origin.derivedDuration > 0 && origin.sourceOffset + origin.derivedDuration <= origin.sourceDuration + 1)).optional(),
+  sourceMaps: z.record(z.string(), z.object({ version: z.literal(1), sourceId: z.string().regex(/^[a-f0-9]{64}$/), sourceOffset: time, sourceEnd: time.optional(), sourceDuration: time, derivedDuration: time }).refine((origin) => (origin.sourceEnd === undefined || (origin.sourceEnd > origin.sourceOffset && origin.sourceEnd <= origin.sourceDuration)) && origin.sourceOffset < origin.sourceDuration && origin.derivedDuration > 0 && origin.sourceOffset + origin.derivedDuration <= origin.sourceDuration + 1)).optional(),
   warnings: z.array(z.object({ key: errorKey, detail: z.string() })),
   // planos v1 (Fase 2) são migrados para v2 ao abrir
   history: z.object({ past: z.array(anyPlanSchema), present: anyPlanSchema, future: z.array(anyPlanSchema) }),
