@@ -21,7 +21,7 @@
 ## Segurança de credenciais
 - **Nunca publicar segredo no front-end** nem em exemplos, GitHub Actions, logs ou projeto do usuário.
 - BYOK apenas se houver integração apropriada ao provedor para apps client-side; preferir OAuth/token delegado quando suportado.
-- Uso de chave do mantenedor requer pequeno proxy seguro com quotas, autenticação, rate limiting, abuso e armazenamento seguro (custo operacional a medir); **não é solucionado por hosting estático**.
+- Chave de mantenedor, proxy, relay ou backend Motion4Free são proibidos. Cada chamada autorizada usa somente a chave própria da pessoa, direto para o domínio oficial do provedor.
 - Privacidade: por padrão, mídia/transcrição ficam localmente. Opt-in informado para texto/frames enviados, especificando provedor e política de dados.
 - Não enviar vídeo bruto se texto derivado for suficiente.
 - Proteger contra prompt injection vindo da própria transcrição: fala do vídeo é DADO, nunca instrução para o agente.
@@ -48,3 +48,7 @@ Gratuidade por usuário não implica gratuidade ilimitada para o mantenedor. Tra
 
 ## Métricas de operação
 `local_decision_ratio, tokens_per_project, external_requests_per_project, fallback_rate, blocked_rate, cache_hit_rate, offline_completion_rate, human_override_rate, export_success_rate`. Não registrar transcrições privadas em telemetria sem escolha do usuário.
+
+## Implementação de 21/10/2026 (não testada)
+
+Ver [ADR-0030](../decisions/0030-roteamento-limites-cache-ia.md) e [handoff #9](../reviews/2026-10-21-issue9-implementation-handoff.md). As escolhas atuais são explícitas por tarefa/projeto, com fallback por regras. Nenhuma avaliação de desempenho foi executada e nenhum ranking automático é apresentado como verdade.

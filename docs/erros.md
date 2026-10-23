@@ -137,4 +137,15 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 | M4F-1214 | Este navegador não permite guardar chaves cifradas. A chave vale só até fechar a aba. | Sem Web Crypto (página fora de HTTPS) ou sem localStorage (modo privado restrito). |
 | M4F-1215 | A senha do cofre precisa ter pelo menos 8 caracteres. | Senha curta demais ao criar o cofre. |
 | M4F-1216 | O cofre de chaves deste navegador está danificado e não pode ser aberto. Apague o cofre em Privacidade e segurança e conecte as chaves de novo. | O conteúdo guardado em "m4f-cofre" não está no formato esperado. |
+| M4F-1218 | O envio para a IA foi cancelado ou a autorização mudou. Nenhum novo pedido será enviado com a autorização anterior; a edição continua pelas regras. |
 | M4F-1217 | O serviço aceitou o teste, mas não enviou uma resposta de texto. Não foi possível confirmar que este modelo funciona. | HTTP 200 sem conteúdo de texto útil. A listagem e a autenticação não comprovam a geração; experimente outro modelo ou peça novamente com mais tokens. |
+
+## Limites e disponibilidade de IA (#9)
+
+O limite local não substitui os limites da conta de API. Não há fallback para outro modelo pago sem consentimento.
+
+| Código | Mensagem | Condição |
+|---|---|---|
+
+| M4F-1219 | O limite local de pedidos ou de texto para IA foi atingido. A edição continua pelas regras; ajuste os limites em Configurações se quiser autorizar mais uso. | Orçamento configurável por sessão/projeto atingido, sem envio extra. |
+| M4F-1220 | Este serviço de IA está temporariamente em espera após limite de uso ou falhas repetidas. A edição continua pelas regras, sem repetir chamadas nem trocar para outro serviço. | Cooldown após 429 ou falhas transitórias. |

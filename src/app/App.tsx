@@ -50,9 +50,10 @@ import { ProjectMenu } from './ProjectMenu';
 import { ProgressPanel } from './ProgressPanel';
 import { ProjectsList } from './Projects';
 import { SettingsHost } from './settings/SettingsScreen';
+import { OutboundConsent } from './settings/OutboundConsent';
 import { openSettings } from './settings/route';
 import { forgetAllKeys } from '../ai/credentials/keys';
-import { resetAiSettings } from './AiOptions';
+import { resetAiSettings, setActiveAiProject } from './AiOptions';
 import { Logo, type SaveState } from './TopBar';
 import { analyze, openWithAudio } from './pipeline';
 import { useAsrPrecision } from './asr-precision';
@@ -105,7 +106,7 @@ export function App() {
     );
   }
   if (EVALUATE) return <Evaluate />;
-  return <EditorApp />;
+  return <><EditorApp /><OutboundConsent /></>;
 }
 
 /**
@@ -150,6 +151,7 @@ function EditorApp() {
   const [fileName, setFileName] = useState<string | null>(null);
   // v0.11: vários projetos
   const [projectId, setProjectId] = useState<string | null>(null);
+  useEffect(() => { setActiveAiProject(projectId); }, [projectId]);
   const [projectName, setProjectName] = useState('');
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [focusProjects, setFocusProjects] = useState(false);

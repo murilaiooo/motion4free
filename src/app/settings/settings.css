@@ -151,3 +151,8 @@ kbd { font-family: var(--mono); font-size: var(--fs-xs); padding: 2px 6px; borde
   .set-models li { flex-direction: column; align-items: stretch; }
   .set-confirm { justify-items: start; text-align: left; max-width: none; }
 }
+
+/* Consentimento por pedido: nenhum texto ou segredo é gravado no armazenamento. */
+.set-outbound { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: var(--s-5); color: var(--text-1); background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-lg); }
+.set-outbound::backdrop { background: rgb(0 0 0 / 65%); }
+.set-outbound-body { max-height: 40dvh; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--s-3); background: var(--bg-2); font-size: var(--fs-xs); }

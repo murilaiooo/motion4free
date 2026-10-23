@@ -2,6 +2,34 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.29.1 — 22/10/2026 — QA independente da issue #73
+
+**Configurações/IA com chave própria: consentimento real, cofre e cancelamento validados.** Corrigida a sincronização de credenciais e preferências entre abas, preservado o cancelamento de pedidos quando a autorização muda e adicionada política CSP aos arquivos estáticos distribuídos pela Cloudflare Worker. Documentados M4F-1218/1219/1220 exatamente como exibidos pelo app.
+
+- Tests: suíte Vitest completa, TypeScript, build de produção e smoke E2E no Brave aprovados na worktree isolada; testes extras para criptografia concorrente, revogação e conteúdo exato da solicitação. Nenhuma mídia longa exportada nem credencial real usada.
+- CORS antes da autenticação verificado no Brave com credenciais sintéticas inválidas nos cinco provedores (modelos e geração). Isso não comprova acesso, preços ou saldo de contas reais; a interface continua distinguindo listagem de inferência validada.
+- Cloudflare Worker local confirmou a CSP e demais headers; Brave abriu a versão Worker sem violação observada. Arquivo WASM de teste maior que 25 MiB é removido pela build de produção, não pela build de E2E.
+- Relatório detalhado: `docs/reviews/2026-10-22-issue73-release-verification.md`. As features de outras issues presentes na integração experimental #116 não foram incorporadas nesta atualização.
+
+## v0.29.0 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#9 / complemento #73 — Roteamento explícito por tarefa/projeto e limites locais de IA.** Configurações avançadas permitem herdar a escolha global ou fixar regras, IA local ou modelo remoto já escolhido para pedido geral, revisão de trecho e ranking de clipes. O projeto aberto pode ter escolhas próprias. Trocar/revogar credencial remove escolhas vinculadas à conta anterior.
+
+- Reserva de pedidos e estimativa conservadora de texto antes de cada chamada, após consentimento. Limites por projeto e por sessão, teto de saída e timeout ajustáveis; conexão e reparos também contam. Não é fatura nem garantia de gasto no provedor. Contadores persistem sem conteúdo; armazenamento bloqueado usa só memória da aba.
+- Cache SHA-256 por versão/contexto/modelo/credencial, até 20 respostas por 10 minutos só na memória; pedidos idênticos simultâneos compartilham resultado. Trocar chave ou limpar dados invalida o cache; não salva transcrição nem resposta em localStorage.
+- `429` respeita `Retry-After`; três falhas transitórias abrem circuito temporário. O app não repete nem troca provedor/modelo sozinho. Cota/falha mantém edição por regras.
+- M4F-1219/1220, documentação e roteiro de QA. Nenhum teste, build, typecheck, lint ou execução da aplicação foi realizado.
+
+## v0.27.6 — 21/10/2026 — IMPLEMENTED — NOT TESTED
+
+**#73 — Autorização para o conteúdo real e revogação imediata.** Cada envio externo, inclusive teste de conexão e reparo de JSON, mostra o corpo completo antes da autorização. O diálogo só guarda o texto enquanto o pedido aguarda a decisão; cancelar mantém o caminho de regras. Trocar/remover chave, trancar cofre ou revogar consentimento cancela operações em andamento e invalida a seleção anterior, inclusive fora do painel IA.
+
+- Respostas de conexão atrasadas não podem confirmar outro modelo/credencial. O timeout e cancelamento cobrem também a leitura do corpo HTTP.
+- Erros remotos não ecoam corpos, URLs ou cabeçalhos potencialmente privados; M4F-1218 identifica cancelamento.
+- Paginação incompleta falha explicitamente sem apresentar um catálogo truncado como completo.
+- Escritas e desbloqueios de cofre são descartados depois de lock/delete ou alteração em outra aba, preservando a revisão mais recente.
+- Nada foi executado para verificar estas mudanças. Testes existentes preservados; QA independente obrigatória.
+
 ## v0.27.5 — 21/10/2026
 
 **Conexão de provedores sem catálogo de outra conta nem sucesso de fachada (#73, entrega parcial).** Conectar/substituir/remover uma chave invalida o catálogo daquela conta e a escolha antiga de modelo, sem guardar identificador derivado da chave em armazenamento. Uma resposta atrasada de outra chave é descartada; requisições pendentes são canceladas ao trocar de provedor. Os catálogos ficam por até 30 minutos na memória desta aba, separados por revisão opaca da credencial.
