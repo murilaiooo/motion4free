@@ -45,7 +45,8 @@ export function rankContextualMoments(input: readonly Moment[], count: number): 
   const limit = Math.min(600, Math.max(1, count));
   const selected: Moment[] = [];
   const midpoint = (moment: Moment) => (moment.start + moment.end) / 2;
-  const temporalSpan = sorted.length ? Math.max(1, midpoint(sorted.at(-1)!) - midpoint(sorted[0]!)) : 1;
+  const positions = sorted.map(midpoint);
+  const temporalSpan = sorted.length ? Math.max(1, Math.max(...positions) - Math.min(...positions)) : 1;
   const noOverlap = (candidate: Moment) => selected.every(other => {
     const overlap = Math.max(0, Math.min(candidate.end, other.end) - Math.max(candidate.start, other.start));
     return overlap / Math.max(0.001, Math.min(candidate.end - candidate.start, other.end - other.start)) <= 0.5;
