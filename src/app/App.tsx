@@ -371,6 +371,7 @@ function EditorApp() {
       warnings: [...project.warnings.map((w) => new AppError(w.key, w.detail)), ...audioWarnings],
       peaks: peaksOf(combinedAudio),
       clipSources,
+      sourceMaps: project.sourceMaps,
       clipWords,
       clipSilences,
       clipAudios: new Map(Object.entries(audiosByClip).filter((item): item is [string, import('../media/audio').DecodedAudio] => item[1] !== null)),
@@ -403,6 +404,7 @@ function EditorApp() {
       audio,
       ctx: { durationSec: media.durationSec, words: project.words },
       silences: project.silences,
+      sourceMaps: project.sourceMaps,
       warnings: project.warnings.map((w) => new AppError(w.key, w.detail)),
       peaks: peaksOf(audio),
     });
@@ -594,6 +596,7 @@ function EditorApp() {
     }
     const opened: Session = {
       file: canonicalBlob,
+      sourceMaps: a.sourceMaps,
       fileName: canonicalName,
       media: a.media,
       audio: a.audio,
@@ -674,7 +677,7 @@ function EditorApp() {
   function openClipInEditor(p: PreparedClip, title: string) {
     setClipView(false);
     setNotices([]);
-    startProject({ media: p.media, audio: p.audio, plan: p.plan, words: p.words, silences: p.silences, warnings: [], asrModel: clipWork?.long.asrModel ?? null }, p.file, title);
+    startProject({ media: p.media, audio: p.audio, plan: p.plan, words: p.words, silences: p.silences, warnings: [], sourceMaps: p.sourceMaps, asrModel: clipWork?.long.asrModel ?? null }, p.file, title);
   }
 
   /** Acrescentar clipes no projeto aberto sem substituir as edições existentes. */
@@ -771,6 +774,7 @@ function EditorApp() {
       video: s.originalVideo ?? { name: s.fileName, size: s.file.size, durationSec: s.media.durationSec },
       words: s.clipWords ? placeWords(h.present.clips, s.clipWords) : s.ctx.words,
       silences: s.clipSilences ? placeRanges(h.present.clips, s.clipSilences) : s.silences,
+      sourceMaps: s.sourceMaps,
       clipAnnotations: s.clipWords
         ? Object.fromEntries(Object.entries(s.clipWords).map(([id, words]) => [id, { words, silences: s.clipSilences?.[id] ?? [] }]))
         : undefined,

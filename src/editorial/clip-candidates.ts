@@ -1,0 +1,118 @@
+import type { Word } from '../core/types';
+import { CLIP_LENGTHS, LEAD_SEC, TAIL_SEC, MAX_MOMENTS, clock, type Moment, type MomentOptions } from './highlights';
+import { buildTranscriptIndex, sentenceBounds, type TranscriptIndex } from './clip-context';
+
+export function groundedMoment(index: TranscriptIndex, first: number, last: number, opts: MomentOptions, source: 'local-context' | 'ai-context' = 'local-context', titleBounds?: [number, number], manual = false): Moment | null {
+  const limit = manual ? { min: 5, max: 180 } : CLIP_LENGTHS[opts.length];
+  if (first < 0 || last < first || last >= index.words.length) return null;
+  const bounds = sentenceBounds(index, first, last, limit.max);
+  const words = index.words.slice(bounds.first, bounds.last + 1);
+  const a = words[0]!; const b = words.at(-1)!;
+  const duration = b.end - a.start;
+  if (duration < limit.min || duration > limit.max) return null;
+  const text = words.map((word) => word.text.trim()).join(' ');
+  const previous = index.words[bounds.first - 1]; const next = index.words[bounds.last + 1];
+  const requestedStart = Math.min(a.start, Math.max(0, a.start - LEAD_SEC, previous ? previous.end + 0.02 : 0));
+  const requestedEnd = Math.max(b.end, Math.min(index.duration, b.end + TAIL_SEC, next ? next.start - 0.02 : Infinity));
+  const lead = a.start - requestedStart, tail = requestedEnd - b.end;
+  const paddingScale = lead + tail > 0 ? Math.min(1, Math.max(0, limit.max - duration) / (lead + tail)) : 0;
+  const start = a.start - lead * paddingScale, end = Math.min(start + limit.max, b.end + tail * paddingScale);
+  const questions = text.includes('?');
+  const specificity = Math.min(10, (text.match(/\d+/g)?.length ?? 0) * 2);
+  const score = Math.max(0, Math.min(100, 65 + specificity + (questions ? 4 : 0) + (source === 'ai-context' ? 3 : 0) - bounds.flags.length * 20));
+  const titleSentence = index.sentences[index.sentenceAt[titleBounds?.[0] ?? bounds.first]!]!;
+  const titleWords = titleSentence.first >= bounds.first && titleSentence.last <= bounds.last
+    ? index.words.slice(titleSentence.first, titleSentence.last + 1)
+    : index.words.slice(bounds.first, index.sentences[index.sentenceAt[bounds.first]!]!.last + 1);
+  const titleText = titleWords.map((word) => word.text.trim()).join(' ');
+  // A cropped quotation can drop 'não/if/até'. Use a whole short sentence or a neutral time label.
+  const title = titleText.length <= 60 && /[.!?…]["”')]*$/.test(titleText) ? titleText : `Trecho em ${clock(start)}`;
+  return {
+    id: `ctx-${a.id}-${b.id}`, rank: 0, start, end,
+    title, text, score, wordCount: words.length,
+    reasons: [source === 'ai-context' ? 'span proposto pela IA e ancorado na transcrição' : 'candidato local por frases da gravação', 'nota estrutural estimada; não prevê visualizações', ...(bounds.flags.length ? ['precisa de revisão de contexto antes de selecionar'] : ['sem sinal estrutural óbvio de frase interrompida; confira o sentido'])],
+    sourceEvidence: { firstWordId: a.id, lastWordId: b.id, review: bounds.flags, source },
+  };
+}
+
+/** Review-worthy quality stays first, but near-equal moments should not all come
+ * from the beginning of a long recording. The first 20 picks use small temporal
+ * novelty (max +14 points); everything else is filled by the original ranking.
+ * This is NOT an estimate of views or semantic understanding.
+ */
+export function rankContextualMoments(input: readonly Moment[], count: number): Moment[] {
+  const sorted = [...input].sort((a, b) => (a.sourceEvidence?.review.length ?? 0) - (b.sourceEvidence?.review.length ?? 0) || b.score - a.score || a.start - b.start);
+  const limit = Math.min(600, Math.max(1, count));
+  const selected: Moment[] = [];
+  const midpoint = (moment: Moment) => (moment.start + moment.end) / 2;
+  const positions = sorted.map(midpoint);
+  const temporalSpan = sorted.length ? Math.max(1, Math.max(...positions) - Math.min(...positions)) : 1;
+  const noOverlap = (candidate: Moment) => selected.every(other => {
+    const overlap = Math.max(0, Math.min(candidate.end, other.end) - Math.max(candidate.start, other.start));
+    return overlap / Math.max(0.001, Math.min(candidate.end - candidate.start, other.end - other.start)) <= 0.5;
+  });
+  for (let i = 0; i < Math.min(limit, 20); i++) {
+    let choice: Moment | null = null;
+    let value = -Infinity;
+    for (const candidate of sorted) {
+      if (selected.includes(candidate) || !noOverlap(candidate)) continue;
+      const distance = selected.length ? Math.min(...selected.map(s => Math.abs(midpoint(s) - midpoint(candidate)))) : 0;
+      const novelty = selected.length ? 14 * distance / temporalSpan : 0;
+      const score = candidate.score - (candidate.sourceEvidence?.review.length ?? 0) * 120 + novelty;
+      if (score > value) { choice = candidate; value = score; }
+    }
+    if (!choice) break;
+    selected.push(choice);
+  }
+  for (const candidate of sorted) {
+    if (selected.length >= limit) break;
+    if (!selected.includes(candidate) && noOverlap(candidate)) selected.push(candidate);
+  }
+  return selected.map((moment, i) => ({ ...moment, rank: i + 1 }));
+}
+
+/** All sentence starts are explored, not only a heuristic top-N. Candidate memory is bounded. */
+export function findContextualMoments(words: readonly Word[], duration: number, opts: MomentOptions): Moment[] {
+  const index = buildTranscriptIndex(words, duration);
+  const limit = CLIP_LENGTHS[opts.length];
+  let pool: Moment[] = [];
+  // Monotone search keys tolerate overlapping ASR word ends without an all-pairs loop.
+  let furthest = 0;
+  const ends = index.sentences.map(sentence => (furthest = Math.max(furthest, index.words[sentence.last]!.end)));
+  for (let a = 0; a < index.sentences.length; a++) {
+    const first = index.sentences[a]!.first;
+    const choices = new Set<number>();
+    for (const target of [limit.min, limit.ideal, limit.max]) {
+      let lo = a, hi = ends.length;
+      const at = index.words[first]!.start + target;
+      while (lo < hi) { const mid = (lo + hi) >>> 1; if (ends[mid]! < at) lo = mid + 1; else hi = mid; }
+      for (const b of [lo - 1, lo, lo + 1]) if (b >= a && b < ends.length) choices.add(b);
+    }
+    for (const b of choices) {
+      const last = index.sentences[b]!.last;
+      const seconds = index.words[last]!.end - index.words[first]!.start;
+      if (seconds < limit.min || seconds > limit.max) continue;
+      const moment = groundedMoment(index, first, last, opts);
+      if (moment) pool.push(moment);
+    }
+    // Retain temporal diversity across the whole recording rather than a prefix-only cap.
+    if (pool.length > 600) pool = rankContextualMoments(pool, 200);
+  }
+  // The old finder remains an explicit UI baseline; do not allocate its all-pairs pool on this bounded path.
+  return rankContextualMoments(pool, Math.min(MAX_MOMENTS, opts.count));
+}
+
+/** Manual curation snaps to entire indexed sentences, then re-evaluates the new bounds. */
+export function nudgeContextMoment(moment: Moment, words: readonly Word[], duration: number, edge: 'start' | 'end', direction: -1 | 1): Moment {
+  const index = buildTranscriptIndex(words, duration);
+  const first = words.findIndex((word) => word.start >= moment.start - 0.001);
+  let last = first;
+  while (last + 1 < words.length && words[last + 1]!.end <= moment.end + 0.001) last++;
+  if (first < 0 || last < first) return moment;
+  const a = index.sentenceAt[first]! + (edge === 'start' ? direction : 0);
+  const b = index.sentenceAt[last]! + (edge === 'end' ? direction : 0);
+  if (a < 0 || b >= index.sentences.length || a > b) return moment;
+  const next = groundedMoment(index, index.sentences[a]!.first, index.sentences[b]!.last, { length: 'longo', count: 1 }, 'local-context', undefined, true);
+  if (next && next.start === moment.start && next.end === moment.end) return moment;
+  return next ? { ...next, rank: moment.rank, userBounds: true, title: moment.userTitle ? moment.title : next.title, userTitle: moment.userTitle, reasons: ['bordas ajustadas manualmente por frase; confira o contexto', ...next.reasons] } : moment;
+}

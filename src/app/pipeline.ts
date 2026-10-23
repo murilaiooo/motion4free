@@ -12,6 +12,7 @@ import type { OnProgress } from '../core/progress';
 import { formatClock } from '../core/bytes';
 
 export interface Analysis {
+  sourceMaps?: import('../editorial/clip-source-map').ClipOrigins;
   media: OpenedMedia;
   audio: DecodedAudio | null;
   plan: EditPlan;
