@@ -34,6 +34,10 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-305 | O servidor do modelo de transcrição respondeu com erro. | O servidor respondeu 401, 403, 429 ou 5xx. O detalhe traz o status e o servidor; `HTTP 502` no espelho do site significa que a Cloudflare não alcançou o Hugging Face. |
 | M4F-306 | Não encontrei fala neste vídeo: ele fica sem legendas e sem título. Dá para escolher estilo e gerar o vídeo final. | A transcrição terminou sem nenhuma palavra (só música, ruído, silêncio ou fala muito baixa). O detalhe traz quantos silêncios foram achados. Se tem fala, confira o volume do microfone. |
 | M4F-307 | O modelo de legenda escolhido não funcionou neste aparelho; usei um modelo mais leve, e a legenda pode ter mais erros. | Desde a v0.8.0 o app tenta os modelos em escada (ADR-0013): no modo Precisa, Whisper large-v3-turbo na placa de vídeo → Whisper small no processador → Whisper base. Se um não baixa, não inicia (falta de memória da placa, navegador sem fp16) ou para no meio de um trecho, o próximo continua do mesmo trecho. O detalhe lista qual falhou, o código do motivo (M4F-301, 302, 303 ou 305) e qual fez a legenda. Não é falha: a legenda saiu, mas com um modelo menor. |
+| M4F-308 | Não consegui analisar os rostos neste navegador. O enquadramento anterior foi mantido; você pode mover o vídeo manualmente ou tentar de novo. | Detector/runtime/decodificação de rostos indisponível. Preserva o enquadramento anterior; escolher enquadramento manual ou tentar novamente. |
+| M4F-309 | Não encontrei um rosto confiável em alguns clipes. Esses clipes usam enquadramento central, ajustável manualmente. | Nenhum rosto confiável em um ou mais clipes; enquadramento central, ajustável manualmente. |
+| M4F-310 | Análise de rostos cancelada. A edição e o enquadramento anterior foram preservados. | Análise cancelada; nenhuma alteração parcial de enquadramento aplicada. |
+| M4F-311 | Há quadros demais para esta análise de rostos. Escolha um clipe menor ou use o enquadramento manual. | Mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar enquadramento manual. |
 | M4F-401 | Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador. | Nenhum codificador de vídeo disponível. |
 | M4F-402 | A geração do vídeo falhou. | Falha durante a geração do MP4; ver detalhe. |
 | M4F-403 | Seu navegador não gera H.264: o vídeo funciona aqui, mas o Instagram pode recusar. Para o arquivo final, use Chrome ou Edge no computador. | O vídeo saiu em outro formato (VP9/AV1) porque o navegador não tem codificador H.264 (comum no Chromium sem codecs proprietários e em alguns Linux). Detalhe traz o formato usado. Antes da v0.7 este aviso aparecia sem código. |
@@ -47,6 +51,7 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-524 | Limite de 24 pontos de animação neste elemento. Apague um ponto para criar outro. | Desde a v0.26. Cada elemento pode ter até 24 pontos de animação (keyframes); o limite mantém a prévia leve. |
 | M4F-525 | Não dá para apagar todos os pedaços do vídeo de uma vez: deixe pelo menos um. | Desde a v0.26. Com vários pedaços escolhidos (Ctrl ou Shift + clique), Apagar tiraria o vídeo inteiro. Nada mudou. |
 | M4F-526 | Com vários itens escolhidos dá para apagar ou copiar pedaços do vídeo. Para duplicar ou copiar um elemento, escolha só ele. | Desde a v0.26. Copiar, recortar ou duplicar com elementos (texto, emoji, legenda) entre vários itens escolhidos. Nada mudou. |
+| M4F-527 | O pedido foi cancelado ou a edição/seleção mudou enquanto ele era preparado. Preservei o estado atual; envie um novo pedido para continuar. | Pedido cancelado ou plano/seleção mudou. Nenhum resultado atrasado é aplicado; enviar novo pedido ao estado atual. |
 | M4F-506 | Este pedaço encosta num trecho já ajustado. Clique no trecho existente ou escolha outro pedaço. | Trechos ajustados não podem se sobrepor. Clique no trecho que já existe (faixa "Trechos") para mudar o pedido dele. |
 | M4F-507 | O vídeo precisa de pelo menos um clipe: não dá para tirar o último. | Na aba Clipes, "Tirar do vídeo" no único clipe que sobrou. Nada muda. |
 | M4F-508 | O vídeo montado passa de 3 minutos, o máximo do Reels. Tire clipes ou corte mais para publicar como Reels. | Aviso (não bloqueia): o vídeo pode ser gerado, mas o Instagram não aceita Reels com mais de 3 minutos. Tire clipes, corte trechos ou use o corte "agressivo" no pedido. |
@@ -111,6 +116,8 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-1107 | Não achei trechos de fala contínua do tamanho escolhido. Tente clipes mais curtos. | A fala tem muitas pausas longas ou o vídeo é curto para o tamanho pedido (ex.: clipes de 60–90 s num vídeo de 3 minutos). |
 | M4F-1108 | Um dos clipes não pôde ser gerado; os outros continuaram normalmente. | Em "Gerar os escolhidos", um clipe falhou ao recortar, montar ou exportar. O detalhe traz o número do clipe e o código do motivo (M4F-1104, M4F-402…). |
 | M4F-1109 | O aparelho ficou sem memória para ler o áudio do vídeo longo. Feche outras abas ou envie um pedaço menor do vídeo. | O navegador recusou memória ao ler o áudio do vídeo longo. Nada foi perdido. |
+| M4F-1110 | A transcrição não tem IDs/tempos válidos ou ultrapassa o limite para análise contextual. Preservei o trabalho; confira a transcrição ou use um arquivo menor. | IDs/tempos da transcrição inválidos ou limite de contexto; preservar a origem e revisar/refazer análise ou escolher arquivo menor. |
+| M4F-1111 | A análise contextual por IA ficou incompleta ou sem resposta válida. Mantive candidatos locais; confira o contexto antes de selecionar. | Análise por IA incompleta/sem resposta ancorada válida; candidatos locais continuam disponíveis, com curadoria humana antes da seleção/export. |
 | M4F-999 | Erro inesperado. | Erro não previsto; ver detalhe. |
 
 Erros 3xx são avisos: o vídeo continua sendo editado e exportado sem legendas e sem título.
@@ -137,8 +144,10 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 | M4F-1214 | Este navegador não permite guardar chaves cifradas. A chave vale só até fechar a aba. | Sem Web Crypto (página fora de HTTPS) ou sem localStorage (modo privado restrito). |
 | M4F-1215 | A senha do cofre precisa ter pelo menos 8 caracteres. | Senha curta demais ao criar o cofre. |
 | M4F-1216 | O cofre de chaves deste navegador está danificado e não pode ser aberto. Apague o cofre em Privacidade e segurança e conecte as chaves de novo. | O conteúdo guardado em "m4f-cofre" não está no formato esperado. |
-| M4F-1218 | Envio de IA cancelado ou autorização alterada. Conferir a credencial e autorizar um novo pedido; continuar pelas regras. |
+| M4F-1218 | O envio para a IA foi cancelado ou a autorização mudou. Nenhum novo pedido será enviado com a autorização anterior; a edição continua pelas regras. |
 | M4F-1217 | O serviço aceitou o teste, mas não enviou uma resposta de texto. Não foi possível confirmar que este modelo funciona. | HTTP 200 sem conteúdo de texto útil. A listagem e a autenticação não comprovam a geração; experimente outro modelo ou peça novamente com mais tokens. |
+| M4F-1219 | O limite local de pedidos ou de texto para IA foi atingido. A edição continua pelas regras; ajuste os limites em Configurações se quiser autorizar mais uso. | Limite local de pedidos/texto atingido ou contador inválido. Edição por regras permanece. Conferir limites em Configurações, e conferir o gasto na própria conta de API. Sem novo envio automático. |
+| M4F-1220 | Este serviço de IA está temporariamente em espera após limite de uso ou falhas repetidas. A edição continua pelas regras, sem repetir chamadas nem trocar para outro serviço. | Cooldown por 429 ou circuito após falhas transitórias. Aguardar o prazo mostrado, continuar localmente; trocar chave não contorna o limite do provedor. |
 
 ## Limites e disponibilidade de IA (#9)
 
@@ -157,11 +166,11 @@ Erros 5xx não alteram nada: a edição é recusada e o plano fica como estava.
 - M4F-309: nenhum rosto confiável em um ou mais clipes; enquadramento central, ajustável manualmente.
 - M4F-310: análise cancelada; nenhuma alteração parcial de enquadramento aplicada.
 - M4F-311: mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual.
-| M4F-806 | Grafo da POC fora dos limites. | Schema fechado, IDs únicos e tempos limitados. |
-| M4F-807 | Adaptador Three indisponível na POC. | Falha no módulo fixo ou WebGL; Canvas permanece. |
+| M4F-806 | O grafo de composição da POC está fora dos limites permitidos. | Schema fechado, IDs únicos e tempos limitados. |
+| M4F-807 | A POC não conseguiu carregar o adaptador Three.js ou criar WebGL. Canvas2D continua disponível. | Falha no módulo fixo ou WebGL; Canvas permanece. |
 
-| M4F-808 | Fonte local/seek da POC indisponível. | Vídeo menor que 12 s, decoder, timeout ou captura ficou obsoleta. |
-| M4F-809 | Dataset sem contrato/direitos/splits válidos. | Faltam direitos/anotações, IDs/tempos são inválidos ou origem/pessoa/hash cruza conjuntos. Nenhum dado privado é repetido no erro. |
+| M4F-808 | A POC precisa de um vídeo local decodificável de pelo menos 12 s e de um seek concluído antes de salvar o frame. | Vídeo menor que 12 s, decoder, timeout ou captura ficou obsoleta. |
+| M4F-809 | O dataset precisa de direitos e anotações válidos, com origem, pessoas e conteúdo separados entre os conjuntos. | Faltam direitos/anotações, IDs/tempos são inválidos ou origem/pessoa/hash cruza conjuntos. Nenhum dado privado é repetido no erro. |
 
-| M4F-810 | Pacote cego inválido. | Direitos, versões, IDs, referências ou briefing incompatíveis. |
-| M4F-811 | Respostas cegas incompletas/inválidas. | Identificador, notas/evidências/abstenções ou preferências ausentes. |
+| M4F-810 | O pacote cego precisa de versões autorizadas, identificadores válidos e o briefing de cada versão. | Direitos, versões, IDs, referências ou briefing incompatíveis. |
+| M4F-811 | Complete as notas com evidência ou abstenção, e a preferência justificada de cada conteúdo. | Identificador, notas/evidências/abstenções ou preferências ausentes. |

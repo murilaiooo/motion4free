@@ -50,8 +50,20 @@ describe('proposeScenes', () => {
 
   it('palavras-chave destacadas e zoom de ênfase em frase com exclamação', () => {
     const hw = of(pop, 'highlight-word').map((s) => s.text.toLowerCase());
-    expect(hw).toContain('segredo');
+    expect(hw).toContain('simples');
+    expect(hw).toContain('acompanhe');
     expect(of(pop, 'emphasis-zoom').length).toBeGreaterThan(0);
+  });
+
+  it('frase negada não gera destaque (#8: destaque não pode representar mal afirmação qualificada)', () => {
+    // "O segredo é a consistência, não a intensidade." tem negação: pular a frase
+    // inteira é a política conservadora atual — nem "segredo" (afirmado) nem
+    // "intensidade" (negado) vira destaque, para nenhum destaque parecer afirmar
+    // o termo negado. Se essa política for refinada para escopo de negação, este
+    // teste deve mudar junto com ela.
+    const hw = of(pop, 'highlight-word').map((s) => s.text.toLowerCase());
+    expect(hw).not.toContain('segredo');
+    expect(hw).not.toContain('intensidade');
   });
 
   it('chamada final nos últimos segundos e barra de progresso no vídeo todo', () => {

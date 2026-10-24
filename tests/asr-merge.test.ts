@@ -50,7 +50,10 @@ describe('junção das janelas', () => {
     expect(merged[1]).toEqual(W('junção', 9.8, 10.4));
   });
 
-  it('se os tempos das duas janelas discordam e a palavra aparece dos dois lados, a repetida sai', () => {
+  it('se os tempos das duas janelas discordam e a palavra aparece dos dois lados, a repetida fica e é sinalizada (#6)', () => {
+    // Política atual (#6): repetição perto da junção pode ser ênfase legítima, e o
+    // descompasso de tempos não prova duplicata — preservar e marcar para revisão,
+    // em vez de apagar palavra só por texto igual e proximidade temporal.
     const merged = mergeWindows(
       [
         { window: win(0, 10, 0, 11), chunks: [{ text: ' casa.', timestamp: [9.5, 9.95] }] },
@@ -58,7 +61,8 @@ describe('junção das janelas', () => {
       ],
       20,
     );
-    expect(texts(merged)).toEqual(['casa.', 'nova']);
+    expect(texts(merged)).toEqual(['casa.', 'Casa', 'nova']);
+    expect(merged[1]!.needsReview).toBe(true);
   });
 
   it('palavra repetida de verdade, longe da junção, fica', () => {
@@ -80,9 +84,14 @@ describe('junção das janelas', () => {
 });
 
 describe('alucinações do Whisper', () => {
-  it('remove "Legendas pela comunidade Amara.org" sempre', () => {
+  it('remove "Legendas pela comunidade Amara.org" quando cai no silêncio; fora dele, preserva e sinaliza (#6)', () => {
     const ws = [W('Oi', 0, 0.3), W('Legendas', 5, 5.3), W('pela', 5.3, 5.5), W('comunidade', 5.5, 6), W('Amara.org', 6, 6.5)];
-    expect(texts(removeHallucinations(ws, []))).toEqual(['Oi']);
+    // Trecho quase todo dentro de um silêncio: é alucinação típica do Whisper, sai.
+    expect(texts(removeHallucinations(ws, [{ start: 4.9, end: 6.6 }]))).toEqual(['Oi']);
+    // Sem silêncio, pode ser fala legítima: fica, marcada para revisão.
+    const kept = removeHallucinations(ws, []);
+    expect(texts(kept)).toEqual(['Oi', 'Legendas', 'pela', 'comunidade', 'Amara.org']);
+    expect(kept.slice(1).every((w) => w.needsReview)).toBe(true);
   });
 
   it('"Obrigado por assistir" só sai se cair no silêncio', () => {

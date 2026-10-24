@@ -138,8 +138,11 @@ export function smoothTrack(samples: readonly FaceSample[], durationSec: number,
     const t = i * opts.step;
     while (j + 1 < sorted.length && Math.abs(sorted[j + 1]!.t - t) <= Math.abs(sorted[j]!.t - t)) j++;
     const s = sorted[j]!;
+    // Buraco nas detecções: segura a última posição. Só o início, antes de qualquer
+    // detecção, fica no centro (valor inicial de `last`). Voltar para NO_FACE no meio
+    // do buraco puxaria o recorte para o centro e de volta, contrariando o teste e a
+    // docstring desta função.
     if (Math.abs(s.t - t) <= opts.holdSec) last = { x: clamp(s.x, 0, 1), y: clamp(s.y, 0, 1) };
-    else last = NO_FACE;
     raw.push(last);
   }
   // 2. zona morta
