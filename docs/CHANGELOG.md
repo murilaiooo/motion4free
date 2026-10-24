@@ -1,3 +1,8 @@
+## 0.34.1 — Correção do M4F-302 (transcrição sem espelho de produção)
+
+- Corrige o carregamento do modelo de transcrição quando o app roda sem o Worker-espelho de produção (preview, hospedagem estática ou espelho fora do ar): o servidor devolvia a página do app (HTML, HTTP 200) no lugar do `config.json` do modelo, o parse falhava com `SyntaxError` e a escada inteira morria com M4F-302 sem nunca tentar o Hugging Face direto. Agora qualquer falha vinda do espelho segue para a próxima origem; só a falha na origem direta encerra o degrau. Nenhum código de erro novo (reutiliza M4F-301/M4F-302).
+- Validado com vídeo real de 39,2 s com fala em PT-BR: antes, 0 legendas e aviso M4F-302; depois, 18 legendas, 39,2 s → 33,1 s editados, 6,1 s de silêncio removidos, nenhum aviso. Typecheck, suíte completa (83 arquivos / 1670 testes) e teste real de importação passando. Revisão independente aprovou com ressalvas (caminho direto ao Hugging Face não provado neste ambiente headless; confirmar no Chrome normal / deploy com espelho de produção).
+
 ## 0.34.0 — IMPLEMENTED — NOT TESTED / AWAITING QA
 
 - Integra os incrementos Draft #97–#100 e #103–#115 em uma branch de revisão; resolve conflitos de metadados de rostos/origem, imports editoriais e versão do manifesto, sem alterar main.
