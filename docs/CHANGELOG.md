@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## Em preparação — 24/10/2026 (não publicado)
+
+- Geração de fixtures E2E portada de Bash/WSL para Node.js + FFmpeg, permitindo testes no Windows sem WSL.
+- O build de produção verifica arquivos gerados para Cloudflare, incluindo limites de 25 MiB, logs e potenciais arquivos de credenciais.
+- Mapa de módulos, estado de release e roteiro seguro de publicação/rollback atualizados. Sem declarar exportação real, licenças ou fluxo geral de IA como aprovados.
+
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
 ## v0.30.0 — 22/10/2026 — #102 (QA pendente, não publicar automaticamente)

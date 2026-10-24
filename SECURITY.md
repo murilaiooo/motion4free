@@ -1,6 +1,6 @@
 # Segurança e privacidade
 
-Estado pre-alpha: apenas documentação. Não existe aplicação publicada, SLA ou e-mail oficial de segurança. Evite issues públicas com tokens, vídeos, transcrições privadas ou PoCs exploráveis; utilize um canal privado com o mantenedor e habilite Private Vulnerability Reporting nas configurações do GitHub quando apropriado.
+Existe uma instalação acessível no endereço Cloudflare indicado no README, mas isso **não é evidência de que a versão atual esteja aprovada para release**. O projeto permanece em pré-lançamento, sem SLA nem e-mail oficial de segurança documentado. Evite issues públicas com tokens, vídeos, transcrições privadas ou PoCs exploráveis; entre em contato com o mantenedor por canal privado e habilite Private Vulnerability Reporting no GitHub quando apropriado.
 
 Princípios:
 - Nenhum segredo no bundle público, repositório ou logs; arquivos de configuração locais ignorados.

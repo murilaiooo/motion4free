@@ -1,7 +1,7 @@
 # Instruções para agentes — Motion4Free
 
 ## Fonte de verdade
-**Trabalho em andamento (20/10/2026): comece por `docs/superpowers/plans/2026-10-20-plano-produto-final.md`.** Depois leia `docs/superpowers/specs/2026-10-20-motion4free-v1-design.md` (spec v1 aprovada), `docs/superpowers/plans/2026-10-20-plano-mestre.md` (fases e gates), o plano detalhado da fase em andamento em `docs/superpowers/plans/` e os ADRs, em especial `docs/decisions/0005-stack-v1.md`. Documentos de 18–19/10 são contexto e pesquisa; onde conflitarem com a spec v1, vale a spec v1.
+**Estado corrente de release (24/10/2026): comece por `docs/release/STATUS.md` e `docs/release/RUNBOOK.md`; leia o plano de 20/10 como histórico da execução, não como snapshot atual.** Depois leia `docs/superpowers/specs/2026-10-20-motion4free-v1-design.md` (spec v1 aprovada), `docs/superpowers/plans/2026-10-20-plano-mestre.md` (fases e gates), o plano detalhado da fase em andamento em `docs/superpowers/plans/` e os ADRs, em especial `docs/decisions/0005-stack-v1.md`. Documentos de 18–19/10 são contexto e pesquisa; onde conflitarem com a spec v1, vale a spec v1.
 
 ## Quem decide
 O responsável pelo produto (murilo) não é técnico e delegou as decisões técnicas ao agente (20/10/2026). O agente decide, registra em ADR quando relevante e segue. Não pedir ao responsável escolhas técnicas. Cada entrega termina com um roteiro de teste simples (sem terminal, sem instalação) e o feedback do teste orienta a próxima iteração.

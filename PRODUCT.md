@@ -1,6 +1,6 @@
 # Motion4Free — definição de produto
 
-**Spec v1 aprovada em 20/10/2026. Versão v0.15.1 em validação: fluxo de edição, multi-clipes e exportação com testes automatizados; qualidade artística e publicação dependem de validação.**
+**Spec v1 aprovada em 20/10/2026. Código v0.30.0 em validação (24/10/2026); publicação pública não aprovada.** O escopo inclui edição, múltiplos clipes, geração contextual e exportação, porém a comprovação de vídeos reais, benchmarks criativos e licenças continua pendente. Consulte [STATUS](docs/release/STATUS.md).
 
 - **Propósito:** criar um editor de vídeo com qualidade comparável a um motion designer experiente, usando software open source, IA criativa no fluxo de edição e custo monetário obrigatório zero para desenvolvedor e usuário.
 - **Público inicial:** criadores que transformam fala e vídeos pessoais em Reels/Shorts visualmente sofisticados.
@@ -10,7 +10,7 @@
 
 ## Fontes canônicas (não duplicar)
 - [Visão](docs/vision.md) e [requisitos](docs/requirements.md)
-- [Spec Superpowers](docs/superpowers/specs/2026-10-18-motion4free-design.md) e [adendo premium](docs/superpowers/specs/2026-10-18-premium-personalization-amendment.md)
+- [Spec v1 aprovada (fonte de verdade)](docs/superpowers/specs/2026-10-20-motion4free-v1-design.md); [spec anterior](docs/superpowers/specs/2026-10-18-motion4free-design.md) e [adendo premium](docs/superpowers/specs/2026-10-18-premium-personalization-amendment.md) são históricos
 - [Direção artística](docs/creative/art-direction.md) e [arquitetura](docs/architecture.md)
 - [Roadmap](docs/roadmap.md), [risco](docs/risks.md) e [benchmarks](docs/ai/evaluation.md)
 
