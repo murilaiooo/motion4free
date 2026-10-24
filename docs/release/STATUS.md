@@ -38,6 +38,7 @@
 | Entrada corrompida entre válidas | `npx playwright test e2e/qa-regression.spec.ts -g corrompido`: **1/1 passou** depois de abrir o painel de mídia e de avisos; sem exportação nesse cenário |
 | Limite desses smokes | Apenas mídias sintéticas de 1–3 s; não provam sincronismo labial, estresse em vídeos longos nem exportação de todas as proporções |
 | E2E completo e integração externa real | **não executados** |
+| Auditoria de dependências de produção | `npm audit --omit=dev --audit-level=high`: **0 vulnerabilidades reportadas** pelo npm; não inclui devDependencies nem substitui revisão da cadeia de suprimentos |
 | Análise integral de licenças/modelos/arte | **não concluída** |
 | Verificação deployment Cloudflare atual | **não executada**, e nenhuma publicação foi iniciada |
 
