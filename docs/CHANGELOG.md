@@ -1,3 +1,7 @@
+## 0.34.2 — Correção do texto do aviso M4F-307
+
+- O aviso de fallback de modelo (M4F-307) vinha com o sufixo "O vídeo foi editado mesmo assim, sem legendas e sem título.", colado automaticamente em todo aviso de modelo — enganoso justamente no caso em que as legendas foram produzidas com um modelo mais leve. O sufixo agora só aparece nos avisos de modelo em que a transcrição realmente falhou (M4F-301, M4F-302, M4F-305); no M4F-307 o aviso termina em "a legenda pode ter mais erros". Validado no navegador com vídeo real: 18 legendas presentes e aviso sem o sufixo. Typecheck e suíte completa (83 arquivos / 1670 testes) passando.
+
 ## 0.34.1 — Correção do M4F-302 (transcrição sem espelho de produção)
 
 - Corrige o carregamento do modelo de transcrição quando o app roda sem o Worker-espelho de produção (preview, hospedagem estática ou espelho fora do ar): o servidor devolvia a página do app (HTML, HTTP 200) no lugar do `config.json` do modelo, o parse falhava com `SyntaxError` e a escada inteira morria com M4F-302 sem nunca tentar o Hugging Face direto. Agora qualquer falha vinda do espelho segue para a próxima origem; só a falha na origem direta encerra o degrau. Nenhum código de erro novo (reutiliza M4F-301/M4F-302).

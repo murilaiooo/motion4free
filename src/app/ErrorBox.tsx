@@ -38,7 +38,7 @@ export function ErrorBox({ error, kind, onDismiss }: { error: AppError; kind: 'e
             {kind === 'error' ? 'Erro' : 'Aviso'} {error.code}
           </b>
           : {error.title}
-          {kind === 'warning' && error.key.startsWith('MODELO') ? ' O vídeo foi editado mesmo assim, sem legendas e sem título.' : ''}
+          {kind === 'warning' && error.key.startsWith('MODELO') && error.key !== 'MODELO_RESERVA' ? ' O vídeo foi editado mesmo assim, sem legendas e sem título.' : ''}
           {kind === 'warning' && error.key === 'TRANSCRICAO_FALHOU' ? ' O vídeo foi editado mesmo assim, sem legendas e sem título.' : ''}
         </p>
         {onDismiss && (
