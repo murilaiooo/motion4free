@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { tab } from './ui';
 
 const RED = 'e2e/fixtures/clip-red.webm';
 const BLUE = 'e2e/fixtures/clip-blue.webm';
@@ -30,6 +31,7 @@ for (const [format, width, height] of [
     test.setTimeout(240_000);
     await page.goto('/?asr=vazio');
     await page.getByTestId('file-input').setInputFiles([RED, BLUE]);
+    await tab(page, 'Mídia');
     await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
     await page.getByTestId('format-select').selectOption(format);
     await expect(page.getByTestId('format-select')).toHaveValue(format);
@@ -46,6 +48,7 @@ test('QA real: arquivo sem áudio exporta vídeo válido sem adicionar trilha fi
   test.setTimeout(180_000);
   await page.goto('/?asr=vazio');
   await page.getByTestId('file-input').setInputFiles(MUTE);
+  await tab(page, 'Mídia');
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   const out = await downloadMp4(page, info.outputPath('qa-no-audio.mp4'));
   const m = metadata(out);
@@ -57,11 +60,13 @@ test('QA real: primeiro vídeo removido preserva segundo após fechar e reabrir,
   test.setTimeout(240_000);
   await page.goto('/?asr=vazio');
   await page.getByTestId('file-input').setInputFiles([RED, BLUE]);
+  await tab(page, 'Mídia');
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
   await page.getByTestId('clip-c1').getByRole('button', { name: 'Remover' }).click();
   await expect(page.getByTestId('clip-c1')).toHaveCount(0);
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 90_000 });
   await page.reload();
+  await tab(page, 'Mídia');
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('clip-c1')).toHaveCount(0);
   const out = await downloadMp4(page, info.outputPath('qa-only-c2.mp4'));
@@ -99,12 +104,16 @@ test('QA: um arquivo corrompido entre arquivos válidos não cancela o projeto n
     { name: 'clip-red.webm', mimeType: 'video/webm', buffer: readFileSync(RED) },
     { name: 'clip-blue.webm', mimeType: 'video/webm', buffer: readFileSync(BLUE) },
   ]);
+  await tab(page, 'Mídia');
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('clip-c2')).toBeVisible();
   await expect(page.getByTestId('clip-c3')).toHaveCount(0);
+  // Warnings live inside a collapsed preview notice popover in the current UI.
+  await page.getByTestId('stage-warning-toggle').click();
   await expect(page.getByTestId('warning-M4F-108')).toBeVisible();
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
   await page.reload();
+  await tab(page, 'Mídia');
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('clip-c2')).toBeVisible();
   await expect(page.getByTestId('warning-M4F-615')).toHaveCount(0);
