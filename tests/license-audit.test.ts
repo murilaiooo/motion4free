@@ -31,6 +31,15 @@ describe('issue #2: auditoria offline de licenças, fail closed', () => {
     try { const res = run('--dist-dir', dir); expect(res.status, res.stderr).toBe(0); }
     finally { rmSync(dir, { recursive: true, force: true }); }
   });
+  it('valida a distribuição sem git no PATH (Cloudflare/Linux)', () => {
+    const dir = fixture();
+    try {
+      const res = spawnSync(process.execPath, [audit, '--dist-dir', dir], {
+        cwd: root, encoding: 'utf8', env: { ...process.env, PATH: '' },
+      });
+      expect(res.status, res.stderr).toBe(0);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
   it('rejeita mídia nova sem proveniência antes da publicação', () => {
     const dir = fixture();
     try {

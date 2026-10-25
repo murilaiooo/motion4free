@@ -6,6 +6,7 @@ Bibliotecas nativas Sharp/libvips/onnxruntime-node NÃO são enviadas pelo site.
 Fontes têm avisos em /licencas-fontes.txt; ícones em /licencas-icones.txt.
 Modelos de IA são obtidos sob demanda por URL externa, não incluídos aqui.
 MIT do Motion4Free não altera nenhuma licença de terceiros.
+Fingerprint SHA-256 do grafo: 1826ddbd11ca61c363eb51f1a49c610c7124930e44669a04c1af04a56c29c6e2
 
 Pacotes do grafo de produção: 99 (incluindo 20 famílias de fontes).
 

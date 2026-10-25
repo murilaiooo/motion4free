@@ -9,7 +9,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,7 +27,21 @@ const sha = filename => crypto.createHash('sha256').update(fs.readFileSync(filen
 const ALLOWED = new Set(['MIT', 'Apache-2.0', 'OFL-1.1', 'ISC', 'BSD-3-Clause', 'BSD-2-Clause', 'MPL-2.0', '0BSD', '(MIT OR CC0-1.0)']);
 const native = name => name.startsWith('@img/') || name === 'sharp' || name === 'onnxruntime-node';
 const noticePath = path.join(root, 'public', 'licencas-bibliotecas.txt');
-const tracked = () => execFileSync('git', ['-C', root, 'ls-files', '-z', 'src/assets', 'public'], { encoding: 'utf8' }).split('\0').filter(Boolean).map(s => s.replaceAll('\\', '/'));
+function tracked() {
+  const out = [];
+  for (const dirname of ['src/assets', 'public']) {
+    const scan = folder => {
+      if (!fs.existsSync(folder)) return;
+      for (const item of fs.readdirSync(folder, { withFileTypes:true })) {
+        const filename = path.join(folder, item.name);
+        if (item.isDirectory()) scan(filename);
+        else if (item.isFile()) out.push(path.relative(root, filename).replaceAll('\\', '/'));
+      }
+    };
+    scan(path.join(root, dirname));
+  }
+  return out;
+}
 const installed = new Map();
 function add(name, parent) {
   if (installed.has(name)) return;
@@ -36,11 +49,11 @@ function add(name, parent) {
   if (!item) { errors.push('Não consta no package-lock: ' + name + ', requerido por ' + parent); return; }
   const packagePath = dir(name);
   let meta;
-  if (item.optional) {
-    // O mesmo pacote opcional pode estar instalado no Windows, mas não no
-    // Linux/Cloudflare (ou vice-versa). Usar SEMPRE os metadados imutáveis
-    // do lockfile, nunca o pacote instalado, gera notices multiplataforma.
-    if (!item.license) errors.push('Licença do pacote opcional ausente no lockfile: ' + name);
+  if (item.optional || (auditDist && !writing && !args.includes('--check'))) {
+    // Preview Cloudflare e builds locais dependem exclusivamente de metadados
+    // imutáveis do lockfile. A checagem completa de LICENSE instalados ocorre
+    // separadamente com npm run licenses:check no PC.
+    if (!item.license) errors.push('Licença ausente no lockfile: ' + name);
     meta = {name, version:item.version, license:item.license, repository:null};
   } else {
     try { meta = JSON.parse(fs.readFileSync(path.join(packagePath, 'package.json'), 'utf8')); }
@@ -62,6 +75,7 @@ function add(name, parent) {
 }
 for (const name of direct) add(name, 'raiz');
 const packages = [...installed.values()].sort((a,b) => a.name.localeCompare(b.name));
+const fingerprint = crypto.createHash('sha256').update(JSON.stringify(packages.map(p => [p.name, p.version, p.license]))).digest('hex');
 function noticeText() {
   const lines = [
     'MOTION4FREE — LICENÇAS E AVISOS DE BIBLIOTECAS',
@@ -72,6 +86,7 @@ function noticeText() {
     'Fontes têm avisos em /licencas-fontes.txt; ícones em /licencas-icones.txt.',
     'Modelos de IA são obtidos sob demanda por URL externa, não incluídos aqui.',
     'MIT do Motion4Free não altera nenhuma licença de terceiros.',
+    'Fingerprint SHA-256 do grafo: ' + fingerprint,
     '',
     'Pacotes do grafo de produção: ' + packages.length + ' (incluindo ' + fonts.length + ' famílias de fontes).',
     '',
@@ -94,10 +109,15 @@ function noticeText() {
   }
   return lines.join('\n').replace(/\r\n/g, '\n').trimEnd() + '\n';
 }
-const expected = noticeText();
-if (writing) fs.writeFileSync(noticePath, expected, 'utf8');
-else if (!fs.existsSync(noticePath) || fs.readFileSync(noticePath, 'utf8').replace(/\r\n/g, '\n') !== expected)
-  errors.push('Avisos de bibliotecas desatualizados; execute npm run licenses:update e revise o diff.');
+if (writing) fs.writeFileSync(noticePath, noticeText(), 'utf8');
+else if (!fs.existsSync(noticePath)) errors.push('Avisos das bibliotecas ausentes');
+else {
+  const recorded = fs.readFileSync(noticePath, 'utf8').replace(/\r\n/g, '\n');
+  if (!recorded.includes('Fingerprint SHA-256 do grafo: ' + fingerprint))
+    errors.push('Licenças no aviso não correspondem ao grafo do lockfile.');
+  if (args.includes('--check') && recorded !== noticeText())
+    errors.push('Avisos de bibliotecas desatualizados; execute npm run licenses:update e revise o diff.');
+}
 
 const approvedSource = new Set([
   'public/_headers', 'public/licencas-fontes.txt', 'public/licencas-icones.txt',
@@ -121,7 +141,7 @@ function classifyAsset(file, abs) {
     if (!name) errors.push('Fonte não inventariada: ' + file);
     else {
       const metadata = installed.get('@fontsource/' + name);
-      if (metadata?.license !== 'OFL-1.1' || !metadata.licenseFile)
+      if (metadata?.license !== 'OFL-1.1' || (args.includes('--check') && !metadata.licenseFile))
         errors.push('OFL/arquivo LICENSE indisponível para: ' + name);
       if (!fontNotice.toLowerCase().includes('- ' + name + ':'))
         errors.push('Falta atribuição desta fonte em /licencas-fontes.txt: ' + name);
