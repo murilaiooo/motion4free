@@ -4,6 +4,8 @@
 
 **Decisão: BLOQUEADO para publicação pública.** A branch prepara gates, corrige o teste Windows e valida dois MP4s sintéticos curtos no Brave, mas **não certifica** os demais subsistemas, a qualidade editorial, o licenciamento, toda a exportação e o desempenho em vídeos reais.
 
+**#102 / #133:** o staging recebeu sinais lexicais de revisão contextual (negação, condição, comparação e referência) portados com testes do histórico #116, sem alterar timestamps/nota de clipes. A [avaliação humana continua pendente](ISSUE102-CONTEXT-REVIEW.md). Inventário adicional de #116 identificou 116 caminhos de mudanças, 18 idênticos, 50 evoluídos e 48 ausentes no staging; faltam módulos experimentais/qualidade a analisar em pequenas PRs, não fazer merge bruto.
+
 **Reconciliação #132:** os 48 caminhos modificados pelo snapshot antigo continuam no staging: 18 com hash igual, 30 com revisões mais novas, 0 ausentes. O backup histórico não precisa de merge bruto; [relatório arquivo a arquivo](ISSUE132-SNAPSHOT-RECONCILIATION.md). A integração #133 permanece independente.
 
 **Atualização de armazenamento (#4):** o staging agora inclui POC de cache estático offline com reabertura de projeto no Brave e export/import de backup portátil `.m4f` com validação SHA-256 por blocos. [Evidência e limitações](ISSUE4-OFFLINE-STORAGE.md). Isso não prova comportamento offline com IA/modelos remotos nem elimina validação no Cloudflare real.
