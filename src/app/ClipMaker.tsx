@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, CircleAlert, Download, Pause, Play, Scissors, SquarePen, Sparkles, WandSparkles } from 'lucide-react';
+import { ArrowLeft, CircleAlert, Download, Scissors, Sparkles } from 'lucide-react';
 import './clips.css';
 import { AppError, toAppError } from '../core/errors';
 import { FORMAT_IDS, OUTPUT_FORMATS, profileFor, type OutputFormatId } from '../core/formats';
@@ -8,7 +8,8 @@ import { listTemplates } from '../core/template-gallery';
 import { CLIP_COUNTS, CLIP_LENGTHS, CLIP_LENGTH_IDS, MAX_MOMENTS, clock, findMoments, type ClipLength, type Moment } from '../editorial/highlights';
 import { discoverContextualMoments } from '../editorial/clip-discovery';
 import { findContextualMoments, nudgeContextMoment } from '../editorial/clip-candidates';
-import { buildTranscriptIndex, contextAround } from '../editorial/clip-context';
+import { buildTranscriptIndex } from '../editorial/clip-context';
+import { ClipReviewWorkspace } from './ClipReviewWorkspace';
 import { useEditRequest } from './use-edit-request';
 import { VERSION_LABEL } from '../version';
 import { fingerprint } from '../ai/routing';
@@ -122,6 +123,7 @@ export function ClipMaker({
   const stopBatch = useRef(false);
   const [previewing, setPreviewing] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [settingsExpanded, setSettingsExpanded] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 560px)').matches);
   const video = useRef<HTMLVideoElement>(null);
   const videoUrl = useMemo(() => URL.createObjectURL(long.file), [long.file]);
   useEffect(() => () => URL.revokeObjectURL(videoUrl), [videoUrl]);
@@ -308,7 +310,14 @@ export function ClipMaker({
           </div>
         )}
 
-        <section className="clips-options card" aria-label="Como fazer os clipes">
+        <section className="clips-configuration" aria-label="Configuração dos clipes">
+          <button className="clips-settings-toggle" type="button" aria-expanded={settingsExpanded}
+            onClick={() => setSettingsExpanded(value => !value)} data-testid="clips-settings-toggle">
+            <span><strong>01 / Como ficam seus clipes</strong>
+              <small>{CLIP_LENGTHS[work.length].label} · {work.count} clipes · {OUTPUT_FORMATS[work.format].ratio}</small></span>
+            <span>{settingsExpanded ? 'Ocultar opções' : 'Alterar opções'}</span>
+          </button>
+          {settingsExpanded && <section className="clips-options card" aria-label="Como fazer os clipes">
           <div className="clips-opt">
             <span className="clips-label">Tamanho</span>
             <div className="segmented" role="group" aria-label="Tamanho dos clipes">
@@ -360,96 +369,30 @@ export function ClipMaker({
             <p className="hint">Regras locais por padrão; IA só se escolhida. Fronteiras e contexto são estimativas. Novas propostas ficam desmarcadas para sua revisão.</p>
             <ProgressPanel progress={aiBusy} compact testId="clips-ai-progress" />
           </div>
+          </section>}
         </section>
 
-        <div className="clips-body">
-          <aside className="clips-preview">
-            <video ref={video} src={videoUrl} controls playsInline preload="metadata" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => previewLimit.current !== null && e.currentTarget.currentTime >= previewLimit.current && e.currentTarget.pause()} data-testid="clips-video" />
-            <p className="hint">
-              {current ? (
-                <>
-                  {contextPreview ? 'Ouvindo com 6 s de contexto ao redor do clipe' : 'Tocando o clipe'} {work.items.indexOf(current) + 1}: {clock(current.m.start)}–{clock(current.m.end)}. A prévia mostra o vídeo original; o clipe pronto sai no formato e no modelo escolhidos.
-                </>
-              ) : (
-                'Clique em “Ver trecho” para assistir um momento aqui.'
-              )}
-            </p>
-          </aside>
-
-          <section className="clips-list" aria-label="Momentos encontrados">
-            {work.items.length === 0 && <ErrorBox error={new AppError('SEM_MOMENTOS', `${CLIP_LENGTHS[work.length].label} em ${clock(long.durationSec)}`)} kind="warning" />}
-            {work.items.map((it, i) => (
-              <article key={it.uid} className={`clip-card ${it.checked ? 'on' : ''}`} data-testid="clip-card">
-                <label className="clip-check">
-                  <input type="checkbox" checked={it.checked} disabled={working} onChange={(e) => setItem(it.uid, () => ({ checked: e.target.checked, selectionEdited: true }))} data-testid="clip-check" />
-                  <span className="clip-rank tnum">{i + 1}</span>
-                </label>
-                <div className="clip-info">
-                  <label>Título do clipe (revise a fidelidade)<input value={it.m.title} maxLength={100} disabled={working} aria-label={`Título do clipe ${i + 1}`} onChange={(event) => setItem(it.uid, (item) => ({ m: { ...item.m, title: event.target.value, userTitle: true }, job: item.job.kind === 'done' ? { kind: 'idle' } : item.job }))} /></label>
-                  <p className="clip-time tnum">
-                    {clock(it.m.start)} – {clock(it.m.end)} · {seconds(it.m)} s · nota estrutural estimada {Math.round(it.m.score)}/100 (não prevê visualizações)
-                  </p>
-                  <ul className="clip-reasons">
-                    {it.m.reasons.map((r) => (
-                      <li key={r}>{r}</li>
-                    ))}
-                  </ul>
-                  <details className="clip-text">
-                    <summary>Ler a fala e o contexto</summary>
-                    <p className="hint"><b>Antes:</b> {contextAround(index, it.m.start, it.m.end).before || 'Início da gravação/sem fala próxima'}</p>
-                    <p>{it.m.text}</p>
-                    <p className="hint"><b>Depois:</b> {contextAround(index, it.m.start, it.m.end).after || 'Fim da gravação/sem fala próxima'}</p>
-                    {it.m.sourceEvidence?.review.map((flag) => <p className="hint warn-text" key={flag}>{flag}</p>)}
-                  </details>
-                  <div className="clip-edges" role="group" aria-label="Ajustar começo e fim">
-                    <span className="hint">Começo</span>
-                    <button className="sm ghost" disabled={working} onClick={() => nudgeItem(it.uid, 'start', -1)} title="Começar na frase anterior">
-                      Frase anterior
-                    </button>
-                    <button className="sm ghost" disabled={working} onClick={() => nudgeItem(it.uid, 'start', 1)} title="Começar na frase seguinte">
-                      Frase seguinte
-                    </button>
-                    <span className="hint">Fim</span>
-                    <button className="sm ghost" disabled={working} onClick={() => nudgeItem(it.uid, 'end', -1)} title="Terminar na frase anterior">
-                      Frase anterior
-                    </button>
-                    <button className="sm ghost" disabled={working} onClick={() => nudgeItem(it.uid, 'end', 1)} title="Terminar na frase seguinte">
-                      Frase seguinte
-                    </button>
-                  </div>
-                  {opening?.uid === it.uid && <ProgressPanel progress={opening.progress} compact testId="clip-opening-progress" />}
-                  {openingError?.uid === it.uid && <ErrorBox error={openingError.error} kind="error" onDismiss={() => setOpeningError(null)} />}
-                  {it.job.kind === 'working' && <ProgressPanel progress={it.job.progress} compact testId="clip-progress" />}
-                  {it.job.kind === 'error' && <ErrorBox error={it.job.error} kind="error" onDismiss={() => setJob(it.uid, { kind: 'idle' })} />}
-                  {it.job.kind === 'done' && (
-                    <p className="clip-done" data-testid="clip-done">
-                      <Check size={15} aria-hidden /> Pronto: <b>{it.job.name}</b>
-                      {it.job.degraded && <span className="hint"> (formato VP9/AV1: veja o aviso M4F-403 no editor)</span>}
-                    </p>
-                  )}
-                </div>
-                <div className="clip-actions">
-                  <button className="sm" onClick={() => preview(it, true)}>Ouvir com contexto</button>
-                  <button className="sm" onClick={() => preview(it)} data-testid="clip-preview">
-                    {previewing === it.uid && playing ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />} Ver trecho
-                  </button>
-                  {it.job.kind === 'done' ? (
-                    <a className="btn sm primary" href={it.job.url} download={it.job.name} data-testid="clip-download">
-                      <Download size={15} aria-hidden /> Baixar de novo
-                    </a>
-                  ) : (
-                    <button className="sm primary" disabled={working} onClick={() => void renderOne(it, i + 1)} data-testid="clip-render">
-                      <WandSparkles size={15} aria-hidden /> Baixar pronto
-                    </button>
-                  )}
-                  <button className="sm" disabled={working} onClick={() => void openInEditor(it, i + 1)} data-testid="clip-edit">
-                    <SquarePen size={15} aria-hidden /> Abrir no editor
-                  </button>
-                </div>
-              </article>
-            ))}
-          </section>
-        </div>
+        <ClipReviewWorkspace
+          work={work} video={video} videoUrl={videoUrl} index={index}
+          working={working} playing={playing} previewing={previewing}
+          contextPreview={contextPreview} opening={opening} openingError={openingError}
+          onVideoPlay={() => setPlaying(true)}
+          onVideoPause={() => setPlaying(false)}
+          onVideoTime={target => { if (previewLimit.current !== null && target.currentTime >= previewLimit.current) target.pause(); }}
+          onSelect={(uid, checked) => setItem(uid, () => ({ checked, selectionEdited: true }))}
+          onBulkSelect={checked => onWork(w => ({ ...w, items: w.items.map(it => ({
+            ...it, checked, selectionEdited: true,
+          })) }))}
+          onTitle={(uid, title) => setItem(uid, item => ({
+            m: { ...item.m, title, userTitle: true },
+            job: item.job.kind === 'done' ? { kind: 'idle' } : item.job,
+          }))}
+          onPreview={preview} onNudge={nudgeItem}
+          onRender={(it, n) => { void renderOne(it, n); }}
+          onEditor={(it, n) => { void openInEditor(it, n); }}
+          onJobDismiss={uid => setJob(uid, { kind: 'idle' })}
+          onOpeningDismiss={() => setOpeningError(null)}
+        />
       </main>
 
       <footer className="clips-bar">
