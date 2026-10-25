@@ -26,7 +26,7 @@ O responsável pelo produto (murilo) não é técnico e delegou as decisões té
 - Avaliar capabilities por necessidade. A stack está fixada no ADR-0005; trocar uma peça exige novo ADR. Qualidade real de vídeo exige benchmarks e revisão humana, além de checks técnicos.
 
 ## Processos Superpowers
-Spec v1 aprovada; execução por fases conforme o plano mestre. Cada fase: plano detalhado (`writing-plans`) → implementação tarefa a tarefa com TDD → PR com CI verde → roteiro de teste para o responsável → gate. Não começar uma fase antes do gate da anterior passar.
+Spec v1 aprovada; execução por fases conforme o plano mestre. Cada fase: plano detalhado (`writing-plans`) → implementação com TDD → **testes locais no PC (TypeScript/Vitest/build, Brave/Playwright, MP4+FFprobe quando houver mídia), sem GitHub Actions** → PR com evidências registradas → roteiro de teste para o responsável → gate. GitHub Actions foram desabilitados por decisão explícita do responsável; não ativar nem disparar workflows. Não começar uma fase antes do gate da anterior passar.
 Documentar decisões arquiteturais em ADR, atualizar docs com testes e exemplos reproduzíveis.
 
 ## Erros e versão (pedido do responsável, 20/10/2026)

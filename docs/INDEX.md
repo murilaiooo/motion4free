@@ -108,6 +108,10 @@
 **Status:** instruções extraídas/adaptadas da fonte; bibliotecas não instaladas no runtime nem comprovadas por POC. Os manuais orientam os agentes antes de cada integração aprovada.
 
 
+## Auditoria de recursos e licenças de release (24/10/2026)
+- [Inventário por arquivo, licenças, SHA-256 e política de rejeição de novos assets](reviews/2026-10-24-runtime-license-audit.md) — issue #2.
+- [Política de licenças, fontes, emoji e modelos externos](licencas.md).
+
 ## Verificação do OpenReel e decisão de timeline (24/10/2026)
 - [Auditoria reproduzível de importação, split/undo/redo, legendas, exportação MP4 real e licenças](research/updates/2026-10-24-openreel-engine-evaluation.md) — issue #5.
 - [ADR-0032: manter a timeline do Motion4Free, sem fork do OpenReel](decisions/0032-openreel-not-primary-timeline.md).
