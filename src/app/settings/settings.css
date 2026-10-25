@@ -28,6 +28,8 @@
 .m4f-callout.warn { background: var(--amber-soft); }
 .m4f-callout.warn svg { color: var(--amber); }
 button.link { background: none; border: 0; padding: 0; height: auto; color: var(--brand); text-decoration: underline; font: inherit; cursor: pointer; }
+.ai-task-choice { display: grid; gap: var(--s-2); font-weight: 600; }
+.ai-task-choice select { width: 100%; min-width: 0; font-weight: 400; }
 .set-check { display: flex; gap: var(--s-2); align-items: flex-start; cursor: pointer; }
 .set-check input { margin-top: 3px; flex: none; }
 .set-check span { display: grid; gap: 2px; }
