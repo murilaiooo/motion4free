@@ -2,6 +2,8 @@
 
 **Decisão: BLOQUEADO para publicação pública.** A branch prepara gates, corrige o teste Windows e valida dois MP4s sintéticos curtos no Brave, mas **não certifica** os demais subsistemas, a qualidade editorial, o licenciamento, toda a exportação e o desempenho em vídeos reais.
 
+**Atualização da triagem no mesmo dia:** as 23 PRs que estavam abertas foram classificadas e encerradas ou mescladas na branch de integração, sem tocar na `main`. Veja [consolidação das PRs](PR-CONSOLIDATION-20261024.md) para o estado mais recente. As contagens citadas abaixo descrevem o levantamento inicial da revisão.
+
 ## Origem, preservação e integração
 
 - GitHub `main` no início: `941b791ecf7e4803c5c69d55ab8469e516b8b184` (código v0.30.0); branch da revisão: `release/readiness-20261024`, criada da main em worktree isolada `I:\codex\motion4free\.local\variantes\release-readiness-20261024`.
