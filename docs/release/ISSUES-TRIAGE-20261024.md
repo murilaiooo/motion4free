@@ -35,7 +35,7 @@ Fonte: GitHub `murilaiooo/motion4free`, após encerramento das 23 PRs antigas e 
 | [#29](https://github.com/murilaiooo/motion4free/issues/29) — Creative Director | specs e protótipos em #116, revisões e qualidade reais ainda não aferidas |
 | [#54](https://github.com/murilaiooo/motion4free/issues/54) — faces | track inteligente em #116 não homologado; precisa teste com rosto real autorizado, save/reopen, preview/export |
 | [#118](https://github.com/murilaiooo/motion4free/issues/118) — variantes A/B | contrato e UI ainda pendentes; dependerá da semântica #117 e estabilidade da edição |
-| [#126](https://github.com/murilaiooo/motion4free/issues/126) — setup IA para leigos | #131 simplificou apenas opções avançadas; ainda faltam seleção guiada, preço confirmado, aptidão por tarefa e teste no cartão |
+| [#126](https://github.com/murilaiooo/motion4free/issues/126) — setup IA para leigos | Incremento funcional: finalidade primeiro, separação texto vs ASR, microteste por modelo com consentimento por request e rota por tarefa, preços conservadores; faltam compatibilidade/cotas realmente aferidas, microbenchmark e usuários reais. [Evidência](ISSUE126-GUIDED-AI.md) |
 | [#127](https://github.com/murilaiooo/motion4free/issues/127) — ASR por API | especificação existente; sem endpoint de áudio integrado. Consentimento de texto não autoriza upload de áudio |
 
 ## Reconciliação e publicação
