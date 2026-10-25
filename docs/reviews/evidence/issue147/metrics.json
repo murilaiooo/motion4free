@@ -1,0 +1,163 @@
+[
+  {
+    "width": 1920,
+    "height": 1080,
+    "ok": true,
+    "cards": 6,
+    "geometry": {
+      "screenWidth": 1920,
+      "documentWidth": 1920,
+      "intersections": 0,
+      "overflow": 0,
+      "minTitle": 891,
+      "bar": 72,
+      "lastY": 2344.78125,
+      "pageHeight": 2537
+    },
+    "selectedBefore": "6 de 6 selecionados",
+    "none": "0 de 6 selecionados",
+    "all": "6 de 6 selecionados",
+    "one": "1 de 6 selecionados",
+    "inspector": 1,
+    "preview": "Reproduzindo da fonteComo uma ideia se transforma em resultado0:04 – 0:25",
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "height": 900,
+    "ok": true,
+    "cards": 6,
+    "geometry": {
+      "screenWidth": 1440,
+      "documentWidth": 1440,
+      "intersections": 0,
+      "overflow": 0,
+      "minTitle": 811.09375,
+      "bar": 72,
+      "lastY": 2342.21875,
+      "pageHeight": 2532
+    },
+    "selectedBefore": "6 de 6 selecionados",
+    "none": "0 de 6 selecionados",
+    "all": "6 de 6 selecionados",
+    "one": "1 de 6 selecionados",
+    "inspector": 1,
+    "preview": "Reproduzindo da fonteComo uma ideia se transforma em resultado0:04 – 0:25",
+    "errors": []
+  },
+  {
+    "width": 1366,
+    "height": 768,
+    "ok": true,
+    "cards": 6,
+    "geometry": {
+      "screenWidth": 1366,
+      "documentWidth": 1366,
+      "intersections": 0,
+      "overflow": 0,
+      "minTitle": 742.125,
+      "bar": 72,
+      "lastY": 2338.203125,
+      "pageHeight": 2526
+    },
+    "selectedBefore": "6 de 6 selecionados",
+    "none": "0 de 6 selecionados",
+    "all": "6 de 6 selecionados",
+    "one": "1 de 6 selecionados",
+    "inspector": 1,
+    "preview": "Reproduzindo da fonteComo uma ideia se transforma em resultado0:04 – 0:25",
+    "errors": []
+  },
+  {
+    "width": 1280,
+    "height": 720,
+    "ok": true,
+    "cards": 6,
+    "geometry": {
+      "screenWidth": 1280,
+      "documentWidth": 1280,
+      "intersections": 0,
+      "overflow": 0,
+      "minTitle": 662.53125,
+      "bar": 72,
+      "lastY": 2326.171875,
+      "pageHeight": 2511
+    },
+    "selectedBefore": "6 de 6 selecionados",
+    "none": "0 de 6 selecionados",
+    "all": "6 de 6 selecionados",
+    "one": "1 de 6 selecionados",
+    "inspector": 1,
+    "preview": "Reproduzindo da fonteComo uma ideia se transforma em resultado0:04 – 0:25",
+    "errors": []
+  },
+  {
+    "width": 1024,
+    "height": 768,
+    "ok": true,
+    "cards": 6,
+    "geometry": {
+      "screenWidth": 1024,
+      "documentWidth": 1024,
+      "intersections": 0,
+      "overflow": 0,
+      "minTitle": 514.375,
+      "bar": 72,
+      "lastY": 2271.5625,
+      "pageHeight": 2450
+    },
+    "selectedBefore": "6 de 6 selecionados",
+    "none": "0 de 6 selecionados",
+    "all": "6 de 6 selecionados",
+    "one": "1 de 6 selecionados",
+    "inspector": 1,
+    "preview": "Reproduzindo da fonteComo uma ideia se transforma em resultado0:04 – 0:25",
+    "errors": []
+  },
+  {
+    "width": 768,
+    "height": 900,
+    "ok": true,
+    "cards": 6,
+    "geometry": {
+      "screenWidth": 768,
+      "documentWidth": 768,
+      "intersections": 0,
+      "overflow": 0,
+      "minTitle": 565.78125,
+      "bar": 72,
+      "lastY": 2562.84375,
+      "pageHeight": 2735
+    },
+    "selectedBefore": "6 de 6 selecionados",
+    "none": "0 de 6 selecionados",
+    "all": "6 de 6 selecionados",
+    "one": "1 de 6 selecionados",
+    "inspector": 1,
+    "preview": "Reproduzindo da fonteComo uma ideia se transforma em resultado0:04 – 0:25",
+    "errors": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "ok": true,
+    "cards": 6,
+    "geometry": {
+      "screenWidth": 390,
+      "documentWidth": 390,
+      "intersections": 0,
+      "overflow": 0,
+      "minTitle": 246,
+      "bar": 90.84375,
+      "lastY": 2528.1875,
+      "pageHeight": 2787
+    },
+    "selectedBefore": "6 de 6 selecionados",
+    "none": "0 de 6 selecionados",
+    "all": "6 de 6 selecionados",
+    "one": "1 de 6 selecionados",
+    "inspector": 1,
+    "preview": "Reproduzindo da fonteComo uma ideia se transforma em resultado0:04 – 0:25",
+    "errors": []
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "width": 390,
+    "ok": true,
+    "focusBefore": true,
+    "backwardFocus": true,
+    "forwardFocus": true,
+    "opened": true,
+    "expanded": "true",
+    "closed": true,
+    "unlabeled": [],
+    "errors": []
+  },
+  {
+    "width": 1440,
+    "ok": true,
+    "focusBefore": true,
+    "backwardFocus": true,
+    "forwardFocus": true,
+    "opened": true,
+    "expanded": "true",
+    "closed": true,
+    "unlabeled": [],
+    "errors": []
+  }
+]

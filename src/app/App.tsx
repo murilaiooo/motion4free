@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FAKE_CHUNKS, FAKE_DEMO_CHUNKS, FakeTranscriber, WhisperTranscriber } from '../asr/transcriber';
+import { FAKE_CHUNKS, FAKE_DEMO_CHUNKS, FAKE_CLIP_CHUNKS, FakeTranscriber, WhisperTranscriber } from '../asr/transcriber';
 import { waveformPeaks } from '../analysis/waveform';
 import { ASR_CANDIDATES, asrLadder } from '../core/asr-models';
 import { MB, formatBytes } from '../core/bytes';
@@ -129,9 +129,10 @@ function EditorApp() {
     () =>
       import.meta.env.VITE_FAKE_ASR === '1'
         ? new FakeTranscriber(
-            new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : new URLSearchParams(location.search).get('asr') === 'demo' ? FAKE_DEMO_CHUNKS : FAKE_CHUNKS,
+            new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : new URLSearchParams(location.search).get('asr') === 'demo' ? FAKE_DEMO_CHUNKS : new URLSearchParams(location.search).get('asr') === 'clips' ? FAKE_CLIP_CHUNKS : FAKE_CHUNKS,
             new URLSearchParams(location.search).get('asr') === 'falha',
             new URLSearchParams(location.search).get('asr') === 'reserva',
+            new URLSearchParams(location.search).get('asr') === 'clips' ? 'Transcrição sintética (teste local)' : null,
           )
         : new WhisperTranscriber(),
     [],
