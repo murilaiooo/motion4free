@@ -6,7 +6,7 @@ import { scheduleSemanticCues, type ScheduledSemanticCue } from './semantic-cues
  * Source words are immutable snapshots; original transcriptions remain in SavedProject.
  * Words removed by trimming are not scheduled. Copied segments get one occurrence each.
  */
-export interface ScheduledWordCue extends ScheduledSemanticCue { text: string }
+export interface ScheduledWordCue extends ScheduledSemanticCue { text: string; effect: NonNullable<SemanticWordCue['effect']> }
 
 const MAX_CUES = 60;
 const cache = new WeakMap<EditPlan, ScheduledWordCue[]>();
@@ -79,6 +79,18 @@ export function offsetSemanticWord(plan: EditPlan, cueId: string, offsetFrames: 
   return { ...plan, semanticCues: plan.semanticCues!.map(c => c.id === cueId ? { ...c, offsetFrames } : c) };
 }
 
+/** Choose a bounded visual treatment for a word without changing its timestamp. */
+export function setSemanticWordEffect(plan: EditPlan, cueId: string, effect: NonNullable<SemanticWordCue['effect']>): EditPlan {
+  if (effect !== 'emphasis' && effect !== 'underline' && effect !== 'pulse')
+    throw new AppError('EDICAO_INVALIDA', 'Movimento visual desconhecido.');
+  const cue = plan.semanticCues?.find(c => c.id === cueId);
+  if (!cue) throw new AppError('PALAVRA_SEM_ANCORA');
+  if (!unlocked(plan, cue.source)) throw new AppError('TRECHO_TRAVADO');
+  if ((cue.effect ?? 'emphasis') === effect) return plan;
+  return { ...plan, semanticCues: plan.semanticCues!.map(c => c.id === cueId
+    ? { ...c, effect } : c) };
+}
+
 /** Pure projection cached by immutable EditPlan identity. */
 export function scheduledPlanCues(plan: EditPlan): ScheduledWordCue[] {
   const cached = cache.get(plan);
@@ -86,9 +98,9 @@ export function scheduledPlanCues(plan: EditPlan): ScheduledWordCue[] {
   const cues = plan.semanticCues ?? [];
   if (!cues.length) return [];
   const sources = [...new Map(cues.map(c => [c.wordId, c.source] as const)).values()];
-  const text = new Map(cues.map(c => [c.id, c.source.text] as const));
+  const byCue = new Map(cues.map(c => [c.id, c] as const));
   const projected = scheduleSemanticCues(sources, plan.segments, cues, plan.output.fps)
-    .map(hit => ({ ...hit, text: text.get(hit.cueId)! }));
+    .map(hit => ({ ...hit, text: byCue.get(hit.cueId)!.source.text, effect: byCue.get(hit.cueId)!.effect ?? 'emphasis' }));
   cache.set(plan, projected);
   return projected;
 }

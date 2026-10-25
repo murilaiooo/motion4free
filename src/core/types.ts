@@ -159,6 +159,8 @@ export interface SemanticWordCue {
   edge: 'start' | 'end';
   offsetFrames: number;
   durationFrames: number;
+  /** Omitido em projetos antigos = destaque tipográfico original. */
+  effect?: 'emphasis' | 'underline' | 'pulse';
 }
 
 export interface EditPlan {

@@ -4,7 +4,7 @@
 
 **Decisão: BLOQUEADO para publicação pública.** A branch prepara gates, corrige o teste Windows e valida dois MP4s sintéticos curtos no Brave, mas **não certifica** os demais subsistemas, a qualidade editorial, o licenciamento, toda a exportação e o desempenho em vídeos reais.
 
-**#117 (entrega parcial):** destaque manual por ID de palavra renderiza no mesmo motor para prévia e MP4, acompanha cortes, cópias e reorder, preserva projeto/undo e respeita trechos quiet/locked. QA Brave+MP4 sintético, veja [prova](ISSUE117-WORD-ANCHORED-MOTION.md). Outras animações por palavra e avaliação visual real ainda pendentes.
+**#117 (dois incrementos parciais):** eventos manuais por `wordId` com três escolhas de movimento (destaque, sublinhado animado e pulso), no mesmo motor para prévia e MP4; segue cortes/cópias/reorder e mantém projeto/undo, quiet/locked e proteção contra palavras corrigidas sem reancoragem. **1.736 testes unitários e 4 E2E no Brave passaram**, com MP4 de pulso sintético no Worker; veja [prova](ISSUE117-WORD-ANCHORED-MOTION.md). Ainda não equivale a avaliação humana com vídeos reais.
 
 **#102 / #133:** o staging recebeu sinais lexicais de revisão contextual (negação, condição, comparação e referência) portados com testes do histórico #116, sem alterar timestamps/nota de clipes. A [avaliação humana continua pendente](ISSUE102-CONTEXT-REVIEW.md). Inventário adicional de #116 identificou 116 caminhos de mudanças, 18 idênticos, 50 evoluídos e 48 ausentes no staging; faltam módulos experimentais/qualidade a analisar em pequenas PRs, não fazer merge bruto.
 
