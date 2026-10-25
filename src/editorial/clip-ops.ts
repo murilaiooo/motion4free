@@ -57,6 +57,14 @@ export function reorderClipPlan(
     const shifted = rebaseInterval(from, to, zoom, 'Zoom manual');
     return shifted ? [{ ...zoom, ...shifted }] : [];
   });
+  // IDs de palavras pertencem ao arquivo, não ao offset acumulado. Rebasear os
+  // snapshots visuais ao mudar a ordem ou excluir um vídeo, sem reancorar outro.
+  const semanticCues = (plan.semanticCues ?? []).flatMap(cue => {
+    const home = clipAt(from, cue.source.start);
+    if (!home || !wordsByClip[home.id]?.some(word => word.id === cue.wordId)) return [];
+    const shifted = rebaseInterval(from, to, { srcStart: cue.source.start, srcEnd: cue.source.end }, 'Destaque por palavra');
+    return shifted ? [{ ...cue, source: { ...cue.source, start: shifted.srcStart, end: shifted.srcEnd } }] : [];
+  });
 
   // Edições de cenas usam chaves tipo@timestamp-original; refaz a chave para o mesmo clipe.
   const scenes: typeof plan.edits.scenes = {};
@@ -91,7 +99,7 @@ export function reorderClipPlan(
     offset += clip.duration;
   }
   return rebuildAll({
-    ...plan, clips: nextClips, segments, ranges,
+    ...plan, clips: nextClips, segments, ranges, semanticCues,
     edits: { ...plan.edits, added, zooms, scenes, captions },
   }, { durationSec: totalDuration(to), words });
 }

@@ -2,6 +2,14 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.30.1 — 24/10/2026 — #117 (movimento sincronizado com a fala)
+
+- A aba **Legendas → Destaques nas palavras** permite selecionar uma palavra de transcrição confirmada e escolher entre Destaque, Sublinhado animado e Pulso suave. Os efeitos são desenhados pelo mesmo compositor Canvas da prévia e do MP4.
+- Âncoras persistem no projeto e histórico de desfazer/refazer. Cortes, trims, duplicações e reordenação de clipes recalculam os eventos por `wordId`, sem aplicar a animação na palavra errada após uma correção manual da legenda; a ausência de transcrição impede criar âncoras falsas.
+- As propriedades de motion são opcionais no plano v6, preservando projetos anteriores e sem dependências externas adicionais. Portabilidade Windows: mídia sintética para testes agora usa diretamente FFmpeg pelo Node, sem Bash/WSL.
+- **Verificação de promoção:** typecheck/build, suíte Vitest integral e E2E Brave no branch de promoção, incluindo MP4 sintético com vídeo/áudio e efeitos visuais. Contagem e limites de QA registrados na PR correspondente. Não é validação humana de qualidade visual em vídeos longos.
+- Esta versão não porta alterações experimentais da branch `integration/pr-consolidation-20261024` nem resolve as issues pendentes de licenças/qualidade para lançamento geral.
+
 ## v0.30.0 — 22/10/2026 — #102 (QA pendente, não publicar automaticamente)
 
 **Descoberta contextual de clipes por transcrição completa:** propostas locais por frases e IDs de palavras da gravação, sugestões opcionais de IA com limites de custo e contexto, curadoria com preservação de escolhas, títulos e arquivos gerados; contexto e mapa dos cortes originais disponíveis no editor.

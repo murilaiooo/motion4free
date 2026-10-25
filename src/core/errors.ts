@@ -60,6 +60,8 @@ export const ERRORS = {
   LIMITE_PONTOS: { code: 'M4F-524', title: 'Limite de 24 pontos de animação neste elemento. Apague um ponto para criar outro.' },
   SELECAO_TUDO: { code: 'M4F-525', title: 'Não dá para apagar todos os pedaços do vídeo de uma vez: deixe pelo menos um.' },
   VARIOS_SELECIONADOS: { code: 'M4F-526', title: 'Com vários itens escolhidos dá para apagar ou copiar pedaços do vídeo. Para duplicar ou copiar um elemento, escolha só ele.' },
+  PALAVRA_SEM_ANCORA: { code: 'M4F-527', title: 'Essa palavra não está disponível numa legenda válida. Escolha outra palavra da fala.' },
+  LIMITE_DESTAQUES: { code: 'M4F-528', title: 'Este projeto chegou ao limite de 60 destaques por palavra. Remova um antes de criar outro.' },
   SALVAR_FALHOU: { code: 'M4F-601', title: 'Não foi possível salvar o projeto neste navegador. As edições se perdem ao fechar a aba.' },
   PROJETO_CORROMPIDO: { code: 'M4F-602', title: 'O projeto salvo não pôde ser aberto. Ele continua em Meus projetos; você pode apagá-lo.' },
   VIDEO_DIFERENTE: { code: 'M4F-603', title: 'Este não é o mesmo vídeo do projeto salvo.' },
