@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Copy, FileVideo, FolderOpen, HardDrive, Pencil, Trash2, TriangleAlert, X } from 'lucide-react';
+import { Check, Copy, Download, FileVideo, FolderOpen, HardDrive, Pencil, Trash2, TriangleAlert, Upload, X } from 'lucide-react';
 import { formatBytes, formatClock, formatWhen } from '../core/bytes';
 import { NAME_MAX, type ProjectSummary } from '../core/project-library';
 import { TEMPLATE_NAMES, type TemplateId } from '../core/templates';
@@ -11,6 +11,8 @@ interface Props {
   onOpen: (id: string) => void;
   onRename: (id: string, name: string) => void;
   onDuplicate: (id: string) => void;
+  onBackup: (id: string) => void;
+  onRestore: (file: File) => void;
   onDelete: (p: ProjectSummary) => void;
   onStorage: () => void;
 }
@@ -21,7 +23,7 @@ function Thumb({ blob }: { blob: Blob | null }) {
   return url ? <img className="proj-thumb" src={url} alt="" /> : <span className="proj-thumb empty"><FileVideo size={22} aria-hidden /></span>;
 }
 
-function ProjectCard({ p, busy, onOpen, onRename, onDuplicate, onDelete }: { p: ProjectSummary } & Omit<Props, 'projects' | 'onStorage'>) {
+function ProjectCard({ p, busy, onOpen, onRename, onDuplicate, onBackup, onDelete }: { p: ProjectSummary } & Omit<Props, 'projects' | 'onStorage' | 'onRestore'>) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(p.name);
   const template = TEMPLATE_NAMES[p.templateId as TemplateId] ?? p.templateId;
@@ -103,6 +105,9 @@ function ProjectCard({ p, busy, onOpen, onRename, onDuplicate, onDelete }: { p: 
           <button className="icon sm ghost" onClick={() => onDuplicate(p.id)} disabled={busy || p.broken} aria-label="Duplicar" data-tip="Duplicar" data-testid="project-duplicate">
             <Copy size={15} />
           </button>
+          <button className="icon sm ghost" onClick={() => onBackup(p.id)} disabled={busy || p.broken || !p.hasVideo} aria-label="Baixar backup completo" data-tip={p.hasVideo ? 'Baixar backup com edições e vídeos' : 'Selecione o vídeo original antes de fazer backup'} data-testid="project-backup">
+            <Download size={15} />
+          </button>
           <button className="icon sm ghost danger" onClick={() => onDelete(p)} disabled={busy} aria-label="Apagar" data-tip="Apagar" data-testid="project-delete">
             <Trash2 size={15} />
           </button>
@@ -123,6 +128,10 @@ export function ProjectsList(props: Props) {
         <span className="hint tnum">
           {projects.length} {projects.length === 1 ? 'projeto' : 'projetos'} · {formatBytes(total)}
         </span>
+        <label className="sm ghost" data-testid="project-restore-label" title="Restaurar cópia salva no computador">
+          <Upload size={14} aria-hidden /> Restaurar backup
+          <input type="file" className="sr-only" accept=".m4f" aria-label="Escolher backup Motion4Free" data-testid="project-restore-input" disabled={props.busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) props.onRestore(file); e.target.value = ''; }} />
+        </label>
         <button className="sm ghost" onClick={onStorage} data-testid="open-storage">
           <HardDrive size={14} aria-hidden /> Ver armazenamento
         </button>
@@ -132,7 +141,7 @@ export function ProjectsList(props: Props) {
           <ProjectCard key={p.id} p={p} {...props} />
         ))}
       </ul>
-      <p className="hint projects-note">Ficam só neste navegador, neste computador. Cada vídeo novo vira um projeto novo; nada é substituído.</p>
+      <p className="hint projects-note">Projetos ficam neste navegador. Baixe um backup para guardar fora dele e restaurar em outro dispositivo.</p>
     </section>
   );
 }

@@ -50,6 +50,11 @@ O agente decide a parte técnica, implementa com testes e abre um PR por entrega
 
 Lista completa e ressalvas de licença em [repositórios de referência](docs/research/repositories.md).
 
+## Projetos, backup e modo offline parcial
+Projetos ficam no armazenamento privado do navegador (OPFS). Em **Meus projetos**, use o ícone de download para criar um backup completo `.m4f` com as edições e as mídias do projeto. Use **Restaurar backup** para abrir o arquivo em outro perfil ou computador, sem substituir projetos existentes. Guarde o `.m4f` em local seguro: ele contém vídeo/transcrição e não é criptografado. Se a mídia copiada estiver ausente, selecione novamente o arquivo original antes de fazer backup.
+
+Após abrir o site uma vez com conexão, um service worker pode guardar uma cópia versionada de arquivos estáticos básicos para reabrir a interface sem internet. Isso **não** torna modelos de transcrição/IA ou serviços de API externos disponíveis offline. Projetos, modelos e backups continuam sujeitos à política de armazenamento do navegador; não confie apenas no OPFS como backup durável. Veja [a evidência e limitações](docs/release/ISSUE4-OFFLINE-STORAGE.md).
+
 ## Custo e privacidade
 Sem custo obrigatório para editar é uma restrição do produto, mas modelos opcionais por API **podem cobrar pela conta do usuário**. Uma assinatura ChatGPT ou Claude não inclui automaticamente créditos de API. Vídeos são processados localmente por padrão; envio de texto para provedores externos exige prévia e consentimento para cada pedido. Downloads de modelos, espelhos e CDNs também geram tráfego externo. Confira a política de cada fornecedor antes de usar a IA por API.
 

@@ -1,6 +1,6 @@
 # Índice da documentação
 
-> **Estado (24/10/2026):** código v0.30.0 em pré-lançamento, não aprovado para publicação. Consulte primeiro [STATUS de release](release/STATUS.md), [consolidação das 23 PRs](release/PR-CONSOLIDATION-20261024.md), [triagem das 21 issues](release/ISSUES-TRIAGE-20261024.md), [prova MP4 no navegador](release/ISSUE3-BROWSER-MP4-POC.md), [runbook](release/RUNBOOK.md) e [mapa de módulos](architecture/MODULES.md). Os planos de 20/10 continuam como histórico das decisões.
+> **Estado (24/10/2026):** código v0.30.0 em pré-lançamento, não aprovado para publicação. Consulte primeiro [STATUS de release](release/STATUS.md), [consolidação das 23 PRs](release/PR-CONSOLIDATION-20261024.md), [triagem das 21 issues](release/ISSUES-TRIAGE-20261024.md), [offline e backup de projetos](release/ISSUE4-OFFLINE-STORAGE.md), [prova MP4 no navegador](release/ISSUE3-BROWSER-MP4-POC.md), [runbook](release/RUNBOOK.md) e [mapa de módulos](architecture/MODULES.md). Os planos de 20/10 continuam como histórico das decisões.
 
 ## Comece aqui (em vigor desde 20/10/2026)
 - [Spec v1 consolidada e aprovada](superpowers/specs/2026-10-20-motion4free-v1-design.md): o que é o produto, arquitetura, decisões e fases.
