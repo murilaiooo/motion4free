@@ -54,7 +54,13 @@ test('troca de chave descarta catálogo e modelo da conta antiga; HTTP 200 vazio
   await expect(page.getByTestId('ai-ready')).toContainText('ainda não testado');
 
   await page.getByTestId('model-test').click();
-  await expect(page.getByTestId('consent-box')).toContainText('não foi possível confirmar uma resposta de texto');
+  // Consentimento persistido não autoriza uma chamada individual automaticamente.
+  const outbound = page.locator('dialog.set-outbound');
+  await expect(outbound).toBeVisible();
+  expect(sent).toEqual(['GET:a', 'GET:b']);
+  await outbound.getByRole('button', { name: 'Autorizar este envio' }).click();
+  // HTTP 200 sem texto nunca equivale a modelo funcionando.
+  await expect(page.getByTestId('consent-box')).toContainText('M4F-1217');
   await expect(page.getByTestId('consent-box')).not.toContainText('Funcionou:');
   expect(sent).toEqual(['GET:a', 'GET:b', 'POST:b']);
 

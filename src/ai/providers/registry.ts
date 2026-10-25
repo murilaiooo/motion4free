@@ -397,7 +397,7 @@ export function keyLooksWrong(id: ProviderId, key: string): boolean {
 }
 
 export const PRICING_LABEL: Record<PricingKind, string> = {
-  gratis: 'Grátis (com limite de uso)',
+  gratis: 'Preço zero informado pelo catálogo (pode mudar)',
   cota: 'Cota varia conforme sua conta (pode cobrar)',
   pago: 'Pode gerar cobrança na sua conta',
   desconhecido: 'Preço não informado',

@@ -20,8 +20,9 @@ import {
 } from '../../ai/credentials/keys';
 import { DEFAULT_AI_POLICY, reserveRequest } from '../../ai/routing';
 import { AiRouting } from './AiRouting';
+import { openSettings } from './route';
 import { MIN_PASSWORD } from '../../ai/credentials/vault';
-import { listModels, testModel } from '../../ai/providers/client';
+import { listModels, testModel, testModelForTask, type TextAiTask } from '../../ai/providers/client';
 import { authorizeRequest } from '../../ai/providers/consent';
 import { onCredentialChange } from '../../ai/credentials/keys';
 import { PRICING_LABEL, PROVIDERS, PROVIDER_IDS, keyLooksWrong, priceText, type ModelInfo, type ProviderId } from '../../ai/providers/registry';
@@ -40,9 +41,9 @@ type CatalogEntry = { models: ModelInfo[]; at: number; revision: number };
 const catalog = new Map<ProviderId, CatalogEntry>();
 
 const MODES: { id: AiMode; title: string; text: string; tags: string[]; Icon: typeof Bot }[] = [
-  { id: 'regras', title: 'Só regras', text: 'O app reconhece palavras e frases comuns, como “legenda amarela”, “sem emojis” ou “cortes rápidos”. Não precisa de internet nem de cadastro.', tags: ['Grátis', 'Funciona em qualquer computador'], Icon: ListChecks },
-  { id: 'local', title: 'IA no navegador', text: 'Um modelo de IA é baixado uma vez e roda dentro do seu computador. Entende pedidos mais soltos, e nada sai do aparelho.', tags: ['Grátis', 'Privado', 'Precisa de placa de vídeo'], Icon: Cpu },
-  { id: 'provedor', title: 'Serviço de IA com sua chave', text: 'Usa a sua conta em um serviço de IA (Google, OpenRouter, Groq, OpenAI ou Claude). É o que melhor entende pedidos livres. Só texto é enviado, direto do seu navegador para o serviço.', tags: ['Tem opções grátis', 'Precisa de cadastro no serviço'], Icon: PlugZap },
+  { id: 'regras', title: 'Só regras', text: 'Funciona sem conta, sem internet e sem cobranças. Entende pedidos simples.', tags: ['Sem conta', 'Grátis'], Icon: ListChecks },
+  { id: 'local', title: 'IA no navegador', text: 'Baixa um modelo no computador e entende pedidos mais livres. Precisa de WebGPU.', tags: ['Local', 'Grátis'], Icon: Cpu },
+  { id: 'provedor', title: 'Usar minha API', text: 'Conecte um serviço de IA para analisar texto. Pode consumir sua cota ou gerar cobranças.', tags: ['Opcional', 'Pode cobrar'], Icon: PlugZap },
 ];
 
 /** Exemplo animado da diferença: o mesmo pedido entendido pelas regras e por uma IA. */
@@ -75,7 +76,7 @@ export function AiSection({ currentProjectId }: { currentProjectId?: string | nu
   return (
     <div className="stack">
       <p className="set-lead">
-        Quando você escreve um pedido (na aba IA do editor, ou ao pedir para escolher clipes), o app precisa entender o que você quis dizer. Escolha como ele faz isso. Em todos os casos o seu vídeo continua neste computador.
+        Escolha como a IA ajuda na edição. O padrão funciona sem conta. Serviços externos são opcionais e exigem sua autorização.
       </p>
       <PromptDemo />
       <div className="set-modes" role="radiogroup" aria-label="Como o app entende seus pedidos">
@@ -108,19 +109,43 @@ export function AiSection({ currentProjectId }: { currentProjectId?: string | nu
   );
 }
 
+type SetupPurpose = TextAiTask | 'audio';
+const PURPOSES: { id: SetupPurpose; label: string; description: string }[] = [
+  { id: 'creative-brief', label: 'Entender meus pedidos', description: 'Interpretar como quero editar.' },
+  { id: 'moment-ranking', label: 'Escolher bons clipes', description: 'Comparar momentos e contexto.' },
+  { id: 'local-revision', label: 'Ajustar minha edição', description: 'Revisar um trecho ou estilo.' },
+  { id: 'audio', label: 'Transcrever áudio', description: 'Transformar fala em texto.' },
+];
+
 function ProviderSetup() {
+  const [purpose, setPurpose] = useState<SetupPurpose>('creative-brief');
   const s = useAiSettings();
   useKeysVersion();
+  const route = purpose === 'audio' ? undefined : s.taskRoutes?.[purpose];
+  const routeActive = route?.kind === 'provider'
+    ? (getKey(route.provider) && s.consent.includes(route.provider) ? 'Chave aberta e envio de texto autorizado. Cada pedido ainda exigirá confirmação.' : 'Escolhido, mas falta abrir a chave ou autorizar texto.')
+    : route?.kind === 'rules' ? 'Esta tarefa usa apenas regras locais.' : route?.kind === 'local' ? 'Esta tarefa usa IA no navegador.' : 'Esta tarefa segue a configuração principal.';
   const legacy = legacyGeminiKey();
   const vault = vaultState();
   return (
     <div className="stack" data-testid="provider-setup">
-      <div className="m4f-callout">
-        <ShieldCheck size={16} aria-hidden />
-        <span>
-          <b>Como funciona:</b> você cria uma chave de acesso (API key) no site do serviço e cola aqui. O seu navegador fala direto com o serviço; o Motion4Free não tem servidor, não recebe a sua chave e não vê o que é enviado. Qualquer custo é da sua conta no serviço, nunca do Motion4Free.
-        </span>
+      <div className="set-sub" data-testid="ai-purpose">
+        <p className="set-sub-title">Para que você quer usar IA?</p>
+        <div className="set-options" role="radiogroup" aria-label="Finalidade da IA">
+          {PURPOSES.map(({ id, label, description }) => (
+            <label className="set-option" key={id}>
+              <input type="radio" name="ai-purpose" checked={purpose === id} onChange={() => setPurpose(id)} data-testid={`ai-purpose-${id}`} />
+              <span><b>{label}</b><small className="hint">{description}</small></span>
+            </label>
+          ))}
+        </div>
+        {purpose === 'audio' && <p className="hint" role="status" data-testid="audio-incompatible">Modelos de texto não transcrevem áudio. Por enquanto, use a transcrição local. Não enviaremos áudio para serviços de IA sem uma integração compatível e autorização específica. <button className="sm" type="button" onClick={() => openSettings('transcricao')}>Abrir transcrição</button></p>}
+        {purpose !== 'audio' && <p className="hint" role="status" data-testid="ai-purpose-status">Configuração atual: <b>{route?.kind === 'provider' ? `${route.remote.label} (${PROVIDERS[route.provider].name})` : routeActive}</b>. {route?.kind === 'provider' && routeActive}</p>}
       </div>
+      {purpose !== 'audio' && <div className="m4f-callout">
+        <ShieldCheck size={16} aria-hidden />
+        <span>Use sua própria chave. O app não recebe nem guarda sua chave em servidor. Cada envio de texto exige autorização e pode consumir sua cota.</span>
+      </div>}
       {legacy && <LegacyGemini />}
       {vault === 'trancado' && (
         <div className="set-sub">
@@ -131,8 +156,8 @@ function ProviderSetup() {
           <UnlockForm />
         </div>
       )}
-      <div>
-        <p className="set-sub-title">1. Escolha o serviço</p>
+      {purpose !== 'audio' && <div>
+        <p className="set-sub-title">Escolha o serviço</p>
         <div className="set-providers" role="radiogroup" aria-label="Serviço de IA">
           {PROVIDER_IDS.map((id) => {
             const p = PROVIDERS[id];
@@ -154,9 +179,9 @@ function ProviderSetup() {
             );
           })}
         </div>
-        <p className="hint">Nunca usou nada disso? Comece pelo Google Gemini ou pelo OpenRouter: os dois têm uso gratuito e pedem só uma conta.</p>
-      </div>
-      {s.provider && <ProviderPanel key={s.provider} id={s.provider} />}
+        <p className="hint">Veja os preços e limites oficiais de cada serviço antes de fazer testes. A disponibilidade depende da sua conta.</p>
+      </div>}
+      {purpose !== 'audio' && s.provider && <ProviderPanel key={`${s.provider}-${purpose}`} id={s.provider} task={purpose} />}
     </div>
   );
 }
@@ -220,7 +245,7 @@ export function UnlockForm({ onDone }: { onDone?: () => void }) {
 
 const thousand = (n: number) => `${Math.round(n / 1000).toLocaleString('pt-BR')} mil`;
 
-function ProviderPanel({ id }: { id: ProviderId }) {
+function ProviderPanel({ id, task }: { id: ProviderId; task: TextAiTask }) {
   const p = PROVIDERS[id];
   const s = useAiSettings();
   useKeysVersion();
@@ -241,8 +266,10 @@ function ProviderPanel({ id }: { id: ProviderId }) {
       setLoaded(null);
       setTest({ kind: 'idle' });
       setConfirmPaid(null);
+      setConfirmTest(null);
+      setCardTest(null);
     });
-    const stopSettings = onAiSettingsChange(() => { activeTest.current?.abort(); setTest({ kind: 'idle' }); });
+    const stopSettings = onAiSettingsChange(() => { activeTest.current?.abort(); setTest({ kind: 'idle' }); setCardTest(null); });
     return () => { mounted.current = false; stop(); stopSettings(); activeRequest.current?.abort(); activeTest.current?.abort(); };
   }, [id]);
   const revision = credentialRevision(id);
@@ -253,11 +280,14 @@ function ProviderPanel({ id }: { id: ProviderId }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'todos' | 'gratis' | 'sugeridos'>(() =>
     catalog.get(id)?.models.some((m) => m.recommended) ? 'sugeridos' : 'todos');
-  const [limit, setLimit] = useState(30);
+  const [limit, setLimit] = useState(8);
   const [confirmPaid, setConfirmPaid] = useState<string | null>(null);
+  const [confirmTest, setConfirmTest] = useState<string | null>(null);
+  const [cardTest, setCardTest] = useState<{ id: string; kind: 'busy' | 'ok' | 'error'; error?: AppError; elapsedMs?: number; at?: number } | null>(null);
   const [test, setTest] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'ok' } | { kind: 'error'; error: AppError }>({ kind: 'idle' });
   const chosen = s.provider === id ? s.remote : null;
   const consent = s.consent.includes(id);
+  const activeForTask = s.taskRoutes?.[task]?.kind === 'provider' && s.taskRoutes[task].provider === id ? s.taskRoutes[task].remote.id : null;
   useEffect(() => {
     activeTest.current?.abort();
     setTest({ kind: 'idle' });
@@ -337,19 +367,48 @@ function ProviderPanel({ id }: { id: ProviderId }) {
     activeTest.current?.abort();
     setConfirmPaid(null);
     setTest({ kind: 'idle' });
+    // Compatível com configurações antigas: aplica ao modo principal de pedidos de texto.
+    // Overrides por tarefa/projeto permanecem intactos no painel opcional.
     setAiSettings({ mode: 'provedor', provider: id, remote: { id: m.id, label: m.label, pricing: m.pricing } });
+  }
+
+  function selectForTask(m: ModelInfo) {
+    if (!key || !consent || cardTest?.kind !== 'ok' || cardTest.id !== m.id) return;
+    setAiSettings({ taskRoutes: { ...s.taskRoutes, [task]: {
+      kind: 'provider', provider: id, remote: { id: m.id, label: m.label, pricing: m.pricing },
+    } } });
+  }
+
+  function runCardTest(m: ModelInfo) {
+    if (!key || !consent || !mounted.current) return;
+    activeTest.current?.abort();
+    const ctrl = new AbortController();
+    activeTest.current = ctrl;
+    const requestedRevision = credentialRevision(id);
+    const startedAt = performance.now();
+    setConfirmTest(null);
+    setCardTest({ id: m.id, kind: 'busy' });
+    void testModelForTask(id, key, m.id, task, {
+      signal: ctrl.signal,
+      authorize: (body) => authorizeRequest(id, m.id, body, ctrl.signal),
+      beforeSend: (body) => reserveRequest(activeAiScope(), body, { ...(getAiSettings().policy ?? DEFAULT_AI_POLICY), outputTokens: 128 }),
+    }).then(
+      () => { if (!ctrl.signal.aborted && requestedRevision === credentialRevision(id)) setCardTest({ id: m.id, kind: 'ok', elapsedMs: Math.max(0, performance.now() - startedAt), at: Date.now() }); },
+      (error) => { if (!ctrl.signal.aborted && requestedRevision === credentialRevision(id)) setCardTest({ id: m.id, kind: 'error', error: toAppError(error, 'PROVEDOR_ERRO') }); },
+    );
   }
 
   const wrong = keyLooksWrong(id, draft);
   return (
     <div className="stack set-provider-panel" data-testid={`provider-panel-${id}`}>
       <div className="set-sub">
-        <p className="set-sub-title">2. Crie a sua chave no {p.name}</p>
-        <ol className="set-steps">
-          {p.steps.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
+        <p className="set-sub-title">Conecte sua conta do {p.name}</p>
+        <details className="set-details" open={!key}>
+          <summary>Como criar a chave</summary>
+          <ol className="set-steps">
+            {p.steps.map((step) => <li key={step}>{step}</li>)}
+          </ol>
+        </details>
         <p>
           <a className="btn sm" href={p.keyUrl} target="_blank" rel="noopener noreferrer">
             <ExternalLink size={14} aria-hidden /> Abrir a página de chaves do {p.name}
@@ -368,7 +427,7 @@ function ProviderPanel({ id }: { id: ProviderId }) {
       </div>
 
       <div className="set-sub">
-        <p className="set-sub-title">3. Cole a chave</p>
+        <p className="set-sub-title">Sua chave</p>
         {key ? (
           <div className="set-row" data-testid="key-open">
             <span className="tag ok">
@@ -417,10 +476,12 @@ function ProviderPanel({ id }: { id: ProviderId }) {
 
       {key && models && (
         <div className="set-sub" data-testid="model-list">
-          <p className="set-sub-title">4. Escolha o modelo</p>
-          <p className="hint">
-            “Modelo” é a versão da IA. A lista vem da sua chave no {p.name} e vale por até 30 minutos. Estar na lista não comprova que o modelo responde, nem que sua conta tem créditos. Use “Testar resposta” para confirmar.
-          </p>
+          <p className="set-sub-title">Escolha e teste um modelo</p>
+          <p className="hint">Para: <b>{PURPOSES.find(item => item.id === task)?.label}</b>. Catálogo consultado em {loaded && new Date(loaded.at).toLocaleString('pt-BR')}. Teste e depois clique em “Usar nesta tarefa” para aplicar só a essa função. O botão “Usar este” altera a configuração principal, mesmo sem teste. Preços e compatibilidade dependem do serviço e da sua conta.</p>
+          <label className="set-check">
+            <input type="checkbox" checked={consent} onChange={(event) => setAiSettings({ consent: event.target.checked ? [...s.consent.filter(c => c !== id), id] : s.consent.filter(c => c !== id) })} data-testid="consent-quick" />
+            <span>Autorizo pedidos de teste contendo <b>apenas texto fictício</b> ao {p.name}. Cada envio ainda precisa da minha confirmação. Não autoriza áudio ou vídeo.</span>
+          </label>
           <div className="set-row">
             <label className="set-search">
               <Search size={14} aria-hidden />
@@ -446,14 +507,14 @@ function ProviderPanel({ id }: { id: ProviderId }) {
                     <div className="set-model-main">
                       <b>{m.label}</b>
                       <span className="set-tags">
-                        {m.recommended && <span className="tag ok">Sugerido</span>}
+                        {m.recommended && <span className="tag">Opção inicial, não testada</span>}
                         <span className={`tag ${m.pricing === 'pago' ? 'paid' : m.pricing === 'gratis' ? 'free' : ''}`}>{PRICING_LABEL[m.pricing]}</span>
                       </span>
-                      <small className="hint">
-                        {price && <>{price}. </>}
-                        {m.context && <>Lê até uns {thousand(m.context * 0.75)} palavras de uma vez. </>}
-                        <span className="set-id">ID técnico: {m.id}</span>
-                      </small>
+                      <small className="hint">{price ? `${price}.` : 'Preço exato não informado pela API; confira antes de usar.'}</small>
+                      <details className="set-details">
+                        <summary>Detalhes do modelo</summary>
+                        <small className="hint">ID: {m.id}. {m.context && `Contexto anunciado: até ${thousand(m.context * 0.75)} palavras estimadas.`} O teste de texto não certifica qualidade criativa nem preço.</small>
+                      </details>
                     </div>
                     {inUse ? (
                       <span className="tag ok">
@@ -474,6 +535,25 @@ function ProviderPanel({ id }: { id: ProviderId }) {
                         Usar este
                       </button>
                     )}
+                    <div className="set-model-test" data-testid={`model-inline-test-${m.id}`}>
+                      {confirmTest === m.id ? (
+                        <div className="set-confirm">
+                          <small>Este teste pode consumir créditos ou gerar cobrança. Confirma uma chamada curta com texto fictício para {p.name}?</small>
+                          <button className="sm primary" onClick={() => runCardTest(m)}>Confirmar teste</button>
+                          <button className="sm ghost" onClick={() => setConfirmTest(null)}>Cancelar</button>
+                        </div>
+                      ) : (
+                        <button className="sm primary" type="button" disabled={!consent || cardTest?.kind === 'busy'} onClick={() => m.pricing === 'gratis' ? runCardTest(m) : setConfirmTest(m.id)} data-testid={`test-model-${m.id}`}>
+                          {cardTest?.id === m.id && cardTest.kind === 'busy' ? 'Testando…' : 'Testar este modelo'}
+                        </button>
+                      )}
+                      {cardTest?.id === m.id && cardTest.kind === 'ok' && <>
+                        <small className="hint" role="status">Microteste de texto concluído em {cardTest.elapsedMs === undefined ? '?' : `${(cardTest.elapsedMs / 1000).toFixed(1).replace('.', ',')} s`} ({cardTest.at ? new Date(cardTest.at).toLocaleTimeString('pt-BR') : 'agora'}). Não comprova qualidade em vídeos reais.</small>
+                        <button type="button" className="sm primary" onClick={() => selectForTask(m)} data-testid={`task-use-model-${m.id}`}>Usar nesta tarefa</button>
+                      </>}
+                      {activeForTask === m.id && <small className="hint" role="status" data-testid={`task-active-${m.id}`}>Escolhido para {PURPOSES.find(item => item.id === task)?.label}. {key && consent ? 'Chave e autorização abertas nesta aba.' : 'Precisa de chave e autorização válidas.'}</small>}
+                      {cardTest?.id === m.id && cardTest.kind === 'error' && cardTest.error && <ErrorBox error={cardTest.error} kind="warning" />}
+                    </div>
                   </li>
                 );
               })}

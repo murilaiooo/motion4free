@@ -1,5 +1,7 @@
 # Estado real do release Motion4Free — 24/10/2026
 
+**Novidade #126 (incremento):** fluxo guiado de IA por finalidade, microteste de texto no cartão com autorização individual, preço conservador do catálogo e uso de rota por tarefa no staging. A #126 permanece aberta para capacidades/custos aferidos e qualidade real. [Evidência e limitações](ISSUE126-GUIDED-AI.md).
+
 **Decisão: BLOQUEADO para publicação pública.** A branch prepara gates, corrige o teste Windows e valida dois MP4s sintéticos curtos no Brave, mas **não certifica** os demais subsistemas, a qualidade editorial, o licenciamento, toda a exportação e o desempenho em vídeos reais.
 
 **Reconciliação #132:** os 48 caminhos modificados pelo snapshot antigo continuam no staging: 18 com hash igual, 30 com revisões mais novas, 0 ausentes. O backup histórico não precisa de merge bruto; [relatório arquivo a arquivo](ISSUE132-SNAPSHOT-RECONCILIATION.md). A integração #133 permanece independente.
