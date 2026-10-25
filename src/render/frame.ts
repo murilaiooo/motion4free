@@ -5,6 +5,7 @@ import type { ElementMarks } from './bounds';
 import { drawAdded } from './added';
 import { captionStyle, sceneStyle } from './look';
 import { normalizeToken } from '../editorial/detect';
+import { activeSemanticCues } from '../editorial/semantic-word-edits';
 import { styleAt } from '../editorial/ranges';
 import type { StyleDNA } from '../core/style';
 import { outputDuration, outputToSource } from '../engine/timeline';
@@ -277,6 +278,15 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
   if (rc && !active.some((s) => s.kind === 'quote' || (s.kind === 'kinetic-title' && sameWords(s.text, rc.caption.text)))) {
     const caption = rc.caption;
     const keywords = new Set(active.filter((s) => s.kind === 'highlight-word').map((s) => normalizeToken((s as { text: string }).text)));
+    // Identity-sensitive word emphasis: never highlight another occurrence of the
+    // same text or a rewritten caption with mismatched word alignment.
+    const fps = plan.output.fps;
+    const currentFrame = Math.floor(t * fps + 1e-7);
+    const semanticEffects = new Map(activeSemanticCues(plan, t).map(cue => [cue.wordId, {
+      effect: cue.effect,
+      sourceText: cue.text,
+      phase: (currentFrame - cue.startFrame) / Math.max(1, cue.endFrameExclusive - cue.startFrame - 1),
+    }] as const));
     const next = R.captions.slice(ci + 1).find((c) => c.caption.start >= caption.end - 1e-6);
     const L = rc.look;
     const cs = captionStyle(style, L);
@@ -284,6 +294,7 @@ export function drawFrame(ctx: Ctx2D, plan: EditPlan, t: number, source: CanvasI
     const exit = L.exit === 'none' ? false : L.exit === 'fade' || L.exit === 'shrink' ? true : !next || next.caption.start - caption.end >= 0.2;
     let begun = false;
     capRect = drawCaption(ctx, ff, caption, t, keywords, {
+      semanticEffects,
       exit,
       place: rc.placement,
       align: L.align,

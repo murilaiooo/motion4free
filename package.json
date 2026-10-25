@@ -1,6 +1,6 @@
 {
   "name": "motion4free",
-  "version": "0.30.0",
+  "version": "0.30.1",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "fixture": "bash scripts/make-fixture.sh",
+    "fixture": "node scripts/make-fixture.mjs",
     "e2e": "playwright test"
   },
   "devDependencies": {
