@@ -24,6 +24,8 @@ Data local: 24/10/2026. Branch `qa/3-browser-mp4-proof-20261024`, derivada de `i
 
 Amostra independente no Brave: a regressão `QA real: clipes horizontal+vertical em formato horizontal (1920×1080), com áudio no MP4` também passou (um cenário, arquivo realmente exportado e conferido com FFprobe).
 
+**Segundo navegador executado:** o Chromium 1243 instalado localmente (executável distinto do Brave; não é uma instalação de Google Chrome/Edge) passou no mesmo teste de exportação: H.264/AAC, 1080 × 1920, 30 FPS, 3,114667 s, 1.362.525 bytes, importação 413 ms, exportação 876 ms, JS heap antes 12.800.232 e após 12.257.788 bytes. A primeira tentativa pelo Playwright padrão não iniciou por ausência do headless-shell correspondente à versão instalada; o teste foi executado com o binário Chromium existente, sem instalar software novo.
+
 **Limitação importante:** as medidas de heap são apenas dois snapshots do JS heap do renderer; não são pico de RAM, uso total do processo, cache de frames, GPU, nem custo de download dos modelos. Tempos refletem este hardware e arquivo pequeno, não SLA. O vídeo contém fala e cortes *sintéticos*; não prova lip-sync com seres humanos, estabilidade em duas horas de gravação ou qualidade editorial. A matriz de dispositivos/navegadores e stress pertence às issues #4, #12 e #102.
 
 ## Reproduzir
