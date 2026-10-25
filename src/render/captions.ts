@@ -142,6 +142,10 @@ export function captionMaxWidth(f: Pick<Frame, 'w' | 'h' | 'safe' | 'style'>): n
 }
 
 export interface CaptionOpts {
+  /** Identity of manually emphasized source words; applied only at matching token index.
+   * If the caption was rewritten and no longer aligns with wordIds, suppress semantic
+   * emphasis rather than lighting up the wrong occurrence with the same text. */
+  semanticWordIds?: ReadonlySet<string>;
   /** a legenda sai animando no fim (há uma pausa antes da próxima) */
   exit?: boolean;
   /** posição escolhida à mão (v0.13): centro normalizado do bloco, tamanho e giro (graus) */
@@ -181,7 +185,9 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   const shown = tokens.map((tk) => applyCase(spec, tk));
   const starts = wordTimings(caption, tokens);
   const active = activeWord(starts, t);
-  const isKw = tokens.map((tk) => keywords.has(normalizeToken(tk)));
+  const semanticAligned = caption.wordIds.length === tokens.length;
+  const isKw = tokens.map((tk, i) => keywords.has(normalizeToken(tk)) ||
+    (semanticAligned && !!opts.semanticWordIds?.has(caption.wordIds[i]!)));
   const emScale = em.family !== spec.family ? 1.16 : 1;
   const maxW = opts.maxW ?? captionMaxWidth(f);
   const place = opts.place ?? null;

@@ -148,6 +148,19 @@ export interface ClipRef {
   framing: Framing | null;
 }
 
+/** Destaque manual ancorado numa palavra da transcrição (tempo da origem).
+ * Mantém um snapshot validado para que prévia e exportação possam renderizar
+ * com o mesmo plano, inclusive em um Worker sem acesso à transcrição externa.
+ */
+export interface SemanticWordCue {
+  id: string;
+  wordId: string;
+  source: Word;
+  edge: 'start' | 'end';
+  offsetFrames: number;
+  durationFrames: number;
+}
+
 export interface EditPlan {
   version: 6;
   output: OutputProfile;
@@ -161,6 +174,8 @@ export interface EditPlan {
   segments: Segment[];
   captions: Caption[];
   scenes: SceneInstance[];
+  /** Opcional em projetos antigos; destaques seguem a fala, cortes e cópias. */
+  semanticCues?: SemanticWordCue[];
   /** trechos ajustados, em ordem e sem sobreposição */
   ranges: RangeEdit[];
   reference: ReferencePalette | null;
