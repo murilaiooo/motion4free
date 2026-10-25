@@ -4,7 +4,7 @@ import { EMPTY_BRIEF } from '../src/core/brief';
 import { POP } from '../src/core/presets';
 import type { EditPlan } from '../src/core/types';
 import { drawFrame } from '../src/render/frame';
-import { addSemanticWord, activeSemanticWords } from '../src/editorial/semantic-word-edits';
+import { addSemanticWord, activeSemanticWords, scheduledPlanCues, setSemanticWordEffect } from '../src/editorial/semantic-word-edits';
 import { RecordingContext } from './helpers/recording-ctx';
 
 const word = { id: 'w2', text: 'segredo', start: 1, end: 1.35 };
@@ -42,6 +42,40 @@ describe('seam #117: a mesma drawFrame usada por player e MP4', () => {
     expect(before.semanticCues).toBeUndefined();
   });
 
+  it('sublinhado animado desenha um traço apenas na palavra e quadros selecionados', () => {
+    const original = plan();
+    const once = addSemanticWord(original, word);
+    const underlined = setSemanticWordEffect(once, once.semanticCues![0]!.id, 'underline');
+    const rects = (p: EditPlan, t: number) => render(p, t).calls.filter(c => c.op === 'fillRect' && c.fillStyle === p.style.palette.accent2);
+    expect(rects(underlined, 1.15).length).toBeGreaterThan(rects(original, 1.15).length);
+    expect(rects(underlined, 1.8)).toEqual(rects(original, 1.8));
+    expect(underlined.captions).toBe(original.captions);
+  });
+
+  it('pulso aumenta escala somente durante a fala e retorna ao tamanho normal ao terminar', () => {
+    const original = plan();
+    const once = addSemanticWord(original, word);
+    const pulsed = setSemanticWordEffect(once, once.semanticCues![0]!.id, 'pulse');
+    expect(keywordScale(pulsed, 1.15)).toBeGreaterThan(keywordScale(once, 1.15) + 0.07);
+    expect(keywordScale(pulsed, 1.15)).toBeLessThan(keywordScale(once, 1.15) + 0.5);
+    expect(keywordScale(pulsed, 1.8)).toBeCloseTo(keywordScale(original, 1.8), 6);
+  });
+
+  it('pulso começa e termina na escala normal, sem salto na fronteira dos quadros 24/30/60 fps', () => {
+    for (const fps of [24,30,60]) {
+      const original = { ...plan(), output: { ...plan().output, fps } };
+      const once = addSemanticWord(original, word);
+      const pulsed = setSemanticWordEffect(once, once.semanticCues![0]!.id, 'pulse');
+      const { startFrame, endFrameExclusive } = scheduledPlanCues(pulsed)[0]!;
+      const first = (startFrame + .01) / fps;
+      const last = (endFrameExclusive - 1 + .01) / fps;
+      const middle = (startFrame + Math.floor((endFrameExclusive-startFrame-1)/2) + .01) / fps;
+      expect(keywordScale(pulsed, first)).toBeCloseTo(keywordScale(original, first), 4);
+      expect(keywordScale(pulsed, last)).toBeCloseTo(keywordScale(original, last), 4);
+      expect(keywordScale(pulsed, middle)).toBeGreaterThan(keywordScale(original, middle) + .09);
+    }
+  });
+
   it('mesmo texto repetido: só a palavra com wordId escolhido recebe a ênfase', () => {
     const baseline = plan();
     const repeated = { ...baseline, captions: [{ ...baseline.captions[0]!, text: 'segredo segredo', wordIds: ['w2', 'w3'], wordStarts: [1, 1.5] }] };
@@ -51,6 +85,23 @@ describe('seam #117: a mesma drawFrame usada por player e MP4', () => {
     expect(calls).toHaveLength(2);
     expect(calls[0]!.m[0]).toBeGreaterThan(flat[0]!.m[0]! + 0.05);
     expect(calls[1]!.m[0]).toBeCloseTo(flat[1]!.m[0]!, 6);
+  });
+
+  it('correção manual da legenda com igual número de palavras não destaca texto diferente da âncora', () => {
+    const original = plan();
+    const cue = addSemanticWord(original, word);
+    const corrected = { ...original, captions: original.captions.map(c =>
+      ({ ...c, text: 'um alterado valioso' })) };
+    const correctedWithCue = { ...cue, captions: corrected.captions };
+    const drawWordScale = (p: EditPlan) => {
+      const call = render(p, 1.15).calls.find(c => c.op === 'fillText' && String(c.args[0]).toLowerCase() === 'alterado');
+      expect(call).toBeDefined();
+      return call!.m[0]!;
+    };
+    expect(drawWordScale(correctedWithCue)).toBeCloseTo(drawWordScale(corrected), 6);
+    const underlined = setSemanticWordEffect(correctedWithCue, cue.semanticCues![0]!.id, 'underline');
+    const colorRects = (p: EditPlan) => render(p, 1.15).calls.filter(c => c.op === 'fillRect' && c.fillStyle === p.style.palette.accent2);
+    expect(colorRects(underlined)).toEqual(colorRects(corrected));
   });
 
   it('palavra cortada não muda os quadros; ao duplicar o pedaço a ênfase reaparece na segunda ocorrência', async () => {

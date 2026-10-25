@@ -6,7 +6,7 @@ import { duplicateSegment, moveSegment } from '../src/editorial/sequence';
 import { cutSourceRange, trimSegment } from '../src/editorial/manual';
 import { parseEditPlan } from '../src/core/schema';
 import { makeProject, parseProject } from '../src/core/project';
-import { addSemanticWord, removeSemanticWord, reanchorSemanticWord, scheduledPlanCues, activeSemanticWords } from '../src/editorial/semantic-word-edits';
+import { addSemanticWord, removeSemanticWord, reanchorSemanticWord, scheduledPlanCues, activeSemanticWords, setSemanticWordEffect } from '../src/editorial/semantic-word-edits';
 
 const words = [
   { id: 'w-a', text: 'primeiro', start: 0.5, end: 0.9 },
@@ -70,6 +70,30 @@ describe('seam #117: edição semântica em EditPlan, undo, save e render determ
     expect(activeSemanticWords(quiet, t)).toEqual([]);
     const locked = { ...cue, ranges: [{ id: 'r1', srcStart: 1.1, srcEnd: 1.8, out: { start: 1.1, end: 1.8 }, quiet: false, locked: {} }] } as unknown as typeof cue;
     expect(activeSemanticWords(locked, t)).toEqual([]);
+  });
+
+  it('altera o tipo de motion por palavra e o conserva em histórico e projeto salvo', () => {
+    const initial = addSemanticWord(base, words[1]!);
+    const id = initial.semanticCues![0]!.id;
+    const pulse = setSemanticWordEffect(initial, id, 'pulse');
+    expect(pulse.semanticCues?.[0]?.effect).toBe('pulse');
+    expect(initial.semanticCues?.[0]?.effect).toBeUndefined();
+    expect(setSemanticWordEffect(pulse, id, 'pulse')).toBe(pulse);
+
+    const underlined = setSemanticWordEffect(pulse, id, 'underline');
+    const hist = commitEdit(commitEdit(createHistory(base), pulse), underlined);
+    expect(undo(hist).present.semanticCues?.[0]?.effect).toBe('pulse');
+    expect(redo(undo(hist)).present.semanticCues?.[0]?.effect).toBe('underline');
+
+    const saved = makeProject({ video: { name: 'demo.webm', durationSec: 4, size: 100 }, words,
+      warnings: [], silences: [], history: hist, appVersion: '0.30.0', savedAt: 'today' });
+    const parsed = parseProject(JSON.parse(JSON.stringify(saved)));
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.project.history.present.semanticCues?.[0]?.effect).toBe('underline');
+
+    expect(parseEditPlan({ ...underlined, semanticCues: [{ ...underlined.semanticCues![0], effect: 'javascript' }] }).ok).toBe(false);
+    expect(() => setSemanticWordEffect(underlined, id, 'javascript' as 'pulse')).toThrow();
+    expect(() => setSemanticWordEffect(underlined, 'sw404', 'pulse')).toThrow();
   });
 
   it('não permite palavra de fora, duplicação, cue com ID inválido nem violar limite', () => {

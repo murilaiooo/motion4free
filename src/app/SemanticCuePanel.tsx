@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { EditPlan, Word } from '../core/types';
+import type { EditPlan, SemanticWordCue, Word } from '../core/types';
 import { outputToSource, sourceToOutput } from '../engine/timeline';
 import { scheduledPlanCues } from '../editorial/semantic-word-edits';
 
@@ -12,13 +12,14 @@ interface Props {
   onRemove: (id: string) => void;
   onReanchor: (id: string, word: Word) => void;
   onOffset: (id: string, frames: number) => void;
+  onEffect: (id: string, effect: NonNullable<SemanticWordCue['effect']>) => void;
   onSeek: (t: number) => void;
 }
 
 const format = (sec: number) => `${sec.toFixed(2).replace('.', ',')} s`;
 
 /** Small optional control in Legendas. Nothing is inferred or sent automatically. */
-export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove, onReanchor, onOffset, onSeek }: Props) {
+export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove, onReanchor, onOffset, onEffect, onSeek }: Props) {
   const [pickedId, setPickedId] = useState<string | null>(null);
   const src = outputToSource(plan.segments, Math.min(time, Math.max(0, plan.segments.reduce((s, p) => s + p.srcEnd - p.srcStart, 0) - .001)));
   const available = useMemo(() => {
@@ -50,7 +51,7 @@ export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove,
     <section className="set-sub stack" data-testid="semantic-cue-panel" aria-label="Destaques sincronizados com a fala">
       <div className="stack" style={{ gap: 4 }}>
         <b>Destaques nas palavras</b>
-        <small className="hint">Escolha uma palavra da fala. O destaque segue os cortes e aparece na prévia e no vídeo final.</small>
+        <small className="hint">Escolha uma palavra e o movimento visual. Os efeitos acompanham a fala, inclusive após os cortes, na prévia e no vídeo final.</small>
       </div>
       {available.length === 0 ? (
         <p className="hint" role="status" data-testid="semantic-no-words">Não há palavras com tempos confirmados neste trecho. Faça ou corrija a transcrição antes de destacar.</p>
@@ -67,7 +68,7 @@ export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove,
       )}
       {cues.length > 0 && (
         <div className="stack" data-testid="semantic-cue-list">
-          <small className="hint">{cues.length} destaque(s) manual(is). Pode apagar, mudar a palavra ou ajustar o início.</small>
+          <small className="hint">{cues.length} efeito(s) por palavra. Você pode trocar o estilo, a palavra e o início, ou remover.</small>
           {cues.map(cue => {
             const instance = selected(cue.id);
             return (
@@ -77,6 +78,16 @@ export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove,
                   <button type="button" className="sm ghost" disabled={disabled || !picked || (picked.id===cue.wordId)} onClick={()=>picked && onReanchor(cue.id,picked)} data-testid={`semantic-reanchor-${cue.id}`}>Mover para palavra escolhida</button>
                   <button type="button" className="sm ghost danger" disabled={disabled} onClick={()=>onRemove(cue.id)} data-testid={`semantic-remove-${cue.id}`}>Remover</button>
                 </div>
+                <label className="stack" style={{ minWidth: 0 }}>
+                  <small>Movimento de {cue.source.text}</small>
+                  <select aria-label={`Movimento visual da palavra ${cue.source.text}`} data-testid={`semantic-effect-${cue.id}`}
+                    value={cue.effect ?? 'emphasis'} disabled={disabled}
+                    onChange={e => onEffect(cue.id, e.target.value as NonNullable<SemanticWordCue['effect']>)}>
+                    <option value="emphasis">Destaque (cor e peso)</option>
+                    <option value="underline">Sublinhado animado</option>
+                    <option value="pulse">Pulso suave</option>
+                  </select>
+                </label>
                 <label className="set-check">
                   <small>Deslocamento inicial (quadros)</small>
                   <input type="number" min="-30" max="30" step="1" value={cue.offsetFrames} disabled={disabled} aria-label={`Deslocamento de ${cue.source.text} em quadros`} data-testid={`semantic-offset-${cue.id}`}

@@ -5,7 +5,7 @@ import { tab } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 const planOf = (page: import('@playwright/test').Page) =>
-  page.evaluate(() => (window as unknown as { __m4f: { plan: { semanticCues?: { id: string; wordId: string; offsetFrames: number; source: { text: string; start: number } }[] } } }).__m4f.plan);
+  page.evaluate(() => (window as unknown as { __m4f: { plan: { semanticCues?: { id: string; wordId: string; effect?: 'emphasis' | 'underline' | 'pulse'; offsetFrames: number; source: { text: string; start: number } }[] } } }).__m4f.plan);
 
 test('issue #117: adiciona, reancora, desfaz/refaz e salva destaque no Brave', async ({ page }) => {
   test.setTimeout(120_000);
@@ -65,6 +65,8 @@ test('issue #117: exporta MP4 com destaque ancorado; áudio e quadros decodifica
   await tab(page, 'Legendas');
   await page.getByTestId('semantic-add-current').click();
   await expect.poll(async () => (await planOf(page)).semanticCues?.length).toBe(1);
+  await page.getByTestId('semantic-effect-sw1').selectOption('pulse');
+  await expect.poll(async () => (await planOf(page)).semanticCues?.[0]?.effect).toBe('pulse');
   const cue = (await planOf(page)).semanticCues![0]!;
   const timing = await page.evaluate(() => (window as unknown as { __m4f: { plan: { output: {fps:number}, semanticCues: { source:{start:number},offsetFrames:number}[] } } }).__m4f.plan);
   expect(timing.output.fps).toBe(30);
@@ -99,4 +101,29 @@ test('issue #117: exporta MP4 com destaque ancorado; áudio e quadros decodifica
   console.log('ISSUE117_MP4 ' + JSON.stringify({ sourceAnchor, duration: probe.format.duration,
     bytes: probe.format.size, streams: probe.streams.map(s=>s.codec_type), cueId: cue.id,
     note: 'synthetic 3-second speech, actual worker MP4 and ffprobe/ffmpeg frames; semantic difference unit-tested through shared drawFrame' }));
+});
+test('issue #117: escolha de efeito, desfazer/refazer e persistência no Brave', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/?asr=rapida');
+  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
+  await tab(page, 'Legendas');
+  await page.getByTestId('semantic-add-current').click();
+  const effect = page.getByTestId('semantic-effect-sw1');
+  await expect(effect).toBeVisible();
+  await expect(effect).toHaveValue('emphasis');
+  await effect.selectOption('underline');
+  await expect.poll(async () => (await planOf(page)).semanticCues?.[0]?.effect).toBe('underline');
+  await effect.selectOption('pulse');
+  await expect.poll(async () => (await planOf(page)).semanticCues?.[0]?.effect).toBe('pulse');
+  await page.getByTestId('undo').click();
+  await expect.poll(async () => (await planOf(page)).semanticCues?.[0]?.effect).toBe('underline');
+  await page.getByTestId('redo').click();
+  await expect.poll(async () => (await planOf(page)).semanticCues?.[0]?.effect).toBe('pulse');
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 30_000 });
+  await page.reload();
+  await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
+  await tab(page, 'Legendas');
+  await expect(page.getByTestId('semantic-effect-sw1')).toHaveValue('pulse');
+  expect((await planOf(page)).semanticCues?.[0]?.effect).toBe('pulse');
 });

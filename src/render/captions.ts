@@ -142,10 +142,8 @@ export function captionMaxWidth(f: Pick<Frame, 'w' | 'h' | 'safe' | 'style'>): n
 }
 
 export interface CaptionOpts {
-  /** Identity of manually emphasized source words; applied only at matching token index.
-   * If the caption was rewritten and no longer aligns with wordIds, suppress semantic
-   * emphasis rather than lighting up the wrong occurrence with the same text. */
-  semanticWordIds?: ReadonlySet<string>;
+  /** Efeito visual por identidade, sincronizado ao quadro da própria palavra. */
+  semanticEffects?: ReadonlyMap<string, { effect: 'emphasis' | 'underline' | 'pulse'; phase: number; sourceText: string }>;
   /** a legenda sai animando no fim (há uma pausa antes da próxima) */
   exit?: boolean;
   /** posição escolhida à mão (v0.13): centro normalizado do bloco, tamanho e giro (graus) */
@@ -186,8 +184,14 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   const starts = wordTimings(caption, tokens);
   const active = activeWord(starts, t);
   const semanticAligned = caption.wordIds.length === tokens.length;
+  const semantic = tokens.map((token, i) => {
+    const anchored = semanticAligned ? opts.semanticEffects?.get(caption.wordIds[i]!) : undefined;
+    // Correction can replace a word without changing the number of tokens.
+    // Suppress stale animations instead of applying them to unrelated narration.
+    return anchored && normalizeToken(token) === normalizeToken(anchored.sourceText) ? anchored : undefined;
+  });
   const isKw = tokens.map((tk, i) => keywords.has(normalizeToken(tk)) ||
-    (semanticAligned && !!opts.semanticWordIds?.has(caption.wordIds[i]!)));
+    semantic[i]?.effect === 'emphasis');
   const emScale = em.family !== spec.family ? 1.16 : 1;
   const maxW = opts.maxW ?? captionMaxWidth(f);
   const place = opts.place ?? null;
@@ -289,10 +293,12 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   const gainOf = (i: number) => C.activeScale - 1 + (isKw[i] ? 0.14 * style.motion.intensity : 0);
   const activeScaleOf = (i: number) => {
     const gain = gainOf(i);
-    if (gain <= 0) return 1;
-    if (i === active) return 1 + gain * springIn(progress(t, starts[i]!, 0.28), ACTIVE_SPRING);
-    if (i === active - 1) return 1 + gain * (1 - easeOutCubic(progress(t, starts[active]!, 0.1)));
-    return 1;
+    let scale = 1;
+    if (gain > 0 && i === active) scale += gain * springIn(progress(t, starts[i]!, 0.28), ACTIVE_SPRING);
+    else if (gain > 0 && i === active - 1) scale += gain * (1 - easeOutCubic(progress(t, starts[active]!, 0.1)));
+    // Micro-pulso suave durante a janela semântica, não altera outros tokens.
+    if (semantic[i]?.effect === 'pulse') scale += 0.24 * Math.sin(Math.PI * Math.max(0, Math.min(1, semantic[i]!.phase)));
+    return scale;
   };
   // a palavra que cresce empurra as vizinhas da mesma linha (a linha "respira" sem encavalar letras)
   const growth = tokens.map((_, i) => Math.max(0, wordEnter(i).scale * activeScaleOf(i) - 1) * widths[i]!);
@@ -459,9 +465,12 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
         g.addColorStop(1, style.palette.accent2);
         color = g;
       }
-      if (C.highlight === 'underline' && i === active) {
-        const grow = easeOutExpo(progress(t, starts[i]!, 0.18));
-        ctx.fillStyle = K.highlight;
+      const wordUnderline = semantic[i]?.effect === 'underline';
+      if ((C.highlight === 'underline' && i === active) || wordUnderline) {
+        const grow = wordUnderline
+          ? easeOutExpo(Math.min(1, semantic[i]!.phase * 3))
+          : easeOutExpo(progress(t, starts[i]!, 0.18));
+        ctx.fillStyle = wordUnderline ? K.keyword : K.highlight;
         ctx.fillRect(xOf(i) - widths[i]! / 2, y + size * 0.52, widths[i]! * grow, Math.max(2, size * 0.08));
       }
       if (C.stroke === 0 && plain && C.box === 'none' && opts.shadow !== false) setShadow(ctx, f, 'soft', 0.9);

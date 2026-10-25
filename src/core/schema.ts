@@ -68,6 +68,7 @@ const semanticCueSchema = z.object({
   edge: z.enum(['start', 'end']),
   offsetFrames: z.number().int().min(-30).max(30),
   durationFrames: z.number().int().min(1).max(90),
+  effect: z.enum(['emphasis', 'underline', 'pulse']).optional(),
 }).strict().refine(cue => cue.wordId === cue.source.id, { message: 'ID de palavra não corresponde à âncora' });
 const semanticCuesSchema = z.array(semanticCueSchema).max(60)
   .refine(cues => new Set(cues.map(c => c.id)).size === cues.length, { message: 'IDs de eventos duplicados' });
