@@ -2,6 +2,8 @@
 
 **Decisão: BLOQUEADO para publicação pública.** A branch prepara gates, corrige o teste Windows e valida dois MP4s sintéticos curtos no Brave, mas **não certifica** os demais subsistemas, a qualidade editorial, o licenciamento, toda a exportação e o desempenho em vídeos reais.
 
+**Atualização de armazenamento (#4):** o staging agora inclui POC de cache estático offline com reabertura de projeto no Brave e export/import de backup portátil `.m4f` com validação SHA-256 por blocos. [Evidência e limitações](ISSUE4-OFFLINE-STORAGE.md). Isso não prova comportamento offline com IA/modelos remotos nem elimina validação no Cloudflare real.
+
 **Atualização da triagem no mesmo dia:** as 23 PRs que estavam abertas foram classificadas e encerradas ou mescladas na branch de integração, sem tocar na `main`. Veja [consolidação das PRs](PR-CONSOLIDATION-20261024.md) para o estado mais recente. As contagens citadas abaixo descrevem o levantamento inicial da revisão.
 
 ## Origem, preservação e integração

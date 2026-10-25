@@ -5,6 +5,7 @@ import { ASR_CANDIDATES, asrLadder } from '../core/asr-models';
 import { MB, formatBytes } from '../core/bytes';
 import { AppError, describeError, toAppError } from '../core/errors';
 import { makeProject, referencedClips, restoreHistory, sameVideo, type SavedProject } from '../core/project';
+import { exportProjectBackup, restoreProjectBackup } from '../core/project-archive';
 import {
   PROJECTS_DIR,
   THUMB,
@@ -154,6 +155,7 @@ function EditorApp() {
   useEffect(() => { setActiveAiProject(projectId); }, [projectId]);
   const [projectName, setProjectName] = useState('');
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [archiveBusy, setArchiveBusy] = useState(false);
   const [focusProjects, setFocusProjects] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [spaceWarn, setSpaceWarn] = useState<{ files: File[]; error: AppError } | null>(null);
@@ -864,6 +866,43 @@ function EditorApp() {
     await refreshProjects();
   }
 
+  async function downloadProjectBackup(id: string) {
+    if (!fs || archiveBusy) return;
+    setArchiveBusy(true);
+    try {
+      const archive = await enqueue(() => exportProjectBackup(fs, id));
+      const url = URL.createObjectURL(archive);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `motion4free-${id}.m4f`;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      // Browsers need time to start the download before the Blob URL is revoked.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setFlash('Backup completo gerado. Guarde o arquivo .m4f fora do navegador.');
+    } catch (error) {
+      notify(toAppError(error, 'SALVAR_FALHOU'));
+    } finally {
+      setArchiveBusy(false);
+    }
+  }
+
+  async function importProjectBackup(file: File) {
+    if (!fs || archiveBusy) return;
+    setArchiveBusy(true);
+    try {
+      await enqueue(() => restoreProjectBackup(fs, file));
+      setFlash('Backup restaurado como novo projeto. Seus projetos anteriores foram preservados.');
+      setFocusProjects(true);
+      await refreshProjects();
+    } catch (error) {
+      notify(toAppError(error, 'SALVAR_FALHOU'));
+    } finally {
+      setArchiveBusy(false);
+    }
+  }
+
   /** Algo foi apagado pela tela Armazenamento. */
   async function storageChanged(deletedProject: string | null, everything: boolean) {
     if (everything) {
@@ -1059,17 +1098,17 @@ function EditorApp() {
           )
         }
         projects={
-          projects.length > 0 && (
-            <ProjectsList
-              projects={projects}
-              busy={busy}
-              onOpen={(id) => void openProject(id)}
-              onRename={(id, n) => void rename(id, n)}
-              onDuplicate={(id) => void duplicate(id)}
-              onDelete={(p) => void askDelete({ id: p.id, name: p.name, videoName: p.video.name, sizeBytes: p.sizeBytes })}
-              onStorage={openStorage}
-            />
-          )
+          <ProjectsList
+            projects={projects}
+            busy={busy || archiveBusy}
+            onOpen={(id) => void openProject(id)}
+            onRename={(id, n) => void rename(id, n)}
+            onDuplicate={(id) => void duplicate(id)}
+            onBackup={(id) => void downloadProjectBackup(id)}
+            onRestore={(file) => void importProjectBackup(file)}
+            onDelete={(p) => void askDelete({ id: p.id, name: p.name, videoName: p.video.name, sizeBytes: p.sizeBytes })}
+            onStorage={openStorage}
+          />
         }
         notices={
           (pendingNotice || flash || status.kind === 'error' || notices.length > 0 || spaceWarn) && (

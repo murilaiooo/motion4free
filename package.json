@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node scripts/prune-dist.mjs && node scripts/check-dist.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/prune-dist.mjs && node scripts/generate-offline-shell.mjs && node scripts/check-dist.mjs",
     "build:e2e": "node scripts/build-e2e.mjs",
     "preview": "vite preview",
     "test": "vitest run",
