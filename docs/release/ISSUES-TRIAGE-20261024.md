@@ -42,18 +42,18 @@ Fonte: GitHub `murilaiooo/motion4free`, após encerramento das 23 PRs antigas e 
 
 | Issue | Estado e próxima decisão |
 | --- | --- |
-| [#132](https://github.com/murilaiooo/motion4free/issues/132) — snapshot 48 arquivos | backup remoto preservado; portar seletivamente código ainda útil, sem sobrescrever editor atual |
+| [#132](https://github.com/murilaiooo/motion4free/issues/132) — snapshot 48 arquivos | Concluída a reconciliação técnica, todos os 48 caminhos presentes no staging: 18 idênticos, 30 evoluídos, 0 ausentes; 10 E2E de criação/workbench no Brave passaram. Branch histórica preservada. [Relatório por arquivo](ISSUE132-SNAPSHOT-RECONCILIATION.md) |
 | [#133](https://github.com/murilaiooo/motion4free/issues/133) — #116 (31 commits) | 13 conflitos de integração mapeados; migrar domínio a domínio com unit/E2E/MP4 e contratos atuais |
 | [#12](https://github.com/murilaiooo/motion4free/issues/12) — publicar | custos, licença, política, GitHub Settings e hardware a auditar; só depois do runbook. Merge na `main` pode publicar automaticamente |
 
 ## Fila objetiva: fechar uma issue por vez
 
-1. **#4:** preservar projetos e medir cache/offline/storage; preparar teste de recuperação sem mídia particular; não implementar SW às cegas.
+1. **#4 CONCLUÍDA no staging:** cache/offline medido, backup portátil e restauração em perfil limpo; evidencia em [ISSUE4-OFFLINE-STORAGE.md](ISSUE4-OFFLINE-STORAGE.md).
 2. **#102:** corrigir o criador de clipes com histórias completas, não apenas trechos de alta energia; provar com corpus autorizado e casos de pronomes/negações.
 3. **#126:** terminar o assistente de modelos adequado a usuários leigos, com teste por modelo e preços honestos. A UX #131 é somente o primeiro incremento.
 4. **#133:** portar primeiro segurança/consentimento e correções de estado; depois mídia/face/clip context, cada uma com testes e PR pequena.
 5. **#127 + #117:** ASR remoto autorizado e eventos visuais por palavra, cada qual isolado para não confundir consentimento de áudio e texto.
-6. **#132:** preservar e reconciliar trabalho local, com checklist por arquivo.
+6. **#132 CONCLUÍDA no staging:** todos os 48 caminhos revistos, nenhum ausente; [relatório por arquivo](ISSUE132-SNAPSHOT-RECONCILIATION.md).
 7. **#5/#28/#26/#10:** apenas encerrar mediante prova experimental e avaliação humana quando exigida. #2 só retomar com autorização do responsável.
 
 **Política:** comentários/relatórios de triagem não concluem critérios de aceite. Issue só fecha com artefato e teste verificáveis, ou como duplicate/not_planned quando o escopo foi transferido integralmente e a decisão foi explicitamente registrada. Evitar novos PRs gigantes, merges forçados ou publicação da `main`.
