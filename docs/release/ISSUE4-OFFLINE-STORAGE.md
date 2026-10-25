@@ -25,12 +25,26 @@ Teste `e2e/issue4-project-backup.spec.ts`:
 
 Regressões de falha já presentes em `e2e/project-recovery.spec.ts`: disco cheio `QuotaExceeded`, aba fechada na cópia e importação interrompida. Os avisos foram alinhados à UI com painel recolhível. A seleção novamente do original continua sendo recuperação possível quando a cópia do OPFS foi apagada.
 
+## Medição de primeira carga, reabertura e modo offline
+
+O teste isolado `e2e/issue4-load-metrics.spec.ts`, em perfil novo do Brave e servidor E2E local, mede as métricas publicadas pela Performance API; valores não representam pico de RAM nem custo total de rede:
+
+| Mesmo perfil Brave | 1ª carga | Reabertura online | Reabertura offline |
+| --- | ---: | ---: | ---: |
+| `navigation.duration` | 104,0 ms | 61,8 ms | 77,1 ms |
+| Requisições de recursos same-origin contabilizadas | 15 | 18 | 18 |
+| `transferSize` agregado reportado | 578.086 bytes | 0 bytes | 0 bytes |
+| `decodedBodySize` agregado reportado | 1.797.228 bytes | 1.852.872 bytes | 1.852.872 bytes |
+| Cache ativo | instalação inicial | `m4f-shell-7350a3a0043f8112` | mesmo cache |
+
+O navegador pode omitir bytes de rede transferidos e a contagem de recursos não captura todos os downloads. A instalação do service worker de 11,4 MB ocorre assíncrona após a primeira tela, de modo que `transferSize` de primeira navegação **não mede o tamanho total do pré-cache**. As três durações são **amostras únicas**, não afirmação de que qualquer usuário obterá a mesma velocidade. A reabertura offline preservou funcionamento sem rede.
+
 ## Como reproduzir
 
 1. `npm ci`, instalar FFmpeg e `npm run fixture`.
 2. `npm run typecheck && npm test && npm run build`.
 3. Configurar `CHROMIUM_PATH` para Brave no Windows.
-4. `npx playwright test e2e/issue4-offline.spec.ts e2e/issue4-project-backup.spec.ts e2e/project-recovery.spec.ts`.
+4. `npx playwright test e2e/issue4-offline.spec.ts e2e/issue4-load-metrics.spec.ts e2e/issue4-project-backup.spec.ts e2e/project-recovery.spec.ts`.
 5. Conferir build: `dist/sw.js`, `dist/index.html` e `dist/assets/*`. O script `scripts/generate-offline-shell.mjs` é deterministicamente testado em `tests/offline-shell.test.ts`.
 6. Usar teste de backup com conteúdo sintético e perfil isolado; não apagar dados de um navegador real.
 
