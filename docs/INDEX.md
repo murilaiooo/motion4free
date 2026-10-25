@@ -108,6 +108,12 @@
 **Status:** instruções extraídas/adaptadas da fonte; bibliotecas não instaladas no runtime nem comprovadas por POC. Os manuais orientam os agentes antes de cada integração aprovada.
 
 
+## Verificação do OpenReel e decisão de timeline (24/10/2026)
+- [Auditoria reproduzível de importação, split/undo/redo, legendas, exportação MP4 real e licenças](research/updates/2026-10-24-openreel-engine-evaluation.md) — issue #5.
+- [ADR-0032: manter a timeline do Motion4Free, sem fork do OpenReel](decisions/0032-openreel-not-primary-timeline.md).
+
+**Resultado:** OpenReel é editor funcional, mas substituir nosso motor não mostrou benefício que supere o risco de migrar planos e projetos. Nenhuma biblioteca de terceiros ou recurso externo foi integrado ao runtime nesta avaliação.
+
 ## Nova atualização de upstream: Editonny (19/10/2026)
 - [Auditoria da atualização do Editonny — site Next.js, design system, prompts, testes e impacto no Motion4Free](research/updates/2026-10-19-editonny-guide.md)
 - O **motor de edição não recebeu mudanças** no commit examinado; boas ideias estão no criador de briefs, nos tokens, na biblioteca e no QA web.
