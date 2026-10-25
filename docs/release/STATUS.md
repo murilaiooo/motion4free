@@ -2,6 +2,8 @@
 
 **Decisão: BLOQUEADO para publicação pública.** A branch prepara gates, corrige o teste Windows e valida dois MP4s sintéticos curtos no Brave, mas **não certifica** os demais subsistemas, a qualidade editorial, o licenciamento, toda a exportação e o desempenho em vídeos reais.
 
+**Reconciliação #132:** os 48 caminhos modificados pelo snapshot antigo continuam no staging: 18 com hash igual, 30 com revisões mais novas, 0 ausentes. O backup histórico não precisa de merge bruto; [relatório arquivo a arquivo](ISSUE132-SNAPSHOT-RECONCILIATION.md). A integração #133 permanece independente.
+
 **Atualização de armazenamento (#4):** o staging agora inclui POC de cache estático offline com reabertura de projeto no Brave e export/import de backup portátil `.m4f` com validação SHA-256 por blocos. [Evidência e limitações](ISSUE4-OFFLINE-STORAGE.md). Isso não prova comportamento offline com IA/modelos remotos nem elimina validação no Cloudflare real.
 
 **Atualização da triagem no mesmo dia:** as 23 PRs que estavam abertas foram classificadas e encerradas ou mescladas na branch de integração, sem tocar na `main`. Veja [consolidação das PRs](PR-CONSOLIDATION-20261024.md) para o estado mais recente. As contagens citadas abaixo descrevem o levantamento inicial da revisão.
@@ -10,7 +12,7 @@
 
 - GitHub `main` no início: `941b791ecf7e4803c5c69d55ab8469e516b8b184` (código v0.30.0); branch da revisão: `release/readiness-20261024`, criada da main em worktree isolada `I:\codex\motion4free\.local\variantes\release-readiness-20261024`.
 - A pasta de trabalho principal `I:\codex\motion4free` estava na branch `sync/local-product-work-20261022`, commit `0a138b5`, com `.agents/`, `.claude/` e `skills-lock.json` não rastreados. **Não modificar, limpar, resetar ou sobrescrever essa pasta.**
-- Outras seis worktrees já existiam. A PR [#122](https://github.com/murilaiooo/motion4free/pull/122) preserva 48 arquivos locais ainda não reconciliados, não deve ser mesclada às cegas.
+- Outras seis worktrees já existiam. A PR [#122](https://github.com/murilaiooo/motion4free/pull/122) preservou 48 arquivos históricos, reconciliados na [#132](ISSUE132-SNAPSHOT-RECONCILIATION.md) sem perder código nem fazer merge bruto.
 - A PR [#116](https://github.com/murilaiooo/motion4free/pull/116) agrega mudanças de vários subsistemas que originalmente **não foram testadas**. A PR [#119](https://github.com/murilaiooo/motion4free/pull/119) contém pesquisa e POC Hypit, sem promoção direta ao runtime.
 - Snapshot inicial GitHub: **21 PRs abertos, 22 issues abertas**. Nenhuma issue foi encerrada nem PR externo mesclado nesta revisão.
 
