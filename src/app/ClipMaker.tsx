@@ -412,7 +412,7 @@ export function ClipMaker({
           </button>
         ) : (
           <button className="primary" disabled={working || selected.filter((it) => it.job.kind !== 'done').length === 0} onClick={() => void renderSelected()} data-testid="clips-render-all">
-            <Download size={16} aria-hidden /> Gerar e baixar os {selected.filter((it) => it.job.kind !== 'done').length} escolhidos
+            <Download size={16} aria-hidden /> {work.items.length === 0 ? 'Nenhum clipe para gerar' : selected.length === 0 ? 'Selecione clipes para gerar' : `Gerar e baixar os ${selected.filter((it) => it.job.kind !== 'done').length} escolhidos`}
           </button>
         )}
         <span className="clips-version hint" data-testid="version">

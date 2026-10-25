@@ -11,6 +11,7 @@ import '../src/app/app.css';
 import '../src/app/landing.css';
 
 const params = new URL(location.href).searchParams;
+const exportTest = params.get('exporttest') === '1';
 const sampleCount = Math.max(0, Math.min(10, Number(params.get('clips') || 6)));
 const width = Number(params.get('sourcewidth') || 1920);
 const height = Number(params.get('sourceheight') || 1080);
@@ -27,8 +28,8 @@ const words = Array.from({ length: 433 }, (_, i) => ({
   end: i * .32 + .25,
 }));
 const moments: ClipItem[] = Array.from({ length: sampleCount }, (_, i) => {
-  const start = 4 + i * 12.8;
-  const end = start + 21;
+  const start = exportTest ? (sampleCount === 1 ? 1 : i * 5 + 1) : 4 + i * 12.8;
+  const end = exportTest ? (sampleCount === 1 ? 6 : start + 5) : start + 21;
   return {
     uid: 'fixture-' + i,
     checked: i < Math.min(6, sampleCount),
@@ -51,7 +52,8 @@ const moments: ClipItem[] = Array.from({ length: sampleCount }, (_, i) => {
 async function mount() {
   const file = await fetch('/e2e/fixtures/long-review.webm').then(r => r.blob())
     .then(blob => new File([blob], 'entrevista-portuguesa-exemplo-2min25.webm', { type: 'video/webm', lastModified: 100 }));
-  const analysis = {file, durationSec:145, width, height, words, silences:[], energy:new Float32Array(0), energyStep:.02, warnings:[], asrModel:'Whisper base (teste)', reused:false};
+  const validWords = exportTest ? words.filter(word => word.end <= 12.207) : words;
+  const analysis = {file, durationSec:exportTest ? 12.207 : 145, width, height, words:validWords, silences:[], energy:new Float32Array(0), energyStep:.02, warnings:[], asrModel:'Whisper base (teste)', reused:false};
   const starter:ClipWork = { ...newClipWork(analysis), length:'curto', count: Math.min(10,sampleCount || 3), items: moments };
   function Fixture() {
     const [work,setWork]=useState<ClipWork>(starter);

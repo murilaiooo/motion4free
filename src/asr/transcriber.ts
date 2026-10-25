@@ -87,6 +87,22 @@ export const FAKE_DEMO_CHUNKS: AsrChunk[] = (() => {
   return [...spread(a, 0.1, 1.35), ...spread(cut, 1.6, 2.8), ...spread(b, 3.05, 4.25)];
 })();
 
+/** Test-only 122-second transcript for exercising complete Clip Creator navigation.
+ * It is reachable exclusively through VITE_FAKE_ASR=1 and ?asr=clips.
+ * Matching speech is produced by e2e/prepare-clip-qa-video.ps1.
+ * This tests UI/clip pipeline integration, never real ASR accuracy.
+ */
+export const FAKE_CLIP_CHUNKS: AsrChunk[] = (() => {
+  const passage = 'Welcome to the Motion for Free editing demonstration. Today we have a short story with a clear beginning, middle and conclusion. First, imagine that your team has a difficult problem and you need to explain it in simple words. The challenge is that every short video must contain its own context. Next, you need to show what changed and why that change makes a difference. The key result is that each video should be clear enough for a person watching it for the first time. Finally, always check the beginning and the ending before exporting your clip.';
+  const spoken = passage.split(/\s+/);
+  return Array.from({ length: 4 }, (_, repeat) =>
+    spoken.map((text, index) => {
+      const from = repeat * 30.5 + index * 30.5 / spoken.length;
+      return { text: ' ' + text, timestamp: [from, from + 0.24] as [number, number] };
+    })
+  ).flat();
+})();
+
 /**
  * Usado só nos testes automáticos (VITE_FAKE_ASR=1): palavras fixas, sem baixar modelo.
  * `fail` simula falha de rede; `fallback` simula o modelo preciso falhando e o leve assumindo (M4F-307).
@@ -96,6 +112,7 @@ export class FakeTranscriber implements Transcriber {
     private chunks: AsrChunk[],
     private fail = false,
     private fallback = false,
+    private labelOverride: string | null = null,
   ) {}
   async transcribe(_audio: Float32Array, durationSec: number): Promise<TranscriptResult> {
     if (this.fail) throw new AppError('MODELO_REDE', 'servidor huggingface.co: TypeError: Failed to fetch (simulado)');
@@ -103,7 +120,7 @@ export class FakeTranscriber implements Transcriber {
     const notices = this.fallback
       ? [new AppError('MODELO_RESERVA', `${label('turbo-webgpu')} falhou (M4F-302 simulado); tentei ${label('small-wasm')}. Legenda feita com ${label('small-wasm')}.`)]
       : [];
-    return { words, model: label(this.fallback ? 'small-wasm' : 'turbo-webgpu'), notices };
+    return { words, model: this.labelOverride ?? label(this.fallback ? 'small-wasm' : 'turbo-webgpu'), notices };
   }
 }
 

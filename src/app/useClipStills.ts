@@ -8,6 +8,9 @@ export function useClipStills(videoUrl: string, items: readonly ClipItem[], form
   const anchors = items.map(it => [it.uid, (it.m.start + it.m.end) / 2] as const);
   const key = JSON.stringify(anchors);
   useEffect(() => {
+    setStills({});
+    // An empty result list has no frames to extract: avoid starting a decoder.
+    if (anchors.length === 0) return;
     let cancelled = false;
     const el = document.createElement('video');
     el.muted = true;
@@ -20,7 +23,6 @@ export function useClipStills(videoUrl: string, items: readonly ClipItem[], form
     cover.width = size[0]!;
     cover.height = size[1]!;
     const ctx = cover.getContext('2d');
-    setStills({});
     const once = (name: string, timeout: number) => new Promise<boolean>(resolve => {
       if (cancelled) { resolve(false); return; }
       let completed = false;

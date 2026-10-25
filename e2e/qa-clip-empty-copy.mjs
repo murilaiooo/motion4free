@@ -1,0 +1,12 @@
+import { chromium } from '@playwright/test';
+const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe'});
+const page=await browser.newPage();
+await page.goto('http://127.0.0.1:5181/e2e/clip-review-lab.html?clips=0');
+await page.getByTestId('clips-review').waitFor();
+const text=await page.getByTestId('clips-preview-context').innerText();
+const action=await page.getByTestId('clips-render-all').innerText();
+const disabled=await page.getByTestId('clips-render-all').isDisabled();
+const ok=text.toLocaleLowerCase('pt-BR').includes('nenhum trecho disponível')&&action.includes('Nenhum clipe para gerar')&&disabled;
+console.log('EMPTY_COPY',JSON.stringify({ok,text,action,disabled}));
+await browser.close();
+if(!ok)process.exitCode=1;

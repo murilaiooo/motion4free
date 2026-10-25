@@ -1,0 +1,56 @@
+﻿[
+    {
+        "file":  "short-render-verification.mp4",
+        "durationSec":  5.013333,
+        "sizeBytes":  2145891,
+        "streams":  [
+                        {
+                            "codec_name":  "h264",
+                            "codec_type":  "video",
+                            "width":  1080,
+                            "height":  1920
+                        },
+                        {
+                            "codec_name":  "aac",
+                            "codec_type":  "audio"
+                        }
+                    ],
+        "verifiedWith":  "ffprobe locally in Brave smoke test, 2026-10-24"
+    },
+    {
+        "file":  "batch-1.mp4",
+        "durationSec":  5.013333,
+        "sizeBytes":  2146175,
+        "streams":  [
+                        {
+                            "codec_name":  "h264",
+                            "codec_type":  "video",
+                            "width":  1080,
+                            "height":  1920
+                        },
+                        {
+                            "codec_name":  "aac",
+                            "codec_type":  "audio"
+                        }
+                    ],
+        "verifiedWith":  "ffprobe locally in Brave smoke test, 2026-10-24"
+    },
+    {
+        "file":  "batch-2.mp4",
+        "durationSec":  5.013333,
+        "sizeBytes":  2128632,
+        "streams":  [
+                        {
+                            "codec_name":  "h264",
+                            "codec_type":  "video",
+                            "width":  1080,
+                            "height":  1920
+                        },
+                        {
+                            "codec_name":  "aac",
+                            "codec_type":  "audio"
+                        }
+                    ],
+        "verifiedWith":  "ffprobe locally in Brave smoke test, 2026-10-24"
+    }
+]

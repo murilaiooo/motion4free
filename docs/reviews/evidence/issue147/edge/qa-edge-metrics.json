@@ -1,0 +1,394 @@
+[
+  {
+    "count": 0,
+    "width": 390,
+    "height": 844,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "0 de 0 selecionados",
+    "geometry": {
+      "view": 390,
+      "scrollWidth": 390,
+      "barHeight": 90.84375,
+      "cardCount": 0,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 0,
+    "width": 768,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "0 de 0 selecionados",
+    "geometry": {
+      "view": 768,
+      "scrollWidth": 768,
+      "barHeight": 72,
+      "cardCount": 0,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 0,
+    "width": 1440,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "0 de 0 selecionados",
+    "geometry": {
+      "view": 1440,
+      "scrollWidth": 1440,
+      "barHeight": 72,
+      "cardCount": 0,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 1,
+    "width": 390,
+    "height": 844,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "1 de 1 selecionados",
+    "geometry": {
+      "view": 390,
+      "scrollWidth": 390,
+      "barHeight": 90.84375,
+      "lastBottom": 613.0625,
+      "cardCount": 1,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 1,
+    "width": 768,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "1 de 1 selecionados",
+    "geometry": {
+      "view": 768,
+      "scrollWidth": 768,
+      "barHeight": 72,
+      "lastBottom": 728.09375,
+      "cardCount": 1,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 1,
+    "width": 1440,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "1 de 1 selecionados",
+    "geometry": {
+      "view": 1440,
+      "scrollWidth": 1440,
+      "barHeight": 72,
+      "lastBottom": 572.46875,
+      "cardCount": 1,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 3,
+    "width": 390,
+    "height": 844,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "3 de 3 selecionados",
+    "geometry": {
+      "view": 390,
+      "scrollWidth": 390,
+      "barHeight": 90.84375,
+      "lastBottom": 584.8125,
+      "cardCount": 3,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 3,
+    "width": 768,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "3 de 3 selecionados",
+    "geometry": {
+      "view": 768,
+      "scrollWidth": 768,
+      "barHeight": 72,
+      "lastBottom": 728.09375,
+      "cardCount": 3,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 3,
+    "width": 1440,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "3 de 3 selecionados",
+    "geometry": {
+      "view": 1440,
+      "scrollWidth": 1440,
+      "barHeight": 72,
+      "lastBottom": 901.21875,
+      "cardCount": 3,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 8,
+    "width": 390,
+    "height": 844,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "6 de 8 selecionados",
+    "geometry": {
+      "view": 390,
+      "scrollWidth": 390,
+      "barHeight": 90.84375,
+      "lastBottom": 585.4375,
+      "cardCount": 8,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 8,
+    "width": 768,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "6 de 8 selecionados",
+    "geometry": {
+      "view": 768,
+      "scrollWidth": 768,
+      "barHeight": 72,
+      "lastBottom": 728.34375,
+      "cardCount": 8,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 8,
+    "width": 1440,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "6 de 8 selecionados",
+    "geometry": {
+      "view": 1440,
+      "scrollWidth": 1440,
+      "barHeight": 72,
+      "lastBottom": 710.21875,
+      "cardCount": 8,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 10,
+    "width": 390,
+    "height": 844,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "6 de 10 selecionados",
+    "geometry": {
+      "view": 390,
+      "scrollWidth": 390,
+      "barHeight": 90.84375,
+      "lastBottom": 584.6875,
+      "cardCount": 10,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 10,
+    "width": 768,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "6 de 10 selecionados",
+    "geometry": {
+      "view": 768,
+      "scrollWidth": 768,
+      "barHeight": 72,
+      "lastBottom": 727.84375,
+      "cardCount": 10,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 10,
+    "width": 1440,
+    "height": 900,
+    "zoom": 1,
+    "ok": true,
+    "firstCount": "6 de 10 selecionados",
+    "geometry": {
+      "view": 1440,
+      "scrollWidth": 1440,
+      "barHeight": 72,
+      "lastBottom": 710.21875,
+      "cardCount": 10,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 8,
+    "width": 390,
+    "height": 844,
+    "zoom": 1.25,
+    "ok": true,
+    "firstCount": "6 de 8 selecionados",
+    "geometry": {
+      "view": 312,
+      "scrollWidth": 312,
+      "barHeight": 109.6875,
+      "lastBottom": 483.453125,
+      "cardCount": 8,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 8,
+    "width": 1024,
+    "height": 900,
+    "zoom": 1.25,
+    "ok": true,
+    "firstCount": "6 de 8 selecionados",
+    "geometry": {
+      "view": 819,
+      "scrollWidth": 819,
+      "barHeight": 72,
+      "lastBottom": 546.34375,
+      "cardCount": 8,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 8,
+    "width": 1440,
+    "height": 900,
+    "zoom": 1.25,
+    "ok": true,
+    "firstCount": "6 de 8 selecionados",
+    "geometry": {
+      "view": 1152,
+      "scrollWidth": 1152,
+      "barHeight": 72,
+      "lastBottom": 538.375,
+      "cardCount": 8,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 8,
+    "width": 390,
+    "height": 844,
+    "zoom": 2,
+    "ok": true,
+    "firstCount": "6 de 8 selecionados",
+    "geometry": {
+      "view": 195,
+      "scrollWidth": 195,
+      "barHeight": 128.53125,
+      "lastBottom": 356.578125,
+      "cardCount": 8,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 8,
+    "width": 1024,
+    "height": 900,
+    "zoom": 2,
+    "ok": true,
+    "firstCount": "6 de 8 selecionados",
+    "geometry": {
+      "view": 512,
+      "scrollWidth": 512,
+      "barHeight": 90.84375,
+      "lastBottom": 357.21875,
+      "cardCount": 8,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 8,
+    "width": 1440,
+    "height": 900,
+    "zoom": 2,
+    "ok": true,
+    "firstCount": "6 de 8 selecionados",
+    "geometry": {
+      "view": 720,
+      "scrollWidth": 720,
+      "barHeight": 72,
+      "lastBottom": 343.671875,
+      "cardCount": 8,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 10,
+    "width": 390,
+    "height": 844,
+    "zoom": 1,
+    "sourcewidth": 1080,
+    "sourceheight": 1920,
+    "ok": true,
+    "firstCount": "6 de 10 selecionados",
+    "geometry": {
+      "view": 390,
+      "scrollWidth": 390,
+      "barHeight": 90.84375,
+      "lastBottom": 584.6875,
+      "cardCount": 10,
+      "faults": []
+    },
+    "errors": []
+  },
+  {
+    "count": 10,
+    "width": 768,
+    "height": 900,
+    "zoom": 1,
+    "sourcewidth": 1080,
+    "sourceheight": 1080,
+    "ok": true,
+    "firstCount": "6 de 10 selecionados",
+    "geometry": {
+      "view": 768,
+      "scrollWidth": 768,
+      "barHeight": 72,
+      "lastBottom": 727.84375,
+      "cardCount": 10,
+      "faults": []
+    },
+    "errors": []
+  }
+]

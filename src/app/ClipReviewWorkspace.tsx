@@ -77,11 +77,15 @@ export function ClipReviewWorkspace({
           <div className="clips-preview-caption" data-testid="clips-preview-context">
             {playingItem ? (
               <>
-                <span className="clip-preview-status">Reproduzindo da fonte</span>
+                <span className="clip-preview-status">{playing ? 'Reproduzindo da fonte' : 'Prévia pausada'}</span>
                 <strong>{playingItem.m.title || `Clipe ${work.items.indexOf(playingItem) + 1}`}</strong>
                 <span className="tnum">{clock(playingItem.m.start)} – {clock(playingItem.m.end)}
                   {contextPreview ? ' · com 6 segundos ao redor' : ''}</span>
               </>
+            ) : work.items.length === 0 ? (
+              <><span className="clip-preview-status">Nenhum trecho disponível</span>
+                <strong>Seu vídeo original está pronto para revisar.</strong>
+                <span>Altere a duração dos clipes nas opções acima para buscar outros momentos.</span></>
             ) : (
               <><span className="clip-preview-status">Prévia pronta</span>
                 <strong>Selecione “Assistir” em qualquer cartão.</strong>

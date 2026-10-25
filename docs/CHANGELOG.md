@@ -2,6 +2,14 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.30.3 — 24/10/2026 — #147 (redesign da revisão de clipes)
+
+- Reconstrução da área de resultados: cartões compactos com miniaturas, títulos editáveis, horários, origem da sugestão e ações horizontais de prévia, revisão, edição e exportação.
+- Inspetor de transcrição e ajuste de limites por frase; vídeo original como referência; configuração recolhível e seleção em lote, com layout para celular e zoom.
+- Estado vazio esclarecido, sem prometer botões inexistentes; geração de miniaturas dispensada quando não há candidatos.
+- QA local no Brave: 1.717 testes Vitest, TypeScript, 23 cenários de layout, teclado, fluxo completo com transcrição **sintética explicitamente identificada**, retorno do editor preservando título/seleção, exportação MP4 individual e lote de dois arquivos validados com FFprobe (H.264, AAC, 1080×1920).
+- A transcrição real por Whisper foi executada com sucesso em uma amostra, mas também houve falha M4F-302 em tentativa independente. Essa instabilidade **não está corrigida por este redesign**; não confundir o transcritor de teste com validação de IA/ASR real. Evidências e limitações: `docs/reviews/2026-10-24-issue147-review-design-qa.md`.
+
 ## v0.30.2 — 24/10/2026 — #2 (licenças e proveniência)
 
 - Auditoria local, reproduzível e **sem GitHub Actions**, do grafo de 99 pacotes npm de produção (20 famílias de fontes) e dos 67 arquivos publicados, com hashes e licenças por arquivo.
