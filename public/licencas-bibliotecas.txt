@@ -718,7 +718,7 @@ Antes de redistribuir arquivos separados, consultar upstream e sua licença.
 
 ====================================================================
 @img/sharp-win32-x64@0.35.5 | SPDX Apache-2.0 AND LGPL-3.0-or-later
-Origem: git+https://github.com/lovell/sharp.git
+Origem: https://www.npmjs.com/package/%40img%2Fsharp-win32-x64
 Dependência opcional/nativa, não distribuída no site estático.
 Aviso do pacote (LICENSE):
 Apache License

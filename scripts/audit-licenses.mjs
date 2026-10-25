@@ -36,14 +36,15 @@ function add(name, parent) {
   if (!item) { errors.push('Não consta no package-lock: ' + name + ', requerido por ' + parent); return; }
   const packagePath = dir(name);
   let meta;
-  try { meta = JSON.parse(fs.readFileSync(path.join(packagePath, 'package.json'), 'utf8')); }
-  catch {
-    // Pacotes opcionais de outra plataforma não são instalados no Windows.
-    // São auditados pelo lockfile, e NUNCA são redistribuídos no site.
-    if (!item.optional || !item.license) {
-      errors.push('Falta package.json no npm instalado: ' + name); return;
-    }
+  if (item.optional) {
+    // O mesmo pacote opcional pode estar instalado no Windows, mas não no
+    // Linux/Cloudflare (ou vice-versa). Usar SEMPRE os metadados imutáveis
+    // do lockfile, nunca o pacote instalado, gera notices multiplataforma.
+    if (!item.license) errors.push('Licença do pacote opcional ausente no lockfile: ' + name);
     meta = {name, version:item.version, license:item.license, repository:null};
+  } else {
+    try { meta = JSON.parse(fs.readFileSync(path.join(packagePath, 'package.json'), 'utf8')); }
+    catch { errors.push('Falta package.json no npm instalado: ' + name); return; }
   }
   const license = meta.license || item.license;
   if (meta.version !== item.version) errors.push('Versão diverge do lockfile: ' + name);
