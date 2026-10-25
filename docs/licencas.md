@@ -79,5 +79,18 @@ O texto da licença Apache-2.0 acompanha o pacote npm (`node_modules/@mlc-ai/web
 
 - **Por que Lucide:** traço consistente, cobre todos os ícones de editor de vídeo que o app usa, componentes React sem dependências, licença permissiva que exige só manter o aviso (feito no arquivo acima). Nenhum ícone ou logo de outro produto (CapCut, Descript etc.) foi copiado; o logo "M" do Motion4Free é um SVG desenhado no próprio código (`src/app/TopBar.tsx`).
 
-## Nada mais
-Cenas, transições, estilos e a interface (layout, CSS, componentes) foram escritos do zero para o Motion4Free (sem código, preset ou asset copiado de outros projetos). As ideias de cenas do Editonny foram apenas referência de nomes de categorias (ver `docs/research/upstream-implementation/INDEX.md`).
+## Bibliotecas JavaScript e licença por arquivo — v0.30.2
+
+Os bundles JavaScript contêm bibliotecas de terceiros: elas **não** recebem automaticamente a licença MIT do Motion4Free. O aviso público [licencas-bibliotecas.txt](../public/licencas-bibliotecas.txt), gerado deterministicamente a partir do `package-lock.json` e dos arquivos de licença instalados, traz a lista de versões, titularidade/metadados e textos de licença disponíveis. Ele inclui, por transparência, algumas dependências opcionais de plataforma **não servidas pelo site** (por exemplo, Sharp/libvips e ONNX Runtime para Node); não confundir lockfile com conteúdo da distribuição.
+
+- **Mediabunny + AAC:** MPL-2.0, código de terceiros inalterado, aviso e fonte em [Vanilagy/mediabunny](https://github.com/Vanilagy/mediabunny).
+- **Transformers.js e WebLLM:** Apache-2.0; bibliotecas presentes no JS, modelos remotos não incluídos no build.
+- **React, Zod, ONNX Runtime Web e transitivas:** licenças individualizadas no aviso gerado. React é MIT, e ONNX Runtime Web é MIT. As 20 famílias Fontsource têm documento OFL separado.
+- **Provenance por recurso distribuído:** [inventário de 67 arquivos com licença, tamanho e SHA-256](reviews/2026-10-24-runtime-license-audit.md), inclusive os 41 arquivos de fonte gerados por Vite e o subconjunto Noto.
+- **Bloqueio de novos assets:** `npm run licenses:check` verifica avisos/pacotes; `npm run build` executa `scripts/audit-licenses.mjs --dist` e rejeita novos arquivos/fontes sem licença aprovada. Alterar dependências exige `npm run licenses:update` com revisão do diff; não contornar o gate.
+
+## Código e recursos autorais
+
+Cenas, transições, estilos e a interface distribuída foram escritos para o Motion4Free (sem código, preset ou asset copiado em massa de Editonny, OpenReel ou Hypit). Esses repositórios são **referência de pesquisa**, não autorização para redistribuir todos seus recursos. O submódulo `tooling/vibe-coding-toolkit` é material de desenvolvimento versionado, não entra no `dist` do site. Músicas, SFX, B-roll e imagens de terceiros não estão empacotados na build auditada; mídias importadas pelo usuário mantêm direitos próprios.
+
+**Limite desta auditoria:** é uma verificação reproduzível de distribuição estática e licenças publicadas, não parecer jurídico nem prova de que todo download opcional de modelo externo será permitido para redistribuição futura. Os cartões oficiais de pesos Whisper (MIT) e Qwen (Apache-2.0) são citados acima, mas a licença específica de cada conversão ONNX/MLC deverá ser reconferida se os pesos passarem a ser hospedados pelo produto.

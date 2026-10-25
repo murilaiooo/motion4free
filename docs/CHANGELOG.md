@@ -2,6 +2,14 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.30.2 — 24/10/2026 — #2 (licenças e proveniência)
+
+- Auditoria local, reproduzível e **sem GitHub Actions**, do grafo de 99 pacotes npm de produção (20 famílias de fontes) e dos 67 arquivos publicados, com hashes e licenças por arquivo.
+- Novo aviso público `/licencas-bibliotecas.txt` com versões, origens, SPDX e textos de licença disponíveis. Avisos OFL das fontes/Noto e ISC/MIT Lucide/Feather continuam separados.
+- `npm run build` bloqueia assets de distribuição sem registro de licença (incluindo imagens, áudio, vídeo, fontes e WASM novos), e exige notice atualizado após mudanças de pacotes; `npm run licenses:check` e `licenses:update` permitem manter o inventário. Testes positivos/negativos garantem que um MP3/fonte desconhecida/emoji alterado seja rejeitado.
+- E2E passa pelo **mesmo prune WASM + auditoria da produção**; antes o build de testes deixava um WASM ONNX de 25,6 MiB que não entrava no deploy real. Teste Brave verifica HTTP 200 dos três avisos.
+- Ver [relatório arquivo a arquivo](reviews/2026-10-24-runtime-license-audit.md). A auditoria não autoriza redistribuição de pesos de modelos externos ou mídia privada; não é certificação de qualidade narrativa.
+
 ## v0.30.1 — 24/10/2026 — #117 (movimento sincronizado com a fala)
 
 - A aba **Legendas → Destaques nas palavras** permite selecionar uma palavra de transcrição confirmada e escolher entre Destaque, Sublinhado animado e Pulso suave. Os efeitos são desenhados pelo mesmo compositor Canvas da prévia e do MP4.
