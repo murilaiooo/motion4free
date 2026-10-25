@@ -5,6 +5,7 @@ import { placeWords } from '../src/engine/clips';
 import { outputDuration } from '../src/engine/timeline';
 import { addElement } from '../src/editorial/manual';
 import { AppError } from '../src/core/errors';
+import { addSemanticWord, scheduledPlanCues } from '../src/editorial/semantic-word-edits';
 
 const a = { id: 'c1', name: 'a.webm', duration: 4, framing: null };
 const b = { id: 'c2', name: 'b.webm', duration: 3, framing: null };
@@ -44,6 +45,16 @@ describe('integridade da timeline ao reorganizar clipes', () => {
     expect(next.captions.every(c => !c.wordIds.includes('c1:w1'))).toBe(true);
     expect(next.captions.some(c => c.wordIds.includes('c2:w1'))).toBe(true);
     expect(outputDuration(next.segments)).toBeCloseTo(3);
+  });
+
+  it('destaque de fala acompanha o arquivo após reordenar, e some apenas se o clipe for excluído', () => {
+    const source = addSemanticWord(begin(), { ...byClip.c2[0]!, start: 4.5, end: 5 });
+    expect(scheduledPlanCues(source)[0]?.startFrame).toBe(135);
+    const swapped = reorderClipPlan(source, [b,a], byClip);
+    expect(swapped.semanticCues?.[0]).toMatchObject({ wordId: 'c2:w1', source: { start: 0.5, end: 1 } });
+    expect(scheduledPlanCues(swapped)[0]?.startFrame).toBe(15);
+    expect(reorderClipPlan(swapped, [a,b], byClip).semanticCues?.[0]?.source.start).toBe(4.5);
+    expect(reorderClipPlan(source, [a], byClip).semanticCues).toEqual([]);
   });
 
   it('recusa elemento atravessando junção ao invés de mover para vídeo errado', () => {

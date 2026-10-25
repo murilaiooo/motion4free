@@ -55,6 +55,23 @@ const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 /** Música de fundo (v0.26): o arquivo fica no projeto (music.bin); aqui só o nome e a mistura. */
 const musicSchema = z.object({ name: z.string().max(200), volume: z.number().min(0).max(1), duck: z.boolean() });
 
+/** Compatível com planos v6 anteriores; não aceita JavaScript nem payload de desenho arbitrário. */
+const semanticCueSchema = z.object({
+  id: z.string().regex(/^sw[1-9][0-9]{0,3}$/),
+  wordId: z.string().min(1).max(200),
+  source: z.object({
+    id: z.string().min(1).max(200),
+    text: z.string().trim().min(1).max(30),
+    start: time,
+    end: time,
+  }).refine(word => word.end > word.start && word.end - word.start <= 10),
+  edge: z.enum(['start', 'end']),
+  offsetFrames: z.number().int().min(-30).max(30),
+  durationFrames: z.number().int().min(1).max(90),
+}).strict().refine(cue => cue.wordId === cue.source.id, { message: 'ID de palavra não corresponde à âncora' });
+const semanticCuesSchema = z.array(semanticCueSchema).max(60)
+  .refine(cues => new Set(cues.map(c => c.id)).size === cues.length, { message: 'IDs de eventos duplicados' });
+
 const rangeFields = {
   id: z.string().regex(/^r[0-9]{1,4}$/),
   srcStart: time,
@@ -155,6 +172,7 @@ export const editPlanSchema = z
     framing: framingSchema,
     edits: editsSchema,
     music: musicSchema.nullable().optional(),
+    semanticCues: semanticCuesSchema.optional(),
   })
   .refine((p) => p.segments.every((s) => s.srcEnd <= p.clips.reduce((a, c) => a + c.duration, 0) + 0.01), { message: 'trecho depois do fim dos clipes' });
 

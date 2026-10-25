@@ -46,6 +46,8 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-523 | O vídeo ainda não tem legendas para baixar (não há fala transcrita). | Desde a v0.26. "Baixar legenda (.srt)" foi apertado num vídeo sem legendas (sem som ou sem fala reconhecida). |
 | M4F-524 | Limite de 24 pontos de animação neste elemento. Apague um ponto para criar outro. | Desde a v0.26. Cada elemento pode ter até 24 pontos de animação (keyframes); o limite mantém a prévia leve. |
 | M4F-525 | Não dá para apagar todos os pedaços do vídeo de uma vez: deixe pelo menos um. | Desde a v0.26. Com vários pedaços escolhidos (Ctrl ou Shift + clique), Apagar tiraria o vídeo inteiro. Nada mudou. |
+| M4F-527 | Essa palavra não está disponível numa legenda válida. Escolha outra palavra da fala. | A palavra precisa estar presente no texto sincronizado do projeto, ter ID único e tempos seguros; nenhuma edição é feita. |
+| M4F-528 | Este projeto chegou ao limite de 60 destaques por palavra. Remova um antes de criar outro. | Remova um destaque anterior para criar outro; o plano original continua intacto. |
 | M4F-526 | Com vários itens escolhidos dá para apagar ou copiar pedaços do vídeo. Para duplicar ou copiar um elemento, escolha só ele. | Desde a v0.26. Copiar, recortar ou duplicar com elementos (texto, emoji, legenda) entre vários itens escolhidos. Nada mudou. |
 | M4F-506 | Este pedaço encosta num trecho já ajustado. Clique no trecho existente ou escolha outro pedaço. | Trechos ajustados não podem se sobrepor. Clique no trecho que já existe (faixa "Trechos") para mudar o pedido dele. |
 | M4F-507 | O vídeo precisa de pelo menos um clipe: não dá para tirar o último. | Na aba Clipes, "Tirar do vídeo" no único clipe que sobrou. Nada muda. |

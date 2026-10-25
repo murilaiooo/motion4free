@@ -19,7 +19,7 @@ Fonte: GitHub `murilaiooo/motion4free`, após encerramento das 23 PRs antigas e 
 | [#5](https://github.com/murilaiooo/motion4free/issues/5) — OpenReel | comparação estática documentada, fork não adotado; nenhuma POC import/trim/caption/export/undo upstream testada | provar/parar o spike com matriz e decisão técnica explícita; não confundir com OpenCut |
 | [#26](https://github.com/murilaiooo/motion4free/issues/26) — 3 composições | POC isolada na branch arquivada #116, não portada/homologada | rodar composições, export MP4 e revisão cega, licenças |
 | [#102](https://github.com/murilaiooo/motion4free/issues/102) — clipes contextuais | Índice e seleção por contexto já integrados, acrescidos de [avisos lexicais PT/EN de negação, condição, comparação e referência](ISSUE102-CONTEXT-REVIEW.md) portados da #116; qualidade de narrativas independentes **não comprovada** | QA de gancho/antecedente/payoff com vídeos reais autorizados, WER, cortes e avaliação humana |
-| [#117](https://github.com/murilaiooo/motion4free/issues/117) — eventos por palavra | POC `semantic-cues.ts` + 9 testes integrados no staging via #119; render, edição manual e export ainda não conectados | integrar aos renderizadores e testar cortes/duplicação/seek em MP4 |
+| [#117](https://github.com/murilaiooo/motion4free/issues/117) — eventos por palavra | Primeiro fluxo vertical implementado: [destaque manual por wordId](ISSUE117-WORD-ANCHORED-MOTION.md) no Editor, `semantic-cues.ts` em `drawFrame` compartilhado por preview/export, undo e persistência, rebase de clipes, corte/cópia/quiet/locked; MP4 sintético verificado | ainda faltam outras formas de motion por palavra, inspeção visual humana e stress com mídias reais |
 
 ## P1 de produto, IA e qualidade
 
