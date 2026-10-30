@@ -42,3 +42,10 @@ App na raiz: `src/` (código), `tests/` (unidade, Vitest), `e2e/` (ponta a ponta
 ## Manual de instruções dos repositórios upstream
 Antes de escolher, integrar ou portar código de terceiros, consultar `docs/research/upstream-implementation/INDEX.md` e `05-integration-matrix.md`. Cada upstream tem instruções específicas, limites do navegador, licenças e provas de integração. Não tratar repositório público como licença universal, não copiar código/asset sem permissão correspondente e não afirmar testes que não rodaram.
 
+
+
+## Impeccable — revisão de UX/UI
+- Skills do [Impeccable](https://github.com/pbakaus/impeccable) instaladas no projeto para Codex (`.agents/skills/impeccable`) e GitHub Copilot (`.github/skills/impeccable`). Consulte `docs/reviews/2026-10-30-impeccable-first-pass.md` para a primeira análise e prioridades.
+- Ao alterar onboarding, editor, criador de clipes, configurações ou landing, use o playbook específico (`critique`, `onboard`, `distill`, `audit`, `harden`, `polish`) conforme o escopo. Compare código e interface realmente renderizada; não trate um alerta automático como prova isolada de defeito.
+- Preserve a identidade visual escura/amarela de `docs/design-system.md` e as regras da spec aprovada. Não substituir identidade, fluxos de privacidade, consentimento ou controles de edição sem justificativa e testes de usabilidade.
+- O Impeccable é ferramenta de desenvolvimento, não dependência do navegador. Binários locais do detector não entram no Git; o launcher os resolve conforme a plataforma. Hooks locais exigem autorização do ambiente. Não ativar GitHub Actions.
