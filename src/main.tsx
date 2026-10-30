@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { registerOfflineShell } from './app/offline-shell';
 import './app/theme.css';
 import './app/app.css';
 
@@ -10,6 +11,8 @@ try {
 } catch {
   // sem armazenamento: tema escuro
 }
+
+registerOfflineShell();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

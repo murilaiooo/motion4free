@@ -49,6 +49,10 @@ Gratuidade por usuário não implica gratuidade ilimitada para o mantenedor. Tra
 ## Métricas de operação
 `local_decision_ratio, tokens_per_project, external_requests_per_project, fallback_rate, blocked_rate, cache_hit_rate, offline_completion_rate, human_override_rate, export_success_rate`. Não registrar transcrições privadas em telemetria sem escolha do usuário.
 
-## Implementação de 21/10/2026 (não testada)
+## Implementação e validação de 24/10/2026
 
-Ver [ADR-0030](../decisions/0030-roteamento-limites-cache-ia.md) e [handoff #9](../reviews/2026-10-21-issue9-implementation-handoff.md). As escolhas atuais são explícitas por tarefa/projeto, com fallback por regras. Nenhuma avaliação de desempenho foi executada e nenhum ranking automático é apresentado como verdade.
+O roteador já permite escolhas explícitas por tarefa/projeto, fallback por regras sem chave ou autorização, orçamento local por projeto/sessão, reserva antes de fetch, cooldown de 429, proteção temporária após falhas de rede e cache por fingerprint que separa tarefa, projeto, modelo, credencial e versão. A UX simplificada foi integrada no staging pela PR #131.
+
+Evidência verificável: `tests/ai-routing-policy.test.ts` contém sete testes de orçamento e isolamento, cooldown 429, três erros de rede, cache, seleção e fallback; `tests/provider-connection.test.ts` e `e2e/issue73-consent.spec.ts` cobrem conexão e consentimento sem APIs pagas. O teste E2E no Brave da configuração simplificada está em `e2e/ai-routing-simple.spec.ts`. Ver também [ADR-0030](../decisions/0030-roteamento-limites-cache-ia.md).
+
+**Limites intencionais:** o orçamento é uma estimativa local em bytes mais teto de resposta, não a cobrança da API. Nenhum modelo pago é escolhido automaticamente. Comparação independente de **qualidade por tarefa**, preço atualizado, capacidades reais e adequação do modelo pertencem às issues #10 e #126; esta validação técnica não afirma superioridade de modelos nem gratuidade universal.

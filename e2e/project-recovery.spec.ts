@@ -41,7 +41,10 @@ test('video.bin não cabe (QuotaExceeded): sem falso "Salvo" e, ao reabrir, pede
   await page.goto('/?asr=vazio');
   await page.getByTestId('file-input').setInputFiles(MEDIA);
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 90_000 });
-  await expect(page.getByTestId('warning-M4F-601')).toBeVisible({ timeout: 40_000 });
+  // Avisos do editor ficam recolhidos na prévia até a pessoa abrir o painel.
+  await expect(page.getByTestId('stage-warning-toggle')).toBeVisible({ timeout: 40_000 });
+  await page.getByTestId('stage-warning-toggle').click();
+  await expect(page.getByTestId('warning-M4F-601')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId('saved')).toHaveCount(0);
   // expect.poll espera de verdade (a função async do waitForFunction devolvia uma Promise, que já conta como "pronto")
   await expect.poll(async () => {

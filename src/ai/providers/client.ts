@@ -92,6 +92,50 @@ export function providerCompleter(id: ProviderId, key: string, modelId: string, 
   };
 }
 
+/** One explicit, synthetic microtest for the selected editorial task.
+ * Passing proves text + minimal structured output, NOT creative quality, ASR
+ * support, updated price or available credits for a longer user request.
+ */
+export type TextAiTask = 'creative-brief' | 'moment-ranking' | 'local-revision';
+const MICROTESTS: Record<TextAiTask, { system: string; user: string; field: string }> = {
+  'creative-brief': {
+    system: 'Responda APENAS JSON válido contendo o campo "ritmo" com valor "rapido".',
+    user: 'Vídeo de teste fictício, deixe o ritmo rápido.',
+    field: 'ritmo',
+  },
+  'moment-ranking': {
+    system: 'Escolha o trecho B (que apresenta pergunta e resposta). Responda APENAS JSON com {"melhor":"B"}.',
+    user: 'A: Boa tarde. B: Por que economizar? Para investir na educação.',
+    field: 'melhor',
+  },
+  'local-revision': {
+    system: 'Responda APENAS JSON com {"ajuste":"amarelo"} para a cor indicada.',
+    user: 'Teste sintético, deixe a legenda amarela.',
+    field: 'ajuste',
+  },
+};
+
+export async function testModelForTask(id: ProviderId, key: string, modelId: string, task: TextAiTask, options: CompletionOptions = {}): Promise<void> {
+  const spec = PROVIDERS[id];
+  const sample = MICROTESTS[task];
+  const expected = task === 'creative-brief' ? 'rapido' : task === 'moment-ranking' ? 'B' : 'amarelo';
+  const messages: AiMessages = { system: sample.system, examples: [], user: sample.user };
+  const req = spec.completeRequest(key, modelId, messages, 128);
+  if (options.authorize && !await options.authorize(req.body ?? '')) throw new AppError('PROVEDOR_CANCELADO');
+  if (options.signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
+  assertProviderReady(id);
+  await options.beforeSend?.(req.body ?? '');
+  const body = await send(id, req, key, options.timeoutMs ?? COMPLETE_TIMEOUT_MS, options.signal);
+  const text = spec.parseCompletion(body);
+  if (!text?.trim()) throw new AppError('PROVEDOR_SEM_TEXTO', spec.host);
+  let parsed: Record<string, unknown>;
+  try { parsed = JSON.parse(text) as Record<string, unknown>; }
+  catch { throw new AppError('IA_RESPOSTA_INVALIDA', 'O modelo não retornou JSON válido no microteste.'); }
+  if (!parsed || typeof parsed !== 'object' || parsed[sample.field] !== expected) {
+    throw new AppError('IA_RESPOSTA_INVALIDA', 'O modelo não seguiu a instrução estruturada do microteste.');
+  }
+}
+
 /** Só a UI pode pedir esta operação, após autorização explícita do corpo e do possível custo. */
 export async function testModel(id: ProviderId, key: string, modelId: string, options: CompletionOptions = {}): Promise<void> {
   const spec = PROVIDERS[id];

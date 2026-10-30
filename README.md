@@ -1,12 +1,12 @@
 # Motion4Free
 
-**Editor de Reels com motion design personalizado que roda no navegador, sem instalação e sem custo.**
-A versão atual é a v0.15.1, com importação de até 30 clipes, edição manual, presets, pedidos por texto e exportação de MP4 no navegador. O deploy é automático na Cloudflare; a versão pública e os checks do commit podem ser confirmados no GitHub Actions.
+**Editor de Reels no navegador, com edição manual, presets e IA opcional.**
+A versão do código é v0.30.0 (pré-lançamento). Existem recursos de edição, múltiplos clipes e exportação, mas **o conjunto ainda não passou em todos os gates para lançamento público**. Consulte [o estado real da release](docs/release/STATUS.md) e [o roteiro de publicação](docs/release/RUNBOOK.md). A Cloudflare pode atualizar o site após alterações na `main`, portanto aprovação e deploy exigem controle explícito.
 
 > **Visão:** transforme uma gravação sua falando em um Reels bem editado, por linguagem natural ou estilos prontos, preservando a voz, o significado e a privacidade. A IA atua como diretora que escolhe e ajusta um sistema de motion design curado; o motor compõe, valida e renderiza localmente sem executar código vindo do modelo.
 
 ## Como funciona
-1. A pessoa abre o site no Chrome ou Edge e escolhe um vídeo. O vídeo **não sai do computador**.
+1. A pessoa abre o site em um navegador Chromium compatível (Brave, Chrome ou Edge) e escolhe um vídeo. O processamento de mídia é local por padrão; IA externa opcional pode receber texto com autorização explícita.
 2. Escreve o que quer e/ou escolhe um estilo pronto.
 3. O site transcreve, corta silêncios sem comer palavras, escolhe o gancho, cria legendas e anima no estilo pedido.
 4. A pessoa revisa, ajusta e baixa o MP4 9:16.
@@ -50,16 +50,24 @@ O agente decide a parte técnica, implementa com testes e abre um PR por entrega
 
 Lista completa e ressalvas de licença em [repositórios de referência](docs/research/repositories.md).
 
+## Projetos, backup e modo offline parcial
+Projetos ficam no armazenamento privado do navegador (OPFS). Em **Meus projetos**, use o ícone de download para criar um backup completo `.m4f` com as edições e as mídias do projeto. Use **Restaurar backup** para abrir o arquivo em outro perfil ou computador, sem substituir projetos existentes. Guarde o `.m4f` em local seguro: ele contém vídeo/transcrição e não é criptografado. Se a mídia copiada estiver ausente, selecione novamente o arquivo original antes de fazer backup.
+
+Após abrir o site uma vez com conexão, um service worker pode guardar uma cópia versionada de arquivos estáticos básicos para reabrir a interface sem internet. Isso **não** torna modelos de transcrição/IA ou serviços de API externos disponíveis offline. Projetos, modelos e backups continuam sujeitos à política de armazenamento do navegador; não confie apenas no OPFS como backup durável. Veja [a evidência e limitações](docs/release/ISSUE4-OFFLINE-STORAGE.md).
+
 ## Custo e privacidade
-Custo zero é uma restrição de projeto: nada de API ou servidor pago, nada de contornar limites de serviços gratuitos. Vídeos e transcrições ficam no dispositivo por padrão. IA externa, quando existir, só com a chave da própria pessoa e consentimento claro, e nunca recebe o vídeo. A mídia original nunca é alterada.
+Sem custo obrigatório para editar é uma restrição do produto, mas modelos opcionais por API **podem cobrar pela conta do usuário**. Uma assinatura ChatGPT ou Claude não inclui automaticamente créditos de API. Vídeos são processados localmente por padrão; envio de texto para provedores externos exige prévia e consentimento para cada pedido. Downloads de modelos, espelhos e CDNs também geram tráfego externo. Confira a política de cada fornecedor antes de usar a IA por API.
 
 ## Rodar localmente (desenvolvimento)
-Requer Node 22.
+Requer Node 22 ou versão compatível, npm e FFmpeg no `PATH` para gerar mídias sintéticas de teste. No Windows, não precisa de WSL.
 ```bash
-npm install
+npm ci
 npm run dev                     # abre em http://localhost:5173
+npm run typecheck
 npm test                        # testes de unidade
-npm run fixture && npm run e2e  # teste de ponta a ponta (precisa de ffmpeg)
+npm run build                   # build e inspeção de assets Cloudflare
+npm run fixture                 # gera apenas vídeos sintéticos locais
+npm run e2e                     # Playwright (configurar Brave, se desejado)
 ```
 
 ## Toolkit de agentes

@@ -1,5 +1,12 @@
 # Histórico de versões
 
+## Em preparação — 24/10/2026 (não publicado)
+
+- Geração de fixtures E2E portada de Bash/WSL para Node.js + FFmpeg, permitindo testes no Windows sem WSL.
+- O build de produção verifica arquivos gerados para Cloudflare, incluindo limites de 25 MiB, logs e potenciais arquivos de credenciais.
+- Roteiro E2E ajustado ao layout real (lista na aba Mídia, avisos recolhidos) para evitar esperas falsas de 90 s. Dois smokes de MP4 realmente exportados passaram no Brave com FFprobe/FFmpeg: vídeo sem áudio e clipe azul com áudio após reabrir projeto. Não certifica exportações longas nem qualidade editorial.
+- Mapa de módulos, estado de release e roteiro de publicação/rollback atualizados. Licenças e fluxo geral de IA ainda não aprovados.
+
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
 ## v0.30.3 — 24/10/2026 — #147 (redesign da revisão de clipes)
