@@ -161,3 +161,9 @@ O limite local não substitui os limites da conta de API. Não há fallback para
 
 | M4F-1219 | O limite local de pedidos ou de texto para IA foi atingido. A edição continua pelas regras; ajuste os limites em Configurações se quiser autorizar mais uso. | Orçamento configurável por sessão/projeto atingido, sem envio extra. |
 | M4F-1220 | Este serviço de IA está temporariamente em espera após limite de uso ou falhas repetidas. A edição continua pelas regras, sem repetir chamadas nem trocar para outro serviço. | Cooldown após 429 ou falhas transitórias. |
+## Análise local de rostos (#54)
+
+- M4F-111: detector/runtime/decodificação indisponível. Preserva enquadramento; escolher manual ou tentar novamente.
+- M4F-112: nenhum rosto confiável em um ou mais clipes; enquadramento central, ajustável manualmente.
+- M4F-113: análise cancelada; nenhuma alteração parcial de enquadramento aplicada.
+- M4F-114: mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual.

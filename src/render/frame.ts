@@ -140,6 +140,8 @@ export function sameWords(a: string, b: string): boolean {
  * para o fundo desfocado do modo "ajustar". Quem decodifica (player/exportação) monta isto; o desenho é puro.
  */
 export interface SourceFrame {
+  legacySingle?: boolean;
+  hasFaceTrack?: boolean;
   kind: 'clip';
   image: CanvasImageSource;
   width: number;
@@ -169,6 +171,10 @@ function drawSource(ctx: Ctx2D, plan: EditPlan, source: CanvasImageSource | Sour
     return;
   }
   const framing = framingFor(plan, source.clipId);
+  if (source.legacySingle && (framing.mode !== 'smart' || !source.hasFaceTrack)) {
+    drawVideo(ctx, source.image, w, h, plan.edits.video);
+    return;
+  }
   const p = placeSource(source.width, source.height, w, h, framing, source.focus);
   if (p.needsBackdrop) {
     if (framing.fill === 'blur' && source.backdrop) {
