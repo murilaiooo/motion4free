@@ -4,7 +4,7 @@ import type { EditPlan, ReferencePalette } from '../core/types';
 import type { PlanVersion } from '../core/versions';
 import { diffPlans } from '../editorial/diff';
 import { referenceFromPixels } from '../editorial/reference';
-import { History, ImageUp, RotateCcw, Save, Trash2 } from 'lucide-react';
+import { History, ImageUp, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react';
 import { ErrorBox } from './ErrorBox';
 
 const fmt = (s: number) => `${s.toFixed(1).replace('.', ',')} s`;
@@ -99,10 +99,12 @@ export function VersionsPanel({
   onRestore,
   onCompare,
   onDelete,
+  onVariants,
   comparing,
   disabled,
 }: {
   versions: PlanVersion[];
+  onVariants?: () => { error: AppError | null; notes: string[] };
   onSave: (name: string) => AppError | null;
   onRestore: (v: PlanVersion) => void;
   onCompare: (v: PlanVersion | null) => void;
@@ -112,8 +114,23 @@ export function VersionsPanel({
 }) {
   const [name, setName] = useState('');
   const [error, setError] = useState<AppError | null>(null);
+  const [notes, setNotes] = useState<string[]>([]);
   return (
     <section className="versions stack" aria-label="Versões" data-testid="versions">
+      {onVariants && (
+        <div className="card variants-box stack" data-testid="variants">
+          <b>Não sabe qual estilo fica melhor?</b>
+          <p className="hint">O app cria 3 variações deste vídeo (energética, elegante e direta, algumas abrindo com outra frase da sua fala). Seus cortes e correções continuam. Depois use <b>Comparar</b> para alternar com o vídeo atual e <b>Restaurar</b> na que preferir.</p>
+          <button className="primary sm" disabled={disabled} data-testid="variants-create" onClick={() => {
+            const r = onVariants();
+            setError(r.error);
+            setNotes(r.notes);
+          }}>
+            <Sparkles size={15} aria-hidden /> Criar 3 variações para comparar
+          </button>
+          {notes.length > 0 && <ul className="hint" role="status" data-testid="variants-notes">{notes.map((n) => <li key={n}>{n}</li>)}</ul>}
+        </div>
+      )}
       <p className="hint">Guarde como o vídeo está agora para voltar depois. Fica salvo neste navegador junto com o projeto.</p>
       <div className="inline-form">
         <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="Nome (ex.: versão calma)" aria-label="Nome da versão" data-testid="version-name" />

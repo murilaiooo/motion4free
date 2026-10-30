@@ -9,6 +9,7 @@ import { adjustCut, applyBrief, applyHook, applyRange, applyReferencePalette, ap
 import type { RangeRequest } from '../editorial/range-interpret';
 import { stylesOf } from '../editorial/ranges';
 import { addVersion, removeVersion, type PlanVersion } from '../core/versions';
+import { makeVariants } from '../editorial/variants';
 import { canRedo, canUndo, redo, undo, type History as EditHistory } from '../engine/history';
 import { commitEdit } from '../editorial/commands';
 import { outputDuration, outputToSource } from '../engine/timeline';
@@ -133,7 +134,7 @@ const TABS: { id: TabId; label: string; title: string; about: string; Icon: type
   { id: 'audio', label: 'Áudio', title: 'Música de fundo', about: 'Uma música por baixo da fala, com volume e abaixamento automático quando alguém fala.', Icon: Music },
   { id: 'ia', label: 'IA', title: 'Pedir com palavras', about: 'Diga o que quer mudar. Funciona sem IA; a IA é opcional.', Icon: Sparkles },
   { id: 'cores', label: 'Cores', title: 'Cores e marca', about: 'As cores do vídeo, ou as de uma imagem sua (logo, foto).', Icon: Palette },
-  { id: 'versoes', label: 'Versões', title: 'Versões', about: 'Guarde, compare e volte para versões do vídeo.', Icon: History },
+  { id: 'versoes', label: 'Versões', title: 'Versões e variações', about: 'Crie variações para comparar, guarde versões e volte quando quiser.', Icon: History },
 ];
 
 
@@ -535,6 +536,20 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
     }
   };
 
+  /** #118: três variações do vídeo atual, guardadas como versões para comparar e escolher. */
+  const createVariants = (): { error: AppError | null; notes: string[] } => {
+    try {
+      const variants = makeVariants(plan, ctx);
+      let list = versions;
+      const now = new Date();
+      for (const v of variants) list = addVersion(list, v.name, v.plan, now);
+      onVersions(list);
+      return { error: null, notes: variants.map((v) => `${v.name}: ${v.why}`) };
+    } catch (err) {
+      return { error: toAppError(err), notes: [] };
+    }
+  };
+
   const saveVersion = (name: string): AppError | null => {
     try {
       onVersions(addVersion(versions, name, plan, new Date()));
@@ -912,6 +927,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
                 setView(v ? 'antes' : 'depois');
               }}
               onDelete={(v) => onVersions(removeVersion(versions, v.id))}
+              onVariants={createVariants}
               comparing={compareWith}
               disabled={off}
             />
