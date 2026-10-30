@@ -21,6 +21,22 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.31.0 — 30/10/2026 — versão final: issues abertas
+
+Rodada que trabalhou todas as issues abertas. Traz para a versão publicada o trabalho que estava pronto, mas parado, na branch de consolidação, e acrescenta o que faltava para quem não é técnico.
+
+- **Clipes com IA (#146, #102):** o aviso M4F-1111 genérico virou motivos claros: M4F-1112 (a IA respondeu fora do formato, mesmo depois de uma segunda tentativa), M4F-1113 (sugeriu trechos que não batem com a fala), M4F-1114 (leu só parte do vídeo). Erro de conta (sem crédito, chave recusada, limite) para na hora, sem gastar as outras partes. Botão **Autorizar envio de texto** na própria linha da IA, explicando o que vai e o que nunca vai. Dá para autorizar de uma vez todas as partes da mesma análise (antes eram até 32 confirmações). **Tentar a análise de novo** sem transcrever outra vez. A tela diz se a lista atual veio da IA (quantas partes leu, quantos momentos trouxe) ou só das regras locais; avisos antigos de configuração somem quando a configuração muda.
+- **Configuração de IA guiada (#126):** escolha por finalidade, teste do modelo no próprio cartão e "Usar nesta tarefa" (vindo da consolidação), mais botões diretos "Abrir a chave" / "Escolher modelo" quando algo falta.
+- **Transcrição por API (#127):** Configurações › Transcrição tem "Quem transcreve": neste computador (padrão, o áudio não sai daqui) ou por API com a sua chave (Groq, com plano gratuito, ou OpenAI). Só entram serviços que devolvem o tempo de cada palavra. Autorização própria para **áudio**, separada da de texto. Se a API não estiver pronta ou falhar, o app transcreve no computador e avisa (M4F-308/310), ou para sem enviar nada se você desligar a reserva (M4F-309). Resposta sem tempo por palavra é recusada (M4F-311); arquivo grande demais é M4F-312. A tela de envio mostra qual transcritor será usado. Uma transcrição guardada de clipes só é reaproveitada se veio do mesmo tipo de transcritor.
+- **Seguir o rosto (#54):** Enquadramento › Seguir o rosto analisa quadros neste computador (detector MediaPipe BlazeFace, Apache-2.0, baixado na primeira vez) e acompanha o rosto ao mudar de deitado para em pé. Se o rosto some por um instante, o quadro fica parado em vez de pular para o centro. Códigos M4F-111 a M4F-114.
+- **Variações para comparar (#118):** Versões e variações › **Criar 3 variações para comparar**: energética, elegante e direta, algumas abrindo com outra frase da sua fala. Cortes e correções continuam. Cada variação vira uma versão com Comparar e Restaurar.
+- **Trocas parciais por texto (#11):** "troque só o gancho", "outro gancho", "tira o gancho" e "outro estilo" mudam só aquela parte; o resto do pedido fica igual e Ctrl+Z desfaz.
+- **Destaques automáticos nas palavras (#117):** Legendas › Destaques nas palavras › **Sugerir destaques automáticos** escolhe até 8 palavras fortes da fala, espaçadas, e nunca a parte negada de uma frase ("não a intensidade").
+- **Portado da integração antiga (#133):** catálogo semântico das cenas (#7), motor editorial que não destaca números/palavras em frases negadas ou condicionais (#8), storyboard estrutural (#29), contratos de dataset e avaliação cega local (#10/#30), cabeçalhos de segurança (#12), descarte de respostas de IA antigas quando o plano muda (#11), precedência do pedido escrito sobre escolhas guiadas (#27), adaptadores Canvas/Three de pesquisa (#28) e as três composições da mesma fonte (#26, pasta `research/`, fora do app). Modelo de legenda: se o espelho do site devolver página em vez do modelo, tenta o Hugging Face direto (M4F-302). Créditos de legendagem inventados pelo Whisper ("Legendas pela comunidade Amara.org") continuam sempre saindo.
+- **Da consolidação (#4, #9, #3):** app abre sem internet depois da primeira visita (cache offline `sw.js`), cópia de segurança dos projetos, limites e cache de IA por tarefa.
+- Códigos duplicados corrigidos: pedido cancelado passou para M4F-529; rostos usam M4F-111..114.
+- Testes desta versão: ver o PR.
+
 ## v0.30.3 — 24/10/2026 — #147 (redesign da revisão de clipes)
 
 - Reconstrução da área de resultados: cartões compactos com miniaturas, títulos editáveis, horários, origem da sugestão e ações horizontais de prévia, revisão, edição e exportação.

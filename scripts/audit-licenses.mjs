@@ -155,7 +155,8 @@ function classifyAsset(file, abs) {
   }
   if (/^assets\/[A-Za-z0-9_.-]+\.(?:js|css)$/.test(file))
     return 'MIT (Motion4Free) + dependências em licencas-bibliotecas.txt';
-  if (file === 'index.html' || file === '_headers') return 'MIT próprio';
+  // sw.js: cache offline gerado pelo próprio build (scripts/generate-offline-shell.mjs).
+  if (file === 'index.html' || file === '_headers' || file === 'sw.js') return 'MIT próprio';
   if (file === 'licencas-fontes.txt') return 'OFL-1.1 / avisos';
   if (file === 'licencas-icones.txt') return 'ISC/MIT / avisos';
   if (file === 'licencas-bibliotecas.txt') return 'aviso bibliotecas';
