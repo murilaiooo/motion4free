@@ -122,13 +122,13 @@ export function smoothTrack(samples: readonly FaceSample[], durationSec: number,
   // 1. amostragem com retenção
   const raw: Focus[] = [];
   let j = 0;
-  let last: Focus = NO_FACE;
+  // Sem detecção por um tempo (rosto virou, mão na frente): segura a última posição em vez de pular ao centro.
+  let last: Focus = { x: clamp(sorted[0]!.x, 0, 1), y: clamp(sorted[0]!.y, 0, 1) };
   for (let i = 0; i < n; i++) {
     const t = i * opts.step;
     while (j + 1 < sorted.length && Math.abs(sorted[j + 1]!.t - t) <= Math.abs(sorted[j]!.t - t)) j++;
     const s = sorted[j]!;
     if (Math.abs(s.t - t) <= opts.holdSec) last = { x: clamp(s.x, 0, 1), y: clamp(s.y, 0, 1) };
-    else last = NO_FACE;
     raw.push(last);
   }
   // 2. zona morta
