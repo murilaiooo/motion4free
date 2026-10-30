@@ -876,7 +876,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
             <AudioPanel plan={plan} loaded={!!music} loading={musicLoading} onPick={onPickMusic ?? (async () => { throw new AppError('MUSICA_NAO_SALVA', 'sem projeto'); })} onApply={apply} disabled={off || disabled} />
           </div>
           <div role="tabpanel" id="panel-ia" aria-labelledby="tab-ia" hidden={tab !== 'ia'} className="stack">
-            <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} disabled={off} />
+            <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} onHook={(h) => apply((p) => applyHook(p, ctx, h))} onStyle={(id) => apply((p) => applyStyle(p, ctx, id))} disabled={off} />
             <details className="fold" open data-testid="fold-gancho">
               <summary>Gancho: a frase que abre o vídeo</summary>
               <HookPanel plan={plan} words={ctx.words} onHook={(h) => apply((p) => applyHook(p, ctx, h))} disabled={off} />
