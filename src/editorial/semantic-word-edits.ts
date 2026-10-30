@@ -138,7 +138,7 @@ export function suggestSemanticWords(plan: EditPlan, words: readonly Word[], sco
   }
   const taken = new Set((plan.semanticCues ?? []).map(c => c.wordId));
   const candidates = plan.captions.flatMap(c => c.wordIds).map(id => byId.get(id)).filter((w): w is Word =>
-    !!w && !blocked.has(w.id) && !taken.has(w.id) && score(w.text) >= 1 &&
+    !!w && !blocked.has(w.id) && !taken.has(w.id) && score(w.text) >= 0.75 &&
     plan.segments.some(s => w.start >= s.srcStart - 1e-6 && w.end <= s.srcEnd + 1e-6));
   const chosen: Word[] = [];
   for (const w of [...candidates].sort((a, b) => score(b.text) - score(a.text) || a.start - b.start)) {

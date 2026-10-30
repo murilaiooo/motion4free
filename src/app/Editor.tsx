@@ -827,7 +827,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
                   <Captions size={14} aria-hidden /> Legenda feita com {asrModel}.
                 </p>
               )}
-              <SemanticCuePanel plan={plan} words={ctx.words} time={time} disabled={off} onAdd={word => apply(p => addSemanticWord(p,word))} onRemove={id => apply(p => removeSemanticWord(p,id))} onReanchor={(id,word)=>apply(p=>reanchorSemanticWord(p,id,word))} onOffset={(id,frames)=>apply(p=>offsetSemanticWord(p,id,frames))} onEffect={(id,effect)=>apply(p=>setSemanticWordEffect(p,id,effect))} onSeek={seek} onSuggest={() => apply(p => suggestSemanticWords(p, ctx.words, keywordScore).reduce((acc, w) => addSemanticWord(acc, w), p))} />
+              <SemanticCuePanel plan={plan} words={ctx.words} time={time} disabled={off} onAdd={word => apply(p => addSemanticWord(p,word))} onRemove={id => apply(p => removeSemanticWord(p,id))} onReanchor={(id,word)=>apply(p=>reanchorSemanticWord(p,id,word))} onOffset={(id,frames)=>apply(p=>offsetSemanticWord(p,id,frames))} onEffect={(id,effect)=>apply(p=>setSemanticWordEffect(p,id,effect))} onSeek={seek} onSuggest={() => { const picked = suggestSemanticWords(plan, ctx.words, keywordScore); if (picked.length) apply(p => picked.reduce((acc, w) => addSemanticWord(acc, w), p)); return picked.length; }} />
               <Transcript words={ctx.words} captions={plan.captions} segments={plan.segments} time={time} playing={playing} onSeek={seek} onEdit={(id, text) => apply((p) => editCaptionText(p, id, text))} disabled={off} />
             </details>
             <details className="fold" open>

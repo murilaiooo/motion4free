@@ -116,7 +116,7 @@ test('pedido e gancho voltam depois de recarregar; a chave própria avisa que s�
   // v0.27: serviço com chave própria fica em Configurações; sem chave, a mesa avisa e o pedido usa as regras
   await page.getByTestId('ai-change').click();
   await page.getByTestId('ai-key').check();
-  await expect(page.getByTestId('provider-setup')).toContainText('o Motion4Free não tem servidor');
+  await expect(page.getByTestId('provider-setup')).toContainText('não recebe nem guarda sua chave');
   await page.getByTestId('provider-gemini').click();
   await expect(page.getByTestId('provider-panel-gemini')).toContainText('Google AI Studio');
   await expect(page.getByTestId('key-input')).toHaveAttribute('type', 'password');

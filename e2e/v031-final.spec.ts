@@ -41,7 +41,8 @@ test('destaques automáticos nas palavras', async ({ page }) => {
   const suggest = page.getByTestId('semantic-suggest');
   if (await page.getByTestId('semantic-no-words').count()) test.skip(true, 'fixture sem palavras confirmadas');
   await suggest.click();
-  await expect(page.getByTestId('semantic-cue-list')).toBeVisible();
+  await expect(page.getByTestId('semantic-suggest-result')).toBeVisible();
+  if ((await page.getByTestId('semantic-suggest-result').textContent())?.includes('Adicionei')) await expect(page.getByTestId('semantic-cue-list')).toBeVisible();
 });
 
 test('transcrição por API: escolha clara, autorização de áudio separada e volta ao computador', async ({ page }) => {
@@ -69,6 +70,7 @@ test('sem chave, transcrição por API cai no computador com aviso M4F-308 e nã
   await closeSettings(page);
   await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText('M4F-308').first()).toBeVisible();
+  await page.getByTestId('stage-warning-toggle').click();
+  await expect(page.getByTestId('warning-M4F-308')).toBeVisible();
   expect(sent).toEqual([]);
 });

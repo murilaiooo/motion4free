@@ -33,7 +33,8 @@ async function closeStorage(page: Page) {
 
 test('dois projetos: lista, renomeia, apaga um, armazenamento muda, apaga modelo e "Apagar tudo"', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByTestId('projects')).toHaveCount(0);
+  // v0.31: a lista fica sempre visível (com "Restaurar backup"); sem projetos = sem cartões
+  await expect(cards(page)).toHaveCount(0);
 
   // primeiro projeto, fechado pelo menu: continua salvo e aparece na lista
   await newVideo(page);
@@ -112,7 +113,8 @@ test('dois projetos: lista, renomeia, apaga um, armazenamento muda, apaga modelo
   await expect(page.getByTestId('storage-notice')).toContainText('Tudo do Motion4Free foi apagado');
   await expect(screen.locator('[data-testid^="storage-item-project-"]')).toHaveCount(0);
   await closeStorage(page);
-  await expect(page.getByTestId('projects')).toHaveCount(0);
+  // v0.31: a lista fica sempre visível (com "Restaurar backup"); sem projetos = sem cartões
+  await expect(cards(page)).toHaveCount(0);
   const left = await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory();
     const names: string[] = [];
@@ -132,7 +134,8 @@ test('apagar o projeto aberto pelo menu do editor volta para a primeira tela', a
   await expect(page.getByTestId('delete-dialog-size')).toHaveText(/\d+(,\d)? (KB|MB)/);
   await page.getByTestId('delete-confirm').click();
   await expect(page.getByTestId('file-input')).toBeAttached();
-  await expect(page.getByTestId('projects')).toHaveCount(0);
+  // v0.31: a lista fica sempre visível (com "Restaurar backup"); sem projetos = sem cartões
+  await expect(cards(page)).toHaveCount(0);
   // recarregar não traz o projeto de volta
   await page.reload();
   await expect(page.getByTestId('file-input')).toBeAttached();

@@ -9,7 +9,8 @@ interface Props {
   time: number;
   disabled: boolean;
   onAdd: (word: Word) => void;
-  onSuggest?: () => void;
+  /** devolve quantos destaques foram criados */
+  onSuggest?: () => number;
   onRemove: (id: string) => void;
   onReanchor: (id: string, word: Word) => void;
   onOffset: (id: string, frames: number) => void;
@@ -22,6 +23,7 @@ const format = (sec: number) => `${sec.toFixed(2).replace('.', ',')} s`;
 /** Small optional control in Legendas. Nothing is inferred or sent automatically. */
 export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove, onReanchor, onOffset, onEffect, onSeek, onSuggest }: Props) {
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const [suggested, setSuggested] = useState<number | null>(null);
   const src = outputToSource(plan.segments, Math.min(time, Math.max(0, plan.segments.reduce((s, p) => s + p.srcEnd - p.srcStart, 0) - .001)));
   const available = useMemo(() => {
     const spoken = new Set(plan.captions.flatMap(c => c.wordIds));
@@ -69,8 +71,9 @@ export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove,
       )}
       {available.length > 0 && onSuggest && (
         <div className="set-row">
-          <button type="button" className="sm" data-testid="semantic-suggest" disabled={disabled || cues.length >= 60} onClick={onSuggest}>Sugerir destaques automáticos</button>
+          <button type="button" className="sm" data-testid="semantic-suggest" disabled={disabled || cues.length >= 60} onClick={() => { const n = onSuggest(); setSuggested(n); }}>Sugerir destaques automáticos</button>
           <small className="hint">Escolhe até 8 palavras fortes da sua fala, espaçadas. Remova as que não quiser.</small>
+          {suggested !== null && <small role="status" data-testid="semantic-suggest-result">{suggested > 0 ? `Adicionei ${suggested} destaque${suggested === 1 ? '' : 's'}. Ctrl+Z desfaz.` : 'Não achei palavras fortes novas nesta fala. Escolha uma palavra acima e clique em Destacar palavra.'}</small>}
         </div>
       )}
       {cues.length > 0 && (
