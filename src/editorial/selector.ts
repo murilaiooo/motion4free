@@ -264,7 +264,7 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     const ord = ordinalOf(ws[i]!.raw);
     if (ord === null) continue;
     const sent = sentenceOf.get(i)!;
-    const before = sent.slice(0, sent.indexOf(i)).map((k) => normalizeToken(tokens[k]!));
+    const before = sent.slice(0, sent.indexOf(i)).map((k) => qualifierKey(tokens[k]!));
     const atStart = before.every((t) => CONNECTORS.has(t)) && before.length <= 2;
     const prev = markers.at(-1);
     const continues = !!prev && prev.ord === ord - 1 && ws[i]!.start - ws[prev.i]!.start < 45;
@@ -332,10 +332,15 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   let lastKw = -Infinity;
   let lastZoom = -Infinity;
   for (const sent of sentences) {
-    if (contextFlags(sent.map(k => tokens[k]!).join(' ')).length) continue;
+    // Negação/condição: só palavras ANTES do "não"/"se" podem ganhar destaque, para nunca destacar
+    // sozinha a parte negada ("não a intensidade") como se fosse afirmação (#8).
+    const flags = contextFlags(sent.map(k => tokens[k]!).join(' '));
+    const qualifier = flags.includes('negation') || flags.includes('conditional')
+      ? sent.findIndex((k) => QUALIFIERS.has(qualifierKey(tokens[k]!))) : -1;
+    const allowed = qualifier >= 0 ? sent.slice(0, qualifier) : sent;
     let best = -1;
     let bestScore = 0;
-    for (const k of sent) {
+    for (const k of allowed) {
       const sc = keywordScore(tokens[k]!);
       if (sc > bestScore) {
         best = k;
@@ -390,6 +395,9 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     .map((s, i) => ({ ...s, id: `s${i + 1}` }) as SceneInstance)
     .filter((scene) => catalogRejection(scene, total) === null);
 }
+
+const QUALIFIERS = new Set(['nao', 'nunca', 'jamais', 'nem', 'sem', 'not', 'never', 'without', 'no', 'se', 'caso', 'talvez', 'if', 'unless']);
+const qualifierKey = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
 
 /** Escolhe as cenas de sobreposição respeitando prioridade, intervalo, orçamento e anti-repetição. */
 function placeOverlays(candidates: Candidate[], total: number, style: StyleDNA, boosted: ReadonlySet<SceneKind>): Draft[] {

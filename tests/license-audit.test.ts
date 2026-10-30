@@ -24,7 +24,7 @@ describe('issue #2: auditoria offline de licenças, fail closed', () => {
     const res = run('--check');
     expect(res.status, res.stderr).toBe(0);
     expect(res.stdout).toContain('LICENSE AUDIT PASS');
-    expect(res.stdout).toContain('"lockedRuntimePackages":99');
+    expect(res.stdout).toContain('"lockedRuntimePackages":100');
   });
   it('aceita build com JS próprio, avisos, fontes documentadas e Noto imutável', () => {
     const dir = fixture();

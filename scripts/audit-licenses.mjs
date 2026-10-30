@@ -121,7 +121,7 @@ else {
 
 const approvedSource = new Set([
   'public/_headers', 'public/licencas-fontes.txt', 'public/licencas-icones.txt',
-  'public/licencas-bibliotecas.txt', 'src/assets/emoji/OFL.txt', 'src/assets/emoji/m4f-emoji.woff2',
+  'public/licencas-bibliotecas.txt', 'public/licencas-rostos.txt', 'src/assets/emoji/OFL.txt', 'src/assets/emoji/m4f-emoji.woff2',
 ]);
 for (const filename of tracked())
   if (!approvedSource.has(filename)) errors.push('Recurso local novo sem revisão: ' + filename);
@@ -159,6 +159,8 @@ function classifyAsset(file, abs) {
   if (file === 'licencas-fontes.txt') return 'OFL-1.1 / avisos';
   if (file === 'licencas-icones.txt') return 'ISC/MIT / avisos';
   if (file === 'licencas-bibliotecas.txt') return 'aviso bibliotecas';
+  // Detector de rostos (#54): o modelo BlazeFace e o WASM são baixados sob demanda, não ficam no dist.
+  if (file === 'licencas-rostos.txt') return 'Apache-2.0 / aviso MediaPipe (modelo baixado sob demanda)';
   errors.push('ARQUIVO DE PRODUÇÃO SEM LICENÇA APROVADA: ' + file);
   return 'NÃO REVISADO';
 }
