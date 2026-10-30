@@ -2,6 +2,15 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.27.4 — 21/10/2026
+
+**Distribuição do Whisper sem URL assinada expirada (#80).** O proxy da Cloudflare mantinha em cache por 30 dias os redirecionamentos assinados temporários de arquivos ONNX grandes no Hugging Face. Após a expiração, o endpoint passava a responder HTTP 403 ("Auth failed: credentials expired"), apesar de o arquivo público continuar disponível na origem.
+
+- O Worker não guarda respostas /hf/ no cache de borda, faz streaming da origem e preserva GET/HEAD, Range, Content-Range e Accept-Ranges. O navegador continua responsável pelo cache do modelo já baixado.
+- Mantido cache de borda em /cdn/ e /gh/, onde os arquivos não dependem de URLs temporárias.
+- Erros de fetch não incluem endereços assinados ou credenciais.
+- Testes isolados do Worker verificam Range, 206, HEAD, ausência de cache para modelos, cache de bibliotecas e segurança; verificação do endpoint publicado apenas por HEAD/byte-range, sem baixar os pesos de 1,2 GB.
+
 ## v0.27.3 — 21/10/2026
 
 **Cores de referência no Creative Setup (#84).** Corrigida a ordem de aplicação das cores na composição e nos trechos com estilo próprio. A imagem escolhida depois do briefing agora determina as cores de destaque e a palavra realçada da legenda quando sua cor acompanha a marca; cores de legenda diferentes escolhidas manualmente são preservadas. Ao remover a imagem, retornam as cores do modelo e do pedido, inclusive a cor de marca explícita. A interface explica a prioridade. As regras de contraste da paleta continuam as mesmas.
