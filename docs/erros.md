@@ -114,6 +114,9 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-1108 | Um dos clipes não pôde ser gerado; os outros continuaram normalmente. | Em "Gerar os escolhidos", um clipe falhou ao recortar, montar ou exportar. O detalhe traz o número do clipe e o código do motivo (M4F-1104, M4F-402…). |
 | M4F-1110 | A transcrição não tem IDs/tempos válidos ou ultrapassa o limite para análise contextual. Preservei o trabalho; confira a transcrição ou use um arquivo menor. | Transcrição com IDs ou tempos inválidos, ou limite de janela excedido; a mídia original não é alterada. |
 | M4F-1111 | A análise contextual por IA ficou incompleta ou sem resposta válida. Mantive candidatos locais; confira o contexto antes de selecionar. | Falha de contexto parcial, limite de chamadas, indisponibilidade do provedor ou resposta não ancorada; candidatos locais permanecem disponíveis. |
+| M4F-1112 | A IA respondeu, mas não no formato combinado (mesmo depois de uma segunda tentativa). | O modelo devolveu texto sem o JSON pedido duas vezes seguidas na mesma parte do vídeo. Os clipes das regras locais continuam. Tente de novo ou use um modelo maior. |
+| M4F-1113 | A IA sugeriu trechos que não batem com a fala do vídeo. | Os IDs de palavras vieram inexistentes, fora de ordem ou sem preparação antes da conclusão; o app descarta para não inventar clipes. |
+| M4F-1114 | A IA leu só parte do vídeo. | Vídeos muito longos são lidos por amostras (até 32 partes) ou a análise parou depois de duas falhas seguidas. Cada cartão diz se foi revisto pela IA ou veio das regras. |
 | M4F-1109 | O aparelho ficou sem memória para ler o áudio do vídeo longo. Feche outras abas ou envie um pedaço menor do vídeo. | O navegador recusou memória ao ler o áudio do vídeo longo. Nada foi perdido. |
 | M4F-999 | Erro inesperado. | Erro não previsto; ver detalhe. |
 

@@ -13,7 +13,7 @@ import { ClipReviewWorkspace } from './ClipReviewWorkspace';
 import { useEditRequest } from './use-edit-request';
 import { VERSION_LABEL } from '../version';
 import { fingerprint } from '../ai/routing';
-import { AiStatusLine, prepareAi, useAiSettings, setAiSettings } from './AiOptions';
+import { AiStatusLine, aiLabel, getAiSettings, prepareAi, useAiSettings, setAiSettings } from './AiOptions';
 import { openSettings } from './settings/route';
 import { ErrorBox } from './ErrorBox';
 import { ProgressPanel } from './ProgressPanel';
@@ -52,6 +52,17 @@ export interface ClipWork {
   notices: AppError[];
   /** a ordem atual veio da IA */
   aiUsed: boolean;
+  /** de onde veio a lista atual (issue #146): regras locais ou qual IA, e quanto ela leu */
+  analysis?: ClipAnalysisInfo;
+}
+
+export interface ClipAnalysisInfo {
+  by: 'regras' | 'ia';
+  /** nome da IA usada (ex.: "IA no navegador, padrão" ou "Modelo X (OpenRouter)") */
+  label?: string;
+  covered?: number;
+  total?: number;
+  accepted?: number;
 }
 
 let uidSeq = 0;
@@ -92,6 +103,10 @@ export function releaseWork(work: ClipWork | null): void {
 }
 
 /** Avisos da IA (preparar ou ordenar): saem quando a IA é pedida de novo ou a lista é refeita. */
+/** Avisos de configuração da IA (sem chave, sem autorização…): somem quando a configuração muda. */
+const setupNotice = (n: AppError) => n.key.startsWith('IA_SEM_') || n.key === 'IA_LOCAL_FALHOU';
+/** Avisos que podem ser resolvidos tentando a análise de novo, sem transcrever outra vez. */
+const retryable = (n: AppError) => n.key.startsWith('CLIPES_IA_') || n.key.startsWith('PROVEDOR_') || n.key === 'IA_LOCAL_FALHOU' || n.key === 'IA_COOLDOWN';
 const notAiNotice = (n: AppError) => !n.key.startsWith('IA_') && !n.key.startsWith('PROVEDOR_') && n.key !== 'CLIPES_IA_CONTEXTO' && n.key !== 'CLIPES_CONTEXTO_INVALIDO';
 
 const seconds = (m: Moment) => Math.round(m.end - m.start);
@@ -114,6 +129,12 @@ export function ClipMaker({
   const ai = useAiSettings();
   const [aiBusy, setAiBusy] = useState<Progress | null>(null);
   const requestScope = useEditRequest(work, '', () => { setAiBusy(null); });
+  // Trocou modelo, chave ou autorização: avisos antigos de configuração não valem mais (issue #146).
+  const firstAi = useRef(true);
+  useEffect(() => {
+    if (firstAi.current) { firstAi.current = false; return; }
+    onWork((w) => (w.notices.some(setupNotice) ? { ...w, notices: w.notices.filter((n) => !setupNotice(n)) } : w));
+  }, [ai]); // eslint-disable-line react-hooks/exhaustive-deps
   const index = useMemo(() => buildTranscriptIndex(long.words, long.durationSec), [long.words, long.durationSec]);
   const previewLimit = useRef<number | null>(null);
   const [contextPreview, setContextPreview] = useState(false);
@@ -164,7 +185,7 @@ export function ClipMaker({
 
   function regenerate(length: ClipLength, count: number, baseline = false) {
     if (working) return;
-    onWork((w) => ({ ...w, length, count, items: preserveCuration(w.items, buildItems(w.long, length, count, baseline)), aiUsed: false, notices: w.notices.filter(notAiNotice) }));
+    onWork((w) => ({ ...w, length, count, items: preserveCuration(w.items, buildItems(w.long, length, count, baseline)), aiUsed: false, analysis: { by: 'regras' }, notices: w.notices.filter(notAiNotice) }));
   }
 
   /** Muda modelo ou formato: os MP4 já gerados ficam com o visual antigo, então voltam a "não gerado". */
@@ -183,16 +204,19 @@ export function ClipMaker({
       const source = work.long.file;
       const project = `clips-${await fingerprint({ name: source.name, size: source.size, modified: source.lastModified })}`;
       if (!request.current()) return;
-      const { ai: choice, warning } = await prepareAi(ai, progress, 'moment-ranking', project, request.signal);
+      const settingsNow = getAiSettings();
+      const { ai: choice, warning } = await prepareAi(settingsNow, progress, 'moment-ranking', project, request.signal);
       if (!request.current()) return;
       const pool = Math.min(MAX_MOMENTS, Math.max(work.count * 2, work.count + 3));
       const options = { length: work.length, count: pool, energy: long.energy, energyStep: long.energyStep };
       const result = choice ? await discoverContextualMoments(long.words, long.durationSec, options, choice, request.signal, (done, total) => progress({ label: `Analisando contexto: janela ${Math.min(done + 1, total)} de ${total}`, phase: 'ia-ler', fraction: total ? done / total : 1 }))
-        : { moments: findContextualMoments(long.words, long.durationSec, options), warning, covered: 0, total: 0 };
+        : { moments: findContextualMoments(long.words, long.durationSec, options), warning, covered: 0, total: 0, accepted: 0 };
       if (!request.current()) return;
       onWork((current) => {
         const items = preserveCuration(current.items, result.moments.map((moment): ClipItem => ({ uid: `c${++uidSeq}`, m: moment, checked: false, job: { kind: 'idle' } })), true);
-        return { ...current, items, aiUsed: !!choice && result.covered > 0,
+        const used = !!choice && result.covered > 0;
+        return { ...current, items, aiUsed: used,
+          analysis: used ? { by: 'ia', label: aiLabel(settingsNow), covered: result.covered, total: result.total, accepted: result.accepted } : { by: 'regras' },
           notices: [...current.notices.filter(notAiNotice), ...(result.warning ? [result.warning] : [])] };
       });
     } catch (error) {
@@ -299,6 +323,14 @@ export function ClipMaker({
             {work.notices.map((n) => (
               <div key={n.code}>
                 <ErrorBox error={n} kind="warning" onDismiss={() => onWork((w) => ({ ...w, notices: w.notices.filter((x) => x.code !== n.code) }))} />
+                {retryable(n) && (
+                  <div className="notice-row">
+                    <button className="sm primary" disabled={working} onClick={() => void askAi()} data-testid="clips-ai-retry">
+                      <Sparkles size={14} aria-hidden /> Tentar a análise de novo
+                    </button>
+                    <span className="hint">Usa a transcrição que já está pronta; não transcreve de novo.</span>
+                  </div>
+                )}
                 {(n.key === 'IA_SEM_ESPACO' || n.key === 'IA_MODELO_GRANDE') && (
                   <div className="notice-row" data-testid="clips-ai-recovery">
                     <button className="sm primary" disabled={working} onClick={() => { setAiSettings({ model: 'padrao' }); onWork((w) => ({ ...w, notices: w.notices.filter(notAiNotice) })); }} data-testid="clips-ai-smaller">Escolher IA Padrão e tentar novamente</button>
@@ -360,12 +392,18 @@ export function ClipMaker({
             </select>
           </div>
           <div className="clips-ai">
-            <AiStatusLine />
+            <AiStatusLine onReady={() => void askAi()} />
             <button className="sm" onClick={() => void askAi()} disabled={working} data-testid="clips-ask-ai">
                 <Sparkles size={15} aria-hidden /> Reanalisar toda a transcrição
               </button>
             {long.words.length <= 20000 && <button className="sm ghost" disabled={working} onClick={() => regenerate(work.length, work.count, true)}>Usar método heurístico anterior (revisar antes de selecionar)</button>}
             {aiBusy && <button className="sm ghost" onClick={requestScope.cancel}>Cancelar análise</button>}
+            <p className="hint" data-testid="clips-analysis-source">
+              <b>Lista atual: </b>
+              {work.analysis?.by === 'ia'
+                ? `IA (${work.analysis.label}) leu ${work.analysis.covered} de ${work.analysis.total} parte${work.analysis.total === 1 ? '' : 's'} da fala e trouxe ${work.analysis.accepted} momento${work.analysis.accepted === 1 ? '' : 's'} novo${work.analysis.accepted === 1 ? '' : 's'}. Cada cartão diz se foi revisto pela IA.`
+                : 'regras locais, sem IA. Cartões marcados "Sugestão local".'}
+            </p>
             <p className="hint">Regras locais por padrão; IA só se escolhida. Fronteiras e contexto são estimativas. Novas propostas ficam desmarcadas para sua revisão.</p>
             <ProgressPanel progress={aiBusy} compact testId="clips-ai-progress" />
           </div>
