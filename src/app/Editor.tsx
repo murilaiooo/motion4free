@@ -10,6 +10,7 @@ import type { RangeRequest } from '../editorial/range-interpret';
 import { stylesOf } from '../editorial/ranges';
 import { addVersion, removeVersion, type PlanVersion } from '../core/versions';
 import { makeVariants } from '../editorial/variants';
+import { keywordScore } from '../editorial/detect';
 import { canRedo, canUndo, redo, undo, type History as EditHistory } from '../engine/history';
 import { commitEdit } from '../editorial/commands';
 import { outputDuration, outputToSource } from '../engine/timeline';
@@ -39,7 +40,7 @@ import { RangePanel } from './RangePanel';
 import { ChangesPanel, ReferencePicker, VersionsPanel, type CompareView } from './Panels';
 import { Transcript } from './Transcript';
 import { SemanticCuePanel } from './SemanticCuePanel';
-import { addSemanticWord, removeSemanticWord, reanchorSemanticWord, offsetSemanticWord, setSemanticWordEffect } from '../editorial/semantic-word-edits';
+import { suggestSemanticWords, addSemanticWord, removeSemanticWord, reanchorSemanticWord, offsetSemanticWord, setSemanticWordEffect } from '../editorial/semantic-word-edits';
 import { TopBar, type SaveState } from './TopBar';
 import { VERSION_LABEL, APP_BUILT_AT } from '../version';
 import { FormatSelector } from './FormatSelector';
@@ -826,7 +827,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
                   <Captions size={14} aria-hidden /> Legenda feita com {asrModel}.
                 </p>
               )}
-              <SemanticCuePanel plan={plan} words={ctx.words} time={time} disabled={off} onAdd={word => apply(p => addSemanticWord(p,word))} onRemove={id => apply(p => removeSemanticWord(p,id))} onReanchor={(id,word)=>apply(p=>reanchorSemanticWord(p,id,word))} onOffset={(id,frames)=>apply(p=>offsetSemanticWord(p,id,frames))} onEffect={(id,effect)=>apply(p=>setSemanticWordEffect(p,id,effect))} onSeek={seek} />
+              <SemanticCuePanel plan={plan} words={ctx.words} time={time} disabled={off} onAdd={word => apply(p => addSemanticWord(p,word))} onRemove={id => apply(p => removeSemanticWord(p,id))} onReanchor={(id,word)=>apply(p=>reanchorSemanticWord(p,id,word))} onOffset={(id,frames)=>apply(p=>offsetSemanticWord(p,id,frames))} onEffect={(id,effect)=>apply(p=>setSemanticWordEffect(p,id,effect))} onSeek={seek} onSuggest={() => apply(p => suggestSemanticWords(p, ctx.words, keywordScore).reduce((acc, w) => addSemanticWord(acc, w), p))} />
               <Transcript words={ctx.words} captions={plan.captions} segments={plan.segments} time={time} playing={playing} onSeek={seek} onEdit={(id, text) => apply((p) => editCaptionText(p, id, text))} disabled={off} />
             </details>
             <details className="fold" open>

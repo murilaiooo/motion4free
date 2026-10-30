@@ -9,6 +9,7 @@ interface Props {
   time: number;
   disabled: boolean;
   onAdd: (word: Word) => void;
+  onSuggest?: () => void;
   onRemove: (id: string) => void;
   onReanchor: (id: string, word: Word) => void;
   onOffset: (id: string, frames: number) => void;
@@ -19,7 +20,7 @@ interface Props {
 const format = (sec: number) => `${sec.toFixed(2).replace('.', ',')} s`;
 
 /** Small optional control in Legendas. Nothing is inferred or sent automatically. */
-export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove, onReanchor, onOffset, onEffect, onSeek }: Props) {
+export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove, onReanchor, onOffset, onEffect, onSeek, onSuggest }: Props) {
   const [pickedId, setPickedId] = useState<string | null>(null);
   const src = outputToSource(plan.segments, Math.min(time, Math.max(0, plan.segments.reduce((s, p) => s + p.srcEnd - p.srcStart, 0) - .001)));
   const available = useMemo(() => {
@@ -64,6 +65,12 @@ export function SemanticCuePanel({ plan, words, time, disabled, onAdd, onRemove,
             </select>
           </label>
           <button type="button" className="sm primary" data-testid="semantic-add-current" disabled={disabled || !picked || cues.length >= 60} onClick={()=> picked && onAdd(picked)}>Destacar palavra</button>
+        </div>
+      )}
+      {available.length > 0 && onSuggest && (
+        <div className="set-row">
+          <button type="button" className="sm" data-testid="semantic-suggest" disabled={disabled || cues.length >= 60} onClick={onSuggest}>Sugerir destaques automáticos</button>
+          <small className="hint">Escolhe até 8 palavras fortes da sua fala, espaçadas. Remova as que não quiser.</small>
         </div>
       )}
       {cues.length > 0 && (
