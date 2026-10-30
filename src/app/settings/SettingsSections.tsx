@@ -13,6 +13,8 @@ import { setTheme, useTheme, type Theme } from '../TopBar';
 import { resetWorkbenchLayout } from '../workbench/EditorWorkspace';
 import { UnlockForm } from './AiSection';
 import { openSettings } from './route';
+import { asrProblem, asrRouteLabel, setAsrRoute, useAsrRoute } from '../../asr/route';
+import { ASR_APIS } from '../../asr/remote-plan';
 
 /* ---------- Transcrição ---------- */
 
@@ -43,13 +45,79 @@ function CaptionDemo() {
 
 export function TranscriptionSection({ precision }: { precision: AsrPrecision }) {
   const c = precision.capability;
+  const route = useAsrRoute();
+  useKeysVersion();
+  const problem = asrProblem(route);
+  const api = route.provider ? ASR_APIS[route.provider] : null;
   return (
     <div className="stack">
       <p className="set-lead">
-        A transcrição é quando o app escuta a fala do vídeo e escreve o texto. Esse texto vira a legenda e também é usado para cortar as pausas, sugerir o gancho e achar os melhores momentos nos clipes. Tudo acontece neste computador: o áudio não é enviado para lugar nenhum.
+        A transcrição é quando o app escuta a fala do vídeo e escreve o texto. Esse texto vira a legenda e também é usado para cortar as pausas, sugerir o gancho e achar os melhores momentos nos clipes.{' '}
+        {route.kind === 'local' ? 'Do jeito que está, tudo acontece neste computador: o áudio não é enviado para lugar nenhum.' : 'Do jeito que está, o áudio da fala (não o vídeo) é enviado ao serviço escolhido abaixo.'}
       </p>
-      <CaptionDemo />
-      <AsrPrecisionOption precision={precision} />
+
+      <div className="set-sub" data-testid="asr-route">
+        <p className="set-sub-title">Quem transcreve</p>
+        <div className="set-options">
+          <label className="set-option">
+            <input type="radio" name="asr-kind" checked={route.kind === 'local'} onChange={() => setAsrRoute({ kind: 'local' })} data-testid="asr-kind-local" />
+            <span><b>Neste computador (Whisper)</b><small className="hint">Grátis, sem conta e sem internet depois do primeiro download. O áudio não sai daqui. Recomendado.</small></span>
+          </label>
+          <label className="set-option">
+            <input type="radio" name="asr-kind" checked={route.kind === 'api'} onChange={() => setAsrRoute({ kind: 'api', provider: route.provider ?? 'groq', model: route.model ?? ASR_APIS.groq!.models[0]!.id })} data-testid="asr-kind-api" />
+            <span><b>Por API, com a sua chave</b><small className="hint">Mais rápido em computador fraco e em vídeos longos. O áudio da fala vai para o serviço que você escolher. Só aparecem serviços que devolvem o tempo de cada palavra (necessário para legenda e cortes).</small></span>
+          </label>
+        </div>
+
+        {route.kind === 'api' && (
+          <div className="stack" data-testid="asr-api-box">
+            <div className="set-row">
+              {(Object.keys(ASR_APIS) as (keyof typeof ASR_APIS)[]).map((id) => (
+                <button key={id} type="button" className="chip" aria-pressed={route.provider === id} onClick={() => setAsrRoute({ provider: id, model: ASR_APIS[id]!.models[0]!.id })} data-testid={`asr-provider-${id}`}>
+                  {PROVIDERS[id].name}{id === 'groq' ? ' (tem plano gratuito)' : ' (pago por minuto)'}
+                </button>
+              ))}
+            </div>
+            {api && route.provider && (
+              <>
+                <div className="set-options">
+                  {api.models.map((m) => (
+                    <label className="set-option" key={m.id}>
+                      <input type="radio" name="asr-model" checked={route.model === m.id} onChange={() => setAsrRoute({ model: m.id })} />
+                      <span><b>{m.label}</b><small className="hint">{m.note}</small></span>
+                    </label>
+                  ))}
+                </div>
+                <p className="hint">{api.cost}</p>
+                <p className="hint">
+                  Chave do {PROVIDERS[route.provider].name}: {getKey(route.provider) ? <b>aberta nesta aba.</b> : <>
+                    <b>não está aberta.</b>{' '}
+                    <button className="link" onClick={() => openSettings('ia')} data-testid="asr-open-key">Conectar ou abrir a chave em IA e provedores</button>
+                  </>}
+                </p>
+                <label className="set-check">
+                  <input type="checkbox" checked={route.audioConsent.includes(route.provider)} data-testid="asr-audio-consent"
+                    onChange={(e) => setAsrRoute({ audioConsent: e.target.checked ? [...route.audioConsent.filter((x) => x !== route.provider), route.provider!] : route.audioConsent.filter((x) => x !== route.provider) })} />
+                  <span>
+                    Autorizo enviar <b>o áudio da fala</b> dos meus vídeos para o <b>{PROVIDERS[route.provider].name}</b> ({PROVIDERS[route.provider].host}), direto deste navegador, para transcrever. O vídeo (imagem) não é enviado. O áudio pode conter a voz de outras pessoas: use só vídeos em que você tem permissão.{' '}
+                    <a href={PROVIDERS[route.provider].privacyUrl} target="_blank" rel="noopener noreferrer">Política do serviço</a>. Esta autorização é separada da de texto para a IA.
+                  </span>
+                </label>
+                <label className="set-check">
+                  <input type="checkbox" checked={route.fallbackLocal} onChange={(e) => setAsrRoute({ fallbackLocal: e.target.checked })} data-testid="asr-fallback" />
+                  <span>Se a API não estiver pronta ou falhar, transcrever neste computador e me avisar (M4F-308/310). Desligado: o app para e avisa (M4F-309), sem transcrever.</span>
+                </label>
+              </>
+            )}
+          </div>
+        )}
+        <p className={`hint ${problem ? 'warn' : ''}`} role="status" data-testid="asr-status">
+          <b>Agora:</b> {asrRouteLabel(route)}{problem ? ` · Atenção: ${problem}.` : ''}
+        </p>
+      </div>
+
+      {route.kind === 'local' && <CaptionDemo />}
+      {route.kind === 'local' && <AsrPrecisionOption precision={precision} />}
       <ul className="set-facts">
         <li>
           <b>Vale para o próximo vídeo.</b> Mudar aqui não refaz a legenda de um projeto já aberto; para isso, abra o vídeo de novo.

@@ -55,6 +55,8 @@ import { OutboundConsent } from './settings/OutboundConsent';
 import { openSettings } from './settings/route';
 import { forgetAllKeys } from '../ai/credentials/keys';
 import { resetAiSettings, setActiveAiProject } from './AiOptions';
+import { RoutedTranscriber } from '../asr/remote';
+import { resetAsrRoute } from '../asr/route';
 import { Logo, type SaveState } from './TopBar';
 import { analyze, openWithAudio } from './pipeline';
 import { useAsrPrecision } from './asr-precision';
@@ -127,7 +129,7 @@ function startOnce() {
 
 function EditorApp() {
   const transcriber = useMemo(
-    () =>
+    () => new RoutedTranscriber(
       import.meta.env.VITE_FAKE_ASR === '1'
         ? new FakeTranscriber(
             new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : new URLSearchParams(location.search).get('asr') === 'demo' ? FAKE_DEMO_CHUNKS : new URLSearchParams(location.search).get('asr') === 'clips' ? FAKE_CLIP_CHUNKS : FAKE_CHUNKS,
@@ -135,7 +137,7 @@ function EditorApp() {
             new URLSearchParams(location.search).get('asr') === 'reserva',
             new URLSearchParams(location.search).get('asr') === 'clips' ? 'Transcrição sintética (teste local)' : null,
           )
-        : new WhisperTranscriber(),
+        : new WhisperTranscriber()),
     [],
   );
   const precision = useAsrPrecision();
@@ -910,6 +912,7 @@ function EditorApp() {
       // "Apagar tudo" limpou o localStorage; a memória da aba também esquece chaves e escolha de IA
       forgetAllKeys();
       resetAiSettings();
+      resetAsrRoute();
     }
     if (everything || (deletedProject && deletedProject === projectId)) resetSession();
     await refreshProjects();
