@@ -63,7 +63,7 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   const fps = plan.output.fps;
   const duration = Math.min(outputDuration(plan.segments), opts.maxDurationSec ?? Infinity);
   const frames = Math.floor(duration * fps);
-  const codecs = await chooseCodecs(width, height);
+  const codecs = await chooseCodecs(width, height, Boolean(audio || (opts.music && plan.music)));
   const fonts = await ensureFonts(stylesOf(plan));
   const emoji = planUsesEmoji(plan) ? await ensureEmojiFont() : { ok: true, detail: '' };
 
@@ -125,7 +125,7 @@ async function exportPlanUnsafeMulti(
   const fps = plan.output.fps;
   const duration = Math.min(outputDuration(plan.segments), opts.maxDurationSec ?? Infinity);
   const frames = Math.floor(duration * fps);
-  const codecs = await chooseCodecs(width, height);
+  const codecs = await chooseCodecs(width, height, Boolean(audio || (opts.music && plan.music)));
   const fonts = await ensureFonts(stylesOf(plan));
   const emoji = planUsesEmoji(plan) ? await ensureEmojiFont() : { ok: true, detail: '' };
 

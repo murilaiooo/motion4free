@@ -6,6 +6,7 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | Código | Mensagem | O que costuma significar |
 |---|---|---|
 | M4F-405 | Falta um vídeo usado na montagem. Reconecte o arquivo original antes de exportar; suas edições continuam salvas. | O preflight não encontrou uma fonte exigida pela timeline ou encontrou um trecho atravessando arquivos. Nenhum quadro preto é exportado como se estivesse correto. |
+| M4F-407 | Este navegador não tem codificador AAC nativo para exportar MP4 com áudio. Use Chrome, Edge ou Brave atualizado no computador; nenhum áudio foi enviado para servidor. | Sem suporte nativo WebCodecs AAC: o fallback FFmpeg WASM sem correspondente-source verificado foi retirado por segurança de licenciamento. MP4 sem áudio continua disponível. |
 | M4F-406 | O projeto tem uma parte inválida e o vídeo não foi gerado. Desfaça a última edição e tente exportar de novo. | Desde a v0.24.2. A checagem antes de exportar achou o plano fora do formato esperado (antes aparecia como M4F-1016). Nenhum quadro é gerado. |
 | M4F-618 | Não foi possível guardar suas preferências neste navegador. Você pode continuar; elas valem nesta visita. | localStorage bloqueado ou cheio. O briefing continua em memória; os arquivos originais permanecem intactos. |
 | M4F-619 | Não foi possível guardar o layout. A organização da mesa vale nesta visita. | A mesa funciona, mas os tamanhos dos painéis não puderam ser persistidos. |

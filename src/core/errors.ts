@@ -29,6 +29,7 @@ export const ERRORS = {
   MODELO_HTTP: { code: 'M4F-305', title: 'O servidor do modelo de transcrição respondeu com erro.' },
   SEM_FALA: { code: 'M4F-306', title: 'Não encontrei fala neste vídeo: ele fica sem legendas e sem título. Dá para escolher estilo e gerar o vídeo final.' },
   MODELO_RESERVA: { code: 'M4F-307', title: 'O modelo de legenda escolhido não funcionou neste aparelho; usei um modelo mais leve, e a legenda pode ter mais erros.' },
+  SEM_AAC: { code: 'M4F-407', title: 'Este navegador não tem codificador AAC nativo para exportar MP4 com áudio. Use Chrome, Edge ou Brave atualizado no computador; nenhum áudio foi enviado para servidor.' },
   SEM_ENCODER: { code: 'M4F-401', title: 'Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador.' },
   EXPORTACAO_FALHOU: { code: 'M4F-402', title: 'A geração do vídeo falhou.' },
   EXPORTACAO_CLIPE: { code: 'M4F-404', title: 'A geração do vídeo não conseguiu ler um dos clipes.' },
