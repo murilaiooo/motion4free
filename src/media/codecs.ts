@@ -7,15 +7,13 @@ export interface CodecChoice {
   degraded: boolean;
 }
 
-let aacReady = false;
-
-export async function chooseCodecs(width: number, height: number): Promise<CodecChoice> {
-  if (!aacReady && !(await canEncodeAudio('aac'))) {
-    // encoder AAC em WebAssembly, carregado só quando o navegador não tem um nativo
-    const { registerAacEncoder } = await import('@mediabunny/aac-encoder');
-    registerAacEncoder();
+/** Não distribuir um FFmpeg WASM sem fonte correspondente verificável (#2).
+ * O MP4 com áudio só usa o AAC nativo do navegador. Sem áudio, não exige AAC.
+ */
+export async function chooseCodecs(width: number, height: number, needsAudio = true): Promise<CodecChoice> {
+  if (needsAudio && !(await canEncodeAudio('aac'))) {
+    throw new AppError('SEM_AAC');
   }
-  aacReady = true;
   for (const video of ['avc', 'vp9', 'av1'] as const) {
     if (await canEncodeVideo(video, { width, height })) return { video, degraded: video !== 'avc' };
   }
