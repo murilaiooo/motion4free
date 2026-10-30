@@ -115,3 +115,36 @@ export function activeSemanticCues(plan: EditPlan, t: number): ScheduledWordCue[
 export function activeSemanticWords(plan: EditPlan, t: number): string[] {
   return activeSemanticCues(plan, t).map(c => c.text);
 }
+
+const QUALIFIER = /^(nao|nunca|jamais|nem|sem|se|caso|talvez|not|never|no|without|if|unless)$/;
+const plain = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
+
+/**
+ * #117: sugere palavras fortes da própria fala para destacar (no máximo `max`, uma a cada `minGapSec`).
+ * Só palavras confirmadas na legenda; nunca depois de "não"/"se" na mesma frase (para não destacar a
+ * parte negada como afirmação). A pessoa pode remover qualquer uma; desfazer volta tudo.
+ */
+export function suggestSemanticWords(plan: EditPlan, words: readonly Word[], score: (raw: string) => number, max = 8, minGapSec = 4): Word[] {
+  const byId = new Map(words.map(w => [w.id, w]));
+  const blocked = new Set<string>();
+  // Por frase (do início até o ponto final), não por legenda: a legenda pode quebrar no meio da frase.
+  let after = false;
+  for (const id of plan.captions.flatMap(c => c.wordIds)) {
+    const w = byId.get(id);
+    if (!w) continue;
+    if (after) blocked.add(id);
+    if (QUALIFIER.test(plain(w.text))) after = true;
+    if (/[.!?…]["”']?$/.test(w.text.trim())) after = false;
+  }
+  const taken = new Set((plan.semanticCues ?? []).map(c => c.wordId));
+  const candidates = plan.captions.flatMap(c => c.wordIds).map(id => byId.get(id)).filter((w): w is Word =>
+    !!w && !blocked.has(w.id) && !taken.has(w.id) && score(w.text) >= 0.75 &&
+    plan.segments.some(s => w.start >= s.srcStart - 1e-6 && w.end <= s.srcEnd + 1e-6));
+  const chosen: Word[] = [];
+  for (const w of [...candidates].sort((a, b) => score(b.text) - score(a.text) || a.start - b.start)) {
+    if (chosen.length >= max) break;
+    if (chosen.some(c => Math.abs(c.start - w.start) < minGapSec)) continue;
+    try { checkedWord(plan, w); chosen.push(w); } catch { /* trecho travado ou palavra inválida: pula */ }
+  }
+  return chosen.sort((a, b) => a.start - b.start);
+}

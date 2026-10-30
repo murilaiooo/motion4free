@@ -34,6 +34,11 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-305 | O servidor do modelo de transcrição respondeu com erro. | O servidor respondeu 401, 403, 429 ou 5xx. O detalhe traz o status e o servidor; `HTTP 502` no espelho do site significa que a Cloudflare não alcançou o Hugging Face. |
 | M4F-306 | Não encontrei fala neste vídeo: ele fica sem legendas e sem título. Dá para escolher estilo e gerar o vídeo final. | A transcrição terminou sem nenhuma palavra (só música, ruído, silêncio ou fala muito baixa). O detalhe traz quantos silêncios foram achados. Se tem fala, confira o volume do microfone. |
 | M4F-307 | O modelo de legenda escolhido não funcionou neste aparelho; usei um modelo mais leve, e a legenda pode ter mais erros. | Desde a v0.8.0 o app tenta os modelos em escada (ADR-0013): no modo Precisa, Whisper large-v3-turbo na placa de vídeo → Whisper small no processador → Whisper base. Se um não baixa, não inicia (falta de memória da placa, navegador sem fp16) ou para no meio de um trecho, o próximo continua do mesmo trecho. O detalhe lista qual falhou, o código do motivo (M4F-301, 302, 303 ou 305) e qual fez a legenda. Não é falha: a legenda saiu, mas com um modelo menor. |
+| M4F-308 | Você escolheu transcrever por API, mas ela não estava pronta. Transcrevi neste computador (Whisper) e nada foi enviado. Resolva em Configurações › Transcrição. | Falta chave aberta, serviço/modelo ou a autorização de **áudio** (diferente da de texto). Nada foi enviado. |
+| M4F-309 | Você escolheu transcrever só por API e ela não está pronta, então não transcrevi para não enviar nada sem autorização. Resolva em Configurações › Transcrição ou ligue a reserva no computador. | A reserva "usar o Whisper deste computador" está desligada em Configurações › Transcrição. |
+| M4F-310 | A transcrição por API falhou; usei o Whisper deste computador desta vez. | O detalhe traz o código do serviço (chave, limite, sem crédito, bloqueio, demora). |
+| M4F-311 | O serviço transcreveu, mas não mandou o tempo de cada palavra. Sem isso a legenda e os cortes ficam fora de sincronia, então não usei essa resposta. | Sem tempo por palavra não dá para sincronizar legenda e cortes; o app não inventa tempos. |
+| M4F-312 | O serviço recusou o pedaço de áudio por ser grande demais. | HTTP 413. O app manda pedaços de até ~12 min; o limite da conta pode ser menor. |
 | M4F-401 | Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador. | Nenhum codificador de vídeo disponível. |
 | M4F-402 | A geração do vídeo falhou. | Falha durante a geração do MP4; ver detalhe. |
 | M4F-403 | Seu navegador não gera H.264: o vídeo funciona aqui, mas o Instagram pode recusar. Para o arquivo final, use Chrome ou Edge no computador. | O vídeo saiu em outro formato (VP9/AV1) porque o navegador não tem codificador H.264 (comum no Chromium sem codecs proprietários e em alguns Linux). Detalhe traz o formato usado. Antes da v0.7 este aviso aparecia sem código. |
@@ -114,6 +119,9 @@ Faixas: 1xx arquivo/vídeo, 2xx áudio, 3xx transcrição, 4xx exportação, 5xx
 | M4F-1108 | Um dos clipes não pôde ser gerado; os outros continuaram normalmente. | Em "Gerar os escolhidos", um clipe falhou ao recortar, montar ou exportar. O detalhe traz o número do clipe e o código do motivo (M4F-1104, M4F-402…). |
 | M4F-1110 | A transcrição não tem IDs/tempos válidos ou ultrapassa o limite para análise contextual. Preservei o trabalho; confira a transcrição ou use um arquivo menor. | Transcrição com IDs ou tempos inválidos, ou limite de janela excedido; a mídia original não é alterada. |
 | M4F-1111 | A análise contextual por IA ficou incompleta ou sem resposta válida. Mantive candidatos locais; confira o contexto antes de selecionar. | Falha de contexto parcial, limite de chamadas, indisponibilidade do provedor ou resposta não ancorada; candidatos locais permanecem disponíveis. |
+| M4F-1112 | A IA respondeu, mas não no formato combinado (mesmo depois de uma segunda tentativa). Mantive os clipes das regras locais; tente de novo ou escolha outro modelo em Configurações. | O modelo devolveu texto sem o JSON pedido duas vezes seguidas na mesma parte do vídeo. Os clipes das regras locais continuam. Tente de novo ou use um modelo maior. |
+| M4F-1113 | A IA sugeriu trechos que não batem com a fala do vídeo (palavras fora de ordem ou inexistentes), então descartei. Mantive os clipes das regras locais. | Os IDs de palavras vieram inexistentes, fora de ordem ou sem preparação antes da conclusão; o app descarta para não inventar clipes. |
+| M4F-1114 | A IA leu só parte do vídeo. Os clipes da parte lida foram revistos pela IA; os outros vieram das regras locais e estão marcados assim. | Vídeos muito longos são lidos por amostras (até 32 partes) ou a análise parou depois de duas falhas seguidas. Cada cartão diz se foi revisto pela IA ou veio das regras. |
 | M4F-1109 | O aparelho ficou sem memória para ler o áudio do vídeo longo. Feche outras abas ou envie um pedaço menor do vídeo. | O navegador recusou memória ao ler o áudio do vídeo longo. Nada foi perdido. |
 | M4F-999 | Erro inesperado. | Erro não previsto; ver detalhe. |
 
@@ -153,3 +161,31 @@ O limite local não substitui os limites da conta de API. Não há fallback para
 
 | M4F-1219 | O limite local de pedidos ou de texto para IA foi atingido. A edição continua pelas regras; ajuste os limites em Configurações se quiser autorizar mais uso. | Orçamento configurável por sessão/projeto atingido, sem envio extra. |
 | M4F-1220 | Este serviço de IA está temporariamente em espera após limite de uso ou falhas repetidas. A edição continua pelas regras, sem repetir chamadas nem trocar para outro serviço. | Cooldown após 429 ou falhas transitórias. |
+## Análise local de rostos (#54)
+
+- M4F-111: detector/runtime/decodificação indisponível. Preserva enquadramento; escolher manual ou tentar novamente.
+- M4F-112: nenhum rosto confiável em um ou mais clipes; enquadramento central, ajustável manualmente.
+- M4F-113: análise cancelada; nenhuma alteração parcial de enquadramento aplicada.
+- M4F-114: mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual.
+| M4F-809 | O dataset precisa de direitos e anotações válidos, com origem, pessoas e conteúdo separados entre os conjuntos. | Faltam direitos/anotações, IDs/tempos são inválidos ou origem/pessoa/hash cruza conjuntos. Nenhum dado privado é repetido no erro. |
+
+| M4F-810 | O pacote cego precisa de versões autorizadas, identificadores válidos e o briefing de cada versão. | Direitos, versões, IDs, referências ou briefing incompatíveis. |
+| M4F-811 | Complete as notas com evidência ou abstenção, e a preferência justificada de cada conteúdo. | Identificador, notas/evidências/abstenções ou preferências ausentes. |
+- M4F-1219: limite local de pedidos/texto atingido ou contador inválido. Edição por regras permanece. Conferir limites em Configurações, e conferir o gasto na própria conta de API. Sem novo envio automático.
+- M4F-1220: cooldown por 429 ou circuito após falhas transitórias. Aguardar o prazo mostrado, continuar localmente; trocar chave não contorna o limite do provedor.
+
+- M4F-529: pedido cancelado ou plano/seleção mudou. Nenhum resultado atrasado é aplicado; enviar novo pedido ao estado atual.
+
+## Códigos sem tabela própria acima
+
+| Código | Mensagem | O que costuma significar |
+|---|---|---|
+| M4F-111 | Não consegui analisar os rostos neste navegador. O enquadramento anterior foi mantido; você pode mover o vídeo manualmente ou tentar de novo. | detector/runtime/decodificação indisponível. Preserva enquadramento; escolher manual ou tentar novamente. |
+| M4F-112 | Não encontrei um rosto confiável em alguns clipes. Esses clipes usam enquadramento central, ajustável manualmente. | nenhum rosto confiável em um ou mais clipes; enquadramento central, ajustável manualmente. |
+| M4F-113 | Análise de rostos cancelada. A edição e o enquadramento anterior foram preservados. | análise cancelada; nenhuma alteração parcial de enquadramento aplicada. |
+| M4F-114 | Há quadros demais para esta análise de rostos. Escolha um clipe menor ou use o enquadramento manual. | mais de 12.000 amostras ou duração inválida; analisar menos clipes ou usar manual. |
+| M4F-529 | O pedido foi cancelado ou a edição/seleção mudou enquanto ele era preparado. Preservei o estado atual; envie um novo pedido para continuar. | pedido cancelado ou plano/seleção mudou. Nenhum resultado atrasado é aplicado; enviar novo pedido ao estado atual. |
+| M4F-806 | O grafo de composição da POC está fora dos limites permitidos. | Schema fechado, IDs únicos e tempos limitados. |
+| M4F-807 | A POC não conseguiu carregar o adaptador Three.js ou criar WebGL. Canvas2D continua disponível. | Falha no módulo fixo ou WebGL; Canvas permanece. |
+
+| M4F-808 | A POC precisa de um vídeo local decodificável de pelo menos 12 s e de um seek concluído antes de salvar o frame. | Vídeo menor que 12 s, decoder, timeout ou captura ficou obsoleta. |

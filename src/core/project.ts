@@ -32,6 +32,7 @@ export interface SavedProject {
   silences: TimeRange[];
   /** Anotações locais de todos os arquivos, inclusive dos clipes guardados no histórico de desfazer. */
   sourceMaps?: import('../editorial/clip-source-map').ClipOrigins;
+  faceTracks?: Record<string, import('../render/framing').FaceTrack>;
   clipAnnotations?: Record<string, { words: Word[]; silences: TimeRange[] }>;
   warnings: SavedWarning[];
   history: { past: EditPlan[]; present: EditPlan; future: EditPlan[] };
@@ -48,13 +49,18 @@ const projectSchema = z.object({
   savedAt: z.string(),
   appVersion: z.string(),
   video: z.object({ name: z.string(), size: z.number().int().nonnegative(), durationSec: time }),
-  words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
+  words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time, needsReview: z.boolean().optional() })),
   silences: z.array(z.object({ start: time, end: time })),
   sourceMaps: z.record(z.string(), z.object({ version: z.literal(1), sourceId: z.string().regex(/^[a-f0-9]{64}$/), sourceOffset: time, sourceEnd: time.optional(), sourceDuration: time, derivedDuration: time }).refine((origin) => (origin.sourceEnd === undefined || (origin.sourceEnd > origin.sourceOffset && origin.sourceEnd <= origin.sourceDuration)) && origin.sourceOffset < origin.sourceDuration && origin.derivedDuration > 0 && origin.sourceOffset + origin.derivedDuration <= origin.sourceDuration + 1)).optional(),
   clipAnnotations: z.record(z.string(), z.object({
-    words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time })),
+    words: z.array(z.object({ id: z.string().min(1), text: z.string(), start: time, end: time, needsReview: z.boolean().optional() })),
     silences: z.array(z.object({ start: time, end: time })),
   })).optional(),
+  faceTracks: z.record(z.string(), z.object({
+    step: z.number().finite().min(0.05).max(5),
+    xs: z.array(z.number().finite().min(0).max(1)).min(1).max(54001),
+    ys: z.array(z.number().finite().min(0).max(1)).min(1).max(54001),
+  }).refine((track) => track.xs.length === track.ys.length)).optional(),
   warnings: z.array(z.object({ key: errorKey, detail: z.string() })),
   // planos v1 (Fase 2) são migrados para v2 ao abrir
   history: z.object({ past: z.array(anyPlanSchema), present: anyPlanSchema, future: z.array(anyPlanSchema) }),

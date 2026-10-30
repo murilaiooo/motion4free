@@ -195,7 +195,7 @@ export async function prepareAi(s: AiSettings, setBusy: OnProgress, task: AiTask
         const policy = current.policy ?? DEFAULT_AI_POLICY;
         const response = await cachedCompletion({ project, task, provider, model, account: revision, outputTokens: policy.outputTokens }, messages, () => providerCompleter(provider, key, model, {
           signal: ctrl.signal,
-          authorize: (body) => authorizeRequest(provider, model, body, ctrl.signal),
+          authorize: (body) => authorizeRequest(provider, model, body, ctrl.signal, task === 'moment-ranking' ? signal : undefined),
           beforeSend: (body) => reserveRequest(project, body, policy),
           maxTokens: policy.outputTokens, timeoutMs: policy.timeoutMs,
         })(messages));
@@ -231,10 +231,13 @@ export function aiProblem(s: AiSettings): string | null {
  * Atalho da mesa de edição e do criador de clipes: mostra qual IA está em uso e leva para Configurações.
  * As opções técnicas (chaves, modelos, tamanhos) não ficam na mesa.
  */
-export function AiStatusLine() {
+export function AiStatusLine({ onReady }: { onReady?: () => void } = {}) {
   const s = useAiSettings();
   useKeysVersion();
   const problem = aiProblem(s);
+  const [asking, setAsking] = useState(false);
+  const provider = s.provider ? PROVIDERS[s.provider] : null;
+  const needsConsent = s.mode === 'provedor' && !!s.provider && !!s.remote && !!getKey(s.provider) && !s.consent.includes(s.provider);
   return (
     <div className={`ai-status ${problem ? 'warn' : ''}`} data-testid="ai-status">
       <Sparkles size={15} aria-hidden />
@@ -250,9 +253,39 @@ export function AiStatusLine() {
                 : 'Só o texto do pedido e trechos da fala vão para o serviço; o vídeo fica aqui.'}
         </small>
       </span>
+      {needsConsent && !asking && (
+        <button type="button" className="sm primary" onClick={() => setAsking(true)} data-testid="ai-consent-open">
+          Autorizar envio de texto
+        </button>
+      )}
+      {problem && !needsConsent && (
+        <button type="button" className="sm primary" onClick={() => openSettings('ia')} data-testid="ai-fix">
+          {problem.startsWith('A chave') ? 'Abrir a chave' : 'Escolher modelo'}
+        </button>
+      )}
       <button type="button" className="sm" onClick={() => openSettings('ia')} data-testid="ai-change">
         <Settings2 size={14} aria-hidden /> Alterar
       </button>
+      {needsConsent && asking && provider && s.provider && (
+        <div className="ai-consent-inline" role="group" aria-label="Autorizar envio de texto" data-testid="ai-consent-inline">
+          <p>
+            Para usar <b>{s.remote?.label}</b>, o app envia ao <b>{provider.name}</b> ({provider.host}) <b>só texto</b>: as instruções do app, o seu pedido e trechos da fala transcrita. <b>Vídeo, áudio e arquivos nunca saem deste computador.</b>
+          </p>
+          <p className="hint">
+            {s.remote?.pricing === 'gratis' ? 'Modelos marcados como grátis podem ter limite de uso do próprio serviço.' : 'Pode consumir cota ou gerar cobrança na sua conta do serviço.'} Antes de cada envio você ainda vê o conteúdo completo e confirma. Dá para tirar a autorização em Configurações › Privacidade.{' '}
+            <a href={provider.privacyUrl} target="_blank" rel="noopener noreferrer">Política do {provider.name}</a>
+          </p>
+          <div className="set-row">
+            <button type="button" className="sm" onClick={() => setAsking(false)}>Agora não</button>
+            <button type="button" className="sm primary" data-testid="ai-consent-yes" onClick={() => {
+              const id = s.provider!;
+              setAiSettings({ consent: [...s.consent.filter((c) => c !== id), id] });
+              setAsking(false);
+              onReady?.();
+            }}>Autorizar {provider.name}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

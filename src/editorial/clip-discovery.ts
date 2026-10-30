@@ -12,8 +12,26 @@ const proposalSchema = z.object({ spans: z.array(z.object({
   setupWordIds: z.array(z.string()).min(1).max(40), payoffWordIds: z.array(z.string()).min(1).max(40),
 }).strict()).max(8) }).strict();
 
+export interface DiscoveryReport {
+  moments: Moment[];
+  warning: AppError | null;
+  /** partes da transcrição que a IA leu com resposta válida */
+  covered: number;
+  /** partes que existiam (todas as janelas) */
+  total: number;
+  /** partes que foram enviadas à IA (amostra de até 32) */
+  planned: number;
+  /** partes que falharam (resposta inválida, sem âncora ou erro do serviço) */
+  failed: number;
+  /** momentos novos que a IA trouxe e que passaram na conferência */
+  accepted: number;
+}
+
+/** Erros do serviço que não melhoram tentando a próxima parte: param a análise na hora. */
+const STOP_KEYS = new Set(['PROVEDOR_CHAVE_INVALIDA', 'PROVEDOR_SEM_PERMISSAO', 'PROVEDOR_LIMITE', 'PROVEDOR_SEM_CREDITO', 'PROVEDOR_BLOQUEADO', 'PROVEDOR_MODELO_SUMIU', 'PROVEDOR_CANCELADO', 'IA_ORCAMENTO', 'IA_COOLDOWN']);
+
 /** Propose new source spans from every bounded window. Never accept model timestamps or invented title text. */
-export async function discoverContextualMoments(words: readonly Word[], duration: number, opts: MomentOptions, ai: AiChoice, signal: AbortSignal, progress: (done: number, total: number) => void): Promise<{ moments: Moment[]; warning: AppError | null; covered: number; total: number }> {
+export async function discoverContextualMoments(words: readonly Word[], duration: number, opts: MomentOptions, ai: AiChoice, signal: AbortSignal, progress: (done: number, total: number) => void): Promise<DiscoveryReport> {
   const index = buildTranscriptIndex(words, duration);
   const candidates = findContextualMoments(words, duration, opts);
   const limit = CLIP_LENGTHS[opts.length];
@@ -24,30 +42,36 @@ export async function discoverContextualMoments(words: readonly Word[], duration
   try { windows = partitionContextWindows(index, bodyBudget, signal, limit.max); }
   catch (err) {
     if (signal.aborted) throw new AppError('PROVEDOR_CANCELADO');
-    return { moments: rankContextualMoments(candidates, opts.count), warning: err instanceof AppError ? err : new AppError('CLIPES_IA_CONTEXTO'), covered: 0, total: 0 };
+    return { moments: rankContextualMoments(candidates, opts.count), warning: err instanceof AppError ? err : new AppError('CLIPES_IA_CONTEXTO'), covered: 0, total: 0, planned: 0, failed: 0, accepted: 0 };
   }
   // Bound GPU/provider work; spread a sampled pass across the recording instead of only its beginning.
   const planned = windows.length <= 32 ? windows : Array.from({ length: 32 }, (_, i) => windows[Math.round(i * (windows.length - 1) / 31)]!);
-  const deficient = windows.filter(window => window.insufficientOverlap).length;
-  let skipped = 0, visited = 0;
-  let covered = 0;
-  let warning: AppError | null = null;
+  let visited = 0, covered = 0, failed = 0, accepted = 0, streak = 0, eligible = 0;
+  let lastError: AppError | null = null;
+  let stopped = false;
   for (const [step, window] of planned.entries()) {
     if (signal.aborted) throw new AppError('PROVEDOR_CANCELADO');
     progress(step, planned.length);
     visited = step + 1;
-    if (words[window.lastWord]!.end - words[window.firstWord]!.start < limit.min) { skipped++; continue; }
+    // Parte menor que o clipe mínimo não pode conter um clipe: não conta como falha nem como "incompleto".
+    if (words[window.lastWord]!.end - words[window.firstWord]!.start < limit.min) continue;
+    eligible++;
     try {
-      const raw = await ai.complete({
-        system,
-        examples: [], user: `<transcricao>\n${escapeData(window.body)}\n</transcricao>`,
-      });
-      if (signal.aborted) throw new AppError('PROVEDOR_CANCELADO');
-      const extracted = extractJsonObject(raw);
-      const parsed = extracted.ok ? proposalSchema.safeParse(extracted.value) : null;
-      if (!parsed?.success) throw new AppError('CLIPES_IA_CONTEXTO');
-      let accepted = 0;
-      for (const proposal of parsed.data.spans) {
+      let parsed: z.infer<typeof proposalSchema> | null = null;
+      // Uma segunda tentativa quando o modelo devolve texto fora do formato (comum em modelos pequenos/locais).
+      for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
+        const raw = await ai.complete({
+          system: attempt ? `${system} A resposta anterior não era JSON válido. Responda apenas o objeto JSON, sem comentários.` : system,
+          examples: [], user: `<transcricao>\n${escapeData(window.body)}\n</transcricao>`,
+        });
+        if (signal.aborted) throw new AppError('PROVEDOR_CANCELADO');
+        const extracted = extractJsonObject(raw);
+        const result = extracted.ok ? proposalSchema.safeParse(extracted.value) : null;
+        if (result?.success) parsed = result.data;
+      }
+      if (!parsed) throw new AppError('CLIPES_IA_RESPOSTA_INVALIDA');
+      let grounded = 0;
+      for (const proposal of parsed.spans) {
         const first = index.positions.get(proposal.firstWordId); const last = index.positions.get(proposal.lastWordId);
         const titleFirst = index.positions.get(proposal.titleFirstWordId); const titleLast = index.positions.get(proposal.titleLastWordId);
         if (first === undefined || last === undefined || titleFirst === undefined || titleLast === undefined || first < window.firstWord || last > window.lastWord || first > last || titleFirst < first || titleLast > last || titleFirst > titleLast) continue;
@@ -59,18 +83,28 @@ export async function discoverContextualMoments(words: readonly Word[], duration
         const firstPayoff = Math.min(...proposal.payoffWordIds.map((id) => index.positions.get(id)!));
         if (firstPayoff <= lastSetup) continue;
         const moment = groundedMoment(index, first, last, opts, 'ai-context', [titleFirst, titleLast]);
-        if (moment) { candidates.push(moment); accepted++; }
+        if (moment) { candidates.push(moment); grounded++; }
       }
-      if (parsed.data.spans.length && !accepted) throw new AppError('CLIPES_IA_CONTEXTO');
+      if (parsed.spans.length && !grounded) throw new AppError('CLIPES_IA_SEM_ANCORA');
+      accepted += grounded;
       covered++;
+      streak = 0;
     } catch (err) {
       if (signal.aborted) throw new AppError('PROVEDOR_CANCELADO');
-      warning = err instanceof AppError ? err : new AppError('CLIPES_IA_CONTEXTO');
-      // Do not burn quota retrying all remaining windows after a failure. Local full-transcript candidates remain.
-      break;
+      lastError = err instanceof AppError ? err : new AppError('CLIPES_IA_CONTEXTO');
+      failed++;
+      streak++;
+      // Erro de conta/serviço ou duas falhas seguidas: parar para não gastar cota à toa.
+      if (STOP_KEYS.has(lastError.key) || streak >= 2) { stopped = true; break; }
     }
   }
   progress(visited, planned.length);
-  if (!warning && (covered < windows.length || deficient > 0)) warning = new AppError('CLIPES_IA_CONTEXTO', `${covered}/${windows.length} janelas consultadas; ${skipped} curtas demais; ${deficient} com sobreposição insuficiente. Candidatos locais preservados. Revise o contexto dos trechos.`);
-  return { moments: rankContextualMoments(candidates, opts.count), warning, covered, total: windows.length };
+  let warning: AppError | null = null;
+  if (covered === 0 && lastError) warning = lastError;
+  else if (covered === 0 && eligible === 0) warning = new AppError('CLIPES_IA_CONTEXTO', 'Nenhuma parte da fala tem o tamanho mínimo do clipe escolhido. Tente clipes mais curtos.');
+  else if (stopped || failed > 0 || planned.length < windows.length) {
+    const reason = stopped && lastError ? `Parou em ${lastError.code}.` : planned.length < windows.length ? 'Vídeo longo: lido por amostras.' : '';
+    warning = new AppError('CLIPES_IA_PARCIAL', `${covered} de ${windows.length} partes lidas pela IA; ${failed} com falha. ${reason}`.trim());
+  }
+  return { moments: rankContextualMoments(candidates, opts.count), warning, covered, total: windows.length, planned: planned.length, failed, accepted };
 }

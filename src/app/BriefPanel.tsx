@@ -4,9 +4,12 @@ import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, Word } from '../core/types';
 import { interpretLayered } from '../editorial/ai-brief';
 import { findHooks } from '../editorial/hooks';
+import { nextOf, partialRequest } from '../editorial/partial-request';
+import { TEMPLATE_IDS, templateById } from '../core/templates';
 import { Check, Sparkles } from 'lucide-react';
 import { AiStatusLine, prepareAi, useAiSettings } from './AiOptions';
 import { ErrorBox } from './ErrorBox';
+import { useEditRequest } from './use-edit-request';
 import { ProgressPanel } from './ProgressPanel';
 import type { Progress } from '../core/progress';
 
@@ -16,6 +19,8 @@ const EXAMPLES = [
   'legenda grande em cima, amarela com contorno preto',
   'cortes rápidos, transição flash, emojis nas palavras importantes',
   'Minimalista e elegante, sem zoom, legenda em minúsculas',
+  'troque só o gancho',
+  'outro estilo',
 ];
 
 const hookKey = (h: Pick<Hook, 'wordIds'> | null) => (h ? h.wordIds.join('|') : '');
@@ -24,26 +29,56 @@ const hookKey = (h: Pick<Hook, 'wordIds'> | null) => (h ? h.wordIds.join('|') : 
  * "O que você quer?": pedido por texto, o que foi aplicado, o que o app ainda não sabe fazer e a
  * escolha do gancho. Tudo vira operação no plano (entra no desfazer). Sem IA por padrão; a IA é opcional.
  */
-export function BriefPanel({ plan, words, onBrief, disabled }: { plan: EditPlan; words: Word[]; onBrief: (b: CreativeBrief) => void; disabled: boolean }) {
+export function BriefPanel({ plan, words, onBrief, onHook, onStyle, disabled }: { plan: EditPlan; words: Word[]; onBrief: (b: CreativeBrief) => void; onHook?: (h: Hook | null) => void; onStyle?: (id: string) => void; disabled: boolean }) {
   const ai = useAiSettings();
   const [text, setText] = useState(plan.brief.prompt);
   const [busy, setBusy] = useState<Progress | null>(null);
   const [error, setError] = useState<AppError | null>(null);
   const [warning, setWarning] = useState<AppError | null>(null);
   const [notDone, setNotDone] = useState<string[]>([]);
+  const [partialDone, setPartialDone] = useState<string | null>(null);
+  const requestScope = useEditRequest(plan, '', () => { setBusy(null); setWarning(new AppError('PEDIDO_CANCELADO')); });
   const summary = summarizeBrief(plan.brief);
   const hasBrief = plan.brief.prompt !== '';
   // desfazer/refazer traz de volta o texto do pedido daquele momento
   useEffect(() => setText(plan.brief.prompt), [plan.brief.prompt]);
 
+  /** #11: "outro gancho", "tira o gancho", "outro estilo" mudam só aquela parte, sem refazer o resto. */
+  function applyPartial(): boolean {
+    const partial = partialRequest(text);
+    if (!partial) return false;
+    setError(null); setWarning(null); setNotDone([]);
+    if (partial.kind === 'no-hook' && onHook) { onHook(null); setPartialDone('Tirei só o gancho; o resto ficou igual.'); return true; }
+    if (partial.kind === 'next-hook' && onHook) {
+      const next = nextOf(findHooks(words), (h) => hookKey(h) === hookKey(plan.brief.hook));
+      if (!next) { setWarning(new AppError('GANCHO_SEM_FRASES')); return true; }
+      onHook({ text: next.text, wordIds: next.wordIds });
+      setPartialDone(`Troquei só o gancho: agora abre com “${next.text}”. O resto ficou igual.`);
+      return true;
+    }
+    if (partial.kind === 'next-style' && onStyle) {
+      const id = nextOf(TEMPLATE_IDS, (x) => x === plan.style.id)!;
+      onStyle(id);
+      setPartialDone(`Troquei só o estilo: agora é ${templateById(id)?.name ?? id}. Cortes, legendas corrigidas e o resto ficaram iguais.`);
+      return true;
+    }
+    return false;
+  }
+
   async function apply() {
+    setPartialDone(null);
+    if (applyPartial()) return;
+    const request = requestScope.begin();
+    const progress: typeof setBusy = (value) => { if (request.current()) setBusy(value); };
     setError(null);
     setWarning(null);
     setNotDone([]);
     setBusy({ label: 'Entendendo o pedido', phase: 'pedido', fraction: null });
     try {
-      const { ai: choice, warning: aiWarning } = await prepareAi(ai, setBusy);
+      const { ai: choice, warning: aiWarning } = await prepareAi(ai, progress, 'creative-brief', undefined, request.signal);
+      if (!request.current()) return;
       const r = await interpretLayered(text, words, choice);
+      if (!request.current()) return;
       setWarning(r.warning ?? aiWarning);
       if (!r.understood) {
         setWarning(new AppError('PEDIDO_NAO_ENTENDIDO', [...r.brief.unsupported, ...r.brief.notes.ignored].slice(0, 8).join(', ')));
@@ -52,9 +87,10 @@ export function BriefPanel({ plan, words, onBrief, disabled }: { plan: EditPlan;
       }
       onBrief(r.brief);
     } catch (err) {
-      setError(toAppError(err));
+      if (request.current()) setError(toAppError(err));
     } finally {
-      setBusy(null);
+      if (request.current()) setBusy(null);
+      request.finish();
     }
   }
 
@@ -93,9 +129,11 @@ export function BriefPanel({ plan, words, onBrief, disabled }: { plan: EditPlan;
           </button>
         ))}
       </div>
+      {busy && <button className="sm ghost" type="button" onClick={requestScope.cancel}>Cancelar pedido</button>}
       <ProgressPanel progress={busy} compact testId="ai-progress" />
       {error && <ErrorBox error={error} kind="error" />}
       {warning && <ErrorBox error={warning} kind="warning" />}
+      {partialDone && <p className="hint" role="status" data-testid="brief-partial">{partialDone} Desfazer (Ctrl+Z) volta ao anterior.</p>}
 
       {!hasBrief && notDone.length > 0 && (
         <p className="hint" data-testid="brief-unsupported">

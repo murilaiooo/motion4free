@@ -5,6 +5,7 @@ import { planAsr } from '../analysis/asr-windows';
 import { ENERGY_STEP_SEC, energyEnvelope } from '../analysis/energy';
 import { findSilences } from '../analysis/silence';
 import type { Transcriber } from '../asr/transcriber';
+import { getAsrRoute } from '../asr/route';
 import type { AsrMode } from '../core/asr-models';
 import { compactEnergy, loadClipJob, sameSource, saveClipJob, type ClipJob } from '../core/clip-job';
 import { AppError, describeError, toAppError } from '../core/errors';
@@ -54,7 +55,10 @@ export async function analyzeLong(file: File, transcriber: Transcriber, onStep: 
     const base = { file, durationSec: media.durationSec, width: media.width, height: media.height };
 
     const saved = opts.fs ? await loadClipJob(opts.fs).catch(() => null) : null;
-    if (saved && sameSource(saved, file) && Math.abs(saved.source.durationSec - media.durationSec) < 0.5 && saved.words.length > 0) {
+    // Transcrição guardada só vale se veio do mesmo tipo de transcritor escolhido agora (local × API, issue #127).
+    const wantsApi = getAsrRoute().kind === 'api';
+    const savedByApi = !!saved?.asrModel?.includes('por API');
+    if (saved && sameSource(saved, file) && Math.abs(saved.source.durationSec - media.durationSec) < 0.5 && saved.words.length > 0 && savedByApi === wantsApi) {
       return { ...base, words: saved.words, silences: saved.silences, energy: saved.energy, energyStep: saved.energyStep, warnings: saved.warnings.map((w) => new AppError(w.key, w.detail)), asrModel: saved.asrModel, reused: true };
     }
 

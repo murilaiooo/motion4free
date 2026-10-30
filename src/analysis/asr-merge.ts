@@ -8,6 +8,7 @@ export interface AsrChunk {
 }
 
 export interface RawWord {
+  needsReview?: boolean;
   text: string;
   start: number;
   end: number;
@@ -80,13 +81,13 @@ export function mergeWindows(results: WindowResult[], durationSec: number): RawW
 }
 
 export function toWords(raw: RawWord[]): Word[] {
-  return raw.map((w, i) => ({ id: `w${i + 1}`, text: w.text, start: w.start, end: w.end }));
+  return raw.map((w, i) => ({ id: `w${i + 1}`, text: w.text, start: w.start, end: w.end, ...(w.needsReview ? { needsReview: true } : {}) }));
 }
 
 // ---------------------------------------------------------------------------------------------
 // Limpeza: alucinações típicas do Whisper
 
-/** Frases que o Whisper inventa no silêncio (vêm de legendas de vídeos usadas no treino). Sempre saem. */
+/** Frases que o Whisper inventa no silêncio (créditos de legendas usadas no treino). Sempre saem. */
 const ALWAYS_HALLUCINATION: string[][] = [
   ['legendas', 'pela', 'comunidade', 'amaraorg'],
   ['legendas', 'pela', 'comunidade', 'amara', 'org'],
@@ -127,9 +128,12 @@ export function removeHallucinations(words: RawWord[], silences: TimeRange[]): R
   const kept = words.filter((w) => !isNonSpeech(w.text));
   const norm = kept.map((w) => normalizeWord(w.text));
   const drop = new Set<number>();
+  const review = new Set<number>();
   for (let i = 0; i < kept.length; i++) {
     for (const p of ALWAYS_HALLUCINATION) {
-      if (matchAt(norm, i, p)) for (let k = 0; k < p.length; k++) drop.add(i + k);
+      if (!matchAt(norm, i, p)) continue;
+      // Créditos de legendagem ("Legendas pela comunidade Amara.org") nunca são fala de quem grava: sempre saem.
+      for (let k = 0; k < p.length; k++) drop.add(i + k);
     }
     for (const p of SILENCE_HALLUCINATION) {
       if (!matchAt(norm, i, p)) continue;
@@ -137,15 +141,21 @@ export function removeHallucinations(words: RawWord[], silences: TimeRange[]): R
       if (silentFractionOf(span, silences) >= 0.6) for (let k = 0; k < p.length; k++) drop.add(i + k);
     }
   }
-  return kept.filter((_, i) => !drop.has(i));
+  return kept.flatMap((word, i) => drop.has(i) ? [] : [{ ...word, ...(review.has(i) ? { needsReview: true } : {}) }]);
 }
 
 function silentFractionOf(range: TimeRange, silences: TimeRange[]): number {
   const len = range.end - range.start;
   if (len <= 0) return 0;
   let covered = 0;
-  for (const s of silences) covered += Math.max(0, Math.min(s.end, range.end) - Math.max(s.start, range.start));
-  return covered / len;
+  let cursor = range.start;
+  const overlaps = silences.map((silence) => ({ start: Math.max(range.start, silence.start), end: Math.min(range.end, silence.end) }))
+    .filter((span) => Number.isFinite(span.start) && Number.isFinite(span.end) && span.end > span.start).sort((a, b) => a.start - b.start);
+  for (const span of overlaps) {
+    covered += Math.max(0, span.end - Math.max(cursor, span.start));
+    cursor = Math.max(cursor, span.end);
+  }
+  return Math.min(1, covered / len);
 }
 
 /**
@@ -153,7 +163,7 @@ function silentFractionOf(range: TimeRange, silences: TimeRange[]): number {
  * Uma palavra repetida 4+ vezes seguidas, ou um grupo de 2 a 8 palavras repetido 3+ vezes seguidas,
  * fica uma vez só. "não, não, não" (3 vezes) é fala normal e fica.
  */
-export function collapseLoops(words: RawWord[]): RawWord[] {
+export function collapseLoops(words: RawWord[], silences?: TimeRange[]): RawWord[] {
   let cur = words;
   for (let n = 8; n >= 1; n--) {
     const minRepeats = n === 1 ? 4 : 3;
@@ -165,7 +175,10 @@ export function collapseLoops(words: RawWord[]): RawWord[] {
       if (i + 2 * n <= cur.length) {
         while (i + (reps + 1) * n <= cur.length && norm.slice(i, i + n).every((t, k) => t === norm[i + reps * n + k])) reps++;
       }
-      if (reps >= minRepeats) {
+      if (reps >= minRepeats && silences && silentFractionOf({ start: cur[i]!.start, end: cur[i + reps * n - 1]!.end }, silences) < 0.9) {
+        out.push(...cur.slice(i, i + reps * n).map((word) => ({ ...word, needsReview: true })));
+        i += reps * n;
+      } else if (reps >= minRepeats) {
         out.push(...cur.slice(i, i + n).map((w, k) => (k === n - 1 ? { ...w, end: Math.max(w.end, Math.min(cur[i + reps * n - 1]!.end, w.end + 0.6)) } : w)));
         i += reps * n;
       } else {
@@ -221,5 +234,5 @@ export function snapToSpeech(words: RawWord[], silences: TimeRange[], margin = 0
 
 /** Limpeza completa depois da junção das janelas. */
 export function cleanTranscript(words: RawWord[], silences: TimeRange[]): RawWord[] {
-  return snapToSpeech(collapseLoops(removeHallucinations(words, silences)), silences);
+  return snapToSpeech(collapseLoops(removeHallucinations(words, silences), silences), silences);
 }

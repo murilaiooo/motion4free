@@ -1,3 +1,7 @@
+# Coleta local implementada — UNTESTED / AWAITING QA
+
+O código em `research/blind-review/` oferece páginas separadas para curador e avaliador; `src/quality/blind-review.ts` define o pacote sem produtor e respostas com evidência/abstenção. Não há resultados coletados. Ver `docs/reviews/2026-10-21-issue30-implementation-handoff.md` para os formatos, privacidade e instruções exatas. O procedimento histórico abaixo continua dependendo de gravações e avaliadores autorizados.
+
 # Avaliação cega da qualidade do motion (issue #30)
 
 Testes automáticos provam que o MP4 abre, que o som está sincronizado e que os modelos geram quadros diferentes. Eles **não** provam que o vídeo parece feito por um motion designer. Isso só se mede com pessoas olhando sem saber quem fez o quê. Este kit cabe numa tarde e não exige instalar nada.

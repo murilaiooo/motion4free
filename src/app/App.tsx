@@ -5,6 +5,7 @@ import { ASR_CANDIDATES, asrLadder } from '../core/asr-models';
 import { MB, formatBytes } from '../core/bytes';
 import { AppError, describeError, toAppError } from '../core/errors';
 import { makeProject, referencedClips, restoreHistory, sameVideo, type SavedProject } from '../core/project';
+import { exportProjectBackup, restoreProjectBackup } from '../core/project-archive';
 import {
   PROJECTS_DIR,
   THUMB,
@@ -54,6 +55,8 @@ import { OutboundConsent } from './settings/OutboundConsent';
 import { openSettings } from './settings/route';
 import { forgetAllKeys } from '../ai/credentials/keys';
 import { resetAiSettings, setActiveAiProject } from './AiOptions';
+import { RoutedTranscriber } from '../asr/remote';
+import { resetAsrRoute } from '../asr/route';
 import { Logo, type SaveState } from './TopBar';
 import { analyze, openWithAudio } from './pipeline';
 import { useAsrPrecision } from './asr-precision';
@@ -126,7 +129,7 @@ function startOnce() {
 
 function EditorApp() {
   const transcriber = useMemo(
-    () =>
+    () => new RoutedTranscriber(
       import.meta.env.VITE_FAKE_ASR === '1'
         ? new FakeTranscriber(
             new URLSearchParams(location.search).get('asr') === 'vazio' ? [] : new URLSearchParams(location.search).get('asr') === 'demo' ? FAKE_DEMO_CHUNKS : new URLSearchParams(location.search).get('asr') === 'clips' ? FAKE_CLIP_CHUNKS : FAKE_CHUNKS,
@@ -134,7 +137,7 @@ function EditorApp() {
             new URLSearchParams(location.search).get('asr') === 'reserva',
             new URLSearchParams(location.search).get('asr') === 'clips' ? 'Transcrição sintética (teste local)' : null,
           )
-        : new WhisperTranscriber(),
+        : new WhisperTranscriber()),
     [],
   );
   const precision = useAsrPrecision();
@@ -155,6 +158,7 @@ function EditorApp() {
   useEffect(() => { setActiveAiProject(projectId); }, [projectId]);
   const [projectName, setProjectName] = useState('');
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [archiveBusy, setArchiveBusy] = useState(false);
   const [focusProjects, setFocusProjects] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [spaceWarn, setSpaceWarn] = useState<{ files: File[]; error: AppError } | null>(null);
@@ -373,6 +377,7 @@ function EditorApp() {
       peaks: peaksOf(combinedAudio),
       clipSources,
       sourceMaps: project.sourceMaps,
+      faceTracks: project.faceTracks,
       clipWords,
       clipSilences,
       clipAudios: new Map(Object.entries(audiosByClip).filter((item): item is [string, import('../media/audio').DecodedAudio] => item[1] !== null)),
@@ -406,6 +411,7 @@ function EditorApp() {
       ctx: { durationSec: media.durationSec, words: project.words },
       silences: project.silences,
       sourceMaps: project.sourceMaps,
+      faceTracks: project.faceTracks,
       warnings: project.warnings.map((w) => new AppError(w.key, w.detail)),
       peaks: peaksOf(audio),
     });
@@ -776,6 +782,7 @@ function EditorApp() {
       words: s.clipWords ? placeWords(h.present.clips, s.clipWords) : s.ctx.words,
       silences: s.clipSilences ? placeRanges(h.present.clips, s.clipSilences) : s.silences,
       sourceMaps: s.sourceMaps,
+      faceTracks: s.faceTracks,
       clipAnnotations: s.clipWords
         ? Object.fromEntries(Object.entries(s.clipWords).map(([id, words]) => [id, { words, silences: s.clipSilences?.[id] ?? [] }]))
         : undefined,
@@ -865,12 +872,50 @@ function EditorApp() {
     await refreshProjects();
   }
 
+  async function downloadProjectBackup(id: string) {
+    if (!fs || archiveBusy) return;
+    setArchiveBusy(true);
+    try {
+      const archive = await enqueue(() => exportProjectBackup(fs, id));
+      const url = URL.createObjectURL(archive);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `motion4free-${id}.m4f`;
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      // Browsers need time to start the download before the Blob URL is revoked.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setFlash('Backup completo gerado. Guarde o arquivo .m4f fora do navegador.');
+    } catch (error) {
+      notify(toAppError(error, 'SALVAR_FALHOU'));
+    } finally {
+      setArchiveBusy(false);
+    }
+  }
+
+  async function importProjectBackup(file: File) {
+    if (!fs || archiveBusy) return;
+    setArchiveBusy(true);
+    try {
+      await enqueue(() => restoreProjectBackup(fs, file));
+      setFlash('Backup restaurado como novo projeto. Seus projetos anteriores foram preservados.');
+      setFocusProjects(true);
+      await refreshProjects();
+    } catch (error) {
+      notify(toAppError(error, 'SALVAR_FALHOU'));
+    } finally {
+      setArchiveBusy(false);
+    }
+  }
+
   /** Algo foi apagado pela tela Armazenamento. */
   async function storageChanged(deletedProject: string | null, everything: boolean) {
     if (everything) {
       // "Apagar tudo" limpou o localStorage; a memória da aba também esquece chaves e escolha de IA
       forgetAllKeys();
       resetAiSettings();
+      resetAsrRoute();
     }
     if (everything || (deletedProject && deletedProject === projectId)) resetSession();
     await refreshProjects();
@@ -944,6 +989,7 @@ function EditorApp() {
           session={session}
           history={history}
           onHistory={setHistory}
+          onFaceTracks={(tracks) => { setSession((current) => current ? { ...current, faceTracks: tracks } : current); setSavedFor(null); }}
           versions={versions}
           onVersions={setVersions}
           disabled={busy}
@@ -1060,17 +1106,17 @@ function EditorApp() {
           )
         }
         projects={
-          projects.length > 0 && (
-            <ProjectsList
-              projects={projects}
-              busy={busy}
-              onOpen={(id) => void openProject(id)}
-              onRename={(id, n) => void rename(id, n)}
-              onDuplicate={(id) => void duplicate(id)}
-              onDelete={(p) => void askDelete({ id: p.id, name: p.name, videoName: p.video.name, sizeBytes: p.sizeBytes })}
-              onStorage={openStorage}
-            />
-          )
+          <ProjectsList
+            projects={projects}
+            busy={busy || archiveBusy}
+            onOpen={(id) => void openProject(id)}
+            onRename={(id, n) => void rename(id, n)}
+            onDuplicate={(id) => void duplicate(id)}
+            onBackup={(id) => void downloadProjectBackup(id)}
+            onRestore={(file) => void importProjectBackup(file)}
+            onDelete={(p) => void askDelete({ id: p.id, name: p.name, videoName: p.video.name, sizeBytes: p.sizeBytes })}
+            onStorage={openStorage}
+          />
         }
         notices={
           (pendingNotice || flash || status.kind === 'error' || notices.length > 0 || spaceWarn) && (

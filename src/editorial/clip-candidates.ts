@@ -1,6 +1,7 @@
 import type { Word } from '../core/types';
 import { CLIP_LENGTHS, LEAD_SEC, TAIL_SEC, MAX_MOMENTS, clock, type Moment, type MomentOptions } from './highlights';
 import { buildTranscriptIndex, sentenceBounds, type TranscriptIndex } from './clip-context';
+import { CONTEXT_LABELS, contextFlags } from './context-policy';
 
 export function groundedMoment(index: TranscriptIndex, first: number, last: number, opts: MomentOptions, source: 'local-context' | 'ai-context' = 'local-context', titleBounds?: [number, number], manual = false): Moment | null {
   const limit = manual ? { min: 5, max: 180 } : CLIP_LENGTHS[opts.length];
@@ -30,7 +31,9 @@ export function groundedMoment(index: TranscriptIndex, first: number, last: numb
   return {
     id: `ctx-${a.id}-${b.id}`, rank: 0, start, end,
     title, text, score, wordCount: words.length,
-    reasons: [source === 'ai-context' ? 'span proposto pela IA e ancorado na transcrição' : 'candidato local por frases da gravação', 'nota estrutural estimada; não prevê visualizações', ...(bounds.flags.length ? ['precisa de revisão de contexto antes de selecionar'] : ['sem sinal estrutural óbvio de frase interrompida; confira o sentido'])],
+    // Alerts are review prompts, not proof of a semantic defect: do NOT distort the
+    // ranking by penalizing a correct negation, a condition or a comparison.
+    reasons: [source === 'ai-context' ? 'span proposto pela IA e ancorado na transcrição' : 'candidato local por frases da gravação', 'nota estrutural estimada; não prevê visualizações', ...(bounds.flags.length ? ['precisa de revisão de contexto antes de selecionar'] : ['sem sinal estrutural óbvio de frase interrompida; confira o sentido']), ...contextFlags(text).map(flag => CONTEXT_LABELS[flag])],
     sourceEvidence: { firstWordId: a.id, lastWordId: b.id, review: bounds.flags, source },
   };
 }

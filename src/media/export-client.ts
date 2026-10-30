@@ -14,16 +14,16 @@ export interface BackgroundExport extends ExportResult {
  * Exporta num Worker para a tela não travar. Se o Worker não iniciar ou falhar,
  * tenta de novo na tela principal (mais lento para a interface, mesmo resultado).
  */
-export async function exportInBackground(file: Blob, media: OpenedMedia, audio: DecodedAudio | null, plan: EditPlan, onProgress: (f: number) => void, music: DecodedAudio | null = null): Promise<BackgroundExport> {
+export async function exportInBackground(file: Blob, media: OpenedMedia, audio: DecodedAudio | null, plan: EditPlan, onProgress: (f: number) => void, music: DecodedAudio | null = null, faceTracks: import('./face-analysis').FaceTracks = {}): Promise<BackgroundExport> {
   try {
-    return { ...(await runWorker(file, audio, plan, onProgress, music)), where: 'worker' };
+    return { ...(await runWorker(file, audio, plan, onProgress, music, faceTracks)), where: 'worker' };
   } catch (workerErr) {
     console.warn('Exportação no Worker falhou; tentando na tela principal.', workerErr);
-    return { ...(await exportPlan(media, audio, plan, { onProgress, music })), where: 'main' };
+    return { ...(await exportPlan(media, audio, plan, { onProgress, music, faceTracks })), where: 'main' };
   }
 }
 
-function runWorker(file: Blob, audio: DecodedAudio | null, plan: EditPlan, onProgress: (f: number) => void, music: DecodedAudio | null): Promise<ExportResult> {
+function runWorker(file: Blob, audio: DecodedAudio | null, plan: EditPlan, onProgress: (f: number) => void, music: DecodedAudio | null, faceTracks: import('./face-analysis').FaceTracks): Promise<ExportResult> {
   const worker = new Worker(new URL('./export.worker.ts', import.meta.url), { type: 'module' });
   return new Promise((resolve, reject) => {
     worker.onmessage = (e: MessageEvent<FromExportWorker>) => {
@@ -46,7 +46,7 @@ function runWorker(file: Blob, audio: DecodedAudio | null, plan: EditPlan, onPro
     const copyOf = (a: DecodedAudio | null) => (a ? { channels: a.channels.map((c) => c.slice()), sampleRate: a.sampleRate } : null);
     const copy = copyOf(audio);
     const musicCopy = plan.music ? copyOf(music) : null;
-    const msg: ToExportWorker = { type: 'export', file, plan, audio: copy, music: musicCopy };
+    const msg: ToExportWorker = { type: 'export', file, plan, audio: copy, music: musicCopy, faceTracks };
     worker.postMessage(msg, [copy, musicCopy].flatMap((a) => (a ? a.channels.map((c) => c.buffer) : [])));
   });
 }

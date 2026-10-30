@@ -9,6 +9,8 @@ import type { ManualEdits, Placement, TextLook } from './edits';
 export interface Word {
   id: string;
   text: string;
+  /** Heurística de revisão da transcrição, não probabilidade/confiança do modelo. */
+  needsReview?: boolean;
   start: number; // src
   end: number; // src
 }

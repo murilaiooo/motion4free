@@ -48,7 +48,9 @@ const sceneV4Options = [
   z.object({ ...base, kind: z.literal('end-cta'), text: line(32) }),
 ] as const;
 const sceneV4 = z.discriminatedUnion('kind', [...sceneV4Options]);
-const scene = z.discriminatedUnion('kind', [...sceneV4Options, z.object({ ...base, kind: z.literal('emoji'), emoji: z.enum(EMOJI_SET) })]);
+export const sceneSchema = z.discriminatedUnion('kind', [...sceneV4Options, z.object({ ...base, kind: z.literal('emoji'), emoji: z.enum(EMOJI_SET) })]);
+
+const scene = sceneSchema;
 
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 

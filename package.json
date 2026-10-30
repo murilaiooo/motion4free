@@ -1,12 +1,12 @@
 {
   "name": "motion4free",
-  "version": "0.30.3",
+  "version": "0.31.0",
   "private": true,
   "type": "module",
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node scripts/prune-dist.mjs && node scripts/audit-licenses.mjs --dist",
+    "build": "tsc --noEmit && vite build && node scripts/prune-dist.mjs && node scripts/generate-offline-shell.mjs && node scripts/audit-licenses.mjs --dist && node scripts/check-dist.mjs",
     "build:e2e": "node scripts/build-e2e.mjs",
     "preview": "vite preview",
     "test": "vitest run",
@@ -50,6 +50,7 @@
     "@fontsource/vt323": "5.3.0",
     "@huggingface/transformers": "4.3.1",
     "@mediabunny/aac-encoder": "1.61.6",
+    "@mediapipe/tasks-vision": "1.1.1",
     "@mlc-ai/web-llm": "0.2.85",
     "lucide-react": "1.49.0",
     "mediabunny": "1.61.6",

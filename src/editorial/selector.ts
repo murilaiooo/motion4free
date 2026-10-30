@@ -1,3 +1,5 @@
+import { contextFlags } from './context-policy';
+import { catalogRejection } from '../motion/catalog';
 import type { StyleDNA } from '../core/style';
 import type { Emphasis } from '../core/brief';
 import type { SceneInstance, SceneKind, Segment, Word } from '../core/types';
@@ -222,6 +224,8 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     if (ordinalOf(ws[i]!.raw) !== null) continue;
     const num = parseNumberAt(tokens, i);
     if (!num) continue;
+    // A single number/label cannot safely represent negated, conditional or comparative claims.
+    if (contextFlags(sentenceOf.get(i)!.map(k => tokens[k]!).join(' ')).length) continue;
     const special = /[%$]/.test(num.value);
     const lastOfNumber = i + num.consumed - 1;
     const label = endsSentence(ws[lastOfNumber]!.raw) ? '' : phrase(ws, i + num.consumed, 5, 28).text.toLowerCase();
@@ -239,7 +243,10 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   }
 
   // título de abertura: não quando a fala abre com apresentação ou com um número
-  const title = openingTitleSkippingGreeting(ws.map((w) => ({ text: w.raw })));
+  const opening = (sentences[0] ?? []).map(k => tokens[k]!);
+  // Only a complete short sentence; never truncate a later negation or condition.
+  const title = opening.length <= 14 && opening.join(' ').length <= 60 && /[.!?…][\"”']?$/.test(opening.at(-1)?.trim() ?? '') && !contextFlags(opening.join(' ')).includes('reference')
+    ? openingTitleSkippingGreeting(opening.map(text => ({ text })), 14) : null;
   const opensWithNumber = numbers.some((n) => n.scene.start < 1);
   const opensWithName = !!nameAt && nameAt.start < 3;
   const opensWithQuestion = sentences.length > 0 && isQuestion(sentences[0]!.map((k) => tokens[k]!));
@@ -257,7 +264,7 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
     const ord = ordinalOf(ws[i]!.raw);
     if (ord === null) continue;
     const sent = sentenceOf.get(i)!;
-    const before = sent.slice(0, sent.indexOf(i)).map((k) => normalizeToken(tokens[k]!));
+    const before = sent.slice(0, sent.indexOf(i)).map((k) => qualifierKey(tokens[k]!));
     const atStart = before.every((t) => CONNECTORS.has(t)) && before.length <= 2;
     const prev = markers.at(-1);
     const continues = !!prev && prev.ord === ord - 1 && ws[i]!.start - ws[prev.i]!.start < 45;
@@ -325,9 +332,15 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   let lastKw = -Infinity;
   let lastZoom = -Infinity;
   for (const sent of sentences) {
+    // Negação/condição: só palavras ANTES do "não"/"se" podem ganhar destaque, para nunca destacar
+    // sozinha a parte negada ("não a intensidade") como se fosse afirmação (#8).
+    const flags = contextFlags(sent.map(k => tokens[k]!).join(' '));
+    const qualifier = flags.includes('negation') || flags.includes('conditional')
+      ? sent.findIndex((k) => QUALIFIERS.has(qualifierKey(tokens[k]!))) : -1;
+    const allowed = qualifier >= 0 ? sent.slice(0, qualifier) : sent;
     let best = -1;
     let bestScore = 0;
-    for (const k of sent) {
+    for (const k of allowed) {
       const sc = keywordScore(tokens[k]!);
       if (sc > bestScore) {
         best = k;
@@ -379,8 +392,12 @@ export function proposeScenes(words: Word[], segments: Segment[], style: StyleDN
   return [...progress, ...transitions, ...zooms, ...accepted, ...highlights, ...emojis]
     .filter((s) => s.end - s.start > 0.05 && !opts.forbid.has(s.kind))
     .sort((a, b) => a.start - b.start || a.kind.localeCompare(b.kind))
-    .map((s, i) => ({ ...s, id: `s${i + 1}` }) as SceneInstance);
+    .map((s, i) => ({ ...s, id: `s${i + 1}` }) as SceneInstance)
+    .filter((scene) => catalogRejection(scene, total) === null);
 }
+
+const QUALIFIERS = new Set(['nao', 'nunca', 'jamais', 'nem', 'sem', 'not', 'never', 'without', 'no', 'se', 'caso', 'talvez', 'if', 'unless']);
+const qualifierKey = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
 
 /** Escolhe as cenas de sobreposição respeitando prioridade, intervalo, orçamento e anti-repetição. */
 function placeOverlays(candidates: Candidate[], total: number, style: StyleDNA, boosted: ReadonlySet<SceneKind>): Draft[] {

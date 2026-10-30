@@ -51,7 +51,7 @@ describe('issue #102 QA: long source context, bounded calls, manual edits and so
     })) };
     const result = await discoverContextualMoments(words, 56, options, ai as any, new AbortController().signal, () => {});
     expect(ai.complete).toHaveBeenCalledTimes(1);
-    expect(result.warning?.key).toBe('CLIPES_IA_CONTEXTO');
+    expect(result.warning?.key).toBe('CLIPES_IA_SEM_ANCORA');
     expect(result.moments.length).toBeGreaterThan(0);
   });
 

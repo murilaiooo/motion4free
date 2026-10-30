@@ -94,3 +94,9 @@ Os bundles JavaScript contêm bibliotecas de terceiros: elas **não** recebem au
 Cenas, transições, estilos e a interface distribuída foram escritos para o Motion4Free (sem código, preset ou asset copiado em massa de Editonny, OpenReel ou Hypit). Esses repositórios são **referência de pesquisa**, não autorização para redistribuir todos seus recursos. O submódulo `tooling/vibe-coding-toolkit` é material de desenvolvimento versionado, não entra no `dist` do site. Músicas, SFX, B-roll e imagens de terceiros não estão empacotados na build auditada; mídias importadas pelo usuário mantêm direitos próprios.
 
 **Limite desta auditoria:** é uma verificação reproduzível de distribuição estática e licenças publicadas, não parecer jurídico nem prova de que todo download opcional de modelo externo será permitido para redistribuição futura. Os cartões oficiais de pesos Whisper (MIT) e Qwen (Apache-2.0) são citados acima, mas a licença específica de cada conversão ONNX/MLC deverá ser reconferida se os pesos passarem a ser hospedados pelo produto.
+## Nada mais
+Cenas, transições, estilos e a interface (layout, CSS, componentes) foram escritos do zero para o Motion4Free (sem código, preset ou asset copiado de outros projetos). As ideias de cenas do Editonny foram apenas referência de nomes de categorias (ver `docs/research/upstream-implementation/INDEX.md`).
+
+## Detector local de rostos (#54, implementação não testada)
+
+MediaPipe Tasks Vision 1.1.1: Apache-2.0, Google. BlazeFace short-range float16 v1: Apache-2.0 conforme [model card oficial](https://storage.googleapis.com/mediapipe-assets/MediaPipe%20BlazeFace%20Model%20Card%20(Short%20Range).pdf), página 1. Uso opcional e local; sem reconhecimento de identidade. Código do pacote é dependência sem modificação; WASM/modelo são baixados de URLs fixas. Ver [ADR-0029](decisions/0029-rastreamento-local-de-rostos.md) para proveniência, versões e limites. Licença Apache distribuída em `public/licencas-rostos.txt`.

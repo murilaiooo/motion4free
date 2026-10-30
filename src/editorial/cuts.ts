@@ -16,11 +16,14 @@ export const DEFAULT_CUTS: CutOptions = { padSec: 0.12, minKeepSec: 0.2 };
  * (transcrição diz que há fala ali), o silêncio é encolhido para fora da palavra.
  */
 export function planKeepSegments(durationSec: number, silences: TimeRange[], words: Word[], opts: CutOptions = DEFAULT_CUTS): Segment[] {
+  if (!Number.isFinite(durationSec) || durationSec <= 0) return [];
+  const protectedWords = words.filter((word) => Number.isFinite(word.start) && Number.isFinite(word.end) && word.end > word.start && word.end > 0 && word.start < durationSec);
   const cuts: TimeRange[] = [];
   for (const s of silences) {
-    let start = s.start + opts.padSec;
-    let end = s.end - opts.padSec;
-    for (const w of words) {
+    if (!Number.isFinite(s.start) || !Number.isFinite(s.end) || s.end <= s.start) continue;
+    let start = Math.max(0, s.start) + opts.padSec;
+    let end = Math.min(durationSec, s.end) - opts.padSec;
+    for (const w of protectedWords) {
       if (w.end <= start || w.start >= end) continue;
       // palavra dentro do silêncio: preserva a palavra e corta só o que sobra antes ou depois
       if (w.start - start >= end - w.end) end = Math.min(end, w.start - opts.padSec);
@@ -36,7 +39,7 @@ export function planKeepSegments(durationSec: number, silences: TimeRange[], wor
     cursor = Math.max(cursor, c.end);
   }
   if (cursor < durationSec) keep.push({ srcStart: cursor, srcEnd: durationSec });
-  return keep.filter((s) => s.srcEnd - s.srcStart >= opts.minKeepSec).map(round);
+  return keep.filter((segment) => segment.srcEnd - segment.srcStart >= opts.minKeepSec || protectedWords.some((word) => word.start < segment.srcEnd && word.end > segment.srcStart)).map(round).filter((segment) => segment.srcEnd > segment.srcStart);
 }
 
 function round(s: Segment): Segment {

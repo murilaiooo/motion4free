@@ -35,7 +35,7 @@ export interface ClipJob {
 
 const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 const isRange = (x: unknown): x is TimeRange => !!x && typeof x === 'object' && isNum((x as TimeRange).start) && isNum((x as TimeRange).end);
-const isWord = (x: unknown): x is Word => isRange(x) && typeof (x as Word).id === 'string' && typeof (x as Word).text === 'string';
+const isWord = (x: unknown): x is Word => isRange(x) && typeof (x as Word).id === 'string' && typeof (x as Word).text === 'string' && ((x as Word).needsReview === undefined || typeof (x as Word).needsReview === 'boolean');
 
 /** Lê e confere o JSON salvo; qualquer coisa fora do formato = null (a análise é refeita). */
 export function parseClipJob(text: string): ClipJob | null {

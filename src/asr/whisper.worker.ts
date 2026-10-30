@@ -95,6 +95,15 @@ async function load(id: AsrCandidateId): Promise<AutomaticSpeechRecognitionPipel
         networkFailures.push(new AppError(err.key, `[${source.name}] ${err.detail}`));
         continue;
       }
+      // Espelho do próprio site sem o Worker (preview, hospedagem estática ou espelho
+      // fora do ar) devolve a página do app (HTML) no lugar do modelo: o parse falha
+      // com SyntaxError e, sem este desvio, a escada inteira morria com M4F-302 sem
+      // nunca tentar a origem direta. Qualquer falha vinda do espelho tenta a próxima
+      // origem; só a falha na origem direta encerra a tentativa deste degrau.
+      if (source.name === 'site') {
+        networkFailures.push(new AppError('MODELO_REDE', `[${source.name}] ${describeError(err)}`));
+        continue;
+      }
       throw toAppError(err, 'MODELO_CARREGAR');
     }
   }

@@ -9,6 +9,8 @@ import { adjustCut, applyBrief, applyHook, applyRange, applyReferencePalette, ap
 import type { RangeRequest } from '../editorial/range-interpret';
 import { stylesOf } from '../editorial/ranges';
 import { addVersion, removeVersion, type PlanVersion } from '../core/versions';
+import { makeVariants } from '../editorial/variants';
+import { keywordScore } from '../editorial/detect';
 import { canRedo, canUndo, redo, undo, type History as EditHistory } from '../engine/history';
 import { commitEdit } from '../editorial/commands';
 import { outputDuration, outputToSource } from '../engine/timeline';
@@ -38,7 +40,7 @@ import { RangePanel } from './RangePanel';
 import { ChangesPanel, ReferencePicker, VersionsPanel, type CompareView } from './Panels';
 import { Transcript } from './Transcript';
 import { SemanticCuePanel } from './SemanticCuePanel';
-import { addSemanticWord, removeSemanticWord, reanchorSemanticWord, offsetSemanticWord, setSemanticWordEffect } from '../editorial/semantic-word-edits';
+import { suggestSemanticWords, addSemanticWord, removeSemanticWord, reanchorSemanticWord, offsetSemanticWord, setSemanticWordEffect } from '../editorial/semantic-word-edits';
 import { TopBar, type SaveState } from './TopBar';
 import { VERSION_LABEL, APP_BUILT_AT } from '../version';
 import { FormatSelector } from './FormatSelector';
@@ -55,6 +57,8 @@ import { KeyframePanel } from './KeyframePanel';
 import { MaskPanel } from './MaskPanel';
 import { planCues, toSrt } from '../editorial/subtitles';
 import { DEFAULT_SETUP, type CreativeSetup } from '../core/production';
+import { StoryboardReview } from './production/StoryboardReview';
+import { applyCreativeFinding } from '../editorial/creative-plan';
 import { evaluateDraft, reviseCreativeDirection } from '../editorial/production';
 import { CreativeSetupScreen } from './production/CreativeSetup';
 import { DraftReview } from './production/DraftReview';
@@ -75,6 +79,7 @@ export interface Session {
   warnings: AppError[];
   peaks: Float32Array | null;
   /** multi-clip: mapa de fontes por clipId e áudio combinado */
+  faceTracks?: import('../media/face-analysis').FaceTracks;
   clipSources?: Map<string, import('../media/sources').ClipSource> | null;
   clipAudios?: Map<string, DecodedAudio> | null;
   openedClips?: import('../media/multi').OpenedClip[] | null;
@@ -130,7 +135,7 @@ const TABS: { id: TabId; label: string; title: string; about: string; Icon: type
   { id: 'audio', label: 'Áudio', title: 'Música de fundo', about: 'Uma música por baixo da fala, com volume e abaixamento automático quando alguém fala.', Icon: Music },
   { id: 'ia', label: 'IA', title: 'Pedir com palavras', about: 'Diga o que quer mudar. Funciona sem IA; a IA é opcional.', Icon: Sparkles },
   { id: 'cores', label: 'Cores', title: 'Cores e marca', about: 'As cores do vídeo, ou as de uma imagem sua (logo, foto).', Icon: Palette },
-  { id: 'versoes', label: 'Versões', title: 'Versões', about: 'Guarde, compare e volte para versões do vídeo.', Icon: History },
+  { id: 'versoes', label: 'Versões', title: 'Versões e variações', about: 'Crie variações para comparar, guarde versões e volte quando quiser.', Icon: History },
 ];
 
 
@@ -161,6 +166,7 @@ interface EditorProps {
   session: Session;
   history: EditHistory<EditPlan>;
   onHistory: (h: EditHistory<EditPlan>) => void;
+  onFaceTracks: (tracks: import('../media/face-analysis').FaceTracks) => void;
   versions: PlanVersion[];
   onVersions: (v: PlanVersion[]) => void;
   disabled: boolean;
@@ -183,8 +189,14 @@ interface EditorProps {
   musicLoading?: boolean;
 }
 
-export function Editor({ session, history, onHistory, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, noticeCount = 0, projectMenu, initialReview = false, music = null, onPickMusic, musicLoading = false }: EditorProps) {
+export function Editor({ session, history, onHistory, onFaceTracks, versions, onVersions, disabled, saveState, asrModel, onReplaceFile, onAddClips, notices, noticeCount = 0, projectMenu, initialReview = false, music = null, onPickMusic, musicLoading = false }: EditorProps) {
   const plan = history.present;
+  const latestFaceContext = useRef({ history, session, onFaceTracks, onHistory });
+  latestFaceContext.current = { history, session, onFaceTracks, onHistory };
+  const [faceProgress, setFaceProgress] = useState<number | null>(null);
+  const [faceError, setFaceError] = useState<AppError | null>(null);
+  const faceAbort = useRef<AbortController | null>(null);
+  useEffect(() => () => { faceAbort.current?.abort(); }, [session.media]);
   const [reviewOpen, setReviewOpen] = useState(initialReview);
   const [directionDraft, setDirectionDraft] = useState<CreativeSetup | null>(null);
   const [tab, setTab] = useState<TabId>('modelos');
@@ -268,7 +280,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
   // Um player por vídeo aberto; o plano é trocado sem recriar.
   useEffect(() => {
-    const player = new PlanPlayer(session.media, shownAudio, canvasRef.current!, shownRef.current, 0.5, session.clipSources ?? undefined);
+    const player = new PlanPlayer(session.media, shownAudio, canvasRef.current!, shownRef.current, 0.5, session.clipSources ?? undefined, session.faceTracks);
     player.onTime = (t, p) => {
       setTime(t);
       setPlaying(p);
@@ -525,6 +537,20 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
     }
   };
 
+  /** #118: três variações do vídeo atual, guardadas como versões para comparar e escolher. */
+  const createVariants = (): { error: AppError | null; notes: string[] } => {
+    try {
+      const variants = makeVariants(plan, ctx);
+      let list = versions;
+      const now = new Date();
+      for (const v of variants) list = addVersion(list, v.name, v.plan, now);
+      onVersions(list);
+      return { error: null, notes: variants.map((v) => `${v.name}: ${v.why}`) };
+    } catch (err) {
+      return { error: toAppError(err), notes: [] };
+    }
+  };
+
   const saveVersion = (name: string): AppError | null => {
     try {
       onVersions(addVersion(versions, name, plan, new Date()));
@@ -533,6 +559,39 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       return toAppError(err);
     }
   };
+
+  async function trackFaces(target: string | null): Promise<void> {
+    if (faceAbort.current) return;
+    const ctrl = new AbortController();
+    faceAbort.current = ctrl;
+    setFaceProgress(0); setFaceError(null);
+    try {
+      const { analyzeFaces } = await import('../media/face-analysis');
+      const available = session.clipSources ?? new Map([[plan.clips[0]!.id, { id: plan.clips[0]!.id, video: session.media.video, width: session.media.width, height: session.media.height }]]);
+      const refs = plan.clips.filter((clip) => !target || clip.id === target);
+      const ids = new Set(refs.map((clip) => clip.id));
+      const sources = new Map([...available].filter(([id]) => ids.has(id)));
+      const result = await analyzeFaces(sources, new Map(refs.map((clip) => [clip.id, clip.duration])), ctrl.signal, setFaceProgress);
+      if (ctrl.signal.aborted) return;
+      const latest = latestFaceContext.current;
+      if (latest.session.media !== session.media) return;
+      const tracks = { ...latest.session.faceTracks };
+      for (const id of ids) delete tracks[id];
+      Object.assign(tracks, result.tracks);
+      if (result.withoutFaces.length) setFaceError(new AppError('ROSTOS_AUSENTES', result.withoutFaces.join(', ')));
+      const current = latest.history.present;
+      const nextHistory = commitEdit(latest.history, { ...current, clips: current.clips.map((clip) => {
+        if (!ids.has(clip.id)) return clip;
+        return { ...clip, framing: { ...(clip.framing ?? current.framing), mode: result.tracks[clip.id] ? 'smart' as const : 'fill' as const } };
+      }) });
+      latest.onFaceTracks(tracks);
+      latest.onHistory(nextHistory);
+    } catch (err) {
+      if (!ctrl.signal.aborted) setFaceError(toAppError(err, 'ROSTOS_FALHOU'));
+    } finally {
+      if (faceAbort.current === ctrl) { faceAbort.current = null; setFaceProgress(null); }
+    }
+  }
 
   const doUndo = useCallback(() => onHistory(undo(history)), [history, onHistory]);
   const doRedo = useCallback(() => onHistory(redo(history)), [history, onHistory]);
@@ -638,8 +697,8 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
       const available = multiSources ? new Set(multiSources.keys()) : new Set([plan.clips[0]!.id]);
       buildExportPreflight(plan, available, multiAudio !== null || (!!music && !!plan.music));
       const out = isMulti
-        ? await (await import('../media/export')).exportPlanMulti(multiSources!, multiAudio, plan, { music, onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
-        : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f), music);
+        ? await (await import('../media/export')).exportPlanMulti(multiSources!, multiAudio, plan, { music, faceTracks: session.faceTracks, onProgress: (f) => setExporting(f) }).then(r => ({ ...r, where: 'main' as const }))
+        : await exportInBackground(session.file, session.media, session.audio, plan, (f) => setExporting(f), music, session.faceTracks);
       if (result) URL.revokeObjectURL(result.url);
       const base = session.fileName.replace(/\.[^.]+$/, '');
       setResult({ url: URL.createObjectURL(out.blob), name: `${base}-${plan.style.id}-motion4free.mp4`, degraded: out.degraded, codec: out.codec, where: out.where, style: plan.style.name, fontWarning: out.fontWarning, emojiWarning: out.emojiWarning });
@@ -768,7 +827,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
                   <Captions size={14} aria-hidden /> Legenda feita com {asrModel}.
                 </p>
               )}
-              <SemanticCuePanel plan={plan} words={ctx.words} time={time} disabled={off} onAdd={word => apply(p => addSemanticWord(p,word))} onRemove={id => apply(p => removeSemanticWord(p,id))} onReanchor={(id,word)=>apply(p=>reanchorSemanticWord(p,id,word))} onOffset={(id,frames)=>apply(p=>offsetSemanticWord(p,id,frames))} onEffect={(id,effect)=>apply(p=>setSemanticWordEffect(p,id,effect))} onSeek={seek} />
+              <SemanticCuePanel plan={plan} words={ctx.words} time={time} disabled={off} onAdd={word => apply(p => addSemanticWord(p,word))} onRemove={id => apply(p => removeSemanticWord(p,id))} onReanchor={(id,word)=>apply(p=>reanchorSemanticWord(p,id,word))} onOffset={(id,frames)=>apply(p=>offsetSemanticWord(p,id,frames))} onEffect={(id,effect)=>apply(p=>setSemanticWordEffect(p,id,effect))} onSeek={seek} onSuggest={() => { const picked = suggestSemanticWords(plan, ctx.words, keywordScore); if (picked.length) apply(p => picked.reduce((acc, w) => addSemanticWord(acc, w), p)); return picked.length; }} />
               <Transcript words={ctx.words} captions={plan.captions} segments={plan.segments} time={time} playing={playing} onSeek={seek} onEdit={(id, text) => apply((p) => editCaptionText(p, id, text))} disabled={off} />
             </details>
             <details className="fold" open>
@@ -810,14 +869,15 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
               {originalOutputSpans(plan, session.sourceMaps).map((span, i) => <p className="hint" key={i}>{fmt(span.sourceStart)}–{fmt(span.sourceEnd)} no original → {fmt(span.outputStart)}–{fmt(span.outputEnd)} nesta edição.</p>)}
             </details>}
             <FormatSelector plan={plan} onChange={(n) => apply(() => n)} disabled={off || disabled} />
-            <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} disabled={off || disabled} />
+            <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} hasFaceTracks={!!session.faceTracks && Object.keys(session.faceTracks).length > 0} onTrackFaces={(target) => void trackFaces(target)} faceProgress={faceProgress} onCancelFaces={() => faceAbort.current?.abort()} disabled={off || disabled || faceProgress !== null} />
+            {faceError && <ErrorBox error={faceError} kind="warning" onDismiss={() => setFaceError(null)} />}
             <MaskPanel plan={plan} onApply={apply} disabled={off || disabled} />
           </div>
           <div role="tabpanel" id="panel-audio" aria-labelledby="tab-audio" hidden={tab !== 'audio'} className="stack">
             <AudioPanel plan={plan} loaded={!!music} loading={musicLoading} onPick={onPickMusic ?? (async () => { throw new AppError('MUSICA_NAO_SALVA', 'sem projeto'); })} onApply={apply} disabled={off || disabled} />
           </div>
           <div role="tabpanel" id="panel-ia" aria-labelledby="tab-ia" hidden={tab !== 'ia'} className="stack">
-            <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} disabled={off} />
+            <BriefPanel plan={plan} words={ctx.words} onBrief={(b) => apply((p) => applyBrief(p, ctx, b))} onHook={(h) => apply((p) => applyHook(p, ctx, h))} onStyle={(id) => apply((p) => applyStyle(p, ctx, id))} disabled={off} />
             <details className="fold" open data-testid="fold-gancho">
               <summary>Gancho: a frase que abre o vídeo</summary>
               <HookPanel plan={plan} words={ctx.words} onHook={(h) => apply((p) => applyHook(p, ctx, h))} disabled={off} />
@@ -868,6 +928,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
                 setView(v ? 'antes' : 'depois');
               }}
               onDelete={(v) => onVersions(removeVersion(versions, v.id))}
+              onVariants={createVariants}
               comparing={compareWith}
               disabled={off}
             />
@@ -956,6 +1017,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
 
       <aside className="inspector" ref={inspectorRef} aria-label="Detalhes">
         {reviewOpen && <DraftReview editorial={evaluateDraft(plan, ctx)} onCustomize={() => setReviewOpen(false)} onExport={() => void onExport()} onRevise={openDirection} disabled={disabled || off} />}
+        {reviewOpen && <StoryboardReview plan={plan} onSeek={seek} onApply={id => apply(p => applyCreativeFinding(p, id))} disabled={disabled || off} />}
         {!reviewOpen && plan.brief.production && <button className="sm" onClick={openDirection} disabled={off}>Direção criativa</button>}
         <div hidden={reviewOpen}>
         <h2 className="insp-title">Detalhes</h2>
@@ -1032,6 +1094,7 @@ export function Editor({ session, history, onHistory, versions, onVersions, disa
           </div>
         ) : activeSelection ? (
           <RangePanel
+            revision={plan}
             selection={activeSelection}
             range={range}
             total={total}
