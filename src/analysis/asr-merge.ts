@@ -87,7 +87,7 @@ export function toWords(raw: RawWord[]): Word[] {
 // ---------------------------------------------------------------------------------------------
 // Limpeza: alucinações típicas do Whisper
 
-/** Padrões conhecidos de alucinação. Fora do silêncio podem ser fala legítima: preservar e marcar para revisão. */
+/** Frases que o Whisper inventa no silêncio (créditos de legendas usadas no treino). Sempre saem. */
 const ALWAYS_HALLUCINATION: string[][] = [
   ['legendas', 'pela', 'comunidade', 'amaraorg'],
   ['legendas', 'pela', 'comunidade', 'amara', 'org'],
@@ -132,9 +132,8 @@ export function removeHallucinations(words: RawWord[], silences: TimeRange[]): R
   for (let i = 0; i < kept.length; i++) {
     for (const p of ALWAYS_HALLUCINATION) {
       if (!matchAt(norm, i, p)) continue;
-      const span = { start: kept[i]!.start, end: kept[i + p.length - 1]!.end };
-      const target = silentFractionOf(span, silences) >= 0.9 ? drop : review;
-      for (let k = 0; k < p.length; k++) target.add(i + k);
+      // Créditos de legendagem ("Legendas pela comunidade Amara.org") nunca são fala de quem grava: sempre saem.
+      for (let k = 0; k < p.length; k++) drop.add(i + k);
     }
     for (const p of SILENCE_HALLUCINATION) {
       if (!matchAt(norm, i, p)) continue;
