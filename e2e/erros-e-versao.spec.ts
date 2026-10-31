@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { pickVideos } from './ui';
 
 test('mostra a versão do app no rodapé', async ({ page }) => {
   await page.goto('/');
@@ -7,7 +8,7 @@ test('mostra a versão do app no rodapé', async ({ page }) => {
 
 test('falha ao baixar o modelo mostra código M4F-301 e ainda edita o vídeo', async ({ page }) => {
   await page.goto('/?asr=falha');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   const warning = page.getByTestId('warning-M4F-301');
   await expect(warning).toBeVisible({ timeout: 60_000 });
   await expect(warning).toContainText('huggingface.co');
@@ -17,6 +18,6 @@ test('falha ao baixar o modelo mostra código M4F-301 e ainda edita o vídeo', a
 
 test('arquivo que não é vídeo mostra código M4F-101', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles({ name: 'nota.mp4', mimeType: 'video/mp4', buffer: Buffer.from('isto não é um vídeo') });
+  await pickVideos(page, { name: 'nota.mp4', mimeType: 'video/mp4', buffer: Buffer.from('isto não é um vídeo') });
   await expect(page.getByTestId('error-M4F-101')).toBeVisible({ timeout: 30_000 });
 });

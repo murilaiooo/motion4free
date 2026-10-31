@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { tab } from './ui';
+import { tab, pickVideos } from './ui';
 
 const RED = 'e2e/fixtures/clip-red.webm';
 const BLUE = 'e2e/fixtures/clip-blue.webm';
@@ -30,7 +30,7 @@ for (const [format, width, height] of [
   test(`QA real: clipes horizontal+vertical em formato ${format} (${width}×${height}), com áudio no MP4`, async ({ page }, info) => {
     test.setTimeout(240_000);
     await page.goto('/?asr=vazio');
-    await page.getByTestId('file-input').setInputFiles([RED, BLUE]);
+    await pickVideos(page, [RED, BLUE]);
     await tab(page, 'Mídia');
     await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
     await page.getByTestId('format-select').selectOption(format);
@@ -47,7 +47,7 @@ for (const [format, width, height] of [
 test('QA real: arquivo sem áudio exporta vídeo válido sem adicionar trilha fictícia', async ({ page }, info) => {
   test.setTimeout(180_000);
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles(MUTE);
+  await pickVideos(page, MUTE);
   await tab(page, 'Mídia');
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   const out = await downloadMp4(page, info.outputPath('qa-no-audio.mp4'));
@@ -59,7 +59,7 @@ test('QA real: arquivo sem áudio exporta vídeo válido sem adicionar trilha fi
 test('QA real: primeiro vídeo removido preserva segundo após fechar e reabrir, exporta imagem+som corretos', async ({ page }, info) => {
   test.setTimeout(240_000);
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles([RED, BLUE]);
+  await pickVideos(page, [RED, BLUE]);
   await tab(page, 'Mídia');
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
   await page.getByTestId('clip-c1').getByRole('button', { name: 'Remover' }).click();
@@ -82,7 +82,7 @@ test('QA real: primeiro vídeo removido preserva segundo após fechar e reabrir,
 test('QA: trocas de formato são guardadas, sobrevivem ao reiniciar e ao desfazer', async ({ page }) => {
   test.setTimeout(150_000);
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles(RED);
+  await pickVideos(page, RED);
   await expect(page.getByTestId('format-select')).toBeVisible({ timeout: 90_000 });
   await page.getByTestId('format-select').selectOption('horizontal');
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 90_000 });
@@ -99,7 +99,7 @@ test('QA: um arquivo corrompido entre arquivos válidos não cancela o projeto n
   test.setTimeout(180_000);
   await page.goto('/?asr=vazio');
   const invalid = { name: 'defeituoso.mp4', mimeType: 'video/mp4', buffer: Buffer.from('isto nao e um video') };
-  await page.getByTestId('file-input').setInputFiles([
+  await pickVideos(page, [
     invalid,
     { name: 'clip-red.webm', mimeType: 'video/webm', buffer: readFileSync(RED) },
     { name: 'clip-blue.webm', mimeType: 'video/webm', buffer: readFileSync(BLUE) },

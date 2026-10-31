@@ -561,3 +561,10 @@
 .key-opacity input { flex: 1; min-width: 50px; }
 .key-list select { font-size: 12px; padding: 2px 4px; }
 .etl-key { position: absolute; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; background: #fff; border: 1px solid rgba(0, 0, 0, 0.6); transform: rotate(45deg); pointer-events: none; }
+.panel-cores { border-top: 1px solid var(--line); padding-top: var(--s-4); margin-top: var(--s-2); }
+.replace-video { border-top: 1px solid var(--line); padding-top: var(--s-4); display: grid; gap: var(--s-2); justify-items: start; }
+.status-keys-all { min-height: 24px; padding: 0 8px; font-size: inherit; margin-left: 4px; }
+.shortcut-list { display: grid; gap: 6px; margin: 0; }
+.shortcut-list > div { display: grid; grid-template-columns: 140px 1fr; gap: var(--s-3); align-items: center; }
+.shortcut-list dt { display: flex; gap: 4px; flex-wrap: wrap; }
+.shortcut-list dd { margin: 0; color: var(--text-2); }

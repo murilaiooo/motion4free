@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { pickVideos } from './ui';
 
 /**
  * Linha do tempo Edição (v0.17): dividir, apagar, copiar, recortar, colar, duplicar e mudar a ordem
@@ -8,7 +9,7 @@ const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
 async function openVideo(page: Page) {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 }
 
