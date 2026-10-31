@@ -21,6 +21,17 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.32.0 — 30/10/2026 — fluxos do usuário e polimento geral
+
+Pedido do responsável: repensar a ordem dos fluxos e onde fica cada opção, pensando como o usuário (ADR-0034).
+
+- **Primeira tela:** pergunta "O que você quer criar hoje?" com dois cartões grandes, cada um com exemplo animado e o próprio botão: **Editar meus vídeos** e **Cortar um vídeo longo em clipes**. "Meus projetos" logo abaixo. "Como funciona" segue o caminho escolhido (antes o modo Clipes mostrava os passos do editor). A linha técnica de transcrição saiu do caminho de edição.
+- **Vídeos primeiro, perguntas enquanto prepara:** escolher os vídeos já começa a transcrição; as perguntas aparecem ao mesmo tempo, com uma faixa de progresso no topo. A espera virou tempo útil. São 5 etapas em vez de 6: Destino, Visual, Legendas, Cortes (cortes + duração) e Pronto. Formatos extras só em "Outro destino".
+- **Quem volta só confirma:** depois da primeira vez, as perguntas abrem em "Usar as mesmas escolhas da última vez?", com "Alterar" em cada item.
+- **Editor mais limpo:** 7 abas na ordem de uso (Estilo, Legendas, Textos, Mídia, Música, Pedir, Versões); todas cabem em tela de notebook. Cores entrou em Estilo; emojis e formas entraram em Textos.
+- **Barra de cima:** sem "Apagar" vermelho ao lado do nome (agora no cartão do projeto, em Meus projetos, com confirmação) e sem "Trocar vídeo" (virou "Começar outro vídeo" na aba Mídia).
+- **Atalhos:** o rodapé mostra os 4 principais e um botão "Todos os atalhos" com a lista completa (antes a lista passava da largura da tela).
+
 ## v0.31.0 — 30/10/2026 — versão final: issues abertas
 
 Rodada que trabalhou todas as issues abertas. Traz para a versão publicada o trabalho que estava pronto, mas parado, na branch de consolidação, e acrescenta o que faltava para quem não é técnico.

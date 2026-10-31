@@ -71,6 +71,25 @@ const FAQ: [string, string][] = [
 
 export type LandingMode = 'editar' | 'clipes';
 
+/** Exemplo animado do modo Clipes: um vídeo longo vira três clipes verticais. */
+function LongToClipsDemo() {
+  return (
+    <span className="ltc">
+      <span className="ltc-long">
+        <i className="ltc-hit a" />
+        <i className="ltc-hit b" />
+        <i className="ltc-hit c" />
+        <i className="ltc-head" />
+      </span>
+      <span className="ltc-clips">
+        <i className="ltc-clip a"><b>1</b></i>
+        <i className="ltc-clip b"><b>2</b></i>
+        <i className="ltc-clip c"><b>3</b></i>
+      </span>
+    </span>
+  );
+}
+
 /** Modo Clipes: o app só trabalha com o arquivo (não baixa de links, ADR-0023); diz como consegui-lo. */
 function FileHelp() {
   return (
@@ -106,7 +125,6 @@ export function Landing({
   onMode,
   onLongFile,
   clipResume,
-  onStart,
 }: {
   onFile: (files: File[]) => void;
   busy: boolean;
@@ -123,9 +141,8 @@ export function Landing({
   onLongFile?: (file: File) => void;
   /** aviso "voltar aos clipes" quando há um trabalho de clipes aberto */
   clipResume?: ReactNode;
-  onStart?: () => void;
 }) {
-  const [over, setOver] = useState(false);
+  const [over, setOver] = useState<LandingMode | null>(null);
   useEffect(() => {
     if (!focusProjects) return;
     const heading = document.getElementById('projects-title');
@@ -135,22 +152,29 @@ export function Landing({
     heading.scrollIntoView({ block: 'start', behavior: 'instant' });
     onProjectsFocused?.();
   }, [focusProjects, projects, onProjectsFocused]);
-  // projeto salvo esperando o vídeo original: a entrada é sempre a do editor
+  // "Como funciona" acompanha o caminho escolhido (abas na própria seção)
   const clips = mode === 'clipes' && !pendingName && !!onLongFile;
   const all = listTemplates();
   const examples = SHOWCASE.map((id) => all.find((t) => t.id === id)).filter((t) => t !== undefined);
   const hero = examples[0];
-  const drop = (e: DragEvent) => {
-    e.preventDefault();
-    setOver(false);
-    const files = e.dataTransfer.files ? Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|webm|mkv)$/i)) : [];
-    if (!files.length || busy) return;
-    if (clips) onLongFile!(files[0]!);
-    else onFile(files);
-  };
+  const videosOf = (list: FileList | null) => (list ? Array.from(list).filter((f) => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|webm|mkv)$/i)) : []);
+  const dropOn = (kind: LandingMode) => ({
+    onDragOver: (e: DragEvent) => {
+      e.preventDefault();
+      setOver(kind);
+    },
+    onDragLeave: () => setOver(null),
+    onDrop: (e: DragEvent) => {
+      e.preventDefault();
+      setOver(null);
+      const files = videosOf(e.dataTransfer.files);
+      if (!files.length || busy) return;
+      if (kind === 'clipes' && onLongFile) onLongFile(files[0]!);
+      else onFile(files);
+    },
+  });
   const toStart = () => {
-    if (!clips && !pendingName && onStart) { onStart(); return; }
-    document.getElementById('comecar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('comecar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     document.querySelector<HTMLInputElement>('#comecar input[type="file"]')?.focus();
   };
   return (
@@ -158,145 +182,94 @@ export function Landing({
       <Header onStorage={onStorage} />
 
       <main>
-        <section className="lp-hero">
-          <div className="lp-hero-copy">
-            {onMode && !pendingName && (
-              <div className="lp-modes" role="group" aria-label="O que você quer fazer">
-                <button aria-pressed={!clips} onClick={() => onMode('editar')} disabled={busy} data-testid="mode-edit">
-                  <WandSparkles size={16} aria-hidden /> Editar meus vídeos
-                </button>
-                <button aria-pressed={clips} onClick={() => onMode('clipes')} disabled={busy} data-testid="mode-clips">
-                  <Scissors size={16} aria-hidden /> Clipes de vídeo longo
-                </button>
-              </div>
-            )}
+        <section className="lp-start" id="comecar">
+          <div className="lp-start-intro">
             <p className="lp-kicker">
-              <span className="lp-dot" aria-hidden /> {clips ? 'Criador de clipes · vídeos longos · no navegador' : 'Editor de vídeo para Reels · no navegador'}
+              <span className="lp-dot" aria-hidden /> Editor de vídeo no navegador · grátis · sem cadastro
             </p>
-            {clips ? (
-              <h1>
-                Um vídeo longo.
-                <br />
-                <em>Vários clipes prontos.</em>
-              </h1>
-            ) : (
-              <h1>
-                Comece com uma ideia.
-                <br />
-                <em>Crie do seu jeito.</em>
-              </h1>
-            )}
+            <h1>
+              {pendingName ? 'Continue seu projeto.' : <>O que você quer <em>criar hoje?</em></>}
+            </h1>
             <p className="lp-lead">
-              {clips
-                ? 'Solte um podcast, aula, live ou entrevista de até 2 horas. O Motion4Free transcreve tudo, acha os melhores momentos e entrega cada corte vertical, com legenda e animação, pronto para postar. Você revê, ajusta e baixa.'
-                : 'Defina o que você quer criar. Depois escolha seus vídeos e receba um primeiro rascunho com cortes, legendas e sua identidade. Assista, personalize ou exporte. Tudo no seu navegador.'}
+              {pendingName
+                ? 'Suas edições estão guardadas. Só falta escolher de novo o vídeo original.'
+                : 'Escolha um caminho e solte seus arquivos. O app faz o trabalho pesado sozinho e você ajusta o que quiser depois.'}
             </p>
+          </div>
 
-            {notices}
-            {clipResume}
+          {notices}
+          {clipResume}
 
-            {!clips && !pendingName && onStart && <div className="lp-creative-start"><button className="primary" onClick={onStart} disabled={busy} data-testid="start-creative"><WandSparkles size={18} aria-hidden /> Começar meu vídeo</button><p>Intenção → direção criativa → seus vídeos → primeiro rascunho</p></div>}
-
-            <div className="lp-quick">
-              {!clips && !pendingName && onStart && <p className="lp-quick-label">Ou solte os vídeos direto aqui: o app usa as últimas escolhas que você fez (ou as escolhas padrão).</p>}
-
-            <label
-              id="comecar"
-              className={`dropzone lp-drop ${over ? 'over' : ''} ${busy ? 'disabled' : ''}`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setOver(true);
-              }}
-              onDragLeave={() => setOver(false)}
-              onDrop={drop}
-            >
-              <input
-                className="sr-only"
-                type="file"
-                accept="video/*"
-                multiple={!clips}
-                disabled={busy}
-                data-testid={clips ? 'long-file-input' : 'file-input'}
-                onChange={(e) => {
-                  const files = e.target.files ? Array.from(e.target.files) : [];
-                  if (files.length) {
-                    if (clips) onLongFile!(files[0]!);
-                    else onFile(files);
-                  }
-                  e.currentTarget.value = '';
-                }}
-              />
-              <span className="drop-icon" aria-hidden>
-                {pendingName ? <FileVideo size={22} /> : <Upload size={22} />}
-              </span>
+          {pendingName ? (
+            <label className={`dropzone lp-drop ${over ? 'over' : ''} ${busy ? 'disabled' : ''}`} {...dropOn('editar')}>
+              <input className="sr-only" type="file" accept="video/*" multiple disabled={busy} data-testid="file-input" onChange={(e) => { const files = e.target.files ? Array.from(e.target.files) : []; if (files.length) onFile(files); e.currentTarget.value = ''; }} />
+              <span className="drop-icon" aria-hidden><FileVideo size={22} /></span>
               <span className="lp-drop-text">
-                <span className="drop-title">{clips ? 'Escolher vídeo longo' : pendingName ? (pendingClipCount ? (pendingClipCount === 1 ? 'Selecione novamente o vídeo original deste projeto' : `Selecione novamente os ${pendingClipCount} vídeos originais`) : `Escolha de novo o vídeo original (${pendingName})`) : 'Escolher vídeos'}</span>
-                <span className="drop-sub">{clips ? 'ou arraste aqui · de 2 min a 2 horas · MP4, MOV, WebM · use vídeos seus ou com autorização' : 'ou arraste aqui · até 30 clipes de até 3 min · MP4, MOV, WebM'}</span>
+                <span className="drop-title">{pendingClipCount ? (pendingClipCount === 1 ? 'Selecione novamente o vídeo original deste projeto' : `Selecione novamente os ${pendingClipCount} vídeos originais`) : `Escolha de novo o vídeo original (${pendingName})`}</span>
+                <span className="drop-sub">ou arraste aqui</span>
               </span>
             </label>
-            </div>
-
-            {clips && <FileHelp />}
-            {options}
-
-            <ul className="lp-facts">
-              <li>
-                <ShieldCheck size={15} aria-hidden /> O vídeo não sai do aparelho
-              </li>
-              <li>
-                <Check size={15} aria-hidden /> Grátis, sem cadastro
-              </li>
-              <li>
-                <Check size={15} aria-hidden /> Sem marca d’água
-              </li>
-            </ul>
-          </div>
-
-          <div className="lp-hero-art" aria-label="Como o editor se parece">
-            <div className="lp-window">
-              <div className="lp-window-bar" aria-hidden>
-                <i />
-                <i />
-                <i />
-                <span>meu-reels.mp4</span>
-              </div>
-              <div className="lp-window-body">
-                <div className="lp-rail" aria-hidden>
-                  {['Modelos', 'Texto', 'Legendas', 'Mídia', 'IA'].map((x, i) => (
-                    <span key={x} className={i === 2 ? 'on' : ''}>
-                      {x}
+          ) : (
+            <div className="lp-paths">
+              <article className={`lp-path ${over === 'editar' ? 'over' : ''}`} data-testid="path-edit">
+                <label className={`lp-path-main ${busy ? 'disabled' : ''}`} {...dropOn('editar')}>
+                  <input className="sr-only" type="file" accept="video/*" multiple disabled={busy} data-testid="file-input" onChange={(e) => { const files = e.target.files ? Array.from(e.target.files) : []; if (files.length) onFile(files); e.currentTarget.value = ''; }} />
+                  <span className="lp-path-art" aria-hidden>{hero && <TemplateThumb styleId={hero.id} t={4.6} width={150} playing />}</span>
+                  <span className="lp-path-body">
+                    <span className="lp-path-tag"><WandSparkles size={14} aria-hidden /> Para Reels, TikTok e Shorts</span>
+                    <strong>Editar meus vídeos</strong>
+                    <span className="lp-path-text">Um vídeo ou vários clipes curtos viram um vídeo pronto: pausas cortadas, legenda palavra por palavra e animação.</span>
+                    <ol className="lp-path-steps">
+                      <li>Escolha os vídeos</li>
+                      <li>Responda 4 perguntas enquanto o app prepara</li>
+                      <li>Assista, ajuste e baixe o MP4</li>
+                    </ol>
+                    <span className="btn primary lp-path-btn"><Upload size={17} aria-hidden /> Escolher vídeos</span>
+                    <span className="lp-path-sub">ou arraste aqui · até 30 clipes de até 3 min · MP4, MOV, WebM</span>
+                  </span>
+                </label>
+              </article>
+              {onLongFile && (
+                <article className={`lp-path ${over === 'clipes' ? 'over' : ''}`} data-testid="path-clips">
+                  <label className={`lp-path-main ${busy ? 'disabled' : ''}`} {...dropOn('clipes')}>
+                    <input className="sr-only" type="file" accept="video/*" disabled={busy} data-testid="long-file-input" onChange={(e) => { const file = e.target.files?.[0]; if (file) onLongFile(file); e.currentTarget.value = ''; }} />
+                    <span className="lp-path-art" aria-hidden><LongToClipsDemo /></span>
+                    <span className="lp-path-body">
+                      <span className="lp-path-tag"><Scissors size={14} aria-hidden /> Para podcast, aula, live</span>
+                      <strong>Cortar um vídeo longo em clipes</strong>
+                      <span className="lp-path-text">O app ouve o vídeo inteiro, acha os melhores momentos e entrega cada corte vertical com legenda.</span>
+                      <ol className="lp-path-steps">
+                        <li>Escolha um vídeo de 2 min a 2 h</li>
+                        <li>O app encontra os melhores trechos</li>
+                        <li>Revise, ajuste e baixe os clipes</li>
+                      </ol>
+                      <span className="btn primary lp-path-btn"><Upload size={17} aria-hidden /> Escolher vídeo longo</span>
+                      <span className="lp-path-sub">ou arraste aqui · use vídeos seus ou com autorização</span>
                     </span>
-                  ))}
-                </div>
-                <div className="lp-stage">{hero && <TemplateThumb styleId={hero.id} t={4.6} width={220} playing />}</div>
-              </div>
-              <div className="lp-tracks" aria-hidden>
-                {(
-                  [
-                    ['Texto', 'c1', [[6, 22], [58, 16]]],
-                    ['Legendas', 'c2', [0, 1, 2, 3, 4, 5, 6].map((i) => [2 + i * 14, 12])],
-                    ['Vídeo', 'c3', [[0, 32], [33, 28], [62, 38]]],
-                    ['Áudio', 'c4', [[0, 100]]],
-                  ] as [string, string, number[][]][]
-                ).map(([name, cls, bars]) => (
-                  <div key={name} className="lp-track">
-                    <b>{name}</b>
-                    <div className="lp-lane">
-                      {bars.map(([l, w]) => (
-                        <span key={l} className={cls} style={{ left: `${l}%`, width: `${w}%` }} />
-                      ))}
-                    </div>
+                  </label>
+                  <div className="lp-path-extra">
+                    {options}
+                    <details className="lp-path-help">
+                      <summary>Onde conseguir o arquivo do vídeo?</summary>
+                      <FileHelp />
+                    </details>
                   </div>
-                ))}
-                <div className="lp-track lp-head-track">
-                  <b />
-                  <div className="lp-lane">
-                    <i className="lp-head" />
-                  </div>
-                </div>
-              </div>
+                </article>
+              )}
             </div>
-          </div>
+          )}
+
+          <ul className="lp-facts">
+            <li>
+              <ShieldCheck size={15} aria-hidden /> O vídeo não sai do aparelho
+            </li>
+            <li>
+              <Check size={15} aria-hidden /> Grátis, sem cadastro
+            </li>
+            <li>
+              <Check size={15} aria-hidden /> Sem marca d’água
+            </li>
+          </ul>
         </section>
 
         {projects && <section className="lp-section lp-projects">{projects}</section>}
@@ -305,21 +278,48 @@ export function Landing({
           <header className="lp-head-row">
             <span className="lp-num">01</span>
             <h2>Como funciona</h2>
+            {onMode && !pendingName && (
+              <div className="lp-modes" role="group" aria-label="Ver como funciona">
+                <button aria-pressed={!clips} onClick={() => onMode('editar')} data-testid="mode-edit">
+                  <WandSparkles size={16} aria-hidden /> Editar meus vídeos
+                </button>
+                <button aria-pressed={clips} onClick={() => onMode('clipes')} data-testid="mode-clips">
+                  <Scissors size={16} aria-hidden /> Vídeo longo em clipes
+                </button>
+              </div>
+            )}
           </header>
-          <ol className="lp-steps">
-            <li>
-              <b>Conte sua intenção</b>
-              <p>Escolha propósito, formato, estilo e ritmo. O briefing orienta a edição; você pode rever as escolhas.</p>
-            </li>
-            <li>
-              <b>Escolha seus vídeos</b>
-              <p>O app transcreve e monta um rascunho com cortes e recursos compatíveis com sua direção. Nada da mídia é enviado.</p>
-            </li>
-            <li>
-              <b>Assista, personalize ou exporte</b>
-              <p>Confira a prévia e as observações. Baixe o MP4 ou refine cada detalhe no editor, com desfazer e versões.</p>
-            </li>
-          </ol>
+          {clips ? (
+            <ol className="lp-steps">
+              <li>
+                <b>Solte o vídeo longo</b>
+                <p>Podcast, aula, live ou entrevista de 2 minutos a 2 horas. O arquivo fica no seu computador.</p>
+              </li>
+              <li>
+                <b>O app acha os melhores momentos</b>
+                <p>Transcreve tudo, mede a energia da voz e sugere os trechos com começo, meio e fim, cada um com nota e motivo.</p>
+              </li>
+              <li>
+                <b>Revise e baixe os clipes</b>
+                <p>Escolha a duração, ajuste o começo e o fim, baixe um por um ou todos de uma vez, ou abra um clipe no editor.</p>
+              </li>
+            </ol>
+          ) : (
+            <ol className="lp-steps">
+              <li>
+                <b>Escolha seus vídeos</b>
+                <p>Um vídeo ou até 30 clipes curtos. O app começa a preparar na hora, sem enviar nada para a internet.</p>
+              </li>
+              <li>
+                <b>Responda enquanto ele prepara</b>
+                <p>Onde vai publicar, visual, legendas e cortes, com exemplos animados. Na próxima vez, é só confirmar.</p>
+              </li>
+              <li>
+                <b>Assista, ajuste e baixe</b>
+                <p>O primeiro rascunho abre pronto. Baixe o MP4 ou mude qualquer detalhe no editor, com desfazer e versões.</p>
+              </li>
+            </ol>
+          )}
         </section>
 
         <section className="lp-section">
@@ -395,9 +395,9 @@ export function Landing({
         </section>
 
         <section className="lp-cta">
-          <h2>Seu próximo Reels em poucos minutos.</h2>
+          <h2>Seu próximo vídeo em poucos minutos.</h2>
           <button className="primary lp-cta-btn" onClick={toStart} disabled={busy}>
-            <Upload size={17} aria-hidden /> Escolher vídeos
+            <Upload size={17} aria-hidden /> Começar agora
           </button>
         </section>
       </main>

@@ -23,3 +23,22 @@ export function saveSetup(setup: CreativeSetup): boolean {
     return false;
   }
 }
+
+/** v0.32: quem já concluiu as perguntas uma vez começa no resumo ("usar as mesmas escolhas"). */
+export const SETUP_DONE_KEY = 'm4f.creative-setup.done';
+
+export function hasCompletedSetup(): boolean {
+  try {
+    return localStorage.getItem(SETUP_DONE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markSetupCompleted(): void {
+  try {
+    localStorage.setItem(SETUP_DONE_KEY, '1');
+  } catch {
+    // sem armazenamento: só perde o atalho na próxima vez
+  }
+}

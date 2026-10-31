@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { editCaption, tab } from './ui';
+import { editCaption, tab, pickVideos } from './ui';
 
 /** v0.11: Meus projetos, menu do projeto (fechar/apagar) e tela Armazenamento. */
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
 async function newVideo(page: Page) {
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 30_000 });
 }
@@ -124,11 +124,13 @@ test('dois projetos: lista, renomeia, apaga um, armazenamento muda, apaga modelo
   expect(left).toEqual({ opfs: [], caches: [] });
 });
 
-test('apagar o projeto aberto pelo menu do editor volta para a primeira tela', async ({ page }) => {
+test('v0.32: apagar não fica no topo do editor; apaga-se pelo cartão em Meus projetos', async ({ page }) => {
   await page.goto('/');
   await newVideo(page);
   await expect(page.getByTestId('file-input-replace')).toBeAttached();
-  await page.getByTestId('menu-delete').click();
+  await expect(page.getByTestId('menu-delete')).toHaveCount(0);
+  await page.getByTestId('menu-close').click();
+  await page.getByTestId('project-delete').click();
   const dialog = page.getByTestId('delete-dialog');
   await expect(dialog).toContainText('Apagar o projeto "fala-com-pausas"?');
   await expect(page.getByTestId('delete-dialog-size')).toHaveText(/\d+(,\d)? (KB|MB)/);
@@ -201,7 +203,7 @@ test('pouco espaço: aviso M4F-606 antes de abrir o vídeo, com "Continuar mesmo
     storage.estimate = async () => ({ usage: 0, quota: 1000 });
   });
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   const warning = page.getByTestId('warning-M4F-606');
   await expect(warning).toBeVisible({ timeout: 30_000 });
   await expect(warning).toContainText('precisa de cerca de');
@@ -210,5 +212,6 @@ test('pouco espaço: aviso M4F-606 antes de abrir o vídeo, com "Continuar mesmo
   await expect(page.getByTestId('storage-screen')).toBeVisible();
   await closeStorage(page);
   await page.getByTestId('space-continue').click();
+  await page.getByTestId('setup-skip').click();
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 });

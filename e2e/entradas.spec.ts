@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
-import { tab } from './ui';
+import { tab, pickVideos } from './ui';
 
 /** Entradas estranhas (v0.7): vídeo sem som, vídeo sem fala, vídeo de 1 segundo. */
 
 async function open(page: Page, file: string, query = '') {
   await page.goto(`/${query}`);
-  await page.getByTestId('file-input').setInputFiles(file);
+  await pickVideos(page, file);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 }
 

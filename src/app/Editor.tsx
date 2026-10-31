@@ -1,7 +1,7 @@
 import { originalOutputSpans } from '../editorial/clip-source-map';
 import { planSummary } from '../core/text';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Captions, FileText, Music, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Clapperboard, MousePointerClick, Palette, Smile, Type, Pause, Play, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Captions, FileText, Music, ChevronRight, Copy, CopyPlus, Download, Film, History, LayoutTemplate, Clapperboard, MousePointerClick, Type, Pause, Play, Replace, Scan, Scissors, SkipBack, Sparkles, SquareDashedMousePointer, SquareSplitHorizontal, Trash2, X } from 'lucide-react';
 import { AppError, toAppError } from '../core/errors';
 import type { EditPlan, Segment, TimeRange } from '../core/types';
 import { PRESETS } from '../core/presets';
@@ -126,15 +126,35 @@ const fmt1 = (s: number) => `${s.toFixed(1).replace('.', ',')} s`;
 
 type TabId = 'modelos' | 'texto' | 'elementos' | 'legendas' | 'midia' | 'audio' | 'ia' | 'cores' | 'versoes';
 /** Menu da esquerda (v0.19), na ordem de CapCut/Canva: o visual pronto, o que se adiciona, a mídia, a IA e o histórico. */
+/** Todos os atalhos do editor (v0.32: o rodapé mostra os principais; a lista completa abre num botão). */
+const SHORTCUTS: [string[], string][] = [
+  [['Espaço'], 'Tocar ou pausar'],
+  [['J'], 'Voltar 1 segundo'],
+  [['L'], 'Avançar 1 segundo'],
+  [['←', '→'], 'Um quadro para trás ou para frente'],
+  [['S'], 'Dividir o trecho na agulha'],
+  [['Ctrl', 'C'], 'Copiar'],
+  [['Ctrl', 'X'], 'Recortar'],
+  [['Ctrl', 'V'], 'Colar'],
+  [['Del'], 'Apagar o que está selecionado'],
+  [['Ctrl', 'Z'], 'Desfazer'],
+  [['Ctrl', 'Shift', 'Z'], 'Refazer'],
+  [['Esc'], 'Tirar a seleção'],
+  [['+', '−'], 'Aproximar ou afastar a linha do tempo'],
+  [['0'], 'Ver a linha do tempo inteira'],
+];
+
+/**
+ * v0.32: 7 abas na ordem em que o usuário costuma mexer (antes eram 9 e a última sumia em tela de notebook).
+ * Cores entrou em Estilo e Elementos entrou em Textos: cada aba responde a uma pergunta só.
+ */
 const TABS: { id: TabId; label: string; title: string; about: string; Icon: typeof Play }[] = [
-  { id: 'modelos', label: 'Modelos', title: 'Modelos', about: 'O visual do vídeo inteiro: letras, cores e animações. Um clique aplica; dá para desfazer.', Icon: LayoutTemplate },
-  { id: 'texto', label: 'Texto', title: 'Texto', about: 'Títulos e frases na tela, onde está a agulha.', Icon: Type },
-  { id: 'elementos', label: 'Elementos', title: 'Elementos', about: 'Emojis, setas e formas para chamar atenção.', Icon: Smile },
+  { id: 'modelos', label: 'Estilo', title: 'Estilo do vídeo', about: 'O visual do vídeo inteiro: modelo, letras, animações e cores. Um clique aplica; dá para desfazer.', Icon: LayoutTemplate },
   { id: 'legendas', label: 'Legendas', title: 'Legendas', about: 'Posição, tamanho e cores das legendas, e o texto falado para corrigir.', Icon: Captions },
+  { id: 'texto', label: 'Textos', title: 'Textos e emojis', about: 'Títulos, frases, emojis, setas e formas. Entram onde está a agulha da linha do tempo.', Icon: Type },
   { id: 'midia', label: 'Mídia', title: 'Mídia e formato', about: 'Seus vídeos, o formato de saída (Reels, quadrado, horizontal) e o enquadramento.', Icon: Clapperboard },
-  { id: 'audio', label: 'Áudio', title: 'Música de fundo', about: 'Uma música por baixo da fala, com volume e abaixamento automático quando alguém fala.', Icon: Music },
-  { id: 'ia', label: 'IA', title: 'Pedir com palavras', about: 'Diga o que quer mudar. Funciona sem IA; a IA é opcional.', Icon: Sparkles },
-  { id: 'cores', label: 'Cores', title: 'Cores e marca', about: 'As cores do vídeo, ou as de uma imagem sua (logo, foto).', Icon: Palette },
+  { id: 'audio', label: 'Música', title: 'Música de fundo', about: 'Uma música por baixo da fala, com volume e abaixamento automático quando alguém fala.', Icon: Music },
+  { id: 'ia', label: 'Pedir', title: 'Pedir com palavras', about: 'Escreva o que quer mudar, como “legenda amarela e mais rápido”. Funciona sem IA; a IA é opcional.', Icon: Sparkles },
   { id: 'versoes', label: 'Versões', title: 'Versões e variações', about: 'Crie variações para comparar, guarde versões e volte quando quiser.', Icon: History },
 ];
 
@@ -173,7 +193,7 @@ interface EditorProps {
   saveState: SaveState;
   /** modelo que fez a legenda (v0.8), quando o vídeo acabou de ser transcrito */
   asrModel?: string | null;
-  onReplaceFile: (f: File) => void;
+  onReplaceFile: (f: File | File[]) => void;
   onAddClips: (files: File[]) => void;
   /** avisos do app (projeto, transcrição, sem áudio…) */
   notices: ReactNode;
@@ -200,6 +220,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
   const [reviewOpen, setReviewOpen] = useState(initialReview);
   const [directionDraft, setDirectionDraft] = useState<CreativeSetup | null>(null);
   const [tab, setTab] = useState<TabId>('modelos');
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [selection, setSelection] = useState<TimeRange | null>(null);
   const [selectedRange, setSelectedRange] = useState<string | null>(null);
   const [compareWith, setCompareWith] = useState<string | null>(null);
@@ -774,7 +795,6 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
         canRedo={canRedo(history)}
         onUndo={doUndo}
         onRedo={doRedo}
-        onReplaceFile={onReplaceFile}
         busy={disabled || off}
         onExport={() => void onExport()}
         exporting={exporting}
@@ -809,11 +829,14 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
               </a>
             </p>
           </div>
-          <div role="tabpanel" id="panel-texto" aria-labelledby="tab-texto" hidden={tab !== 'texto'}>
-            <TextPanel onAdd={addAt} disabled={off} />
-          </div>
-          <div role="tabpanel" id="panel-elementos" aria-labelledby="tab-elementos" hidden={tab !== 'elementos'}>
-            <ElementsPanel onAdd={addAt} disabled={off} />
+          <div role="tabpanel" id="panel-texto" aria-labelledby="tab-texto" hidden={tab !== 'texto'} className="stack">
+            <section>
+              <h3 className="section-title">Textos</h3>
+              <TextPanel onAdd={addAt} disabled={off} />
+            </section>
+            <section id="panel-elementos">
+              <ElementsPanel onAdd={addAt} disabled={off} />
+            </section>
           </div>
           <div role="tabpanel" id="panel-legendas" aria-labelledby="tab-legendas" hidden={tab !== 'legendas'} className="stack">
             <details className="fold" open>
@@ -869,9 +892,18 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
               {originalOutputSpans(plan, session.sourceMaps).map((span, i) => <p className="hint" key={i}>{fmt(span.sourceStart)}–{fmt(span.sourceEnd)} no original → {fmt(span.outputStart)}–{fmt(span.outputEnd)} nesta edição.</p>)}
             </details>}
             <FormatSelector plan={plan} onChange={(n) => apply(() => n)} disabled={off || disabled} />
+
             <FramingPanel plan={plan} multi={!!session.clipSources && session.clipSources.size > 0} onChange={(n) => apply(() => n)} hasFaceTracks={!!session.faceTracks && Object.keys(session.faceTracks).length > 0} onTrackFaces={(target) => void trackFaces(target)} faceProgress={faceProgress} onCancelFaces={() => faceAbort.current?.abort()} disabled={off || disabled || faceProgress !== null} />
             {faceError && <ErrorBox error={faceError} kind="warning" onDismiss={() => setFaceError(null)} />}
             <MaskPanel plan={plan} onApply={apply} disabled={off || disabled} />
+            <section className="replace-video">
+              <h3 className="section-title">Começar outro vídeo</h3>
+              <p className="hint">Abre um projeto novo com outros vídeos. Este projeto continua salvo em Meus projetos.</p>
+              <label className={`btn sm ${off || disabled ? 'disabled' : ''}`}>
+                <Replace size={14} aria-hidden /> Escolher outros vídeos
+                <input className="sr-only" type="file" accept="video/*" multiple disabled={off || disabled} data-testid="file-input-replace" aria-label="Começar outro vídeo (projeto novo; este continua salvo em Meus projetos)" onChange={(e) => { const files = e.target.files ? Array.from(e.target.files) : []; if (files.length) onReplaceFile(files); e.currentTarget.value = ''; }} />
+              </label>
+            </section>
           </div>
           <div role="tabpanel" id="panel-audio" aria-labelledby="tab-audio" hidden={tab !== 'audio'} className="stack">
             <AudioPanel plan={plan} loaded={!!music} loading={musicLoading} onPick={onPickMusic ?? (async () => { throw new AppError('MUSICA_NAO_SALVA', 'sem projeto'); })} onApply={apply} disabled={off || disabled} />
@@ -933,7 +965,8 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
               disabled={off}
             />
           </div>
-          <div role="tabpanel" id="panel-cores" aria-labelledby="tab-cores" hidden={tab !== 'cores'} className="stack">
+          <div id="panel-cores" hidden={tab !== 'modelos'} className="stack panel-cores">
+            <h3 className="section-title">Cores e marca</h3>
             <div className="palette-now" aria-label="Cores atuais do vídeo">
               {[
                 ['Texto', P.text],
@@ -1212,13 +1245,17 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
           Motion4Free {VERSION_LABEL}
         </span>
         <span className="status-keys" aria-label="Atalhos de teclado">
-          <span className="kbd">Espaço</span> tocar/pausar <span className="kbd">J</span>
-          <span className="kbd">L</span> −1 s/+1 s <span className="kbd">←</span>
-          <span className="kbd">→</span> um quadro <span className="kbd">S</span> dividir <span className="kbd">Ctrl</span>+<span className="kbd">C</span>/<span className="kbd">X</span>/<span className="kbd">V</span> copiar/recortar/colar <span className="kbd">Del</span> apagar <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer <span className="kbd">Esc</span> tirar seleção <span className="kbd">+</span><span className="kbd">−</span><span className="kbd">0</span> zoom
+          <span className="kbd">Espaço</span> tocar/pausar <span className="kbd">S</span> dividir <span className="kbd">Del</span> apagar <span className="kbd">Ctrl</span>+<span className="kbd">Z</span> desfazer
+          <button type="button" className="ghost sm status-keys-all" onClick={() => setShortcutsOpen(true)} data-testid="shortcuts-open">Todos os atalhos</button>
         </span>
         <span className="status-privacy" data-testid="status-privacy">{ai.mode === 'provedor' && ai.provider ? `Vídeo no seu aparelho · pedidos por texto vão para ${PROVIDERS[ai.provider].name}` : 'Tudo no seu aparelho · nada é enviado'}</span>
       </footer>
 
+      {shortcutsOpen && <Dialog title="Atalhos de teclado" onClose={() => setShortcutsOpen(false)} testId="shortcuts-dialog">
+        <dl className="shortcut-list">
+          {SHORTCUTS.map(([keys, what]) => <div key={what}><dt>{keys.map((k, i) => <span key={i} className="kbd">{k}</span>)}</dt><dd>{what}</dd></div>)}
+        </dl>
+      </Dialog>}
       {directionDraft && <Dialog title="Rever direção criativa" onClose={() => setDirectionDraft(null)} wide testId="direction-dialog"><div className="direction-dialog"><CreativeSetupScreen revision value={directionDraft} onChange={setDirectionDraft} onBack={() => setDirectionDraft(null)} onComplete={(setup) => { apply(currentPlan => reviseCreativeDirection(currentPlan, ctx, setup)); setDirectionDraft(null); setReviewOpen(true); }} /></div></Dialog>}
       {exportOpen && (
         <div className="export-pop card" role="dialog" aria-label="Exportar vídeo" data-testid="export-panel">

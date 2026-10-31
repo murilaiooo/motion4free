@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
-import { editCaption, originalView, tab } from './ui';
+import { editCaption, originalView, tab, pickVideos } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
 async function openVideo(page: Page) {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 }
 
@@ -112,10 +112,10 @@ test('sem a cópia do vídeo, pede o arquivo de novo (M4F-604) e continua o proj
   await page.reload();
   await expect(page.getByTestId('warning-M4F-604')).toBeVisible({ timeout: 30_000 });
   // arquivo que não é o vídeo é recusado e o aviso continua
-  await page.getByTestId('file-input').setInputFiles({ name: 'outro.webm', mimeType: 'video/webm', buffer: Buffer.from('nao') });
+  await pickVideos(page, { name: 'outro.webm', mimeType: 'video/webm', buffer: Buffer.from('nao') });
   await expect(page.getByTestId('error-M4F-101')).toBeVisible({ timeout: 30_000 });
 
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('caption-c2')).toHaveText('Dica reaberta.', { timeout: 60_000 });
   await expect(page.getByTestId('warning-M4F-604')).toHaveCount(0);
 });

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { closeSettings, settings } from './ui';
+import { closeSettings, settings, pickVideos } from './ui';
 
 /** Precisão da legenda (v0.8): opção Rápida/Precisa, aviso de modelo reserva e página ?avaliar. */
 
@@ -24,7 +24,7 @@ test('opção "Precisão da legenda" aparece com o tamanho do download e fica le
 
 test('modelo preciso falha: legenda sai com o modelo leve e aviso M4F-307 diz qual foi usado', async ({ page }) => {
   await page.goto('/?asr=reserva');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   const warning = page.getByTestId('warning-M4F-307');
   await expect(warning).toBeVisible({ timeout: 60_000 });
   await expect(warning).toContainText('Whisper small');
@@ -34,7 +34,7 @@ test('modelo preciso falha: legenda sai com o modelo leve e aviso M4F-307 diz qu
 
 test('transcrição normal mostra o modelo que fez a legenda', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('asr-model')).toContainText('Whisper large-v3-turbo', { timeout: 60_000 });
   await expect(page.getByTestId('warning-M4F-307')).toHaveCount(0);
 });

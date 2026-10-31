@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
-import { editCaption } from './ui';
+import { editCaption, pickVideos } from './ui';
 
 interface Probe {
   streams: Array<{ codec_type: string; codec_name: string; width?: number; height?: number; avg_frame_rate?: string; sample_rate?: string }>;
@@ -33,7 +33,7 @@ test('issue #3: corta, revisa legenda e exporta MP4 com codec/FPS/áudio; mede t
 
   await page.goto('/');
   const beforeImport = Date.now();
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
   const importMs = Date.now() - beforeImport;
 
