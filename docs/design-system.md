@@ -43,3 +43,9 @@ Contrato visual do app (não do vídeo: o visual do vídeo é o StyleDNA, ver [A
 ## Como conferir
 - `npm run fixture && CHROMIUM_PATH=… npx playwright test e2e/visual.spec.ts`: primeira tela, abas, transcrição, galeria, atalhos, exportar, tema e telas de 390, 768 e 1280 px sem rolagem lateral.
 - Capturas de referência da v0.10 (1440×900, 1920×1080, 768×1024, 390×844): pasta `visual-v0.10/` dos arquivos do projeto.
+
+## Identidade "estúdio de bolso" (v0.33, ADR-0035)
+- Telas de entrada (início, perguntas iniciais, preparo, galeria, Clipes) usam a **paleta quente**: mesmos nomes de token, valores em marrom/creme, com grão leve (`src/app/landing.css`). O editor fica neutro.
+- **Marca-texto** (`.lp-mark`): fundo amarelo atrás da palavra, texto `--brand-ink`. Gesto da marca, igual à palavra falada na legenda.
+- **Letra à mão** (`--hand`, Caveat) só para notas curtas acima de títulos e anotações; **serifa itálica** (`--serif`, Instrument Serif) só para a parte suave do título e números dos passos.
+- **Cartões** (`src/app/cards.css`): raio 16 px, degradê `--bg-2`→`--bg-1`, filete de luz, sombra macia, sobe 2 px no mouse; escolhido = borda amarela + brilho (`--card-picked`). Nada de fundo amarelado opaco na seleção.

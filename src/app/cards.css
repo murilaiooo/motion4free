@@ -1,0 +1,56 @@
+/*
+ * Cartões com identidade (v0.33, ADR-0035). Uma só "família" de cartão em todo o app: superfície que sobe
+ * levemente do fundo, filete de luz no alto, sombra macia, levanta no passar do mouse e, quando escolhido,
+ * ganha a borda amarela da marca com um brilho quente (nunca o fundo amarelado opaco).
+ * Carregado depois das folhas de cada tela para valer sobre elas.
+ */
+/* só valores fixos aqui: cores vêm dos tokens de cada tela (as telas de entrada usam a paleta quente) */
+:root {
+  --card-r: 16px;
+  --card-edge: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --card-drop: 0 14px 32px -22px rgba(0, 0, 0, 0.7);
+  --card-lift: 0 22px 44px -22px rgba(0, 0, 0, 0.75);
+  --card-picked: 0 0 0 1px var(--brand), 0 18px 40px -22px color-mix(in srgb, var(--brand) 55%, transparent);
+}
+:root[data-theme='light'] {
+  --card-edge: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --card-drop: 0 10px 24px -18px rgba(60, 45, 20, 0.35);
+  --card-lift: 0 18px 36px -18px rgba(60, 45, 20, 0.4);
+}
+
+:is(.setup-card-grid .setup-card, .proj-card, .tpl-card, .clips-page .clip-card, .add-card, .asset-card, .setup-review, .proc-card, .lp-steps li, .lp-faq details) {
+  border-radius: var(--card-r);
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--card-edge), var(--card-drop);
+}
+:is(.setup-card-grid .setup-card, .proj-card, .tpl-card, .clips-page .clip-card, .add-card, .asset-card) {
+  transition: transform var(--dur-2) var(--ease), border-color var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease), background var(--dur-1) var(--ease);
+}
+:is(.setup-card-grid .setup-card, .proj-card, .tpl-card, .add-card, .asset-card):hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border-color: color-mix(in srgb, var(--brand) 38%, var(--line-strong));
+  box-shadow: var(--card-edge), var(--card-lift);
+}
+.clips-page .clip-card:hover { border-color: color-mix(in srgb, var(--brand) 30%, var(--line-strong)); }
+
+/* escolhido */
+.setup-card-grid .setup-card[aria-pressed='true'],
+.setup-card-grid .setup-card[aria-pressed='true']:hover,
+.tpl-card.selected,
+.tpl-card.selected:hover:not(:disabled),
+.clips-page .clip-card.on {
+  border-color: var(--brand);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 7%, var(--bg-2)), var(--bg-1));
+  box-shadow: var(--card-edge), var(--card-picked);
+}
+
+/* miniaturas com cantos de tela de celular */
+.tpl-card .tpl-media { margin: 6px 6px 0; border-radius: 12px; overflow: hidden; }
+.proj-thumb, .clip-thumb { border-radius: 10px; box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.6); }
+.setup-visual-choices .setup-card canvas, .setup-destinations .setup-card canvas { border-radius: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.setup-card-grid .setup-card, .proj-card, .tpl-card, .add-card, .asset-card):hover:not(:disabled) { transform: none; }
+}

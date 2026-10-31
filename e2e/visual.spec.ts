@@ -15,7 +15,7 @@ const seconds = async (page: Page) => Number((await page.getByTestId('player-tim
 
 test('primeira tela: promessa, área para soltar o vídeo, privacidade e exemplos de modelos desenhados', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('O que você quer criar hoje?');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Grave do seu jeito.');
   await expect(page.getByTestId('path-edit')).toBeVisible();
   await expect(page.getByTestId('path-clips')).toBeVisible();
   await expect(page.getByText('Escolher vídeos').first()).toBeVisible();
