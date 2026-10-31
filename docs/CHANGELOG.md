@@ -29,6 +29,7 @@ Pedido do responsável: home e cartões com identidade, personalidade e aconcheg
 - **Cartões dos dois caminhos:** lombada colorida (amarelo para Editar, coral para Clipes), exemplo animado próprio de cada um ("vários clipes viram um vídeo" e "vídeo longo vira clipes"), levantam ao passar o mouse.
 - **Seções com voz própria:** passos com números grandes em serifa, "Tudo o que o editor faz" dividido em *Ele faz sozinho / Você ajusta / Fica com você*, modelos dentro de celulares, faixa amarela "Seu vídeo não sai daqui.", perguntas que abrem e fecham, chamada final "Seu próximo vídeo começa agora."
 - **Cartões do app inteiro numa só família** (`src/app/cards.css`): perguntas iniciais, modelos, projetos, clipes, biblioteca de mídia e cartões de adicionar. Superfície que sobe do fundo, sombra macia, levanta no mouse; escolhido = borda amarela com brilho (some o fundo amarelado opaco).
+- **Prévias de estilo com o seu vídeo:** depois de escolher os vídeos, os cartões de estilo (perguntas iniciais e editor) mostram a legenda animada em cima do **seu próprio vídeo tocando**, não mais sobre o boneco desenhado (`src/app/thumb-backdrop.ts`). Na primeira tela, sem vídeo escolhido, ainda aparece o fundo de exemplo.
 - Paleta quente vale para início, perguntas iniciais, preparo, galeria e Clipes. O editor continua neutro para não tingir o julgamento de cor do vídeo.
 - Fontes novas na interface só da primeira tela: Instrument Serif (itálico) e Caveat, já presentes no app para os vídeos (OFL 1.1, em licencas-fontes.txt).
 

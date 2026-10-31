@@ -9,6 +9,7 @@ import { listTemplates } from '../core/template-gallery';
 import { APP_BUILT_AT, VERSION_LABEL } from '../version';
 import { TemplateThumb } from './Templates';
 import { Logo, SettingsButton } from './TopBar';
+import { setUserBackdropFile } from './thumb-backdrop';
 
 function Header(_: { onStorage?: () => void }) {
   return (
@@ -215,6 +216,10 @@ export function Landing({
   clipResume?: ReactNode;
 }) {
   const [over, setOver] = useState<LandingMode | null>(null);
+  // de volta ao início: as prévias voltam ao fundo de exemplo (o vídeo anterior não aparece aqui)
+  useEffect(() => {
+    if (!pendingName) setUserBackdropFile(null);
+  }, []);
   useEffect(() => {
     if (!focusProjects) return;
     const heading = document.getElementById('projects-title');
