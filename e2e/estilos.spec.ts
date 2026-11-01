@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
+import { pickVideos } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 const STYLES = ['pop', 'neon', 'editorial', 'documental'] as const;
@@ -11,7 +12,7 @@ const SHOTS_V09 = ['abertura', 'legenda'] as const;
 
 async function openVideo(page: Page) {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 }
 

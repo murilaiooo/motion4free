@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { pickVideos } from './ui';
 
 /**
  * Recuperação de projetos (v0.16). Vem do QA do PR #55: quando a cópia do vídeo (video.bin) não era
@@ -39,7 +40,7 @@ test('video.bin não cabe (QuotaExceeded): sem falso "Salvo" e, ao reabrir, pede
     };
   });
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles(MEDIA);
+  await pickVideos(page, MEDIA);
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 90_000 });
   // Avisos do editor ficam recolhidos na prévia até a pessoa abrir o painel.
   await expect(page.getByTestId('stage-warning-toggle')).toBeVisible({ timeout: 40_000 });
@@ -58,7 +59,7 @@ test('video.bin não cabe (QuotaExceeded): sem falso "Salvo" e, ao reabrir, pede
   await expect(page.getByText('Projeto que não abre')).toHaveCount(0);
   await expect(page.getByTestId('project-damaged')).toHaveCount(0);
   // escolher o mesmo vídeo continua a edição
-  await page.getByTestId('file-input').setInputFiles(MEDIA);
+  await pickVideos(page, MEDIA);
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 90_000 });
 });
 
@@ -75,7 +76,7 @@ test('aba fechada durante a cópia do vídeo: as edições já estavam salvas e 
     };
   });
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles(MEDIA);
+  await pickVideos(page, MEDIA);
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 90_000 });
   await expect.poll(async () => ((await savedFiles(page))?.['project.json'] ?? 0) > 100, { timeout: 45_000 }).toBe(true);
   await page.reload();

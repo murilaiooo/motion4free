@@ -1,5 +1,6 @@
 ﻿import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { pickVideos } from './ui';
 
 const source = ['e2e/fixtures/clip-red.webm', 'e2e/fixtures/clip-blue.webm'];
 function rms(path: string, start: number, duration = 0.42) {
@@ -14,7 +15,7 @@ function difference(a: number, b: number) { return Math.abs(20 * Math.log10(a / 
 test('equalização de dois clipes permanece igual no MP4 depois de salvar/reabrir (#53)', async ({ page }, info) => {
   test.setTimeout(240000);
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles(source);
+  await pickVideos(page, source);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60000 });
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60000 });
   const exportMp4 = async (name: string) => {

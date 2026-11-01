@@ -4,8 +4,10 @@ import { expect, type Page } from '@playwright/test';
  * Abre uma aba do painel de ferramentas (trilho à esquerda no computador, barra de baixo no celular).
  * v0.19: Pedido, Gancho e Trechos ficam juntos na aba IA; os dois últimos dentro de uma seção recolhível.
  */
-export async function tab(page: Page, name: 'Modelos' | 'Texto' | 'Elementos' | 'Legendas' | 'Mídia' | 'Áudio' | 'IA' | 'Pedido' | 'Gancho' | 'Trechos' | 'Versões' | 'Cores') {
-  const real = name === 'Pedido' || name === 'Gancho' || name === 'Trechos' ? 'IA' : name;
+export async function tab(page: Page, name: 'Modelos' | 'Estilo' | 'Texto' | 'Textos' | 'Elementos' | 'Legendas' | 'Mídia' | 'Áudio' | 'Música' | 'IA' | 'Pedir' | 'Pedido' | 'Gancho' | 'Trechos' | 'Versões' | 'Cores') {
+  // v0.32: 7 abas. Modelos + Cores = Estilo; Texto + Elementos = Textos; Áudio = Música; IA = Pedir.
+  const alias: Record<string, string> = { Modelos: 'Estilo', Cores: 'Estilo', Texto: 'Textos', Elementos: 'Textos', 'Áudio': 'Música', IA: 'Pedir', Pedido: 'Pedir', Gancho: 'Pedir', Trechos: 'Pedir' };
+  const real = alias[name] ?? name;
   const t = page.getByRole('tab', { name: real, exact: true });
   await t.click();
   await expect(t).toHaveAttribute('aria-selected', 'true');
@@ -48,4 +50,20 @@ export async function pickTheme(page: Page, theme: 'light' | 'dark') {
   await settings(page, 'editor');
   await page.getByTestId(`theme-${theme}`).click();
   await closeSettings(page);
+}
+
+/**
+ * v0.32: escolher vídeos na tela inicial abre as perguntas enquanto o app prepara os vídeos.
+ * Este atalho escolhe os arquivos e pula as perguntas (usa as escolhas guardadas ou as padrão).
+ * Ao reabrir um projeto salvo (vídeo original de novo) não há perguntas: o helper só escolhe os arquivos.
+ */
+export async function pickVideos(page: Page, files: Parameters<ReturnType<Page['getByTestId']>['setInputFiles']>[0]) {
+  await page.getByTestId('file-input').setInputFiles(files);
+  const shell = page.getByTestId('setup-shell');
+  const opened = await shell.waitFor({ state: 'visible', timeout: 5_000 }).then(() => true, () => false);
+  if (!opened) return;
+  const skip = page.getByTestId('setup-skip');
+  const done = page.getByTestId('setup-complete');
+  if (await skip.isVisible().catch(() => false)) await skip.click({ timeout: 5_000 }).catch(() => undefined);
+  else if (await done.isVisible().catch(() => false)) await done.click({ timeout: 5_000 }).catch(() => undefined);
 }

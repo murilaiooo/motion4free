@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { statSync } from 'node:fs';
+import { pickVideos } from './ui';
 
 test('issue #4: baixa backup completo e restaura sem substituir o projeto', async ({ page, browser }, info) => {
   test.setTimeout(150_000);
   await page.goto('/?asr=vazio');
   await expect(page.getByTestId('project-restore-input')).toHaveCount(1);
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/clip-red.webm');
+  await pickVideos(page, 'e2e/fixtures/clip-red.webm');
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
   await page.getByTestId('menu-close').click();
 

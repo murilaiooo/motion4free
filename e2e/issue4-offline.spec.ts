@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { pickVideos } from './ui';
 
 test('issue #4: app abre offline depois de cachear, mantém projeto OPFS sem rede', async ({ page, context }) => {
   test.setTimeout(150_000);
@@ -24,7 +25,7 @@ test('issue #4: app abre offline depois de cachear, mantém projeto OPFS sem red
   expect(precache!.urls.some(url => /video\.bin|\.mp4|openrouter|api\.openai/.test(url))).toBe(false);
 
   const first = await page.evaluate(() => performance.getEntriesByType('resource').length);
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/clip-red.webm');
+  await pickVideos(page, 'e2e/fixtures/clip-red.webm');
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
   await page.reload();
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 60_000 });

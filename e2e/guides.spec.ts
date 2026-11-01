@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { pickVideos } from './ui';
 
 test('platform and custom composition guides are UI-only and persist', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   const canvas = page.getByTestId('player-canvas');
   await expect(canvas).toBeVisible({ timeout: 60_000 });
   await page.waitForFunction(() => (window as any).__m4f?.plan.captions.length > 0 && document.fonts.status === 'loaded');

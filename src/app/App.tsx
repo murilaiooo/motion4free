@@ -63,10 +63,10 @@ import { useAsrPrecision } from './asr-precision';
 import { AsrPrecisionSummary } from './AsrPrecisionOption';
 import { Evaluate } from './Evaluate';
 import { projectFs, storage, storageAvailable } from './project-store';
-import { creativeSetupSchema, type CreativeSetup } from '../core/production';
+import type { CreativeSetup } from '../core/production';
 import { produceFirstDraft } from '../editorial/production';
-import { CreativeSetupScreen, ProductionUpload } from './production/CreativeSetup';
-import { readSetup, saveSetup } from './production/preferences';
+import { CreativeSetupScreen } from './production/CreativeSetup';
+import { hasCompletedSetup, markSetupCompleted, readSetup, saveSetup } from './production/preferences';
 
 const fs = projectFs;
 
@@ -169,7 +169,16 @@ function EditorApp() {
   const [clipView, setClipView] = useState(false);
   const [longWork, setLongWork] = useState(false);
   const [creativeSetup, setCreativeSetup] = useState(readSetup);
-  const [creativePhase, setCreativePhase] = useState<'home' | 'setup' | 'upload'>('home');
+  // v0.32: os vídeos vêm primeiro; as perguntas aparecem enquanto eles são preparados
+  const [creativePhase, setCreativePhase] = useState<'home' | 'setup'>('home');
+  const [setupDone, setSetupDone] = useState(false);
+  const [setupReturning, setSetupReturning] = useState(false);
+  const [prepared, setPrepared] = useState<{ a: Awaited<ReturnType<typeof analyze>>; primary: File } | null>(null);
+  const [prepLabel, setPrepLabel] = useState('');
+  /** cada escolha de vídeos ganha um número; resultados de uma preparação abandonada são ignorados */
+  const prepGen = useRef(0);
+  /** uma preparação por vez: o transcritor é um só */
+  const preparing = useRef<Promise<unknown>>(Promise.resolve());
   const [firstDraft, setFirstDraft] = useState(false);
   // música de fundo (v0.26): fica fora da sessão para sobreviver a trocar/adicionar clipes
   const [music, setMusic] = useState<DecodedAudio | null>(null);
@@ -523,11 +532,6 @@ function EditorApp() {
       }
       return;
     }
-    if (!creativeSetupSchema.safeParse(creativeSetup).success) {
-      fail(new AppError('BRIEF_INVALIDO'));
-      setCreativePhase('setup');
-      return;
-    }
     if (!force) {
       const warn = await checkSpace(files);
       if (warn) {
@@ -549,7 +553,20 @@ function EditorApp() {
     setHistory(null);
     setNotices([]);
     setProjectId(null);
+    const gen = ++prepGen.current;
+    const step = (progress: Progress) => { if (gen === prepGen.current) setStatus({ kind: 'working', progress }); };
+    setPrepared(null);
+    setSetupDone(false);
+    setSetupReturning(hasCompletedSetup());
+    setPrepLabel(files.length > 1 ? `${files.length} vídeos` : primary.name);
+    setCreativePhase('setup');
+    const previous = preparing.current;
+    let release!: () => void;
+    preparing.current = new Promise<void>((resolve) => { release = resolve; });
     try {
+      await previous;
+      if (gen !== prepGen.current) return;
+      step({ label: 'Abrindo os vídeos', phase: 'abrir', fraction: null });
       let a: Awaited<ReturnType<typeof analyze>>;
       if (files.length === 1) {
         a = await analyze(primary, transcriber, step, { asrMode: precision.mode });
@@ -566,15 +583,38 @@ function EditorApp() {
         a = { media: clips[0]!.media, audio: combinedAudio, words: allWords, silences: allSilences, warnings, asrModel, plan } as any;
         (a as any).__multi = { clips, refs, combinedAudio, wordsByClip, silencesByClip };
       }
-      step({ label: 'Aplicando sua direção criativa', phase: 'montar', fraction: null });
-      const durationSec = a.plan.clips.reduce((total, clip) => total + clip.duration, 0);
-      a.plan = produceFirstDraft(a.plan, { durationSec, words: a.words }, a.silences, creativeSetup).plan;
-      setFirstDraft(true);
-      setCreativePhase('home');
-      startProject(a, primary);
+      if (gen !== prepGen.current) return;
+      setPrepared({ a, primary });
+      setStatus({ kind: 'idle' });
     } catch (err) {
+      if (gen !== prepGen.current) return;
       fail(err);
+      setCreativePhase('home');
+    } finally {
+      release();
     }
+  }
+
+  /** Vídeos preparados + perguntas respondidas: aplica as escolhas e abre o primeiro rascunho. */
+  useEffect(() => {
+    if (!prepared || !setupDone) return;
+    const { a, primary } = prepared;
+    setPrepared(null);
+    setSetupDone(false);
+    const durationSec = a.plan.clips.reduce((total, clip) => total + clip.duration, 0);
+    a.plan = produceFirstDraft(a.plan, { durationSec, words: a.words }, a.silences, creativeSetup).plan;
+    setFirstDraft(true);
+    setCreativePhase('home');
+    startProject(a, primary);
+  }, [prepared, setupDone]);
+
+  /** Sair das perguntas antes do fim: a preparação em andamento é descartada. */
+  function leaveSetup() {
+    prepGen.current++;
+    setPrepared(null);
+    setSetupDone(false);
+    setStatus({ kind: 'idle' });
+    setCreativePhase('home');
   }
 
   /** Abre no editor o resultado de uma análise (vídeo novo, vários clipes ou um clipe do criador de clipes) e começa a salvar. */
@@ -1037,6 +1077,20 @@ function EditorApp() {
       </>
     );
   }
+  if (!pending && creativePhase === 'setup') {
+    if (setupDone && status.kind === 'working') return <><Processing progress={status.progress} fileName={prepLabel} />{overlays}</>;
+    return <>
+      <CreativeSetupScreen
+        value={creativeSetup}
+        onChange={updateSetup}
+        startAtReview={setupReturning}
+        prep={{ fileLabel: prepLabel, progress: status.kind === 'working' ? status.progress : null, ready: !!prepared }}
+        onComplete={(setup) => { updateSetup(setup); markSetupCompleted(); setSetupDone(true); }}
+        onBack={leaveSetup}
+      />
+      {overlays}
+    </>;
+  }
   if (status.kind === 'working')
     return longWork ? (
       <Processing progress={status.progress} fileName={fileName} title="Procurando os melhores momentos" note="Vídeo longo: transcrever leva de alguns minutos a quase uma hora, conforme o computador. Deixe a aba aberta; se fechar, a análise que já terminou fica guardada e o mesmo arquivo abre direto." />
@@ -1060,18 +1114,9 @@ function EditorApp() {
         {overlays}
       </>
     );
-  if (!pending && creativePhase === 'setup') return <>
-    <CreativeSetupScreen value={creativeSetup} onChange={updateSetup} onComplete={(setup) => { updateSetup(setup); setCreativePhase('upload'); }} onBack={() => setCreativePhase('home')} />
-    {overlays}
-  </>;
-  if (!pending && creativePhase === 'upload') return <>
-    <ProductionUpload setup={creativeSetup} onBack={() => setCreativePhase('home')} onRevise={() => setCreativePhase('setup')} onFile={(files) => void onFile(files)} notices={appNotices} options={<AsrPrecisionSummary precision={precision} disabled={busy} />} />
-    {overlays}
-  </>;
   return (
     <>
       <Landing
-        onStart={() => setCreativePhase('setup')}
         onFile={(f) => void onFile(f)}
         busy={busy}
         pendingName={pending?.project.video.name ?? null}

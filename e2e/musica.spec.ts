@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { tab } from './ui';
+import { tab, pickVideos } from './ui';
 
 /** WAV de 6 s com um tom simples: música de teste gerada aqui, sem arquivo de terceiros. */
 function toneWav(seconds = 6, rate = 22050): Buffer {
@@ -27,7 +27,7 @@ const musicOf = (page: import('@playwright/test').Page) => page.evaluate(() => (
 
 test('música de fundo: escolher, ajustar, continuar no projeto e tirar (v0.26)', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 60_000 });
   await tab(page, 'Áudio');
   await page.getByTestId('music-input').setInputFiles({ name: 'trilha.wav', mimeType: 'audio/wav', buffer: toneWav() });
@@ -57,7 +57,7 @@ test('música de fundo: escolher, ajustar, continuar no projeto e tirar (v0.26)'
 
 test('legenda em arquivo: baixa um .srt com as falas do vídeo editado (v0.26)', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 60_000 });
   await tab(page, 'Legendas');
   const download = page.waitForEvent('download');

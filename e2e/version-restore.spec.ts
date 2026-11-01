@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { pickVideos } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 type Plan = { edits: { added: { id: string; text: string }[] } };
@@ -9,7 +10,7 @@ async function planOf(page: Page): Promise<Plan> {
 
 test('versão restaura composição completa, desfazer/refazer e reabertura no Brave', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 
   await page.getByRole('tab', { name: 'Versões', exact: true }).click();
@@ -18,7 +19,7 @@ test('versão restaura composição completa, desfazer/refazer e reabertura no B
   await page.getByTestId('version-save').click();
   await expect(page.getByTestId('version-v1')).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Texto', exact: true }).click();
+  await page.getByRole('tab', { name: 'Textos', exact: true }).click();
   await page.getByTestId('add-text-título').click();
   await expect(page.getByTestId('tl-el-e1')).toBeVisible();
   expect((await planOf(page)).edits.added).toHaveLength(original.edits.added.length + 1);

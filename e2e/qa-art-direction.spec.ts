@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { pickVideos } from './ui';
 
 /**
  * Prova automatizada de diferenciação visual, não uma nota estética.
@@ -7,7 +8,7 @@ import { expect, test } from '@playwright/test';
 test('QA criativo técnico: a mesma fala produz quadros visualmente diferentes com três estilos', async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto('/?asr=demo');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 90_000 });
   await page.locator('body').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('l');

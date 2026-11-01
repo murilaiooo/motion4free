@@ -1,5 +1,5 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
-import { Check, CloudOff, Download, Moon, Redo2, Replace, Settings, Sun, Undo2 } from 'lucide-react';
+import { Check, CloudOff, Download, Moon, Redo2, Settings, Sun, Undo2 } from 'lucide-react';
 import { openSettings, type SettingsSection } from './settings/route';
 
 export type SaveState = 'saved' | 'saving' | 'off';
@@ -77,8 +77,9 @@ interface Props {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
-  onReplaceFile: (f: File) => void;
-  busy: boolean;
+  /** não usado desde a v0.32: "Começar outro vídeo" fica na aba Mídia */
+  onReplaceFile?: (f: File) => void;
+  busy?: boolean;
   onExport: () => void;
   exporting: number | null;
   exportDisabled: boolean;
@@ -87,7 +88,7 @@ interface Props {
   workspaceControls?: ReactNode;
 }
 
-export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, onReplaceFile, busy, onExport, exporting, exportDisabled, menu, workspaceControls }: Props) {
+export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, onExport, exporting, exportDisabled, menu, workspaceControls }: Props) {
   const project = fileName.replace(/\.[^.]+$/, '');
   return (
     <header className="topbar">
@@ -129,11 +130,6 @@ export function TopBar({ fileName, saveState, canUndo, canRedo, onUndo, onRedo, 
           <Redo2 size={18} />
         </button>
         <span className="topbar-sep" aria-hidden />
-        <label className={`btn ghost replace ${busy ? 'disabled' : ''}`} data-tip="Começa um projeto novo; este continua salvo">
-          <Replace size={16} aria-hidden />
-          <span className="hide-sm">Trocar vídeo</span>
-          <input className="sr-only" type="file" accept="video/*" disabled={busy} data-testid="file-input-replace" aria-label="Trocar vídeo (começa um projeto novo; este continua salvo em Meus projetos)" onChange={(e) => e.target.files?.[0] && onReplaceFile(e.target.files[0])} />
-        </label>
         <SettingsButton />
         <button className="primary export-btn" onClick={onExport} disabled={exportDisabled} data-testid="export">
           {exporting !== null ? <span className="spinner dark" aria-hidden /> : <Download size={16} aria-hidden />}

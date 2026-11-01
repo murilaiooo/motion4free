@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { closeSettings, pickTheme, settings } from './ui';
+import { closeSettings, pickTheme, settings, pickVideos } from './ui';
 
 test('resizing persists, keyboard works, cancel restores and playback canvas stays mounted', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 60_000 });
   const splitter = page.getByRole('separator', { name: 'Largura da biblioteca' });
   await expect(splitter).toBeVisible();
@@ -38,7 +38,7 @@ test('resizing persists, keyboard works, cancel restores and playback canvas sta
 test('workspace remains bounded at compact widths and survives corrupt preferences', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('m4f.workbench-layout.v1', '{corrupt'));
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 60_000 });
   for (const width of [1920, 1024, 768]) {
     await page.setViewportSize({ width, height: 768 });

@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
-import { closeSettings, settings, tab } from './ui';
+import { closeSettings, settings, tab, pickVideos } from './ui';
 
 /** v0.31: variações A/B (#118), trocas parciais (#11), destaques automáticos (#117) e transcrição por API (#127). */
 
 async function openVideo(page: Page) {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 }
 
@@ -68,7 +68,7 @@ test('sem chave, transcrição por API cai no computador com aviso M4F-308 e nã
   await settings(page, 'transcricao');
   await page.getByTestId('asr-kind-api').check();
   await closeSettings(page);
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
   await page.getByTestId('stage-warning-toggle').click();
   await expect(page.getByTestId('warning-M4F-308')).toBeVisible();

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { tab } from './ui';
+import { tab, pickVideos } from './ui';
 
 async function openMediaPanel(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 60_000 });
@@ -45,7 +45,7 @@ function pitchAt(file: string, seconds: number): number {
 test('dois vídeos reais: reordenar, exportar MP4, ffprobe verifica vídeo e áudio na ordem nova', async ({ page }, testInfo) => {
   test.setTimeout(240_000);
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles([RED, BLUE]);
+  await pickVideos(page, [RED, BLUE]);
   await openMediaPanel(page);
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
@@ -86,7 +86,7 @@ test('dois vídeos reais: reordenar, exportar MP4, ffprobe verifica vídeo e áu
 test('editor permite acrescentar clipe mantendo o primeiro e desfazer a inclusão', async ({ page }) => {
   test.setTimeout(150_000);
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles(RED);
+  await pickVideos(page, RED);
   await openMediaPanel(page);
   await expect(page.getByTestId('clip-c1')).toBeVisible({ timeout: 90_000 });
   await page.locator('[data-testid="clip-list"] input[type=file]').setInputFiles(BLUE);
@@ -102,7 +102,7 @@ test('editor permite acrescentar clipe mantendo o primeiro e desfazer a inclusã
 test('salvar, reabrir, remover e desfazer conserva as fontes de todos os clipes', async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles([RED, BLUE]);
+  await pickVideos(page, [RED, BLUE]);
   await openMediaPanel(page);
   await expect(page.getByTestId('clip-c2')).toBeVisible({ timeout: 90_000 });
   await page.getByTestId('clip-c2').getByRole('button', { name: 'Mover para cima' }).click();

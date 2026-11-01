@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
+import { pickVideos } from './ui';
 
 test('vídeo com pausas vira MP4 editado, mais curto, com áudio', async ({ page }, info) => {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
 
   const outDuration = page.getByTestId('out-duration');
   await expect(outDuration).toBeVisible({ timeout: 60_000 });

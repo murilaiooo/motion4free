@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
-import { tab } from './ui';
+import { tab, pickVideos } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 const planOf = (page: import('@playwright/test').Page) =>
@@ -10,7 +10,7 @@ const planOf = (page: import('@playwright/test').Page) =>
 test('issue #117: adiciona, reancora, desfaz/refaz e salva destaque no Brave', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/?asr=rapida');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
   await tab(page, 'Legendas');
   await expect(page.getByTestId('semantic-cue-panel')).toBeVisible();
@@ -50,7 +50,7 @@ test('issue #117: adiciona, reancora, desfaz/refaz e salva destaque no Brave', a
 
 test('issue #117: ausência de fala não sugere um destaque impossível', async ({ page }) => {
   await page.goto('/?asr=vazio');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
   await tab(page, 'Legendas');
   await expect(page.getByTestId('semantic-no-words')).toBeVisible();
@@ -60,7 +60,7 @@ test('issue #117: ausência de fala não sugere um destaque impossível', async 
 test('issue #117: exporta MP4 com destaque ancorado; áudio e quadros decodificam', async ({ page }, info) => {
   test.setTimeout(120_000);
   await page.goto('/?asr=rapida');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
   await tab(page, 'Legendas');
   await page.getByTestId('semantic-add-current').click();
@@ -105,7 +105,7 @@ test('issue #117: exporta MP4 com destaque ancorado; áudio e quadros decodifica
 test('issue #117: escolha de efeito, desfazer/refazer e persistência no Brave', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/?asr=rapida');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 60_000 });
   await tab(page, 'Legendas');
   await page.getByTestId('semantic-add-current').click();

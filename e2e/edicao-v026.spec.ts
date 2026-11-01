@@ -1,12 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { tab } from './ui';
+import { tab, pickVideos } from './ui';
 
 /** v0.26: escolher vários e apagar de uma vez, máscara do vídeo e animação por pontos. */
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
 async function openVideo(page: Page) {
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 }
 const segments = (page: Page) => page.locator('[data-testid^="tl-seg-"]:not([data-testid$="-start"]):not([data-testid$="-end"])');

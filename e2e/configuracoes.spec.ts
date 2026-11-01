@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { closeSettings, settings, tab } from './ui';
+import { closeSettings, settings, tab, pickVideos } from './ui';
 
 /** Configurações (v0.27, issue #73): abre de qualquer tela, tem as 6 seções e não mexe no projeto aberto. */
 
@@ -31,7 +31,7 @@ test('a mesa fica só com edição e Configurações não perde o projeto aberto
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('/');
-  await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
   const duration = page.getByTestId('out-duration');
   await expect(duration).toBeVisible({ timeout: 60_000 });
   const before = await duration.textContent();

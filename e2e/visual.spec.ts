@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { pickTheme, tab } from './ui';
+import { pickTheme, tab, pickVideos } from './ui';
 
 /** Novo visual (v0.10): primeira tela, abas, transcrição, galeria de modelos, exportar, atalhos e telas pequenas. */
 
@@ -7,7 +7,7 @@ const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
 async function openVideo(page: Page, query = '') {
   await page.goto(`/${query}`);
-  await page.getByTestId('file-input').setInputFiles(FIXTURE);
+  await pickVideos(page, FIXTURE);
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 }
 
@@ -15,7 +15,9 @@ const seconds = async (page: Page) => Number((await page.getByTestId('player-tim
 
 test('primeira tela: promessa, área para soltar o vídeo, privacidade e exemplos de modelos desenhados', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Comece com uma ideia.');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('O que você quer criar hoje?');
+  await expect(page.getByTestId('path-edit')).toBeVisible();
+  await expect(page.getByTestId('path-clips')).toBeVisible();
   await expect(page.getByText('Escolher vídeos').first()).toBeVisible();
   await expect(page.getByText('O vídeo não sai do aparelho')).toBeVisible();
   const thumbs = page.locator('.lp-reel canvas');
@@ -52,13 +54,14 @@ test('todas as ferramentas ficam a um clique (e pelas setas do teclado)', async 
     await expect(page.getByTestId(marks[t])).toBeVisible();
   }
   // setas trocam de aba
-  await page.getByRole('tab', { name: 'Cores', exact: true }).focus();
+  await tab(page, 'Pedir');
+  await page.getByRole('tab', { name: 'Pedir', exact: true }).focus();
   await page.keyboard.press('ArrowDown');
   await expect(page.getByRole('tab', { name: 'Versões', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', { name: 'Versões', exact: true })).toBeFocused();
   await page.keyboard.press('ArrowDown');
-  await expect(page.getByRole('tab', { name: 'Modelos', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByRole('tab', { name: 'Modelos', exact: true })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Estilo', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Estilo', exact: true })).toBeFocused();
   // prévia, detalhes, linha do tempo e "O que mudou" ficam visíveis ao mesmo tempo no computador
   await expect(page.getByTestId('player-canvas')).toBeVisible();
   await expect(page.getByTestId('timeline')).toBeVisible();
@@ -151,7 +154,7 @@ for (const [w, h] of [
     await page.setViewportSize({ width: w, height: h });
     await page.goto('/');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.getByTestId('file-input').setInputFiles(FIXTURE);
+    await pickVideos(page, FIXTURE);
     await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(page.getByTestId('player-canvas')).toBeVisible();
