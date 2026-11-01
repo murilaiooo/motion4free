@@ -4,6 +4,7 @@ import { presetById } from '../core/presets';
 import { filterTemplates, listTemplates, templateTags, type TemplateInfo } from '../core/template-gallery';
 import { ensureFonts } from '../media/fonts';
 import { paintBackdrop, renderShot } from './Gallery';
+import { onUserBackdrop, userBackdrop } from './thumb-backdrop';
 
 let backdrop: HTMLCanvasElement | null = null;
 const getBackdrop = () => (backdrop ??= paintBackdrop(540, 960));
@@ -59,25 +60,29 @@ export function TemplateThumb({ styleId, t, width = 180, playing = false, classN
       alive = false;
     };
   }, [styleId, seen]);
+  // vídeo da própria pessoa como fundo, quando ela já escolheu um (v0.33)
+  const [userBg, setUserBg] = useState(() => !!userBackdrop());
+  useEffect(() => onUserBackdrop(() => setUserBg(!!userBackdrop())), []);
   useEffect(() => {
     const c = ref.current;
     if (!c || !ready) return;
+    const bg = () => userBackdrop() ?? (plain ? getPlainBackdrop() : getBackdrop());
     if (!playing) {
-      renderShot(c, styleId, t, plain ? getPlainBackdrop() : getBackdrop());
+      renderShot(c, styleId, t, bg());
       return;
     }
     let raf = 0;
     const t0 = performance.now();
     const loop = (now: number) => {
-      renderShot(c, styleId, (t + (now - t0) / 1000) % DEMO_SEC, plain ? getPlainBackdrop() : getBackdrop());
+      renderShot(c, styleId, (t + (now - t0) / 1000) % DEMO_SEC, bg());
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [ready, playing, styleId, t, plain]);
+  }, [ready, playing, styleId, t, plain, userBg]);
   const dpr = typeof devicePixelRatio === 'number' ? Math.min(2, devicePixelRatio) : 1;
   const w = Math.round(width * dpr);
-  return <canvas ref={ref} className={`tpl-thumb ${className}`} width={w} height={Math.round((w * 16) / 9)} aria-hidden data-ready={ready ? '1' : '0'} />;
+  return <canvas ref={ref} className={`tpl-thumb ${className}`} width={w} height={Math.round((w * 16) / 9)} aria-hidden data-ready={ready ? '1' : '0'} data-backdrop={userBg ? 'user' : 'demo'} />;
 }
 
 /** Instante de cada modelo que mais mostra a cara dele (legenda + título). */
