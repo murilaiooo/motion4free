@@ -36,8 +36,8 @@
 .clips-page .clip-card:hover { border-color: color-mix(in srgb, var(--brand) 30%, var(--line-strong)); }
 
 /* escolhido */
-.setup-card-grid .setup-card[aria-pressed='true'],
-.setup-card-grid .setup-card[aria-pressed='true']:hover,
+.setup-card-grid .setup-card[aria-checked='true'],
+.setup-card-grid .setup-card[aria-checked='true']:hover,
 .tpl-card.selected,
 .tpl-card.selected:hover:not(:disabled),
 .clips-page .clip-card.on {

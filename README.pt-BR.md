@@ -16,7 +16,7 @@ O Motion4Free é um editor de vídeo gratuito e de código aberto para criar Ree
 
 Junte gravações, corte as partes que ficaram longas, corrija as legendas e ajuste o ritmo. Você pode começar por um estilo visual ou descrever a edição que quer fazer. O resultado continua nas suas mãos.
 
-- Importe até 30 vídeos curtos, com até 3 minutos cada.
+- Importe até 30 vídeos curtos, com até 3 minutos cada e 10 minutos somados. A legenda automática entende fala em português.
 - Corte, divida, reorganize e duplique trechos em uma linha do tempo.
 - Mova legendas e elementos diretamente na prévia.
 - Exporte em MP4 vertical, retrato, quadrado ou horizontal.

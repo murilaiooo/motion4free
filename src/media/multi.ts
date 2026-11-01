@@ -2,6 +2,7 @@ import type { ClipRef, Framing } from '../core/types';
 import type { Word, TimeRange } from '../core/types';
 import { clipLayout, placeRanges, placeWords } from '../engine/clips';
 import { AppError, describeError, toAppError } from '../core/errors';
+import { IMPORT_LIMITS } from '../core/import-limits';
 import type { OpenedMedia } from './input';
 import { openMedia } from './input';
 import { decodeAudio, toMono16k, type DecodedAudio } from './audio';
@@ -45,7 +46,7 @@ export async function openClips(
   firstClipNumber = 1,
 ): Promise<MultiSessionInput> {
   if (files.length === 0) throw new AppError('SEM_VIDEO');
-  if (files.length > 30) throw new AppError('CLIPES_DEMAIS', `${files.length} clipes (máximo 30)`);
+  if (files.length > IMPORT_LIMITS.maxFiles) throw new AppError('CLIPES_DEMAIS', `${files.length} clipes (máximo ${IMPORT_LIMITS.maxFiles})`);
 
   const clips: OpenedClip[] = [];
   const wordsByClip: Record<string, Word[]> = {};
@@ -69,7 +70,7 @@ export async function openClips(
       continue;
     }
     runningDuration += media.durationSec;
-    if (runningDuration > 600) throw new AppError('CLIPES_LONGOS', `${runningDuration.toFixed(1)} s > 600 s`);
+    if (runningDuration > IMPORT_LIMITS.maxTotalSec + IMPORT_LIMITS.toleranceSec) throw new AppError('CLIPES_LONGOS', `${runningDuration.toFixed(1)} s > ${IMPORT_LIMITS.maxTotalSec} s`);
     // Somente arquivos válidos ganham IDs. O primeiro arquivo válido é sempre c1 num projeto novo.
     const id = `c${firstClipNumber + clips.length}`;
     let audio: DecodedAudio | null = null;

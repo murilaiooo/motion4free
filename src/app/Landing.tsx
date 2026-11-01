@@ -10,6 +10,10 @@ import { APP_BUILT_AT, VERSION_LABEL } from '../version';
 import { TemplateThumb } from './Templates';
 import { Logo, SettingsButton } from './TopBar';
 import { setUserBackdropFile } from './thumb-backdrop';
+import { IMPORT_LIMITS, importLimitsText } from '../core/import-limits';
+import { SPEECH_LANGUAGE } from '../core/asr-models';
+import { usePrivacyStatus } from './usePrivacyStatus';
+import { openSettings } from './settings/route';
 
 function Header(_: { onStorage?: () => void }) {
   return (
@@ -64,7 +68,7 @@ const FEATURE_GROUPS: { note: string; title: string; items: Feature[] }[] = [
       { icon: <Scissors size={18} aria-hidden />, title: 'Corta as pausas', text: 'Tira silêncios, respiros e “éééé” longos sem cortar palavras. Você revê cada corte e devolve o que quiser.' },
       { icon: <Captions size={18} aria-hidden />, title: 'Legenda palavra por palavra', text: 'Transcrição no próprio aparelho, com a palavra falada em destaque. Clique numa palavra para corrigir.' },
       { icon: <Film size={18} aria-hidden />, title: 'Clipes de vídeo longo', text: 'Podcast, aula ou live de até 2 horas vira cortes verticais com começo, meio e fim.' },
-      { icon: <Clapperboard size={18} aria-hidden />, title: 'Vários clipes, um vídeo', text: 'Solte até 30 clipes curtos. O app monta, corta e nivela o volume de todos.' },
+      { icon: <Clapperboard size={18} aria-hidden />, title: 'Vários clipes, um vídeo', text: `Solte até ${IMPORT_LIMITS.maxFiles} clipes curtos (${IMPORT_LIMITS.maxTotalSec / 60} min somados). O app monta, corta e nivela o volume de todos.` },
     ],
   },
   {
@@ -82,7 +86,7 @@ const FEATURE_GROUPS: { note: string; title: string; items: Feature[] }[] = [
     title: 'Fica com você',
     items: [
       { icon: <History size={18} aria-hidden />, title: 'Versões e projetos', text: 'Salve versões, compare antes e depois e continue amanhã, do ponto em que parou.' },
-      { icon: <ShieldCheck size={18} aria-hidden />, title: 'Seu vídeo, seu aparelho', text: 'Nada é enviado para servidor. Você vê e apaga o espaço que o app usa.' },
+      { icon: <ShieldCheck size={18} aria-hidden />, title: 'Seu vídeo, seu aparelho', text: 'O vídeo nunca é enviado. Áudio e texto só saem se você ligar um serviço com a sua chave. Você vê e apaga o espaço que o app usa.' },
       { icon: <Check size={18} aria-hidden />, title: 'Sem marca d’água', text: 'O MP4 sai limpo, pronto para o Instagram, TikTok ou YouTube. Sem plano pago.' },
     ],
   },
@@ -90,10 +94,10 @@ const FEATURE_GROUPS: { note: string; title: string; items: Feature[] }[] = [
 
 const FAQ: [string, string][] = [
   ['É grátis mesmo?', 'Sim. Não tem plano pago, cadastro nem marca d’água. O processamento é feito pelo seu próprio computador, então não há servidor para pagar.'],
-  ['Meu vídeo é enviado para algum lugar?', 'Não. O vídeo e tudo o que o app gera ficam neste aparelho. Você vê e apaga o espaço usado em Armazenamento.'],
+  ['Meu vídeo é enviado para algum lugar?', 'O vídeo, não: ele e tudo o que o app gera ficam neste aparelho. Por padrão o áudio e a transcrição também. Só se você ligar em Configurações a transcrição por API ou uma IA com a sua chave, e autorizar, o áudio da fala ou trechos de texto vão direto do seu navegador para esse serviço. Configurações › Privacidade mostra o que sai agora.'],
   ['Preciso instalar alguma coisa?', 'Não. Funciona no Chrome, no Edge ou no Brave, no computador. Na primeira vez o app baixa o modelo de transcrição, uma vez só.'],
   ['Dá para colar um link do YouTube?', 'Ainda não. O navegador não consegue baixar vídeo do YouTube, e os termos do YouTube só permitem baixar pelo próprio YouTube. Se o vídeo é seu, baixe no YouTube Studio e solte o arquivo no modo Clipes. Vídeo de outra pessoa, só com autorização dela.'],
-  ['Funciona com vídeo gravado no celular?', 'Sim. MP4, MOV ou WebM, até 3 minutos por clipe no editor e até 2 horas no modo Clipes. O resultado sai em MP4, pronto para o Instagram.'],
+  ['Funciona com vídeo gravado no celular?', `Sim. MP4, MOV ou WebM. No editor: ${importLimitsText()}. No modo Clipes: um vídeo de 2 minutos a 2 horas. A legenda automática entende fala em ${SPEECH_LANGUAGE.label}. O resultado sai em MP4, pronto para o Instagram.`],
 ];
 
 /** Título com a palavra "marcada" como na legenda: o marca-texto amarelo passa por ela. */
@@ -216,6 +220,7 @@ export function Landing({
   clipResume?: ReactNode;
 }) {
   const [over, setOver] = useState<LandingMode | null>(null);
+  const privacy = usePrivacyStatus();
   // de volta ao início: as prévias voltam ao fundo de exemplo (o vídeo anterior não aparece aqui)
   useEffect(() => {
     if (!pendingName) setUserBackdropFile(null);
@@ -303,7 +308,7 @@ export function Landing({
                         <strong>Editar meus vídeos</strong>
                         <span className="lp-path-text">Um vídeo ou vários clipes curtos viram um vídeo pronto, com pausas cortadas, legenda e animação.</span>
                         <span className="btn primary lp-path-btn"><Upload size={17} aria-hidden /> Escolher vídeos</span>
-                        <span className="lp-path-sub">ou arraste aqui · até 30 clipes de até 3 min</span>
+                        <span className="lp-path-sub" data-testid="import-limits">ou arraste aqui · {importLimitsText()} · fala em {SPEECH_LANGUAGE.label}</span>
                       </span>
                     </label>
                   </article>
@@ -317,7 +322,7 @@ export function Landing({
                           <strong>Cortar um vídeo longo em clipes</strong>
                           <span className="lp-path-text">O app ouve o vídeo inteiro, acha os melhores momentos e entrega cada corte vertical com legenda.</span>
                           <span className="btn lp-path-btn"><Upload size={17} aria-hidden /> Escolher vídeo longo</span>
-                          <span className="lp-path-sub">ou arraste aqui · de 2 min a 2 h · vídeos seus ou com autorização</span>
+                          <span className="lp-path-sub">ou arraste aqui · de 2 min a 2 h · fala em {SPEECH_LANGUAGE.label} · vídeos seus ou com autorização</span>
                         </span>
                       </label>
                       <div className="lp-path-extra">
@@ -333,8 +338,8 @@ export function Landing({
               )}
 
               <ul className="lp-facts">
-                <li>
-                  <ShieldCheck size={15} aria-hidden /> O vídeo não sai do aparelho
+                <li data-testid="privacy-fact">
+                  <ShieldCheck size={15} aria-hidden /> {privacy.anySends ? privacy.summary : 'O vídeo não sai do aparelho'}
                 </li>
                 <li>
                   <Check size={15} aria-hidden /> Grátis, sem cadastro
@@ -384,7 +389,7 @@ export function Landing({
             <ol className="lp-steps">
               <li>
                 <b>Escolha seus vídeos</b>
-                <p>Um vídeo ou até 30 clipes curtos. O app começa a preparar na hora, sem enviar nada para a internet.</p>
+                <p>Um vídeo ou vários clipes curtos ({importLimitsText()}). O app começa a preparar na hora, sem enviar o vídeo para a internet.</p>
               </li>
               <li>
                 <b>Responda enquanto ele prepara</b>
@@ -451,11 +456,16 @@ export function Landing({
           <div>
             <span className="lp-hand">promessa</span>
             <h2>Seu vídeo não sai daqui.</h2>
-            <p>Transcrição, edição e exportação acontecem no seu computador. Não há upload, conta nem servidor guardando o que você grava.</p>
+            <p>Por padrão, transcrição, edição e exportação acontecem no seu computador. Não há upload do vídeo, conta nem servidor do Motion4Free guardando o que você grava.</p>
           </div>
           <ul>
             <li>
-              <ShieldCheck size={20} aria-hidden /> <span>Nenhum envio de vídeo ou áudio</span>
+              <ShieldCheck size={20} aria-hidden />{' '}
+              <span data-testid="privacy-promise">
+                {privacy.audio.state === 'sends' ? `O vídeo nunca é enviado. O áudio da fala vai para ${privacy.audio.destination}, porque você autorizou` : 'Nenhum envio de vídeo ou áudio, a não ser que você ligue a transcrição por API'}
+                {' · '}
+                <button type="button" className="link" onClick={() => openSettings('privacidade')}>ver o que sai agora</button>
+              </span>
             </li>
             <li>
               <HardDrive size={20} aria-hidden /> <span>Você vê e apaga o espaço usado</span>

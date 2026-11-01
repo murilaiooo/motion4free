@@ -1,4 +1,5 @@
 import { AppError, toAppError } from '../core/errors';
+import { IMPORT_LIMITS } from '../core/import-limits';
 import { ALL_FORMATS, BlobSource, Input, type InputAudioTrack, type InputVideoTrack } from 'mediabunny';
 
 export interface OpenedMedia {
@@ -11,7 +12,7 @@ export interface OpenedMedia {
 }
 
 /** Limite do editor (Reels); o criador de clipes abre vídeos longos com o próprio limite (ADR-0023). */
-export const EDITOR_MAX_SEC = 180;
+export const EDITOR_MAX_SEC = IMPORT_LIMITS.maxClipSec;
 
 /** Abre o arquivo local sem enviar nada para servidor nenhum. */
 export async function openMedia(file: Blob, opts: { maxSec?: number } = {}): Promise<OpenedMedia> {
@@ -30,6 +31,6 @@ async function openMediaUnsafe(file: Blob, maxSec: number): Promise<OpenedMedia>
   if (!(await video.canDecode())) throw new AppError('VIDEO_NAO_DECODIFICA', `codec ${video.codec ?? 'desconhecido'}`);
   const audio = await input.getPrimaryAudioTrack();
   const durationSec = await input.computeDuration();
-  if (durationSec > maxSec) throw new AppError(maxSec > EDITOR_MAX_SEC ? 'LONGO_DEMAIS' : 'VIDEO_LONGO', `duração ${durationSec.toFixed(1)} s`);
+  if (durationSec > maxSec + IMPORT_LIMITS.toleranceSec) throw new AppError(maxSec > EDITOR_MAX_SEC ? 'LONGO_DEMAIS' : 'VIDEO_LONGO', `duração ${durationSec.toFixed(1)} s`);
   return { input, video, audio, durationSec, width: video.displayWidth, height: video.displayHeight };
 }

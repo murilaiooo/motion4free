@@ -23,6 +23,8 @@ button.ghost.danger:hover:not(:disabled) { background: var(--red-soft); color: v
 .m4f-callout svg { flex: none; margin-top: 2px; color: var(--text-2); }
 .m4f-callout.ok { background: var(--green-soft); }
 .m4f-callout.ok svg { color: var(--green); }
+.m4f-callout.warn { background: var(--amber-soft); border: 1px solid color-mix(in srgb, var(--amber, #f5b13d) 40%, transparent); }
+.m4f-callout.warn:focus { outline: 2px solid var(--brand, #ffd400); outline-offset: 2px; }
 .m4f-strong-warn { color: var(--red); font-weight: 650; }
 
 /* ---------- Meus projetos (primeira tela) ---------- */

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { IMPORT_LIMITS } from './import-limits';
 import { EMPHASES, EMPTY_BRIEF, LEVELS, PACES, PROHIBITIONS, TONES, briefSchema, briefV1Schema, migrateBrief } from './brief';
 import { EMOJI_SET } from './emoji';
 import { lookSchema } from './look';
@@ -132,7 +133,7 @@ export const framingSchema = z.object({
 });
 
 /** Limite de clipes por projeto (v0.14; ver ADR-0019). */
-export const MAX_CLIPS = 30;
+export const MAX_CLIPS = IMPORT_LIMITS.maxFiles;
 
 const clipRef = z.object({
   id: z.string().regex(/^c[0-9]{1,3}$/),

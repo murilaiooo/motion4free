@@ -21,6 +21,19 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.34.0 — 01/11/2026 — todas as issues abertas fechadas
+
+Pedido do responsável: verificar todas as issues abertas, fechar as já resolvidas e resolver as outras.
+
+- **Limites avisados antes (#154):** a tela inicial diz "até 30 vídeos, 3 min cada, 10 min somados · fala em português". Ao escolher, o app lê só a duração de cada arquivo e, se algum não cabe, mostra quais e por quê (M4F-104/106/107) antes de transcrever ou baixar o modelo: "Continuar só com os que cabem", "Cortar em clipes" (um vídeo longo) ou "Escolher outros vídeos". Vale também para "Adicionar clipes" no editor, sem mexer no projeto aberto. Os limites saem de um lugar só (`src/core/import-limits.ts`); 10:00 exatos passam.
+- **Privacidade verdadeira (#153):** Configurações › Privacidade mostra "O que sai agora" separado em vídeo, áudio e texto, cada um com o destino real: fica aqui, escolhido mas parado (falta chave ou autorização) ou sai com sua autorização. A tela inicial, o Armazenamento e o pedido de IA deixaram de dizer "o áudio nunca sai" quando a transcrição por API está autorizada. O vídeo (imagem) continua nunca sendo enviado.
+- **Idioma avisado antes (#6):** a legenda automática entende português; isso aparece na tela inicial, nas perguntas frequentes e em Configurações, antes de escolher o vídeo.
+- **Escolhas do início por teclado e leitor de tela (#152):** os cartões das perguntas viraram grupo de escolha única: uma parada de Tab por grupo, setas/Home/End mudam a escolha, o leitor de tela diz "marcada". A ordem "vídeos primeiro" já tinha chegado na v0.32.
+- **Primeira tela 41% mais leve (#156):** editor, clipes e o preparo de vídeo carregam só quando usados. A primeira tela baixa 303 KiB (gzip) em vez de 517 KiB; os 6 avisos de import dinâmico sem efeito sumiram. Detalhes: `docs/reviews/2026-11-01-v034-desempenho.md`.
+- **Vídeos de teste gerados sozinhos (#155):** o Playwright cria `e2e/fixtures/*.webm` com o FFmpeg antes de rodar; sem FFmpeg, a mensagem começa com `[SETUP]` e diz que é o ambiente, não o app.
+- **v0.33.0 incluída:** a identidade visual da v0.33 tinha sido mesclada na branch da v0.32, não na `main`; esta versão a traz.
+- **Testes humanos pendentes:** o que sobrava das issues antigas (vídeos reais, Brave/Windows, chaves reais, avaliação cega) está numa lista só: `docs/release/QA-HUMANO-PENDENTE.md`.
+
 ## v0.33.0 — 31/10/2026 — identidade visual: "estúdio de bolso"
 
 Pedido do responsável: home e cartões com identidade, personalidade e aconchego, nada genérico (ADR-0035).

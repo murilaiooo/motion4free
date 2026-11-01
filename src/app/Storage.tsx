@@ -7,6 +7,7 @@ import { ErrorBox } from './ErrorBox';
 import { ProgressPanel } from './ProgressPanel';
 import type { Progress } from '../core/progress';
 import './library.css';
+import { usePrivacyStatus } from './usePrivacyStatus';
 
 /** Medir percorre todos os projetos e o cache dos modelos: em aparelhos com muita coisa leva alguns segundos. */
 const MEASURING: Progress = { label: 'Medindo o espaço usado (projetos, modelos e cache)', phase: 'medir', fraction: null };
@@ -111,6 +112,7 @@ export function StoragePanel({ deps, currentProjectId, onProjectDeleted, onEvery
   const [confirmAll, setConfirmAll] = useState(false);
   const [word, setWord] = useState('');
   const [wiping, setWiping] = useState(false);
+  const privacy = usePrivacyStatus();
 
   const refresh = useCallback(async () => {
     setReport(await measureStorage(deps));
@@ -184,7 +186,7 @@ export function StoragePanel({ deps, currentProjectId, onProjectDeleted, onEvery
       <p className="m4f-callout ok st-privacy">
         <ShieldCheck size={16} aria-hidden />
         <span>
-          <b>Tudo fica só neste computador</b>, dentro deste navegador. Nada é enviado para a internet. O app guarda uma <i>cópia</i> dos vídeos: seus arquivos originais nunca são apagados nem alterados.
+          <b>Os projetos ficam só neste computador</b>, dentro deste navegador. O vídeo nunca é enviado{privacy.audio.state === 'sends' ? `; o áudio da fala vai para ${privacy.audio.destination} ao transcrever, porque você autorizou` : ''}. O app guarda uma <i>cópia</i> dos vídeos: seus arquivos originais nunca são apagados nem alterados.
         </span>
       </p>
 

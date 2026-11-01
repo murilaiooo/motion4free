@@ -16,7 +16,7 @@ Motion4Free is a free, open-source video editor for Reels, YouTube Shorts, TikTo
 
 Bring short recordings together, trim what drags, fix the captions, and shape the pacing yourself. Start with a visual style or describe the edit you have in mind. You can keep adjusting every part before exporting.
 
-- Import up to 30 short clips, each up to 3 minutes.
+- Import up to 30 short clips, each up to 3 minutes, 10 minutes combined. Automatic captions currently understand Portuguese speech.
 - Cut, split, rearrange, duplicate, and undo edits on a real timeline.
 - Move captions and visual elements in the preview.
 - Export vertical, portrait, square, or widescreen MP4.

@@ -1,23 +1,41 @@
 // Generate synthetic media on Windows, macOS and Linux without Bash or WSL.
-// Requires ffmpeg in PATH. Fixtures are ignored by Git and contain no user media.
-import { mkdirSync } from 'node:fs';
+// Requires ffmpeg in PATH. Fixtures are ignored by Git and contain no user media:
+// every file is drawn by FFmpeg's own test sources (testsrc2, color, sine), so there
+// is no recording, voice or third-party asset involved (#155).
+//
+// Idempotent: existing files are kept. `node scripts/make-fixture.mjs --force` rebuilds all.
+// Playwright calls this automatically from e2e/global-setup.ts before the suite runs.
+import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const directory = join('e2e', 'fixtures');
 mkdirSync(directory, { recursive: true });
+const force = process.argv.includes('--force');
+let generated = 0;
+let kept = 0;
 
 function ffmpeg(name, args) {
+  const target = join(directory, name);
+  if (!force && existsSync(target) && statSync(target).size > 0) {
+    kept += 1;
+    return;
+  }
   const result = spawnSync('ffmpeg', ['-hide_banner', '-y', '-loglevel', 'error', ...args, join(directory, name)], {
     stdio: 'inherit',
     shell: false,
     windowsHide: true,
   });
   if (result.error) {
-    console.error('Cannot run ffmpeg. Install FFmpeg and add it to PATH before generating E2E fixtures.');
-    throw result.error;
+    console.error('[SETUP] Cannot run ffmpeg. Install FFmpeg and add it to PATH before generating E2E fixtures.');
+    console.error('[SETUP] This is a test-environment problem, not a product regression.');
+    process.exit(2);
   }
-  if (result.status !== 0) throw new Error(`FFmpeg failed to generate ${name} (exit ${result.status}).`);
+  if (result.status !== 0) {
+    console.error(`[SETUP] FFmpeg failed to generate ${name} (exit ${result.status}).`);
+    process.exit(3);
+  }
+  generated += 1;
 }
 
 // 6 s with two audible spans: 0–1.4 s and 3.0–4.3 s.
@@ -53,4 +71,4 @@ for (const { name, color, size, frequency } of [
     '-cpu-used', '8', '-c:a', 'libopus', '-shortest',
   ]);
 }
-console.log('Generated 5 synthetic E2E media fixtures in e2e/fixtures.');
+console.log(`E2E fixtures in e2e/fixtures: ${generated} generated, ${kept} already present.`);

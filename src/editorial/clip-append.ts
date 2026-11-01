@@ -1,5 +1,6 @@
 import type { ClipRef, EditPlan, TimeRange, Word } from '../core/types';
 import { AppError } from '../core/errors';
+import { IMPORT_LIMITS } from '../core/import-limits';
 import { totalDuration, placeRanges, placeWords } from '../engine/clips';
 import { outputDuration } from '../engine/timeline';
 import { autoEdit } from './auto-edit';
@@ -17,8 +18,8 @@ export function appendClipsToPlan(
 ): EditPlan {
   if (!more.length) return plan;
   const all = [...plan.clips, ...more];
-  if (all.length > 30) throw new AppError('CLIPES_DEMAIS', `${all.length}/30`);
-  if (totalDuration(all) > 600) throw new AppError('CLIPES_LONGOS', `${totalDuration(all).toFixed(1)} s > 600 s`);
+  if (all.length > IMPORT_LIMITS.maxFiles) throw new AppError('CLIPES_DEMAIS', `${all.length}/${IMPORT_LIMITS.maxFiles}`);
+  if (totalDuration(all) > IMPORT_LIMITS.maxTotalSec + IMPORT_LIMITS.toleranceSec) throw new AppError('CLIPES_LONGOS', `${totalDuration(all).toFixed(1)} s > ${IMPORT_LIMITS.maxTotalSec} s`);
   if (new Set(all.map(c => c.id)).size !== all.length) throw new AppError('CLIPES_AUSENTES', 'Identificadores duplicados.');
   const oldSourceEnd = totalDuration(plan.clips);
   const oldOutEnd = outputDuration(plan.segments);

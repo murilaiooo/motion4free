@@ -98,9 +98,8 @@ function preserveCuration(previous: readonly ClipItem[], proposed: readonly Clip
 }
 
 /** Libera os MP4 gerados (quando a lista é refeita ou o trabalho é fechado). */
-export function releaseWork(work: ClipWork | null): void {
-  for (const it of work?.items ?? []) if (it.job.kind === 'done') URL.revokeObjectURL(it.job.url);
-}
+import { releaseWork } from './clip-work';
+export { releaseWork };
 
 /** Avisos da IA (preparar ou ordenar): saem quando a IA é pedida de novo ou a lista é refeita. */
 /** Avisos de configuração da IA (sem chave, sem autorização…): somem quando a configuração muda. */

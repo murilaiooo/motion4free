@@ -61,7 +61,7 @@ test('dois projetos: lista, renomeia, apaga um, armazenamento muda, apaga modelo
   await openStorage(page);
   const screen = page.getByTestId('storage-screen');
   await expect(screen.locator('[data-testid^="storage-item-project-"]')).toHaveCount(2);
-  await expect(screen).toContainText('Tudo fica só neste computador');
+  await expect(screen).toContainText('Os projetos ficam só neste computador');
   await expect(page.getByTestId('storage-quota')).toBeVisible();
   const before = await totalBytes(page);
   expect(before).toBeGreaterThan(0);
