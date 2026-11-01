@@ -1,81 +1,108 @@
 # Motion4Free
 
-**Editor de Reels no navegador, com edição manual, presets e IA opcional.**
-A versão do código é v0.30.0 (pré-lançamento). Existem recursos de edição, múltiplos clipes e exportação, mas **o conjunto ainda não passou em todos os gates para lançamento público**. Consulte [o estado real da release](docs/release/STATUS.md) e [o roteiro de publicação](docs/release/RUNBOOK.md). A Cloudflare pode atualizar o site após alterações na `main`, portanto aprovação e deploy exigem controle explícito.
+**Make short videos worth watching. Edit them right in your browser.**
 
-> **Visão:** transforme uma gravação sua falando em um Reels bem editado, por linguagem natural ou estilos prontos, preservando a voz, o significado e a privacidade. A IA atua como diretora que escolhe e ajusta um sistema de motion design curado; o motor compõe, valida e renderiza localmente sem executar código vindo do modelo.
+Motion4Free is a free, open-source video editor for Reels, YouTube Shorts, TikTok, and other social videos. Cut footage, add word-synced captions, build a look that fits your content, and export an MP4 without installing an editor or creating an account.
 
-## Como funciona
-1. A pessoa abre o site em um navegador Chromium compatível (Brave, Chrome ou Edge) e escolhe um vídeo. O processamento de mídia é local por padrão; IA externa opcional pode receber texto com autorização explícita.
-2. Escreve o que quer e/ou escolhe um estilo pronto.
-3. O site transcreve, corta silêncios sem comer palavras, escolhe o gancho, cria legendas e anima no estilo pedido.
-4. A pessoa revisa, ajusta e baixa o MP4 9:16.
+**No account. No watermark. No required subscription.**
 
-Sem GPU ou sem IA disponível, o site continua cortando, legendando, animando por regras e exportando, e avisa que a direção criativa automática ficou limitada.
+[**Open Motion4Free**](https://motion4free.murdokmurilo1.workers.dev/) · [Português (Brasil)](README.pt-BR.md) · [See the styles](https://motion4free.murdokmurilo1.workers.dev/?galeria) · [Report an issue](https://github.com/murilaiooo/motion4free/issues)
 
-**Não prometemos vídeo viral, qualidade profissional universal nem IA ilimitada.** Cada afirmação de qualidade depende de teste com vídeos reais e avaliação de pessoas.
+> **Current release:** Motion4Free is in active development. You can try the web app now, but real-world video quality, browser compatibility, and some release checks are still being evaluated. [Read the latest test report](docs/reviews/2026-10-30-v031-testes.md).
 
-## Estado do projeto
+## What can you make?
 
-| Parte | Estado |
-|---|---|
-| Visão, requisitos, riscos e pesquisa | Documentados |
-| [Spec v1 consolidada](docs/superpowers/specs/2026-10-20-motion4free-v1-design.md) | **Aprovada** (20/10/2026) |
-| [Stack (ADR-0005)](docs/decisions/0005-stack-v1.md) | **Decidida**: TypeScript, Vite, React, Mediabunny, Transformers.js |
-| [Plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md) | Pronto, 6 fases com gates |
-| [Plano detalhado da Fase 1](docs/superpowers/plans/2026-10-20-fase1-primeiro-mp4.md) | Fase inicial implementada; evolução no [CHANGELOG](docs/CHANGELOG.md) |
-| Site publicado | [Versão de produção](https://motion4free.murdokmurilo1.workers.dev), verificar atualização após merge e build da Cloudflare |
-| Avaliação de qualidade criativa | Pendente de comparação com vídeos reais por pessoas; testes técnicos de MP4 não substituem esse gate |
+### Edit your own videos
 
-## Como o trabalho acontece
-O agente decide a parte técnica, implementa com testes e abre um PR por entrega. Cada PR ganha um link de prévia e um **roteiro de teste**; o responsável pelo produto testa com vídeos reais e dá feedback. Detalhes no [plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md).
+Bring short recordings together, trim what drags, fix the captions, and shape the pacing yourself. Start with a visual style or describe the edit you have in mind. You can keep adjusting every part before exporting.
 
-## Documentação
-- **Decisão e execução:** [spec v1](docs/superpowers/specs/2026-10-20-motion4free-v1-design.md) · [plano mestre](docs/superpowers/plans/2026-10-20-plano-mestre.md) · [Fase 1](docs/superpowers/plans/2026-10-20-fase1-primeiro-mp4.md) · [ADRs](docs/decisions/)
-- **Contexto:** [índice completo](docs/INDEX.md) · [visão](docs/vision.md) · [requisitos](docs/requirements.md) · [riscos](docs/risks.md) · [arquitetura (histórico)](docs/architecture.md)
-- **Pesquisa:** [auditoria premium F01–F21](docs/reviews/2026-10-18-premium-creative-audit.md) · [manuais dos repositórios upstream](docs/research/upstream-implementation/INDEX.md) · [atualização do Editonny](docs/research/updates/2026-10-19-editonny-guide.md)
-- **Acompanhamento:** [histórico de versões](docs/CHANGELOG.md) · [catálogo de erros](docs/erros.md)
-- **Colaboração:** [AGENTS.md](AGENTS.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
+- Import up to 30 short clips, each up to 3 minutes.
+- Cut, split, rearrange, duplicate, and undo edits on a real timeline.
+- Move captions and visual elements in the preview.
+- Export vertical, portrait, square, or widescreen MP4.
 
-## Referências principais
+### Turn long videos into short clips
 
-| Repositório | Uso no Motion4Free |
-|---|---|
-| [Editonny](https://github.com/soumatheusgomes/editonny) | Regras editoriais, cenas e QA como referência |
-| [Mediabunny](https://github.com/Vanilagy/mediabunny) | Leitura e escrita de vídeo com WebCodecs (dependência) |
-| [Transformers.js](https://github.com/huggingface/transformers.js) | Transcrição Whisper no navegador (dependência) |
-| [OpenReel](https://github.com/Augani/openreel-video) | Referência de timeline e exportação web |
-| [WebLLM](https://github.com/mlc-ai/web-llm) | IA local candidata na Fase 4 |
-| [Vice City WASM](https://github.com/joncodeofficial/gta-vice-city-wasm) e [GTA5 Web](https://github.com/hammadshakeelai/gta5-web) | Padrões de cache e carregamento progressivo |
+Have a podcast, interview, class, or recorded stream? The Clip Creator works with local video files from 2 minutes to 2 hours. It transcribes the recording and proposes moments to review. You choose the excerpts, check the surrounding context, adjust the boundaries, and download individual clips or open them in the editor.
 
-Lista completa e ressalvas de licença em [repositórios de referência](docs/research/repositories.md).
+Suggestions come from local rules by default. Optional AI analysis can help with selection, but it may be unavailable or fall back to local suggestions. **Review the meaning of every cut before publishing.** The app does not promise virality or automatically guarantee a complete story.
 
-## Projetos, backup e modo offline parcial
-Projetos ficam no armazenamento privado do navegador (OPFS). Em **Meus projetos**, use o ícone de download para criar um backup completo `.m4f` com as edições e as mídias do projeto. Use **Restaurar backup** para abrir o arquivo em outro perfil ou computador, sem substituir projetos existentes. Guarde o `.m4f` em local seguro: ele contém vídeo/transcrição e não é criptografado. Se a mídia copiada estiver ausente, selecione novamente o arquivo original antes de fazer backup.
+## Make it look like yours
 
-Após abrir o site uma vez com conexão, um service worker pode guardar uma cópia versionada de arquivos estáticos básicos para reabrir a interface sem internet. Isso **não** torna modelos de transcrição/IA ou serviços de API externos disponíveis offline. Projetos, modelos e backups continuam sujeitos à política de armazenamento do navegador; não confie apenas no OPFS como backup durável. Veja [a evidência e limitações](docs/release/ISSUE4-OFFLINE-STORAGE.md).
+Motion4Free includes editable visual styles, animated typography, word-level emphasis, and layouts for spoken videos. Use a style as a starting point, then change the text, timing, position, and framing to fit your footage.
 
-## Custo e privacidade
-Sem custo obrigatório para editar é uma restrição do produto, mas modelos opcionais por API **podem cobrar pela conta do usuário**. Uma assinatura ChatGPT ou Claude não inclui automaticamente créditos de API. Vídeos são processados localmente por padrão; envio de texto para provedores externos exige prévia e consentimento para cada pedido. Downloads de modelos, espelhos e CDNs também geram tráfego externo. Confira a política de cada fornecedor antes de usar a IA por API.
+These are examples from Motion4Free's own style gallery:
 
-## Rodar localmente (desenvolvimento)
-Requer Node 22 ou versão compatível, npm e FFmpeg no `PATH` para gerar mídias sintéticas de teste. No Windows, não precisa de WSL.
+**Pop**
+![Pop style: bold, energetic captions and motion graphics](docs/assets/fase3/pop.png)
+
+**Editorial**
+![Editorial style: refined typography and restrained layouts](docs/assets/fase3/editorial.png)
+
+**Documentary**
+![Documentary style: clear titles, captions and information graphics](docs/assets/fase3/documental.png)
+
+[Explore more styles in the live gallery](https://motion4free.murdokmurilo1.workers.dev/?galeria).
+
+## The tools you need, without the clutter
+
+| Feature | What it does |
+| --- | --- |
+| **Speech-to-text captions** | Transcribe speech with on-device Whisper, edit individual words, and keep captions timed to the voice. Model downloads and performance depend on your hardware. |
+| **Timeline editing** | Trim, split, reorder, and review footage with an audio waveform, plus undo and redo. |
+| **Motion and text** | Work with styles, title cards, animated emphasis, overlays, and on-screen positioning. |
+| **Flexible formats** | Export 9:16 (Reels/Shorts/TikTok), 4:5, 1:1, or 16:9. |
+| **Creative assistance** | Start from guided choices, a written instruction, local rules, or optional AI. Review and change the result. |
+| **Projects and backups** | Return to a project saved in this browser and export a portable `.m4f` backup containing the project and copied media. |
+| **Local MP4 export** | Render and download on your device, without a Motion4Free watermark. Actual codec support depends on the browser and computer. |
+
+## Get started
+
+1. [Open the web editor](https://motion4free.murdokmurilo1.workers.dev/) in **Brave, Chrome, or Edge on a desktop computer**.
+2. Choose **Editar meus vídeos** (edit my videos) or **Clipes de vídeo longo** (long-video clips).
+3. Select video files you own or are authorized to edit. The interface accepts common formats such as MP4, MOV, and WebM; the underlying codec must also be supported by your browser.
+4. Pick a style, review the cuts and captions, and make any changes you want.
+5. Export your MP4. For projects you want to keep, download a `.m4f` backup.
+
+The **app interface is currently in Brazilian Portuguese**. This English README is here to help international users explore the project. Direct YouTube-link importing is not supported; use a video file you have the right to edit.
+
+## Free editing, with clear privacy choices
+
+Motion4Free processes your video locally by default. There is no Motion4Free account or project-upload server. Your saved projects live in your browser's local storage (OPFS), not in a cloud account.
+
+AI is optional:
+
+- **Local mode:** transcription and supported processing run on your device. Some models must be downloaded first, and demanding models may require a capable GPU.
+- **External AI:** if you connect your own API key, the browser can send selected transcript text or speech audio directly to the chosen provider **only through the corresponding opt-in flow**. Text-sharing and audio-sharing permissions are separate. Provider terms, usage limits, and charges apply.
+- **No API key required:** you can still edit, use styles and local rules, and export. A ChatGPT or Claude subscription does not automatically include API credits.
+
+**Keep your backups.** Browsers can clear local data when storage is limited or a profile is removed. A `.m4f` backup contains your media and transcript and is **not encrypted**. Store it somewhere private.
+
+## Run it locally
+
+For developers: Node.js 22 or a compatible version and npm. FFmpeg is needed to generate synthetic test fixtures, not to use the hosted web editor.
+
 ```bash
+git clone https://github.com/murilaiooo/motion4free.git
+cd motion4free
 npm ci
-npm run dev                     # abre em http://localhost:5173
-npm run typecheck
-npm test                        # testes de unidade
-npm run build                   # build e inspeção de assets Cloudflare
-npm run fixture                 # gera apenas vídeos sintéticos locais
-npm run e2e                     # Playwright (configurar Brave, se desejado)
+npm run dev
 ```
 
-## Toolkit de agentes
-O [Vibe Coding Toolkit](https://github.com/soumatheusgomes/vibe-coding-toolkit) está como submódulo em `tooling/vibe-coding-toolkit` (prompts e processos, não é o motor). Para clonar com ele: `git clone --recurse-submodules https://github.com/murilaiooo/motion4free.git`.
+Open `http://localhost:5173`.
 
-## Licença
-Código do Motion4Free sob [MIT](LICENSE). Bibliotecas, modelos, fontes e assets de terceiros mantêm as próprias licenças (por exemplo, Mediabunny é MPL-2.0).
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run fixture   # requires FFmpeg
+npm run e2e       # Playwright; browser configuration may be needed
+```
 
----
+The app uses TypeScript, React, Vite, Mediabunny, and Transformers.js. [Development guide](CONTRIBUTING.md) · [Architecture and research](docs/INDEX.md) · [Release status](docs/release/STATUS.md) · [Changelog](docs/CHANGELOG.md)
 
-*Motion4Free: a criatividade na direção, a precisão no motor, o processamento no navegador.*
+## Open source, with room to grow
+
+Motion4Free is under active development. Reports about broken workflows, confusing screens, codecs, captions, and exports are welcome in [GitHub Issues](https://github.com/murilaiooo/motion4free/issues). Please don't attach private footage, transcripts, or API keys to a public issue. For sensitive reports, see [Security](SECURITY.md).
+
+The Motion4Free source code is released under the [MIT License](LICENSE). Third-party libraries, fonts, models, and assets retain their own licenses and notices; see [Third-party licenses](docs/licencas.md). Use only footage and audio you have permission to edit and publish.
