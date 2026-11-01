@@ -44,6 +44,7 @@ import { DeleteProjectDialog, type DeleteTarget } from './DeleteProjectDialog';
 import { Editor, type Session } from './Editor';
 import { ErrorBox } from './ErrorBox';
 import { Gallery } from './Gallery';
+import { setUserBackdropFile } from './thumb-backdrop';
 import { Landing, Processing, type LandingMode } from './Landing';
 import { ClipMaker, newClipWork, releaseWork, type ClipWork } from './ClipMaker';
 import { analyzeLong, type PreparedClip } from './clip-pipeline';
@@ -340,6 +341,7 @@ function EditorApp() {
   }
 
   async function resumeMulti(id: string, project: SavedProject, clipMap: Map<string, Blob>, copyExists: boolean): Promise<import('../media/multi').OpenedClip[]> {
+    setUserBackdropFile(clipMap.values().next().value ?? null);
     step({ label: 'Abrindo o projeto salvo', phase: 'abrir-projeto', fraction: 0 });
     setAsrModel(null);
     const { openMedia } = await import('../media/input');
@@ -404,6 +406,7 @@ function EditorApp() {
   }
 
   async function resume(id: string, project: SavedProject, file: Blob, copyExists: boolean) {
+    setUserBackdropFile(file);
     setFileName(project.video.name);
     step({ label: 'Abrindo o projeto salvo', phase: 'abrir', fraction: null });
     setAsrModel(null);
@@ -505,6 +508,7 @@ function EditorApp() {
     const files = Array.isArray(f) ? f : [f];
     if (!files.length) return;
     const primary = files[0]!;
+    setUserBackdropFile(primary);
     if (pending) {
       const savedClips = referencedClips(pending.project);
       const relinkClips = savedClips.length > 1 || (savedClips.length === 1 && savedClips[0]!.id !== 'c1');
