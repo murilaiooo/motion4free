@@ -21,6 +21,12 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.43.0 — 02/11/2026
+
+- Idioma da fala (#171): além de automático, português e inglês, agora dá para escolher espanhol e russo em Configurações → Transcrição. O reconhecimento usa o mesmo modelo Whisper; a qualidade em espanhol e russo ainda não foi medida com vídeos reais.
+- Legendas em russo: os modelos de legenda ganharam as letras cirílicas. Quando a fonte do modelo não tem essas letras, o app usa uma parecida que tem (Inter, Cormorant Garamond, IBM Plex Mono ou Caveat). Os arquivos cirílicos só são baixados quando a legenda tem texto em russo, e saem iguais na prévia, na capa e no vídeo exportado.
+- Tradução de legendas (#172): o tradutor local só sabe inglês → português. Se a legenda não parece inglês, o app avisa (M4F-320) antes de baixar o modelo e não troca nada. A tradução também rejeita resultado em outro alfabeto.
+
 ## v0.42.1 — 02/11/2026
 
 - IA dos clipes (#176): cena sem fala não vai mais para a nota da IA. A IA só lê texto e inventava nota para o que não via, e essa nota pesava metade do ranking. A cena sem fala fica com a nota do app. A nota da IA ganhou uma escala clara (0, 3, 5, 8, 10) e aceita fala em qualquer idioma.

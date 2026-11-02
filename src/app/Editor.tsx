@@ -16,7 +16,7 @@ import { commitEdit } from '../editorial/commands';
 import { outputDuration, outputToSource } from '../engine/timeline';
 import type { DecodedAudio } from '../media/audio';
 import { exportInBackground } from '../media/export-client';
-import { ensureEmojiFont, ensureFonts } from '../media/fonts';
+import { ensureEmojiFont, ensureFonts, planNeedsCyrillic } from '../media/fonts';
 import { planUsesEmoji } from '../core/emoji';
 import { ZOOM_LIMITS } from '../core/edits';
 import { useAiSettings } from './AiOptions';
@@ -58,6 +58,7 @@ import { MaskPanel } from './MaskPanel';
 import { planCues, toSrt } from '../editorial/subtitles';
 import { applySubtitleTranslation, selectSubtitleLanguage, translatedCaptions, translatedCueLength, translationGroups } from '../editorial/subtitle-translation';
 import { translateEnglishToPortuguese } from '../translation/en-pt';
+import { sourceLooksEnglish } from '../editorial/translation-check';
 import { DEFAULT_SETUP, migrateSetupDefaults, type CreativeSetup } from '../core/production';
 import { StoryboardReview } from './production/StoryboardReview';
 import { applyCreativeFinding } from '../editorial/creative-plan';
@@ -326,7 +327,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
   // fontes do estilo atual antes de desenhar; as dos outros estilos ficam prontas para a troca ser instantânea
   useEffect(() => {
     let alive = true;
-    void ensureFonts(stylesOf(shown)).then((r) => {
+    void ensureFonts(stylesOf(shown), { cyrillic: planNeedsCyrillic(shown) }).then((r) => {
       if (!alive) return;
       setFontError(r.ok ? null : new AppError('FONTE_FALHOU', r.detail));
       playerRef.current?.redraw();
@@ -392,6 +393,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
     const originals = startedPlan.subtitleTranslation?.original ?? startedPlan.captions;
     const groups = translationGroups(originals);
     if (!groups.length) { setTranslationError(new AppError('TRADUCAO_FALHOU', 'Não há texto para traduzir')); return; }
+    if (!sourceLooksEnglish(groups.map((g) => g.source).join(' '))) { setTranslationError(new AppError('TRADUCAO_ORIGEM')); return; }
     const controller = new AbortController();
     translationAbort.current = controller;
     setTranslationBusy(true);

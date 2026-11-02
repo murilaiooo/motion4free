@@ -3,7 +3,7 @@ import type { EditPlan } from '../core/types';
 import { outputDuration, outputToSource } from '../engine/timeline';
 import type { Ctx2D } from '../render/ctx';
 import { drawFrame } from '../render/frame';
-import { ensureFonts } from './fonts';
+import { ensureFonts, planNeedsCyrillic } from './fonts';
 import type { OpenedMedia } from './input';
 
 const W = 216;
@@ -18,7 +18,7 @@ export async function makeThumbnail(media: OpenedMedia, plan: EditPlan): Promise
   const src = outputToSource(plan.segments, t) ?? 0;
   const sink = new CanvasSink(media.video, { width: W, height: H, fit: 'cover' });
   const frame = await sink.getCanvas(src);
-  await ensureFonts(plan.style).catch(() => undefined);
+  await ensureFonts(plan.style, { cyrillic: planNeedsCyrillic(plan) }).catch(() => undefined);
   const canvas = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(W, H) : Object.assign(document.createElement('canvas'), { width: W, height: H });
   const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
   if (!ctx) return null;

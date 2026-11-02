@@ -15,7 +15,7 @@ import { UnlockForm } from './AiSection';
 import { openSettings } from './route';
 import { asrProblem, asrRouteLabel, setAsrRoute, useAsrRoute } from '../../asr/route';
 import { ASR_APIS } from '../../asr/remote-plan';
-import { describeGpu } from '../../core/asr-models';
+import { describeGpu, SPEECH_LANGUAGES } from '../../core/asr-models';
 import type { ShareLine } from '../../core/privacy-status';
 import { LanguageToggle } from '../LanguageToggle';
 import { usePrivacyStatus } from '../usePrivacyStatus';
@@ -127,6 +127,8 @@ export function TranscriptionSection({ precision }: { precision: AsrPrecision })
             ['auto', 'Detectar automaticamente', 'Para vídeos em português, inglês ou outros idiomas compatíveis.'],
             ['pt', 'Português', 'Se você sabe que o áudio está em português.'],
             ['en', 'Inglês', 'Se você sabe que o áudio está em inglês.'],
+            ['es', 'Espanhol', 'Se você sabe que o áudio está em espanhol.'],
+            ['ru', 'Russo', 'Se você sabe que o áudio está em russo. A legenda sai em letras russas.'],
           ] as const).map(([value, label, detail]) => (
             <label className="set-option" key={value}>
               <input type="radio" name="asr-speech-language" value={value} checked={route.speechLanguage === value}
@@ -148,7 +150,7 @@ export function TranscriptionSection({ precision }: { precision: AsrPrecision })
           <b>Placa de vídeo (detectada sozinha):</b> <span data-testid="asr-gpu">{describeGpu(c)}</span>
         </li>
         <li>
-          <b>Idioma da fala:</b> {route.speechLanguage === 'auto' ? 'detecção automática' : route.speechLanguage === 'en' ? 'inglês' : 'português'}. A qualidade depende do idioma, do modelo e do áudio.
+          <b>Idioma da fala:</b> {route.speechLanguage === 'auto' ? 'detecção automática' : SPEECH_LANGUAGES[route.speechLanguage].label.toLowerCase()}. A qualidade depende do idioma, do modelo e do áudio.
         </li>
         <li>
           <b>Modelos baixados:</b> ficam guardados neste navegador para não baixar de novo. Veja o tamanho ou apague em{' '}

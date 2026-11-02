@@ -344,10 +344,31 @@ export function migrateStyle(v1: StyleV1): StyleDNA {
 }
 export type FontSpec = StyleDNA['type']['display'];
 
+/**
+ * Famílias com letras cirílicas nos arquivos do app (#171, legenda em russo). As outras recebem, só para
+ * essas letras, uma família parecida que tem cirílico (`cyrillicFallback`), em vez da fonte do sistema.
+ */
+export const CYRILLIC_FAMILIES: ReadonlySet<FontFamily> = new Set(['Inter', 'Montserrat', 'IBM Plex Sans', 'IBM Plex Mono', 'Nunito', 'Cormorant Garamond', 'Oswald', 'Rubik', 'Caveat', 'Playfair Display']);
+
+/** Família com cirílico usada no lugar de uma que não tem (mesma categoria: serifa, mono, manuscrita, sem serifa). */
+export function cyrillicFallback(family: FontFamily): FontFamily | null {
+  if (CYRILLIC_FAMILIES.has(family)) return null;
+  if (SERIF_FAMILIES.has(family)) return 'Cormorant Garamond';
+  if (MONO_FAMILIES.has(family)) return 'IBM Plex Mono';
+  if (HAND_FAMILIES.has(family)) return 'Caveat';
+  return 'Inter';
+}
+
+/** Texto com letras cirílicas (russo, ucraniano…). */
+export function hasCyrillic(text: string): boolean {
+  return /[\u0400-\u04FF]/.test(text);
+}
+
 /** String CSS de fonte para o canvas, com reserva do sistema caso a fonte não carregue. */
 export function cssFont(f: Pick<FontSpec, 'family' | 'weight' | 'style'>, sizePx: number): string {
   const fallback = SERIF_FAMILIES.has(f.family) ? 'Georgia, serif' : MONO_FAMILIES.has(f.family) ? 'ui-monospace, monospace' : HAND_FAMILIES.has(f.family) ? 'cursive' : 'system-ui, sans-serif';
-  return `${f.style === 'italic' ? 'italic ' : ''}${f.weight} ${Math.round(sizePx * 100) / 100}px "${f.family}", ${fallback}`;
+  const cyr = cyrillicFallback(f.family);
+  return `${f.style === 'italic' ? 'italic ' : ''}${f.weight} ${Math.round(sizePx * 100) / 100}px "${f.family}", ${cyr ? `"${cyr}", ` : ''}${fallback}`;
 }
 
 /** Peso disponível da família mais perto do pedido (empate: o mais forte). */

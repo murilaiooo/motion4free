@@ -325,12 +325,29 @@ export function estimateMinutes(id: AsrCandidateId, durationSec: number): number
  */
 /** Modelos Whisper multilíngues; o modo automático deixa o próprio modelo identificar a fala. */
 export const SPEECH_LANGUAGE = { label: 'vários idiomas, incluindo português e inglês' } as const;
-export type SpeechLanguage = 'auto' | 'pt' | 'en';
+
+/**
+ * Idiomas da fala que a pessoa pode escolher (#171). Todos são reconhecidos pelo Whisper multilíngue e
+ * pelo Parakeet v3; o russo usa letras cirílicas, que as fontes do app cobrem em src/media/fonts.ts.
+ * Escolher um idioma é uma dica para o modelo, nunca uma tradução.
+ */
+export const SPEECH_LANGUAGES = {
+  pt: { whisper: 'portuguese', label: 'Português' },
+  en: { whisper: 'english', label: 'Inglês' },
+  es: { whisper: 'spanish', label: 'Espanhol' },
+  ru: { whisper: 'russian', label: 'Russo' },
+} as const;
+export type SpokenLanguage = keyof typeof SPEECH_LANGUAGES;
+export type SpeechLanguage = 'auto' | SpokenLanguage;
+
+export function isSpeechLanguage(v: unknown): v is SpeechLanguage {
+  return v === 'auto' || (typeof v === 'string' && Object.hasOwn(SPEECH_LANGUAGES, v));
+}
 
 export function whisperOptions(retry = false, language: SpeechLanguage = 'auto'):
-  { language?: 'portuguese' | 'english'; task: 'transcribe'; return_timestamps: 'word'; no_repeat_ngram_size?: number } {
+  { language?: (typeof SPEECH_LANGUAGES)[SpokenLanguage]['whisper']; task: 'transcribe'; return_timestamps: 'word'; no_repeat_ngram_size?: number } {
   return {
-    ...(language === 'pt' ? { language: 'portuguese' as const } : language === 'en' ? { language: 'english' as const } : {}),
+    ...(language !== 'auto' ? { language: SPEECH_LANGUAGES[language].whisper } : {}),
     task: 'transcribe', return_timestamps: 'word', ...(retry ? { no_repeat_ngram_size: 6 } : {}),
   };
 }
