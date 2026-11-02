@@ -267,9 +267,6 @@ export function Landing({
         <section className="lp-start" id="comecar">
           <div className="lp-hero-grid">
             <div className="lp-start-intro">
-              <p className="lp-kicker">
-                <span className="lp-dot" aria-hidden /> Seu estúdio de bolso · grátis · sem cadastro
-              </p>
               <h1>
                 {pendingName ? (
                   <>Continue <Marked>seu projeto.</Marked></>
@@ -325,15 +322,17 @@ export function Landing({
                           <span className="lp-path-sub">ou arraste aqui · de 2 min a 2 h · fala em {SPEECH_LANGUAGE.label} · vídeos seus ou com autorização</span>
                         </span>
                       </label>
-                      <div className="lp-path-extra">
-                        {options}
-                        <details className="lp-path-help">
-                          <summary>Onde conseguir o arquivo do vídeo?</summary>
-                          <FileHelp />
-                        </details>
-                      </div>
                     </article>
                   )}
+                </div>
+              )}
+              {!pendingName && onLongFile && (
+                <div className="lp-path-extra" data-testid="path-extra">
+                  {options}
+                  <details className="lp-path-help">
+                    <summary>Onde conseguir o arquivo do vídeo?</summary>
+                    <FileHelp />
+                  </details>
                 </div>
               )}
 

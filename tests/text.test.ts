@@ -13,3 +13,12 @@ describe('textos da tela', () => {
     expect(planSummary(2, 0, 5)).toBe('2 trechos · 0 legendas · 5 palavras reconhecidas');
   });
 });
+
+describe('dec', () => {
+  it('usa vírgula decimal, como no Brasil', async () => {
+    const { dec } = await import('../src/core/text');
+    expect(dec(3.14)).toBe('3,1');
+    expect(dec(0.25, 2)).toBe('0,25');
+    expect(dec(6)).toBe('6,0');
+  });
+});

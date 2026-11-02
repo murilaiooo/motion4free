@@ -48,7 +48,6 @@ export function ClipReviewWorkspace({
     <section className="clips-review" aria-label="Revisão dos momentos sugeridos" data-testid="clips-review">
       <div className="clips-review-heading">
         <div>
-          <p className="lp-kicker">02 / Escolha os momentos</p>
           <h2>Revise seus clipes</h2>
           <p className="hint">Assista, ajuste e escolha quais deseja transformar em vídeo.</p>
         </div>

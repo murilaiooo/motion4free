@@ -21,6 +21,22 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.35.0 — 02/11/2026 — polimento pesado para a versão final
+
+Pedido do responsável: polir todos os cantos do app usando o Impeccable (crítica + polish). Crítica feita na tela renderizada (1440×900 e 390×844, tema escuro e claro) e com o detector do Impeccable; relatório em `docs/reviews/2026-11-02-v035-polimento.md`.
+
+- **Editor, nada cortado:** os painéis Textos e Pedir passavam da largura do painel (cartões e caixa de texto cortados na direita); agora tudo cabe. Os filtros de Estilo (Energético, Vendas…) ficavam escondidos numa faixa que rolava para o lado; agora os 7 principais aparecem e um botão visível "Mais filtros (+11)" mostra o resto.
+- **Celular:** o botão "Meus projetos" ficava em cima de Desfazer na barra do topo; agora cada um tem o seu espaço. As ferramentas da linha do tempo (dividir, copiar, recortar, apagar…) quebram em linhas em vez de sumirem para a direita. Configurações mostra as 6 seções numa grade, sem rolar para o lado.
+- **Números em português:** durações e régua da linha do tempo usam vírgula (3,1 s). A régua mostrava 0:00.3 para 0,25 s; agora mostra 0:00,25.
+- **Campo de busca da Mídia** tinha a aparência padrão do navegador (cinza claro); agora segue o tema. Cursor de texto amarelo em todos os campos.
+- **Início:** o título "cara de estúdio" ficava invisível por meio segundo antes do marca-texto passar; agora fica legível desde o primeiro instante. Os dois cartões (Editar / Clipes) têm a mesma altura; a linha de transcrição e "Onde conseguir o arquivo" viraram uma faixa própria embaixo deles. Saiu a etiqueta piscante acima do título (repetia "grátis, sem cadastro").
+- **Meus projetos:** ações com nome visível (Renomear, Duplicar, Backup, Apagar) em vez de só ícones; projetos em grade; lista vazia explica o que vai aparecer ali.
+- **Clipes de vídeo longo:** título sem a extensão do arquivo (.mp4/.webm), sem as etiquetas "01 /" e "02 /", e textos sem jargão ("Voltar à sugestão automática, sem IA" em vez de "método heurístico").
+- **Configurações › IA:** as etiquetas (Grátis, Local…) viraram etiquetas pequenas, não barras; "Precisa de WebGPU" virou "precisa de um navegador com acesso à placa de vídeo (Chrome ou Edge atualizados)".
+- **Textos mais claros:** "Seu primeiro rascunho está pronto." no lugar do rótulo em maiúsculas; a legenda diz "escrita neste computador, sem enviar o áudio" antes do nome do modelo.
+- **Testes (nuvem, Chromium):** tsc ok; Vitest 1789/1789; build + auditoria de licenças ok; Playwright 118 passaram, 14 falharam na rodada completa: 12 são as mesmas que já falham na v0.34.0; `pedido-ia:30` passou ao repetir sozinho (lento com 4 em paralelo); `visual:88` quebrou pela mudança dos filtros e foi corrigido (passa).
+- **Detalhes:** separador solto ao lado do tempo "Editado" sumiu; "Salvo neste navegador" alinhado com o nome do projeto; animação com quique trocada por saída suave; faixa colorida na lateral de aviso trocada por borda fina.
+
 ## v0.34.0 — 01/11/2026 — todas as issues abertas fechadas
 
 Pedido do responsável: verificar todas as issues abertas, fechar as já resolvidas e resolver as outras.

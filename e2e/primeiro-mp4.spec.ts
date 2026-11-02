@@ -8,7 +8,7 @@ test('vídeo com pausas vira MP4 editado, mais curto, com áudio', async ({ page
 
   const outDuration = page.getByTestId('out-duration');
   await expect(outDuration).toBeVisible({ timeout: 60_000 });
-  const shown = Number((await outDuration.textContent())!.replace(' s', ''));
+  const shown = Number((await outDuration.textContent())!.replace(' s', '').replace(',', '.'));
   expect(shown).toBeGreaterThan(2.5);
   expect(shown).toBeLessThan(3.6);
 

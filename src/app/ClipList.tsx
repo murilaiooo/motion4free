@@ -68,7 +68,7 @@ export function ClipList({ clips, onReorder, onRemove, onAdd, max = 30, disabled
             <span className="clip-drag" aria-hidden><GripVertical size={14} /></span>
             <span className="clip-index tnum">{i + 1}</span>
             <span className="clip-name" title={c.name}>{c.name}</span>
-            {c.duration != null && <span className="clip-dur tnum">{c.duration.toFixed(1)}s</span>}
+            {c.duration != null && <span className="clip-dur tnum">{c.duration.toFixed(1).replace('.', ',')} s</span>}
             <span className="clip-actions">
               <button className="icon sm ghost" onClick={() => move(i, i - 1)} disabled={disabled || i === 0} aria-label="Mover para cima"><ArrowUp size={14} /></button>
               <button className="icon sm ghost" onClick={() => move(i, i + 1)} disabled={disabled || i === clips.length - 1} aria-label="Mover para baixo"><ArrowDown size={14} /></button>

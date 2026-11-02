@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, CircleAlert, Download, Scissors, Sparkles } from 'lucide-react';
+import { ArrowLeft, CircleAlert, Download, Sparkles } from 'lucide-react';
 import './clips.css';
 import { AppError, toAppError } from '../core/errors';
 import { FORMAT_IDS, OUTPUT_FORMATS, profileFor, type OutputFormatId } from '../core/formats';
@@ -306,10 +306,7 @@ export function ClipMaker({
 
       <main className="clips-main">
         <section className="clips-head">
-          <p className="lp-kicker">
-            <Scissors size={14} aria-hidden /> Criador de clipes
-          </p>
-          <h1>Melhores momentos de “{long.file.name}”</h1>
+          <h1>Melhores momentos de “{long.file.name.replace(/\.[^.]+$/, '')}”</h1>
           <p className="hint" data-testid="clips-meta">
             {clock(long.durationSec)} de vídeo · {long.words.length.toLocaleString('pt-BR')} palavras transcritas
             {long.asrModel ? ` · legenda: ${long.asrModel}` : ''}
@@ -344,7 +341,7 @@ export function ClipMaker({
         <section className="clips-configuration" aria-label="Configuração dos clipes">
           <button className="clips-settings-toggle" type="button" aria-expanded={settingsExpanded}
             onClick={() => setSettingsExpanded(value => !value)} data-testid="clips-settings-toggle">
-            <span><strong>01 / Como ficam seus clipes</strong>
+            <span><strong>Como ficam seus clipes</strong>
               <small>{CLIP_LENGTHS[work.length].label} · {work.count} clipes · {OUTPUT_FORMATS[work.format].ratio}</small></span>
             <span>{settingsExpanded ? 'Ocultar opções' : 'Alterar opções'}</span>
           </button>
@@ -395,15 +392,15 @@ export function ClipMaker({
             <button className="sm" onClick={() => void askAi()} disabled={working} data-testid="clips-ask-ai">
                 <Sparkles size={15} aria-hidden /> Reanalisar toda a transcrição
               </button>
-            {long.words.length <= 20000 && <button className="sm ghost" disabled={working} onClick={() => regenerate(work.length, work.count, true)}>Usar método heurístico anterior (revisar antes de selecionar)</button>}
+            {long.words.length <= 20000 && <button className="sm ghost" disabled={working} onClick={() => regenerate(work.length, work.count, true)}>Voltar à sugestão automática, sem IA</button>}
             {aiBusy && <button className="sm ghost" onClick={requestScope.cancel}>Cancelar análise</button>}
             <p className="hint" data-testid="clips-analysis-source">
               <b>Lista atual: </b>
               {work.analysis?.by === 'ia'
                 ? `IA (${work.analysis.label}) leu ${work.analysis.covered} de ${work.analysis.total} parte${work.analysis.total === 1 ? '' : 's'} da fala e trouxe ${work.analysis.accepted} momento${work.analysis.accepted === 1 ? '' : 's'} novo${work.analysis.accepted === 1 ? '' : 's'}. Cada cartão diz se foi revisto pela IA.`
-                : 'regras locais, sem IA. Cartões marcados "Sugestão local".'}
+                : 'sugestões automáticas deste aparelho, sem IA (cartões marcados "Sugestão local").'}
             </p>
-            <p className="hint">Regras locais por padrão; IA só se escolhida. Fronteiras e contexto são estimativas. Novas propostas ficam desmarcadas para sua revisão.</p>
+            <p className="hint">Sem IA, o app escolhe os momentos por regras, aqui no aparelho. Início e fim de cada clipe são estimativas: assista antes de exportar. Clipes novos chegam desmarcados para você revisar.</p>
             <ProgressPanel progress={aiBusy} compact testId="clips-ai-progress" />
           </div>
           </section>}

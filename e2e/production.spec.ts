@@ -19,7 +19,7 @@ test('creative setup produces an edited draft, preserves preferences and exports
   await expect(page.getByTestId('setup-review')).toContainText('16:9');
   await page.getByTestId('setup-complete').click();
   await expect(page.getByTestId('draft-review')).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByTestId('out-duration')).toContainText('6.0');
+  await expect(page.getByTestId('out-duration')).toContainText('6,0');
   await expect(page.getByTestId('draft-review')).toContainText('Documental');
   await page.screenshot({ path: info.outputPath('first-draft.png') });
   await page.getByTestId('draft-export').click();
@@ -41,7 +41,7 @@ test('creative setup produces an edited draft, preserves preferences and exports
   await expect(page.getByTestId('timeline')).toBeVisible();
   await page.reload();
   await expect(page.getByTestId('player-canvas')).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByTestId('out-duration')).toContainText('6.0');
+  await expect(page.getByTestId('out-duration')).toContainText('6,0');
 });
 
 test('optional setup can be skipped and the answers come back next time', async ({ page }) => {

@@ -122,7 +122,7 @@ export function BriefPanel({ plan, words, onBrief, onHook, onStyle, disabled }: 
         </button>
       </div>
       <div className="examples" aria-label="Exemplos de pedido">
-        <span className="eyebrow">Exemplos — toque para usar</span>
+        <span className="field-label examples-label">Exemplos: toque para usar</span>
         {EXAMPLES.map((e) => (
           <button key={e} type="button" className="example" onClick={() => setText(e)} disabled={disabled || busy !== null}>
             {e}

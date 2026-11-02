@@ -10,7 +10,7 @@ async function openVideo(page: Page) {
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 }
 
-const seconds = async (page: Page) => Number((await page.getByTestId('out-duration').textContent())!.replace(' s', ''));
+const seconds = async (page: Page) => Number((await page.getByTestId('out-duration').textContent())!.replace(' s', '').replace(',', '.'));
 
 test('edita legenda, desfaz e refaz', async ({ page }) => {
   await openVideo(page);

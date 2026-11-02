@@ -99,17 +99,17 @@ function ProjectCard({ p, busy, onOpen, onRename, onDuplicate, onBackup, onDelet
           <button className="sm" onClick={() => onOpen(p.id)} disabled={busy || p.broken} data-testid="project-open-btn">
             <FolderOpen size={14} aria-hidden /> Abrir
           </button>
-          <button className="icon sm ghost" onClick={() => setEditing(true)} disabled={busy || p.broken} aria-label="Renomear" data-tip="Renomear" data-testid="project-rename">
-            <Pencil size={15} />
+          <button className="sm ghost" onClick={() => setEditing(true)} disabled={busy || p.broken} aria-label="Renomear" data-tip="Renomear" data-testid="project-rename">
+            <Pencil size={14} aria-hidden /> Renomear
           </button>
-          <button className="icon sm ghost" onClick={() => onDuplicate(p.id)} disabled={busy || p.broken} aria-label="Duplicar" data-tip="Duplicar" data-testid="project-duplicate">
-            <Copy size={15} />
+          <button className="sm ghost" onClick={() => onDuplicate(p.id)} disabled={busy || p.broken} aria-label="Duplicar" data-tip="Duplicar" data-testid="project-duplicate">
+            <Copy size={14} aria-hidden /> Duplicar
           </button>
-          <button className="icon sm ghost" onClick={() => onBackup(p.id)} disabled={busy || p.broken || !p.hasVideo} aria-label="Baixar backup completo" data-tip={p.hasVideo ? 'Baixar backup com edições e vídeos' : 'Selecione o vídeo original antes de fazer backup'} data-testid="project-backup">
-            <Download size={15} />
+          <button className="sm ghost" onClick={() => onBackup(p.id)} disabled={busy || p.broken || !p.hasVideo} aria-label="Baixar backup completo" data-tip={p.hasVideo ? 'Baixar backup com edições e vídeos' : 'Selecione o vídeo original antes de fazer backup'} data-testid="project-backup">
+            <Download size={14} aria-hidden /> Backup
           </button>
-          <button className="icon sm ghost danger" onClick={() => onDelete(p)} disabled={busy} aria-label="Apagar" data-tip="Apagar" data-testid="project-delete">
-            <Trash2 size={15} />
+          <button className="sm ghost danger" onClick={() => onDelete(p)} disabled={busy} aria-label="Apagar" data-tip="Apagar" data-testid="project-delete">
+            <Trash2 size={14} aria-hidden /> Apagar
           </button>
         </div>
       </div>
@@ -128,7 +128,7 @@ export function ProjectsList(props: Props) {
         <span className="hint tnum">
           {projects.length} {projects.length === 1 ? 'projeto' : 'projetos'} · {formatBytes(total)}
         </span>
-        <label className="sm ghost" data-testid="project-restore-label" title="Restaurar cópia salva no computador">
+        <label className="btn sm ghost" data-testid="project-restore-label" title="Restaurar cópia salva no computador">
           <Upload size={14} aria-hidden /> Restaurar backup
           <input type="file" className="sr-only" accept=".m4f" aria-label="Escolher backup Motion4Free" data-testid="project-restore-input" disabled={props.busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) props.onRestore(file); e.target.value = ''; }} />
         </label>
@@ -136,11 +136,17 @@ export function ProjectsList(props: Props) {
           <HardDrive size={14} aria-hidden /> Ver armazenamento
         </button>
       </header>
-      <ul className="proj-grid">
-        {projects.map((p) => (
-          <ProjectCard key={p.id} p={p} {...props} />
-        ))}
-      </ul>
+      {projects.length === 0 ? (
+        <p className="projects-empty" data-testid="projects-empty">
+          Nenhum projeto ainda. Escolha um vídeo acima: ele fica salvo aqui sozinho, para você continuar de onde parou.
+        </p>
+      ) : (
+        <ul className="proj-grid">
+          {projects.map((p) => (
+            <ProjectCard key={p.id} p={p} {...props} />
+          ))}
+        </ul>
+      )}
       <p className="hint projects-note">Projetos ficam neste navegador. Baixe um backup para guardar fora dele e restaurar em outro dispositivo.</p>
     </section>
   );

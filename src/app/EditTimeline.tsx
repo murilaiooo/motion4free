@@ -83,8 +83,10 @@ const typingIn = (el: EventTarget | null) => {
 function clock(s: number, step: number): string {
   const m = Math.floor(s / 60);
   const sec = s - m * 60;
-  const ss = step < 0.25 ? sec.toFixed(2).padStart(5, '0') : step < 1 ? sec.toFixed(1).padStart(4, '0') : String(Math.round(sec)).padStart(2, '0');
-  return `${m}:${ss}`;
+  // passo de 0,25 s precisa de 2 casas: com 1 casa a régua mostrava 0,3 para 0,25
+  const twoDigits = Math.abs(step * 10 - Math.round(step * 10)) > 1e-6;
+  const ss = twoDigits ? sec.toFixed(2).padStart(5, '0') : step < 1 ? sec.toFixed(1).padStart(4, '0') : String(Math.round(sec)).padStart(2, '0');
+  return `${m}:${ss.replace('.', ',')}`;
 }
 const secs = (s: number) => `${s.toFixed(1).replace('.', ',')} s`;
 

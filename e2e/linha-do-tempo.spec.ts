@@ -13,7 +13,7 @@ async function openVideo(page: Page) {
   await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
 }
 
-const seconds = async (page: Page) => Number((await page.getByTestId('out-duration').textContent())!.replace(' s', ''));
+const seconds = async (page: Page) => Number((await page.getByTestId('out-duration').textContent())!.replace(' s', '').replace(',', '.'));
 const segments = (page: Page) => page.locator('[data-testid^="tl-seg-"]:not([data-testid$="-start"]):not([data-testid$="-end"])');
 const plan = (page: Page) => page.evaluate(() => (window as unknown as { __m4f: { plan: { segments: { srcStart: number; srcEnd: number }[] } } }).__m4f.plan);
 

@@ -30,7 +30,7 @@ function clock(s: number, step: number): string {
   const m = Math.floor(s / 60);
   const sec = s - m * 60;
   const ss = step < 1 ? sec.toFixed(1).padStart(4, '0') : String(Math.round(sec)).padStart(2, '0');
-  return `${m}:${ss}`;
+  return `${m}:${ss.replace('.', ',')}`;
 }
 
 /**
