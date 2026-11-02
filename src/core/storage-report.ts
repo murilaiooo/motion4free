@@ -97,11 +97,13 @@ const ASR_LABELS: Record<string, string> = {
   [ASR_REPOS.turbo]: 'Whisper large-v3-turbo',
   [ASR_REPOS.small]: 'Whisper small',
   [ASR_REPOS.base]: 'Whisper base',
+  [ASR_REPOS.parakeet]: 'Parakeet v3',
 };
 const ASR_DETAILS: Record<string, string> = {
   [ASR_REPOS.turbo]: 'Legenda no modo Precisa, na placa de vídeo',
   [ASR_REPOS.small]: 'Legenda no modo Precisa, na placa integrada ou no processador',
   [ASR_REPOS.base]: 'Legenda no modo Rápida (e reserva)',
+  [ASR_REPOS.parakeet]: 'Legenda no modo Precisa, no processador',
 };
 
 const HF_REPO = /(?:\/hf\/|huggingface\.co\/)([\w.-]+\/[\w.-]+)\/resolve\//;
@@ -120,7 +122,7 @@ export function classifyCacheEntry(cache: string, url: string): { id: string; ki
     return { id: `ai:${llm}`, kind: 'ai-model', label: `IA ${m.label.split(' — ')[0]}`, detail: 'Modelo da IA no navegador (opcional, para entender pedidos)' };
   }
   const repo = HF_REPO.exec(url)?.[1];
-  if (repo && /whisper/i.test(repo)) {
+  if (repo && /whisper|parakeet/i.test(repo)) {
     return { id: `asr:${repo}`, kind: 'asr-model', label: ASR_LABELS[repo] ?? repo.split('/')[1]!, detail: ASR_DETAILS[repo] ?? 'Modelo de legenda de uma versão anterior do app' };
   }
   if (cache.startsWith('webllm/')) {

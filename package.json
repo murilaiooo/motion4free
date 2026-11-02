@@ -1,6 +1,6 @@
 {
   "name": "motion4free",
-  "version": "0.37.1",
+  "version": "0.38.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -54,8 +54,14 @@
     "@mlc-ai/web-llm": "0.2.85",
     "lucide-react": "1.49.0",
     "mediabunny": "1.61.6",
+    "parakeet.js": "1.4.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "zod": "4.6.7"
+  },
+  "overrides": {
+    "parakeet.js": {
+      "onnxruntime-web": "1.31.0-dev.20260914-8d85527a0"
+    }
   }
 }

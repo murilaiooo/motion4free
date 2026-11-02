@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { FAKE_CHUNKS, FAKE_DEMO_CHUNKS, FAKE_CLIP_CHUNKS, FakeTranscriber, WhisperTranscriber } from '../asr/transcriber';
 import { waveformPeaks } from '../analysis/waveform';
-import { ASR_CANDIDATES, asrLadder } from '../core/asr-models';
+import { ASR_CANDIDATES, requestLadder } from '../core/asr-models';
 import { MB, formatBytes } from '../core/bytes';
 import { AppError, describeError, toAppError } from '../core/errors';
 import { IMPORT_LIMITS, checkImportBatch, formatClock, type ImportCheck, type ImportItem } from '../core/import-limits';
@@ -499,7 +499,7 @@ function EditorApp() {
   async function checkSpace(files: File[]): Promise<AppError | null> {
     const est = (await storage.quota?.estimate().catch(() => null)) ?? null;
     if (!est) return null;
-    const cand = ASR_CANDIDATES[asrLadder(precision.mode, precision.capability)[0]!];
+    const cand = ASR_CANDIDATES[requestLadder(precision.request, precision.capability)[0]!];
     const cached = await cachedRepos(storage.caches).catch(() => new Set<string>());
     const model = cached.has(cand.repo) ? 0 : cand.downloadMB * MB;
     const fileBytes = files.reduce((sum, file) => sum + file.size, 0);
@@ -618,12 +618,12 @@ function EditorApp() {
       let a: Awaited<ReturnType<typeof import('./pipeline').analyze>>;
       if (files.length === 1) {
         const { analyze } = await import('./pipeline');
-        a = await analyze(primary, transcriber, step, { asrMode: precision.mode });
+        a = await analyze(primary, transcriber, step, { asrMode: precision.request });
       } else {
         const { openClips, buildClipRefs, assembledWords, assembledSilences } = await import('../media/multi');
         const { autoEdit } = await import('../editorial/auto-edit');
         const { DEFAULT_STYLE } = await import('../core/presets');
-        const { clips, wordsByClip, silencesByClip, combinedAudio, warnings, asrModel } = await openClips(files, transcriber, step, precision.mode);
+        const { clips, wordsByClip, silencesByClip, combinedAudio, warnings, asrModel } = await openClips(files, transcriber, step, precision.request);
         const refs = buildClipRefs(clips);
         const allWords = assembledWords(refs, wordsByClip);
         const allSilences = assembledSilences(refs, silencesByClip);
@@ -759,7 +759,7 @@ function EditorApp() {
     setLongWork(true);
     try {
       const { analyzeLong } = await import('./clip-pipeline');
-      const long = await analyzeLong(file, transcriber, step, { asrMode: precision.mode, fs: storageAvailable() ? fs : null });
+      const long = await analyzeLong(file, transcriber, step, { asrMode: precision.request, fs: storageAvailable() ? fs : null });
       releaseWork(clipWork);
       const { newClipWork } = await import('./ClipMaker');
       setClipWork(newClipWork(long));
@@ -808,7 +808,7 @@ function EditorApp() {
       const currentIds = [...existingClips.map(c => c.id), ...Array.from(session.clipSources?.keys() ?? [])];
       const firstNumber = 1 + Math.max(0, ...currentIds.map(id => Number(id.slice(1)) || 0));
       const { openClips, buildClipRefs, combineAudios } = await import('../media/multi');
-      const opened = await openClips(files, transcriber, step, precision.mode, firstNumber);
+      const opened = await openClips(files, transcriber, step, precision.request, firstNumber);
       const extraRefs = buildClipRefs(opened.clips);
       const oldWords = initialSession.clipWords ?? unplaceWords(existingClips, initialSession.ctx.words);
       const oldSilences = initialSession.clipSilences ?? unplaceRanges(existingClips, initialSession.silences);

@@ -58,6 +58,12 @@
 .asr-opt span { display: grid; gap: 2px; }
 .asr-opt small { color: var(--text-2); font-size: var(--fs-2xs); line-height: 1.4; }
 .asr-precision:disabled { opacity: 0.55; }
+.asr-menu { border: 0; padding: 0; margin: 0; width: 100%; max-width: 640px; display: grid; gap: var(--s-2); }
+.asr-menu legend { font-size: var(--fs-xs); font-weight: 650; color: var(--text-2); margin-bottom: var(--s-2); padding: 0; }
+.asr-menu .asr-opt[aria-disabled="true"] { opacity: 0.6; }
+.asr-stats { display: grid; gap: 1px; font-size: var(--fs-2xs); color: var(--text-2); }
+.asr-stats b { color: var(--text); font-weight: 650; }
+.asr-menu-foot { line-height: 1.4; }
 .privacy { display: flex; align-items: center; gap: var(--s-2); color: var(--text-2); font-size: var(--fs-sm); }
 .privacy svg { color: var(--green); }
 .how-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); color: var(--text-2); font-size: var(--fs-sm); }
