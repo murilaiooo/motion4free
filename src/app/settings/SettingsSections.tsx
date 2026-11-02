@@ -15,9 +15,11 @@ import { UnlockForm } from './AiSection';
 import { openSettings } from './route';
 import { asrProblem, asrRouteLabel, setAsrRoute, useAsrRoute } from '../../asr/route';
 import { ASR_APIS } from '../../asr/remote-plan';
-import { describeGpu, SPEECH_LANGUAGES } from '../../core/asr-models';
+import { describeGpu, SPEECH_LANGUAGES, type AsrCapability } from '../../core/asr-models';
 import type { ShareLine } from '../../core/privacy-status';
-import { LanguageToggle } from '../LanguageToggle';
+import { LanguageToggle, useLocale } from '../LanguageToggle';
+import { clearPerf, usePerfEntries } from '../perf-store';
+import { perfLine, perfReport } from '../../core/perf-log';
 import { usePrivacyStatus } from '../usePrivacyStatus';
 
 /* ---------- Transcrição ---------- */
@@ -43,6 +45,53 @@ function CaptionDemo() {
           </span>
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Medições reais deste computador (#170, #173): cada transcrição e cada resposta da IA local grava o tempo.
+ * Nada é estimado e nada sai do aparelho; a pessoa copia o relatório se quiser mandar.
+ */
+function PerfPanel({ capability }: { capability: AsrCapability }) {
+  const entries = usePerfEntries();
+  const locale = useLocale();
+  const [copied, setCopied] = useState<'no' | 'yes' | 'failed'>('no');
+  const report = perfReport(
+    { app: VERSION_LABEL, browser: navigator.userAgent, gpu: describeGpu(capability), webgpu: capability.webgpu, f16: capability.f16, memoryGB: capability.memoryGB },
+    entries,
+  );
+  return (
+    <div className="set-sub" data-testid="perf-panel">
+      <p className="set-sub-title">Desempenho medido neste computador</p>
+      <p className="hint">Cada vez que o app transcreve ou a IA local responde, ele anota quanto tempo levou, com qual modelo e se usou a placa de vídeo ou o processador. São medições reais, não estimativas. Ficam só neste navegador.</p>
+      {entries.length === 0 ? (
+        <p className="hint" data-testid="perf-empty">Ainda não há medições. Abra um vídeo para transcrever e volte aqui.</p>
+      ) : (
+        <ul className="set-facts" data-testid="perf-list" translate="no">
+          {entries.slice(0, 8).map((e) => (
+            <li key={`${e.at}-${e.kind}-${e.model}`} data-perf-kind={e.kind} data-perf-error={e.error ? 'true' : 'false'}>
+              {perfLine(e, locale)}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="set-row">
+        <button
+          className="sm"
+          onClick={() => void navigator.clipboard.writeText(report).then(() => setCopied('yes'), () => setCopied('failed'))}
+          data-testid="perf-copy"
+        >
+          {copied === 'yes' ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />} {copied === 'yes' ? 'Copiado' : 'Copiar relatório de desempenho'}
+        </button>
+        {entries.length > 0 && (
+          <button className="sm" onClick={() => { clearPerf(); setCopied('no'); }} data-testid="perf-clear">
+            <Trash2 size={14} aria-hidden /> Apagar medições
+          </button>
+        )}
+      </div>
+      {copied === 'failed' && <pre className="set-sample">{report}</pre>}
+      <p className="hint">O relatório traz só a versão, o navegador, a placa de vídeo e os tempos. Nenhum nome de arquivo, texto da legenda, pedido ou chave. A memória mostrada é a do computador informada pelo navegador, não a da placa de vídeo.</p>
     </div>
   );
 }
@@ -160,6 +209,7 @@ export function TranscriptionSection({ precision }: { precision: AsrPrecision })
           .
         </li>
       </ul>
+      <PerfPanel capability={c} />
     </div>
   );
 }

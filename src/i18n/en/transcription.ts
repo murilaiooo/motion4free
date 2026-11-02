@@ -102,6 +102,12 @@ const en: Record<string, string> = {
   "usa o processador": "uses the processor",
   "; sem placa de vídeo compatível, demora alguns minutos": "; without a compatible graphics card, it takes a few minutes",
   "{0}, {1}; baixa cerca de {2} na primeira vez{3}.": "{0}, {1}; downloads about {2} the first time{3}.",
+  "Desempenho medido neste computador": "Performance measured on this computer",
+  "Cada vez que o app transcreve ou a IA local responde, ele anota quanto tempo levou, com qual modelo e se usou a placa de vídeo ou o processador. São medições reais, não estimativas. Ficam só neste navegador.": "Each time the app transcribes or the local AI answers, it notes how long it took, which model ran and whether it used the graphics card or the processor. These are real measurements, not estimates. They stay in this browser only.",
+  "Ainda não há medições. Abra um vídeo para transcrever e volte aqui.": "No measurements yet. Open a video to transcribe and come back here.",
+  "Copiar relatório de desempenho": "Copy performance report",
+  "Apagar medições": "Delete measurements",
+  "O relatório traz só a versão, o navegador, a placa de vídeo e os tempos. Nenhum nome de arquivo, texto da legenda, pedido ou chave. A memória mostrada é a do computador informada pelo navegador, não a da placa de vídeo.": "The report only has the version, the browser, the graphics card and the times. No file name, caption text, request or key. The memory shown is the computer's, as reported by the browser, not the graphics card's.",
 };
 
 export default en;

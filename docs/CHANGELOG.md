@@ -21,6 +21,10 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.44.0 — 02/11/2026
+
+- Desempenho medido (#170, #173): o app anota, neste navegador, quanto tempo cada transcrição e cada resposta da IA local levaram de verdade. Para cada uma guarda o modelo, a placa de vídeo ou o processador, o tempo para carregar, o tempo para ouvir a fala (e quantas vezes mais rápido que o tempo real) e as fichas por segundo da IA. Falhas e trocas de modelo também entram, com o código M4F. Veja em Configurações → Transcrição → "Desempenho medido neste computador", com botões para copiar o relatório e apagar as medições. Nada é enviado, e o relatório não leva nome de arquivo, legenda, pedido nem chave.
+
 ## v0.43.0 — 02/11/2026
 
 - Idioma da fala (#171): além de automático, português e inglês, agora dá para escolher espanhol e russo em Configurações → Transcrição. O reconhecimento usa o mesmo modelo Whisper; a qualidade em espanhol e russo ainda não foi medida com vídeos reais.
