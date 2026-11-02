@@ -2,7 +2,7 @@ import type { EditPlan, TimeRange, Word } from '../core/types';
 import { AppError, toAppError } from '../core/errors';
 import { cleanTranscript, toWords } from '../analysis/asr-merge';
 import { planAsr } from '../analysis/asr-windows';
-import type { AsrMode } from '../core/asr-models';
+import type { AsrRequest } from '../core/asr-models';
 import { findSilences } from '../analysis/silence';
 import { autoEdit } from '../editorial/auto-edit';
 import { decodeAudio, toMono16k, type DecodedAudio } from '../media/audio';
@@ -40,7 +40,7 @@ export async function openWithAudio(file: Blob, onStep: OnProgress): Promise<{ m
 }
 
 /** Passo a passo da edição automática: abrir -> áudio -> silêncios -> transcrição -> plano. */
-export async function analyze(file: File, transcriber: Transcriber, onStep: OnProgress, opts: { asrMode?: AsrMode } = {}): Promise<Analysis> {
+export async function analyze(file: File, transcriber: Transcriber, onStep: OnProgress, opts: { asrMode?: AsrRequest } = {}): Promise<Analysis> {
   const { media, audio } = await openWithAudio(file, onStep);
   if (!audio) {
     const plan = autoEdit(media.durationSec, [], []);

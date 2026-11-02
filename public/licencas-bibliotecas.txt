@@ -6,9 +6,9 @@ Bibliotecas nativas Sharp/libvips/onnxruntime-node NÃO são enviadas pelo site.
 Fontes têm avisos em /licencas-fontes.txt; ícones em /licencas-icones.txt.
 Modelos de IA são obtidos sob demanda por URL externa, não incluídos aqui.
 MIT do Motion4Free não altera nenhuma licença de terceiros.
-Fingerprint SHA-256 do grafo: 48e953e3a46997312e7f22e2ec8ef9481f397d002607b7c6f8c3bd6cf5645f66
+Fingerprint SHA-256 do grafo: 1c9d75caf6f7fcc1b36a07db4c3eb0d7f7ae784cc9de1543b01b47eb0b8f8cac
 
-Pacotes do grafo de produção: 100 (incluindo 20 famílias de fontes).
+Pacotes do grafo de produção: 101 (incluindo 20 famílias de fontes).
 
 ====================================================================
 @emnapi/runtime@1.11.3 | SPDX MIT
@@ -3826,6 +3826,32 @@ onnxruntime-web@1.31.0-dev.20260914-8d85527a0 | SPDX MIT
 Origem: https://github.com/Microsoft/onnxruntime.git
 Pacote instalado sem arquivo LICENSE; licença consta no package.json.
 Antes de redistribuir arquivos separados, consultar upstream e sua licença.
+
+====================================================================
+parakeet.js@1.4.4 | SPDX MIT
+Origem: git+https://github.com/ysdede/parakeet.js.git
+Aviso do pacote (LICENSE):
+MIT License
+
+Copyright (c) 2025 Yunus Seyhan Dede
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ====================================================================
 platform@1.3.6 | SPDX MIT

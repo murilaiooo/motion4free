@@ -7,13 +7,14 @@ import { DEFAULT_STYLE, presetById } from '../core/presets';
 import { listTemplates } from '../core/template-gallery';
 import { CLIP_COUNTS, CLIP_LENGTHS, CLIP_LENGTH_IDS, MAX_MOMENTS, clock, findMoments, type ClipLength, type Moment } from '../editorial/highlights';
 import { discoverContextualMoments } from '../editorial/clip-discovery';
+import { juryRank } from '../editorial/clip-jury';
 import { findContextualMoments, nudgeContextMoment } from '../editorial/clip-candidates';
 import { buildTranscriptIndex } from '../editorial/clip-context';
 import { ClipReviewWorkspace } from './ClipReviewWorkspace';
 import { useEditRequest } from './use-edit-request';
 import { VERSION_LABEL } from '../version';
 import { fingerprint } from '../ai/routing';
-import { AiStatusLine, aiLabel, getAiSettings, prepareAi, useAiSettings, setAiSettings } from './AiOptions';
+import { AiStatusLine, ClipAiPicker, aiLabel, getAiSettings, prepareAi, routedSettings, useAiSettings, setAiSettings } from './AiOptions';
 import { openSettings } from './settings/route';
 import { ErrorBox } from './ErrorBox';
 import { ProgressPanel } from './ProgressPanel';
@@ -65,6 +66,8 @@ export interface ClipAnalysisInfo {
   covered?: number;
   total?: number;
   accepted?: number;
+  /** trechos que receberam notas do júri da IA (v0.39) */
+  judged?: number;
 }
 
 let uidSeq = 0;
@@ -214,12 +217,19 @@ export function ClipMaker({
       const result = choice ? await discoverContextualMoments(long.words, long.durationSec, options, choice, request.signal, (done, total) => progress({ label: `Analisando contexto: janela ${Math.min(done + 1, total)} de ${total}`, phase: 'ia-ler', fraction: total ? done / total : 1 }))
         : { moments: findContextualMoments(long.words, long.durationSec, options), warning, covered: 0, total: 0, accepted: 0 };
       if (!request.current()) return;
+      // Júri da IA (v0.39): a mesma IA dá notas aos melhores trechos; a nota final mistura app + IA.
+      let jury: { moments: typeof result.moments; judged: number; warning: AppError | null } = { moments: result.moments, judged: 0, warning: null };
+      if (choice && result.moments.length > 1) {
+        progress({ label: 'A IA está dando notas aos melhores trechos', phase: 'ia-juri', fraction: null, detail: 'gancho, história, se funciona sozinho e valor para quem assiste' });
+        jury = await juryRank(result.moments, choice, request.signal);
+        if (!request.current()) return;
+      }
       onWork((current) => {
-        const items = preserveCuration(current.items, result.moments.map((moment): ClipItem => ({ uid: `c${++uidSeq}`, m: moment, checked: false, job: { kind: 'idle' } })), true);
-        const used = !!choice && result.covered > 0;
+        const items = preserveCuration(current.items, jury.moments.map((moment): ClipItem => ({ uid: `c${++uidSeq}`, m: moment, checked: false, job: { kind: 'idle' } })), true);
+        const used = !!choice && (result.covered > 0 || jury.judged > 0);
         return { ...current, items, aiUsed: used,
-          analysis: used ? { by: 'ia', label: aiLabel(settingsNow), covered: result.covered, total: result.total, accepted: result.accepted } : { by: 'regras' },
-          notices: [...current.notices.filter(notAiNotice), ...(result.warning ? [result.warning] : [])] };
+          analysis: used ? { by: 'ia', label: aiLabel(routedSettings(settingsNow, 'moment-ranking')), covered: result.covered, total: result.total, accepted: result.accepted, judged: jury.judged } : { by: 'regras' },
+          notices: [...current.notices.filter(notAiNotice), ...(result.warning ? [result.warning] : []), ...(jury.warning ? [jury.warning] : [])] };
       });
     } catch (error) {
       if (request.current()) onWork((current) => ({ ...current, notices: [...current.notices, toAppError(error, 'CLIPES_IA_CONTEXTO')] }));
@@ -396,6 +406,7 @@ export function ClipMaker({
           </div>
           <div className="clips-ai">
             <AiStatusLine onReady={() => void askAi()} />
+            <ClipAiPicker disabled={working} />
             <button className="sm" onClick={() => void askAi()} disabled={working} data-testid="clips-ask-ai">
                 <Sparkles size={15} aria-hidden /> Reanalisar toda a transcrição
               </button>
@@ -404,7 +415,7 @@ export function ClipMaker({
             <p className="hint" data-testid="clips-analysis-source">
               <b>Lista atual: </b>
               {work.analysis?.by === 'ia'
-                ? `IA (${work.analysis.label}) leu ${work.analysis.covered} de ${work.analysis.total} parte${work.analysis.total === 1 ? '' : 's'} da fala e trouxe ${work.analysis.accepted} momento${work.analysis.accepted === 1 ? '' : 's'} novo${work.analysis.accepted === 1 ? '' : 's'}. Cada cartão diz se foi revisto pela IA.`
+                ? `IA (${work.analysis.label}) leu ${work.analysis.covered} de ${work.analysis.total} parte${work.analysis.total === 1 ? '' : 's'} da fala e trouxe ${work.analysis.accepted} momento${work.analysis.accepted === 1 ? '' : 's'} novo${work.analysis.accepted === 1 ? '' : 's'}${work.analysis.judged ? `; deu notas a ${work.analysis.judged} trechos, somadas à nota do app` : ''}. Cada cartão diz se foi revisto pela IA.`
                 : 'sugestões automáticas deste aparelho, sem IA (cartões marcados "Sugestão local").'}
             </p>
             <p className="hint">Sem IA, o app escolhe os momentos por regras, aqui no aparelho. Início e fim de cada clipe são estimativas: assista antes de exportar. Clipes novos chegam desmarcados para você revisar.</p>

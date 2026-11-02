@@ -6,7 +6,7 @@ import { ENERGY_STEP_SEC, energyEnvelope } from '../analysis/energy';
 import { findSilences } from '../analysis/silence';
 import type { Transcriber } from '../asr/transcriber';
 import { getAsrRoute } from '../asr/route';
-import type { AsrMode } from '../core/asr-models';
+import type { AsrRequest } from '../core/asr-models';
 import { compactEnergy, loadClipJob, sameSource, saveClipJob, type ClipJob } from '../core/clip-job';
 import { AppError, describeError, toAppError } from '../core/errors';
 import type { Fs } from '../core/storage-fs';
@@ -14,6 +14,7 @@ import type { StyleDNA } from '../core/style';
 import type { EditPlan, OutputProfile, TimeRange, Word } from '../core/types';
 import { clipFileName, clipPlan, sliceForClip } from '../editorial/clip-plan';
 import type { Moment } from '../editorial/highlights';
+import { snapToCuts } from '../editorial/scene-cuts';
 import type { DecodedAudio } from '../media/audio';
 import { cutRange } from '../media/cut';
 import { exportInBackground, type BackgroundExport } from '../media/export-client';
@@ -48,7 +49,7 @@ export interface LongAnalysis {
 type Step = OnProgress;
 
 /** Abre o vídeo longo, lê o áudio em mono 16 kHz, acha silêncios e energia e transcreve. Guarda o resultado. */
-export async function analyzeLong(file: File, transcriber: Transcriber, onStep: Step, opts: { asrMode: AsrMode; fs: Fs | null }): Promise<LongAnalysis> {
+export async function analyzeLong(file: File, transcriber: Transcriber, onStep: Step, opts: { asrMode: AsrRequest; fs: Fs | null }): Promise<LongAnalysis> {
   onStep({ label: 'Abrindo o vídeo', phase: 'abrir', fraction: null });
   const media = await openMedia(file, { maxSec: LONG_MAX_SEC });
   try {
@@ -152,21 +153,38 @@ async function trackClipFace(media: OpenedMedia, clipId: string, onStep: Step): 
   }
 }
 
+/**
+ * Séries, filmes e vídeos editados (v0.39): começo e fim do clipe vão para a troca de plano mais próxima, sem
+ * cortar fala. Só melhora o corte; se não der para ler os quadros, fica o corte da fala, sem aviso.
+ */
+async function snapClipToScenes(long: LongAnalysis, m: Moment, onStep: Step): Promise<TimeRange> {
+  onStep({ label: 'Ajustando o corte à troca de cena', phase: 'cenas', fraction: null, detail: 'olhando os quadros perto do começo e do fim' });
+  try {
+    const { sceneCutsNear } = await import('../media/scene-cuts');
+    const cuts = await sceneCutsNear(long.file, [m.start, m.end], long.durationSec);
+    const snapped = snapToCuts(m.start, m.end, cuts, long.words, long.durationSec);
+    return { start: snapped.start, end: snapped.end };
+  } catch {
+    return { start: m.start, end: m.end };
+  }
+}
+
 /** `index`: número do clipe na lista (1, 2…), usado no nome do arquivo. */
 export async function prepareClip(long: LongAnalysis, m: Moment, index: number, settings: ClipSettings, onStep: Step): Promise<PreparedClip> {
-  const cutting = (fraction: number) => onStep({ label: 'Recortando o trecho do vídeo longo', phase: 'recortar', fraction, detail: `${formatClock(m.end - m.start)} de vídeo` });
+  const range = await snapClipToScenes(long, m, onStep);
+  const cutting = (fraction: number) => onStep({ label: 'Recortando o trecho do vídeo longo', phase: 'recortar', fraction, detail: `${formatClock(range.end - range.start)} de vídeo` });
   cutting(0);
-  const blob = await cutRange(long.file, m.start, m.end, cutting);
+  const blob = await cutRange(long.file, range.start, range.end, cutting);
   const file = new File([blob], clipFileName(long.file.name, index, m.title), { type: 'video/mp4' });
   onStep({ label: 'Montando a edição do clipe', phase: 'montar', fraction: null });
   const { media, audio } = await openWithAudio(file, () => undefined);
-  const slice = sliceForClip({ start: m.start, end: m.end }, media.durationSec, long.words, long.silences);
+  const slice = sliceForClip(range, media.durationSec, long.words, long.silences);
   const sourceId = await fingerprint({ name: long.file.name, size: long.file.size, modified: long.file.lastModified, duration: long.durationSec });
   const plan = clipPlan(slice, settings.style, settings.output);
   const clipId = plan.clips[0]?.id ?? 'c1';
   const face = settings.followFace !== false && needsReframe(media.width, media.height, settings.output.width, settings.output.height)
     ? await trackClipFace(media, clipId, onStep) : {};
-  return { file, media, audio, plan, words: slice.words, silences: slice.silences, ...(face.tracks ? { faceTracks: face.tracks } : {}), notices: face.notice ? [face.notice] : [], sourceMaps: { c1: { version: 1, sourceId, sourceOffset: m.start, sourceEnd: m.end, sourceDuration: long.durationSec, derivedDuration: media.durationSec } } };
+  return { file, media, audio, plan, words: slice.words, silences: slice.silences, ...(face.tracks ? { faceTracks: face.tracks } : {}), notices: face.notice ? [face.notice] : [], sourceMaps: { c1: { version: 1, sourceId, sourceOffset: range.start, sourceEnd: range.end, sourceDuration: long.durationSec, derivedDuration: media.durationSec } } };
 }
 
 /** Recorta, monta e exporta: devolve o MP4 final e o nome do arquivo. */

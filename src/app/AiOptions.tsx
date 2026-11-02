@@ -347,3 +347,44 @@ export function LocalModelPicker() {
     </div>
   );
 }
+
+/** A escolha de IA de uma tarefa já aplicada (rota da tarefa ou a IA geral do app). */
+export function routedSettings(s: AiSettings, task: AiTask): AiSettings {
+  return routed(s, task, activeAiProject);
+}
+
+/**
+ * Cardápio de IA só para os clipes (v0.39): a pessoa escolhe ali mesmo qual IA analisa os clipes, sem mudar
+ * a IA do resto do app. Usa a rota por tarefa 'moment-ranking' que já existia nas Configurações avançadas.
+ */
+export function ClipAiPicker({ disabled }: { disabled?: boolean }) {
+  const s = useAiSettings();
+  const route = s.taskRoutes?.['moment-ranking'];
+  const base: AiSettings = { ...s, taskRoutes: {}, projectRoutes: {} };
+  const options: { value: string; label: string }[] = [{ value: 'default', label: `A mesma IA do app (${aiLabel(base)})` }, { value: 'rules', label: 'Só as regras do app (sem IA)' }];
+  if (LOCAL_AI_ENABLED) for (const key of LLM_KEYS) options.push({ value: `local:${key}`, label: `IA no navegador: ${LLM_MODELS[key].label.split(' (')[0]}` });
+  if (s.provider && s.remote) options.push({ value: `provider:${s.provider}:${s.remote.id}`, label: `${s.remote.label} (${PROVIDERS[s.provider].name})` });
+  if (route?.kind === 'provider' && !(route.provider === s.provider && route.remote.id === s.remote?.id)) options.push({ value: `provider:${route.provider}:${route.remote.id}`, label: `${route.remote.label} (${PROVIDERS[route.provider].name})` });
+  const value = !route ? 'default' : route.kind === 'rules' ? 'rules' : route.kind === 'local' ? `local:${route.model}` : `provider:${route.provider}:${route.remote.id}`;
+  const choose = (v: string) => {
+    const next: TaskRoutes = { ...s.taskRoutes };
+    if (v === 'default') delete next['moment-ranking'];
+    else if (v === 'rules') next['moment-ranking'] = { kind: 'rules' };
+    else if (v.startsWith('local:')) next['moment-ranking'] = { kind: 'local', model: v.slice(6) as LlmKey };
+    else if (route?.kind === 'provider' && v === `provider:${route.provider}:${route.remote.id}`) next['moment-ranking'] = route;
+    else if (s.provider && s.remote) next['moment-ranking'] = { kind: 'provider', provider: s.provider, remote: { ...s.remote } };
+    setAiSettings({ taskRoutes: next });
+  };
+  return (
+    <div className="clips-ai-picker">
+      <label>
+        <span className="clips-label">IA dos clipes</span>
+        <select value={value} disabled={disabled} onChange={(e) => choose(e.target.value)} data-testid="clips-ai-picker" aria-label="IA que analisa os clipes">
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </label>
+      <button type="button" className="sm ghost" onClick={() => openSettings('ia')} data-testid="clips-ai-more">Mais modelos e serviços…</button>
+      <p className="hint">Vale só para os clipes. Modelos grandes e que respondem direto (sem "raciocínio") costumam dar notas melhores.</p>
+    </div>
+  );
+}

@@ -65,7 +65,7 @@ export function TranscriptionSection({ precision }: { precision: AsrPrecision })
         <div className="set-options">
           <label className="set-option">
             <input type="radio" name="asr-kind" checked={route.kind === 'local'} onChange={() => setAsrRoute({ kind: 'local' })} data-testid="asr-kind-local" />
-            <span><b>Neste computador (Whisper)</b><small className="hint">Grátis, sem conta e sem internet depois do primeiro download. O áudio não sai daqui. Recomendado.</small></span>
+            <span><b>Neste computador (Whisper e Parakeet)</b><small className="hint">Grátis, sem conta e sem internet depois do primeiro download. O áudio não sai daqui. Recomendado.</small></span>
           </label>
           <label className="set-option">
             <input type="radio" name="asr-kind" checked={route.kind === 'api'} onChange={() => setAsrRoute({ kind: 'api', provider: route.provider ?? 'groq', model: route.model ?? ASR_APIS.groq!.models[0]!.id })} data-testid="asr-kind-api" />
@@ -520,7 +520,7 @@ export function AboutSection() {
       <div className="set-sub">
         <p className="set-sub-title">Licença e créditos</p>
         <p className="hint">
-          O Motion4Free é código aberto, licença MIT. Usa, entre outros: React, Mediabunny (ler e gravar vídeo), Transformers.js com modelos Whisper (legenda), WebLLM com modelos Qwen (IA no navegador), Lucide (ícones) e fontes da coleção Fontsource. Cada um segue a própria licença.
+          O Motion4Free é código aberto, licença MIT. Usa, entre outros: React, Mediabunny (ler e gravar vídeo), Transformers.js com modelos Whisper e parakeet.js com o Parakeet TDT 0.6B v3 da NVIDIA (legenda; modelo sob CC-BY-4.0), WebLLM com modelos Qwen (IA no navegador), Lucide (ícones) e fontes da coleção Fontsource. Cada um segue a própria licença.
         </p>
       </div>
     </div>
