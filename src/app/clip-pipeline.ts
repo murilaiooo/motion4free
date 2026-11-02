@@ -23,6 +23,7 @@ import { APP_VERSION } from '../version';
 import { formatClock } from '../core/bytes';
 import { exportProgress, type OnProgress } from '../core/progress';
 import { openWithAudio } from './pipeline';
+import type { FaceTracks } from '../media/face-analysis';
 
 /** Criador de clipes (v0.22, ADR-0023): análise do vídeo longo e produção de cada clipe. */
 
@@ -105,6 +106,14 @@ export async function analyzeLong(file: File, transcriber: Transcriber, onStep: 
 export interface ClipSettings {
   style: StyleDNA;
   output: OutputProfile;
+  /** seguir o rosto quando o formato de saída é diferente do vídeo (ex.: horizontal → vertical). Padrão: sim. */
+  followFace?: boolean;
+}
+
+/** A proporção muda o bastante para o recorte esconder parte do quadro (16:9 → 9:16, 4:5, 1:1). */
+export function needsReframe(srcW: number, srcH: number, outW: number, outH: number): boolean {
+  if (!(srcW > 0 && srcH > 0 && outW > 0 && outH > 0)) return false;
+  return Math.abs(Math.log((srcW / srcH) / (outW / outH))) > 0.15;
 }
 
 /** Clipe recortado, aberto e com o plano montado: pronto para o editor ou para exportar. */
@@ -116,6 +125,31 @@ export interface PreparedClip {
   plan: EditPlan;
   words: Word[];
   silences: TimeRange[];
+  /** caminho do rosto no clipe (v0.37): o recorte vertical acompanha quem fala */
+  faceTracks?: FaceTracks;
+  /** avisos que não impedem o clipe (ex.: rosto não encontrado → centro) */
+  notices: AppError[];
+}
+
+/**
+ * Reenquadramento automático (v0.37): acha o rosto no trecho recortado, só neste aparelho (MediaPipe, Apache-2.0,
+ * já usado no editor), e devolve o caminho suave do recorte. Falhou ou não há rosto: centro + aviso, nunca erro.
+ */
+async function trackClipFace(media: OpenedMedia, clipId: string, onStep: Step): Promise<{ tracks?: FaceTracks; notice?: AppError }> {
+  const started = performance.now();
+  const step = (fraction: number) => {
+    const elapsed = (performance.now() - started) / 1000;
+    onStep({ label: 'Procurando o rosto para enquadrar o clipe', phase: 'rostos', fraction, detail: fraction > 0.05 ? `falta cerca de ${formatClock(elapsed / fraction - elapsed)}` : 'analisando os quadros neste aparelho' });
+  };
+  step(0);
+  try {
+    const { analyzeFaces } = await import('../media/face-analysis');
+    const result = await analyzeFaces(new Map([[clipId, { id: clipId, video: media.video, width: media.width, height: media.height }]]), new Map([[clipId, media.durationSec]]), new AbortController().signal, step);
+    if (result.tracks[clipId]) return { tracks: result.tracks };
+    return { notice: new AppError('CLIPE_SEM_ROSTO') };
+  } catch (err) {
+    return { notice: new AppError('CLIPE_ROSTO_FALHOU', describeError(err).slice(0, 160)) };
+  }
 }
 
 /** `index`: número do clipe na lista (1, 2…), usado no nome do arquivo. */
@@ -128,15 +162,19 @@ export async function prepareClip(long: LongAnalysis, m: Moment, index: number, 
   const { media, audio } = await openWithAudio(file, () => undefined);
   const slice = sliceForClip({ start: m.start, end: m.end }, media.durationSec, long.words, long.silences);
   const sourceId = await fingerprint({ name: long.file.name, size: long.file.size, modified: long.file.lastModified, duration: long.durationSec });
-  return { file, media, audio, plan: clipPlan(slice, settings.style, settings.output), words: slice.words, silences: slice.silences, sourceMaps: { c1: { version: 1, sourceId, sourceOffset: m.start, sourceEnd: m.end, sourceDuration: long.durationSec, derivedDuration: media.durationSec } } };
+  const plan = clipPlan(slice, settings.style, settings.output);
+  const clipId = plan.clips[0]?.id ?? 'c1';
+  const face = settings.followFace !== false && needsReframe(media.width, media.height, settings.output.width, settings.output.height)
+    ? await trackClipFace(media, clipId, onStep) : {};
+  return { file, media, audio, plan, words: slice.words, silences: slice.silences, ...(face.tracks ? { faceTracks: face.tracks } : {}), notices: face.notice ? [face.notice] : [], sourceMaps: { c1: { version: 1, sourceId, sourceOffset: m.start, sourceEnd: m.end, sourceDuration: long.durationSec, derivedDuration: media.durationSec } } };
 }
 
 /** Recorta, monta e exporta: devolve o MP4 final e o nome do arquivo. */
-export async function renderClip(long: LongAnalysis, m: Moment, index: number, settings: ClipSettings, onStep: Step): Promise<{ blob: Blob; name: string; result: BackgroundExport }> {
+export async function renderClip(long: LongAnalysis, m: Moment, index: number, settings: ClipSettings, onStep: Step): Promise<{ blob: Blob; name: string; result: BackgroundExport; notices: AppError[]; followedFace: boolean }> {
   const p = await prepareClip(long, m, index, settings, onStep);
   try {
-    const result = await exportInBackground(p.file, p.media, p.audio, p.plan, (f) => onStep(exportProgress(f)));
-    return { blob: result.blob, name: clipFileName(long.file.name, index, m.title), result };
+    const result = await exportInBackground(p.file, p.media, p.audio, p.plan, (f) => onStep(exportProgress(f)), null, p.faceTracks ?? {});
+    return { blob: result.blob, name: clipFileName(long.file.name, index, m.title), result, notices: p.notices, followedFace: !!p.faceTracks };
   } finally {
     p.media.input.dispose();
   }

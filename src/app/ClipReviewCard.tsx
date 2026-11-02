@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Check, ChevronDown, ChevronUp, CircleAlert, Clock3, Download, FileVideo2, Play, SquarePen, WandSparkles } from 'lucide-react';
 import { clock } from '../editorial/highlights';
+import { BREAKDOWN_LABELS, type ScoreBreakdown } from '../editorial/clip-score';
 import type { ClipItem } from './ClipMaker';
 import type { TranscriptIndex } from '../editorial/clip-context';
 import { contextAround } from '../editorial/clip-context';
@@ -64,6 +65,11 @@ export function ClipReviewCard({
                 aria-label={`Selecionar clipe ${index + 1}`} />
               <span>Clipe {index + 1}</span>
             </label>
+            {Number.isFinite(moment.score) && moment.breakdown && (
+              <span className="clip-score tnum" data-testid="clip-score" title="Nota estimada pelas regras do app (gancho, emoção, conclusão, energia…). Não prevê visualizações.">
+                Nota {Math.round(moment.score)}
+              </span>
+            )}
             <span className={`clip-state${proven ? ' clip-state-ai' : ''}${it.job.kind === 'error' ? ' clip-state-error' : ''}`}
               data-testid="clip-provenance" title={proven ? 'Análise contextual da IA, revise antes de exportar' : 'Escolhido por regras locais; não validado por IA'}>
               {status}
@@ -118,8 +124,10 @@ export function ClipReviewCard({
             <p className="clip-done" data-testid="clip-done"><Check size={15} aria-hidden />
               Arquivo pronto: <b>{it.job.name}</b>
               {it.job.degraded && <span className="hint"> (formato alternativo)</span>}
+              {it.job.followedFace && <span className="hint"> · enquadrado no rosto</span>}
             </p>
           )}
+          {it.job.kind === 'done' && it.job.notices?.map((n) => <ErrorBox key={n.code} error={n} kind="warning" />)}
         </div>
       )}
       {expanded && (
@@ -141,6 +149,21 @@ export function ClipReviewCard({
             <div className="clip-inspector-current"><span className="clip-inspector-label">Neste clipe</span><p>{moment.text || 'Sem fala reconhecida.'}</p></div>
             <div><span className="clip-inspector-label">Depois</span><p>{context?.after || 'Sem fala posterior próxima.'}</p></div>
           </div>
+          {moment.breakdown && (
+            <div className="clip-breakdown" data-testid="clip-breakdown">
+              <span className="clip-inspector-label">Por que este trecho (nota {Math.round(moment.score)} de 100)</span>
+              <ul>
+                {(Object.keys(BREAKDOWN_LABELS) as (keyof ScoreBreakdown)[]).map((k) => (
+                  <li key={k}>
+                    <span>{BREAKDOWN_LABELS[k]}</span>
+                    <span className="clip-breakdown-bar" aria-hidden><i style={{ width: `${Math.round(moment.breakdown![k] * 100)}%` }} /></span>
+                    <span className="tnum">{Math.round(moment.breakdown![k] * 10)}/10</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="hint">{moment.reasons.filter((r) => !r.startsWith('nota estimada')).slice(0, 4).join(' · ')}</p>
+            </div>
+          )}
           {review.length > 0 && (
             <div className="clip-review-warning"><CircleAlert size={16} aria-hidden />
               <div><strong>Confira antes de publicar.</strong>{review.map(message => <p key={message}>{message}</p>)}</div>

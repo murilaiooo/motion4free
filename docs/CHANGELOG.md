@@ -21,6 +21,16 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.37.0 — 02/11/2026 — corte de clipes profissional
+
+Pedido do responsável: foco total no corte automático de clipes, com pesquisa de repositórios que ajudem a deixá-lo profissional e assertivo. Decisão em [ADR-0037](decisions/0037-corte-de-clipes-profissional.md); pesquisa resumida em [docs/research/2026-11-02-corte-de-clipes.md](research/2026-11-02-corte-de-clipes.md).
+
+- **Nota profissional dos clipes:** cada sugestão recebe nota de 0 a 100 por 8 critérios (gancho nos primeiros segundos, emoção/opinião, conclusão, energia da voz, ritmo, termina a ideia, funciona sozinho, assunto único). A nota aparece no cartão; "Revisar trecho" mostra as barras e os motivos. Antes a nota era quase igual para todos.
+- **Começo sem enrolação:** "hum", "bom," e "então," no início saem do corte.
+- **Títulos melhores:** a frase falada mais forte do clipe, sem cortar palavras que mudam o sentido.
+- **Seguir o rosto:** ao gerar o MP4 ou abrir no editor, se o formato muda (deitado → vertical), o recorte acompanha o rosto. Novo aviso M4F-1115 (sem rosto) e M4F-1116 (detector não carregou); o clipe sai mesmo assim.
+- **IA grátis sem M4F-1112:** a resposta da IA é lida de forma tolerante (raciocínio antes, cercas, campos diferentes, vírgula sobrando, resposta cortada). O pedido ficou menor e o OpenRouter ganhou folga para modelos que pensam (ex.: Nemotron). O detalhe do aviso mostra o começo da resposta quando ainda falhar.
+
 ## v0.35.0 — 02/11/2026 — polimento pesado para a versão final
 
 Pedido do responsável: polir todos os cantos do app usando o Impeccable (crítica + polish). Crítica feita na tela renderizada (1440×900 e 390×844, tema escuro e claro) e com o detector do Impeccable; relatório em `docs/reviews/2026-11-02-v035-polimento.md`.

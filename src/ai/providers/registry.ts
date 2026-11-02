@@ -74,12 +74,22 @@ function chatMessages(m: AiMessages) {
 }
 
 function chatText(body: unknown): string | null {
-  const c = (body as { choices?: { message?: { content?: unknown } }[] })?.choices?.[0]?.message?.content;
-  if (typeof c === 'string') return c || null;
+  const message = (body as { choices?: { message?: { content?: unknown; reasoning?: unknown; reasoning_content?: unknown } }[] })?.choices?.[0]?.message;
+  const c = message?.content;
+  if (typeof c === 'string' && c.trim()) return c;
   // alguns modelos devolvem o conteúdo em partes
-  if (Array.isArray(c)) return c.map((p) => (typeof p?.text === 'string' ? p.text : '')).join('') || null;
-  return null;
+  if (Array.isArray(c)) {
+    const joined = c.map((p) => (typeof p?.text === 'string' ? p.text : '')).join('');
+    if (joined.trim()) return joined;
+  }
+  // Modelos que "pensam" (Nemotron, DeepSeek R1, Qwen3…) às vezes deixam a resposta vazia e o JSON só no
+  // raciocínio. O leitor tolerante (editorial/ai-json.ts) acha o JSON lá dentro, e nada é executado.
+  const r = typeof message?.reasoning === 'string' ? message.reasoning : typeof message?.reasoning_content === 'string' ? message.reasoning_content : '';
+  return r.trim() ? r : null;
 }
+
+/** Folga para modelos que pensam antes de responder: o raciocínio também gasta o limite de saída. */
+export const REASONING_HEADROOM = 2048;
 
 /** Nome amigável a partir do ID técnico: "llama-3.3-70b-versatile" → "Llama 3.3 70b versatile". */
 export function friendlyName(id: string): string {
@@ -142,7 +152,9 @@ const openrouter: ProviderSpec = {
     url: 'https://openrouter.ai/api/v1/chat/completions',
     method: 'POST',
     headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-    body: json({ model: modelId, messages: chatMessages(m), temperature: 0, max_tokens: maxTokens }),
+    // Modelos que pensam (ex.: Nemotron :free) gastavam todo o limite raciocinando e a resposta vinha cortada
+    // ou vazia (M4F-1112). Pensar pouco + folga no limite; o OpenRouter ignora `reasoning` em modelos que não pensam.
+    body: json({ model: modelId, messages: chatMessages(m), temperature: 0, max_tokens: maxTokens + REASONING_HEADROOM, reasoning: { effort: 'low' } }),
   }),
   parseCompletion: chatText,
 };

@@ -31,7 +31,7 @@ import { downloadBlob, prepareClip, renderClip, type ClipSettings, type LongAnal
 export type ClipJobState =
   | { kind: 'idle' }
   | { kind: 'working'; progress: Progress }
-  | { kind: 'done'; url: string; name: string; degraded: boolean }
+  | { kind: 'done'; url: string; name: string; degraded: boolean; followedFace?: boolean; notices?: AppError[] }
   | { kind: 'error'; error: AppError };
 
 export interface ClipItem {
@@ -54,6 +54,8 @@ export interface ClipWork {
   aiUsed: boolean;
   /** de onde veio a lista atual (issue #146): regras locais ou qual IA, e quanto ela leu */
   analysis?: ClipAnalysisInfo;
+  /** v0.37: o recorte segue o rosto quando o formato muda (padrão: ligado) */
+  followFace?: boolean;
 }
 
 export interface ClipAnalysisInfo {
@@ -164,7 +166,7 @@ export function ClipMaker({
     };
   }, [batch, rendering]);
   const selected = work.items.filter((it) => it.checked);
-  const settings = (): ClipSettings => ({ style: presetById(work.templateId) ?? DEFAULT_STYLE, output: profileFor(work.format) });
+  const settings = (): ClipSettings => ({ style: presetById(work.templateId) ?? DEFAULT_STYLE, output: profileFor(work.format), followFace: work.followFace !== false });
 
   const setItem = (uid: string, patch: (it: ClipItem) => Partial<ClipItem>) =>
     onWork((w) => ({ ...w, items: w.items.map((it) => {
@@ -188,7 +190,7 @@ export function ClipMaker({
   }
 
   /** Muda modelo ou formato: os MP4 já gerados ficam com o visual antigo, então voltam a "não gerado". */
-  function changeLook(patch: Partial<Pick<ClipWork, 'templateId' | 'format'>>) {
+  function changeLook(patch: Partial<Pick<ClipWork, 'templateId' | 'format' | 'followFace'>>) {
     if (working) return;
     releaseWork(work);
     onWork((w) => ({ ...w, ...patch, items: w.items.map((it): ClipItem => ({ ...it, job: { kind: 'idle' } })) }));
@@ -231,7 +233,7 @@ export function ClipMaker({
     try {
       const out = await renderClip(long, it.m, index, settings(), (progress) => setJob(it.uid, { kind: 'working', progress }));
       const url = URL.createObjectURL(out.blob);
-      setJob(it.uid, { kind: 'done', url, name: out.name, degraded: out.result.degraded });
+      setJob(it.uid, { kind: 'done', url, name: out.name, degraded: out.result.degraded, followedFace: out.followedFace, notices: out.notices });
       downloadBlob(url, out.name);
       return true;
     } catch (err) {
@@ -375,6 +377,10 @@ export function ClipMaker({
                 </button>
               ))}
             </div>
+            <label className="clips-follow-face">
+              <input type="checkbox" checked={work.followFace !== false} disabled={working} onChange={(e) => changeLook({ followFace: e.target.checked })} data-testid="clips-follow-face" />
+              <span><b>Seguir o rosto</b> — quando o formato muda (ex.: vídeo deitado → vertical), o recorte acompanha a pessoa em vez de cortar no meio. Tudo neste aparelho.</span>
+            </label>
           </div>
           <div className="clips-opt clips-style">
             <span className="clips-label">Modelo</span>

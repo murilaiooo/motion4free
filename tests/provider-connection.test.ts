@@ -1,3 +1,4 @@
+import { REASONING_HEADROOM } from '../src/ai/providers/registry';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { credentialRevision, forgetKey, getKey, setSessionKey } from '../src/ai/credentials/keys';
 import { testModel } from '../src/ai/providers/client';
@@ -25,7 +26,7 @@ describe('BYOK: seleção e verificação confiáveis (#73)', () => {
     expect((init as RequestInit).credentials).toBe('omit');
     expect(url).not.toContain(FAKE_KEY);
     const sent = JSON.parse(String((init as RequestInit).body));
-    expect(sent.max_tokens).toBe(128);
+    expect(sent.max_tokens).toBe(128 + REASONING_HEADROOM);
   });
 
   it('somente uma resposta de texto real valida o modelo', async () => {
