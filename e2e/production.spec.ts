@@ -5,16 +5,16 @@ import { pickVideos } from './ui';
 test('creative setup produces an edited draft, preserves preferences and exports the chosen format', async ({ page }, info) => {
   await page.goto('/');
   await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
-  await page.getByRole('button', { name: 'YouTube', exact: true }).click();
+  await page.getByRole('radio', { name: 'YouTube', exact: true }).click();
   await page.getByTestId('setup-next').click();
-  await page.getByRole('button', { name: 'Documental', exact: true }).click();
+  await page.getByRole('radio', { name: 'Documental', exact: true }).click();
   await page.getByTestId('setup-next').click();
   await page.getByTestId('setup-next').click();
-  await page.getByRole('button', { name: 'Sem cortes', exact: true }).click();
+  await page.getByRole('radio', { name: 'Sem cortes', exact: true }).click();
   await page.getByTestId('setup-next').click();
   await page.getByText('Ajustes opcionais', { exact: true }).click();
   await page.getByText('Abertura e chamada final', { exact: true }).click();
-  await page.getByRole('button', { name: 'Salve para ver depois', exact: true }).click();
+  await page.getByRole('radio', { name: 'Salve para ver depois', exact: true }).click();
   await page.screenshot({ path: info.outputPath('creative-setup.png'), fullPage: true });
   await expect(page.getByTestId('setup-review')).toContainText('16:9');
   await page.getByTestId('setup-complete').click();
@@ -47,11 +47,11 @@ test('creative setup produces an edited draft, preserves preferences and exports
 test('optional setup can be skipped and the answers come back next time', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
-  await page.getByRole('button', { name: 'TikTok', exact: true }).click();
+  await page.getByRole('radio', { name: 'TikTok', exact: true }).click();
   await page.getByTestId('setup-next').click();
   await page.reload();
   await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
-  await expect(page.getByRole('button', { name: 'TikTok', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('radio', { name: 'TikTok', exact: true })).toHaveAttribute('aria-checked', 'true');
   await page.getByTestId('setup-skip').click();
   await expect(page.getByTestId('draft-review')).toBeVisible({ timeout: 60_000 });
   expect(await page.evaluate(() => (window as any).__m4f.plan.output)).toMatchObject({ width: 1080, height: 1920 });
@@ -69,7 +69,7 @@ test('direction revision preserves manual text, timeline and undo history', asyn
   await page.getByRole('button', { name: 'Direção criativa', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Etapas da configuração' }).getByRole('button', { name: 'Cortes', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Visual', exact: true }).click();
-  await page.getByRole('button', { name: 'Documental', exact: true }).click();
+  await page.getByRole('radio', { name: 'Documental', exact: true }).click();
   await page.getByTestId('setup-skip').click();
   await expect(page.getByTestId('draft-review')).toContainText('Documental');
   expect(await page.evaluate(() => (window as any).__m4f.history.past.length)).toBe(2);

@@ -15,6 +15,9 @@ import { UnlockForm } from './AiSection';
 import { openSettings } from './route';
 import { asrProblem, asrRouteLabel, setAsrRoute, useAsrRoute } from '../../asr/route';
 import { ASR_APIS } from '../../asr/remote-plan';
+import { SPEECH_LANGUAGE } from '../../core/asr-models';
+import type { ShareLine } from '../../core/privacy-status';
+import { usePrivacyStatus } from '../usePrivacyStatus';
 
 /* ---------- Transcrição ---------- */
 
@@ -126,7 +129,7 @@ export function TranscriptionSection({ precision }: { precision: AsrPrecision })
           <b>Placa de vídeo:</b> {c.webgpu ? 'compatível (a transcrição fica mais rápida).' : 'não encontrada ou não liberada pelo navegador; a transcrição usa o processador e demora mais.'}
         </li>
         <li>
-          <b>Idioma da fala:</b> português. Nesta versão o app só transcreve português.
+          <b>Idioma da fala:</b> {SPEECH_LANGUAGE.label}. Nesta versão o app só transcreve {SPEECH_LANGUAGE.label}: vídeos em outro idioma abrem e editam, mas a legenda e os cortes por palavra não ficam confiáveis.
         </li>
         <li>
           <b>Modelos baixados:</b> ficam guardados neste navegador para não baixar de novo. Veja o tamanho ou apague em{' '}
@@ -229,26 +232,32 @@ export function AppearanceSection() {
 
 /* ---------- Privacidade e segurança ---------- */
 
-/** Desenho animado do caminho dos dados: o que fica no computador e o que (se você ligar) vai para o serviço de IA. */
-function DataFlow({ sends, to }: { sends: boolean; to: string }) {
+/** Desenho do caminho dos dados (#153): vídeo, áudio e texto separados, cada um com o destino real agora. */
+function DataFlow({ lines }: { lines: { label: string; line: ShareLine }[] }) {
+  const out = lines.filter((l) => l.line.state === 'sends');
+  const label = out.length
+    ? `${out.map((l) => `${l.label} vai para ${l.line.destination}`).join('; ')}. O resto fica neste computador.`
+    : 'Nada sai deste computador';
   return (
-    <div className={`set-flow ${sends ? 'sends' : ''}`} aria-label={sends ? `Só texto vai deste computador para ${to}; vídeo, áudio e projetos ficam aqui` : 'Nada sai deste computador'}>
+    <div className={`set-flow ${out.length ? 'sends' : ''}`} aria-label={label} data-testid="privacy-flow">
       <div className="set-flow-box" aria-hidden>
         <Monitor size={20} />
         <b>Este computador</b>
-        <small>vídeos, áudio, legendas, projetos</small>
+        <small>vídeos, projetos{out.length < 2 ? ', e o que não está marcado ao lado' : ''}</small>
       </div>
       <div className="set-flow-path" aria-hidden>
-        {sends ? <span className="set-flow-dot">texto</span> : <X size={18} />}
+        {out.length ? out.map((l) => <span key={l.label} className="set-flow-dot">{l.label.toLowerCase()}</span>) : <X size={18} />}
       </div>
-      <div className={`set-flow-box ${sends ? '' : 'muted'}`} aria-hidden>
+      <div className={`set-flow-box ${out.length ? '' : 'muted'}`} aria-hidden>
         <ShieldCheck size={20} />
-        <b>{sends ? to : 'Nenhum serviço'}</b>
-        <small>{sends ? 'só o texto do pedido e trechos da fala' : 'o Motion4Free não tem servidor'}</small>
+        <b>{out.length ? [...new Set(out.map((l) => l.line.destination))].join(' e ') : 'Nenhum serviço'}</b>
+        <small>{out.length ? 'só o que você autorizou' : 'o Motion4Free não tem servidor'}</small>
       </div>
     </div>
   );
 }
+
+const SHARE_BADGE: Record<ShareLine['state'], string> = { local: 'fica aqui', blocked: 'escolhido, mas parado', sends: 'sai, com sua autorização' };
 
 export function PrivacySection() {
   const s = useAiSettings();
@@ -256,7 +265,7 @@ export function PrivacySection() {
   const [confirmVault, setConfirmVault] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   const vault = vaultState();
-  const sends = s.mode === 'provedor' && !!s.provider;
+  const privacy = usePrivacyStatus();
   const legacy = legacyGeminiKey();
   const keys = PROVIDER_IDS.filter((id) => getKey(id) || isRemembered(id));
 
@@ -281,17 +290,24 @@ export function PrivacySection() {
       <p className="set-lead">
         O Motion4Free funciona inteiro dentro do seu navegador. Ele não tem servidor próprio, não tem conta de usuário e não recebe seus vídeos, suas chaves ou o que você escreve.
       </p>
-      <DataFlow sends={sends} to={s.provider ? PROVIDERS[s.provider].name : ''} />
-      <ul className="set-facts">
+      <p className="set-sub-title" style={{ marginBottom: 0 }}>O que sai agora</p>
+      <DataFlow lines={[{ label: 'Áudio', line: privacy.audio }, { label: 'Texto', line: privacy.text }]} />
+      <ul className="set-facts" data-testid="privacy-now">
+        {([['video', privacy.video], ['audio', privacy.audio], ['text', privacy.text]] as const).map(([id, line]) => (
+          <li key={id} data-testid={`privacy-${id}`} data-state={line.state}>
+            {line.text} <small className="hint">({SHARE_BADGE[line.state]})</small>
+          </li>
+        ))}
         <li>
-          <b>Seus vídeos e o áudio</b> nunca saem deste computador. O app guarda uma cópia dentro do navegador para continuar o projeto depois; o arquivo original não é alterado.
+          O app guarda uma cópia dos vídeos dentro do navegador para continuar o projeto depois; o arquivo original não é alterado. Para parar de enviar, volte a transcrição para "Neste computador" ou desmarque a autorização; vale na hora.{' '}
+          <button type="button" className="link" onClick={() => openSettings('transcricao')}>Abrir Transcrição</button>
         </li>
         <li>
           <b>Downloads:</b> na primeira vez o app baixa o modelo de legenda (e, se você ligar, a IA no navegador). Isso é só baixar; nada seu é enviado nessa hora.
         </li>
         <li>
           <b>IA agora:</b> {aiLabel(s)}.{' '}
-          {sends ? `Ao fazer um pedido por texto, o seu navegador envia direto para ${PROVIDERS[s.provider!].name} o pedido e trechos da fala.` : 'Nenhum texto sai deste computador.'}
+          {privacy.text.state === 'sends' ? `Ao fazer um pedido por texto, o seu navegador envia direto para ${privacy.text.destination} o pedido e trechos da fala.` : privacy.text.state === 'blocked' ? 'Falta chave ou autorização: nenhum texto sai deste computador.' : 'Nenhum texto sai deste computador.'}
         </li>
       </ul>
 

@@ -4,6 +4,7 @@ import { App } from './app/App';
 import { registerOfflineShell } from './app/offline-shell';
 import './app/theme.css';
 import './app/app.css';
+import './app/cards.css';
 
 // tema escolhido antes (claro/escuro), aplicado antes do primeiro desenho
 try {

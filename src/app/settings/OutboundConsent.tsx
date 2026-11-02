@@ -22,7 +22,7 @@ export function OutboundConsent() {
       onClick={(event) => { if (event.target === event.currentTarget) cancel(); }}>
       <div className="stack">
         <h2 id="outbound-title">Enviar este texto ao {provider.name}?</h2>
-        <p>Modelo: <b>{request.model}</b>. O pedido abaixo vai diretamente para <b>{provider.host}</b>. Pode consumir cota ou gerar cobrança na sua conta de API. Vídeo, áudio e arquivos ficam neste computador.</p>
+        <p>Modelo: <b>{request.model}</b>. O pedido abaixo vai diretamente para <b>{provider.host}</b>. Pode consumir cota ou gerar cobrança na sua conta de API. Este pedido leva só o texto abaixo: vídeo, áudio e arquivos não vão nele.</p>
         {request.batch && <p className="hint">Esta análise lê o vídeo em várias partes. As próximas partes têm o mesmo formato, só com outro trecho da fala. Se autorizar todas, o app não pergunta de novo até esta análise terminar.</p>}
         <p className="hint">Confira todo o conteúdo antes de autorizar. Uma correção da resposta também pede autorização. Cancelar mantém a edição pelas regras.</p>
         <details open>

@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { FAKE_CHUNKS, FAKE_DEMO_CHUNKS, FAKE_CLIP_CHUNKS, FakeTranscriber, WhisperTranscriber } from '../asr/transcriber';
 import { waveformPeaks } from '../analysis/waveform';
 import { ASR_CANDIDATES, asrLadder } from '../core/asr-models';
 import { MB, formatBytes } from '../core/bytes';
 import { AppError, describeError, toAppError } from '../core/errors';
+import { IMPORT_LIMITS, checkImportBatch, formatClock, type ImportCheck, type ImportItem } from '../core/import-limits';
+import { ImportLimitWarning } from './ImportLimitWarning';
 import { makeProject, referencedClips, restoreHistory, sameVideo, type SavedProject } from '../core/project';
 import { exportProjectBackup, restoreProjectBackup } from '../core/project-archive';
 import {
@@ -27,26 +29,32 @@ import {
   setCurrent,
   type ProjectSummary,
 } from '../core/project-library';
+// já carregado na primeira tela (lista de projetos); import dinâmico aqui não separava nada (#156)
+import * as projectLibrary from '../core/project-library';
 import { dirSize } from '../core/storage-fs';
 import { cachedRepos, spaceCheck } from '../core/storage-report';
 import type { Progress } from '../core/progress';
 import type { EditPlan } from '../core/types';
 import { createHistory, type History } from '../engine/history';
 import { commitEdit } from '../editorial/commands';
-import { appendClipsToPlan } from '../editorial/clip-append';
 import { placeWords, placeRanges, unplaceWords, unplaceRanges, totalDuration } from '../engine/clips';
 import type { PlanVersion } from '../core/versions';
 import type { OpenedMedia } from '../media/input';
 import type { DecodedAudio } from '../media/audio';
-import { makeThumbnail } from '../media/thumbnail';
 import { APP_VERSION, VERSION_LABEL } from '../version';
 import { DeleteProjectDialog, type DeleteTarget } from './DeleteProjectDialog';
-import { Editor, type Session } from './Editor';
+import type { Session } from './Editor';
+// O editor (linha do tempo, painéis, prévia) só carrega quando um vídeo abre: a primeira tela fica mais leve (#156).
+const Editor = lazy(() => import('./Editor').then((m) => ({ default: m.Editor })));
+const Evaluate = lazy(() => import('./Evaluate').then((m) => ({ default: m.Evaluate })));
 import { ErrorBox } from './ErrorBox';
 import { Gallery } from './Gallery';
+import { setUserBackdropFile } from './thumb-backdrop';
 import { Landing, Processing, type LandingMode } from './Landing';
-import { ClipMaker, newClipWork, releaseWork, type ClipWork } from './ClipMaker';
-import { analyzeLong, type PreparedClip } from './clip-pipeline';
+import type { ClipWork } from './ClipMaker';
+import { releaseWork } from './clip-work';
+const ClipMaker = lazy(() => import('./ClipMaker').then((m) => ({ default: m.ClipMaker })));
+import type { PreparedClip } from './clip-pipeline';
 import { ProjectMenu } from './ProjectMenu';
 import { ProgressPanel } from './ProgressPanel';
 import { ProjectsList } from './Projects';
@@ -58,10 +66,8 @@ import { resetAiSettings, setActiveAiProject } from './AiOptions';
 import { RoutedTranscriber } from '../asr/remote';
 import { resetAsrRoute } from '../asr/route';
 import { Logo, type SaveState } from './TopBar';
-import { analyze, openWithAudio } from './pipeline';
 import { useAsrPrecision } from './asr-precision';
 import { AsrPrecisionSummary } from './AsrPrecisionOption';
-import { Evaluate } from './Evaluate';
 import { projectFs, storage, storageAvailable } from './project-store';
 import type { CreativeSetup } from '../core/production';
 import { produceFirstDraft } from '../editorial/production';
@@ -108,7 +114,7 @@ export function App() {
       </div>
     );
   }
-  if (EVALUATE) return <Evaluate />;
+  if (EVALUATE) return <Suspense fallback={<p className="hint" role="status">Abrindo…</p>}><Evaluate /></Suspense>;
   return <><EditorApp /><OutboundConsent /></>;
 }
 
@@ -162,6 +168,8 @@ function EditorApp() {
   const [focusProjects, setFocusProjects] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [spaceWarn, setSpaceWarn] = useState<{ files: File[]; error: AppError } | null>(null);
+  /** lote que passa dos limites do editor (#154): mostrado antes de transcrever ou baixar o modelo */
+  const [importWarn, setImportWarn] = useState<{ files: File[]; check: ImportCheck; mode: 'new' | 'add' } | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   // v0.22: dois modos na primeira tela e o criador de clipes (ADR-0023)
   const [mode, setModeState] = useState<LandingMode>(() => (typeof location !== 'undefined' && location.hash === '#clipes' ? 'clipes' : 'editar'));
@@ -173,7 +181,7 @@ function EditorApp() {
   const [creativePhase, setCreativePhase] = useState<'home' | 'setup'>('home');
   const [setupDone, setSetupDone] = useState(false);
   const [setupReturning, setSetupReturning] = useState(false);
-  const [prepared, setPrepared] = useState<{ a: Awaited<ReturnType<typeof analyze>>; primary: File } | null>(null);
+  const [prepared, setPrepared] = useState<{ a: Awaited<ReturnType<typeof import('./pipeline').analyze>>; primary: File } | null>(null);
   const [prepLabel, setPrepLabel] = useState('');
   /** cada escolha de vídeos ganha um número; resultados de uma preparação abandonada são ignorados */
   const prepGen = useRef(0);
@@ -279,7 +287,7 @@ function EditorApp() {
     if (!loaded.video) {
       if (usesClipStorage) {
         try {
-          const { loadProjectVideos } = await import('../core/project-library');
+          const { loadProjectVideos } = projectLibrary;
           const clipMap = await enqueue(() => loadProjectVideos(fs, id, loaded.project));
           if (clipMap) {
             await resumeMulti(id, loaded.project, clipMap, true);
@@ -340,6 +348,7 @@ function EditorApp() {
   }
 
   async function resumeMulti(id: string, project: SavedProject, clipMap: Map<string, Blob>, copyExists: boolean): Promise<import('../media/multi').OpenedClip[]> {
+    setUserBackdropFile(clipMap.values().next().value ?? null);
     step({ label: 'Abrindo o projeto salvo', phase: 'abrir-projeto', fraction: 0 });
     setAsrModel(null);
     const { openMedia } = await import('../media/input');
@@ -404,9 +413,11 @@ function EditorApp() {
   }
 
   async function resume(id: string, project: SavedProject, file: Blob, copyExists: boolean) {
+    setUserBackdropFile(file);
     setFileName(project.video.name);
     step({ label: 'Abrindo o projeto salvo', phase: 'abrir', fraction: null });
     setAsrModel(null);
+    const { openWithAudio } = await import('./pipeline');
     const { media, audio } = await openWithAudio(file, step);
     if (!sameVideo(project.video, { size: file.size, durationSec: media.durationSec })) {
       throw new AppError('VIDEO_DIFERENTE', `salvo: ${project.video.name}, ${project.video.size} bytes, ${project.video.durationSec.toFixed(2)} s; escolhido: ${file.size} bytes, ${media.durationSec.toFixed(2)} s`);
@@ -442,7 +453,7 @@ function EditorApp() {
     setCopy('pending');
     const total = clips.reduce((sum, c) => sum + c.file.size, 0);
     void enqueue(async () => {
-      const { saveClipVideo } = await import('../core/project-library');
+      const { saveClipVideo } = projectLibrary;
       let before = 0;
       for (const [i, clip] of clips.entries()) {
         const onBytes = (written: number) => showCopy(before + written, total, `clipe ${i + 1} de ${clips.length}`);
@@ -478,7 +489,8 @@ function EditorApp() {
 
   function storeThumb(id: string, media: OpenedMedia, plan: EditPlan): Promise<void> {
     if (!fs) return Promise.resolve();
-    return makeThumbnail(media, plan)
+    return import('../media/thumbnail')
+      .then(({ makeThumbnail }) => makeThumbnail(media, plan))
       .then((b) => (b ? enqueue(() => saveThumb(fs, id, b)) : undefined))
       .catch((err) => console.warn('Miniatura do projeto não foi salva', err));
   }
@@ -499,12 +511,36 @@ function EditorApp() {
     );
   }
 
-  async function onFile(f: File | File[], force = false) {
+  /** Lê só a duração de cada arquivo (rápido, sem decodificar), para conferir os limites antes de transcrever. */
+  async function readDurations(files: File[]): Promise<ImportItem[]> {
+    const { openMedia } = await import('../media/input');
+    const out: ImportItem[] = [];
+    for (const file of files) {
+      try {
+        const media = await openMedia(file, { maxSec: Number.POSITIVE_INFINITY });
+        out.push({ name: file.name, durationSec: media.durationSec });
+        try { media.input.dispose(); } catch { /* nada a liberar */ }
+      } catch {
+        out.push({ name: file.name, durationSec: null }); // o preparo mostra o erro específico deste arquivo
+      }
+    }
+    return out;
+  }
+
+  /** Confere 30 vídeos / 3 min cada / 10 min somados. Arquivo ilegível não bloqueia aqui: o preparo diz o motivo exato. */
+  async function importProblems(files: File[], existing?: { count: number; durationSec: number }): Promise<ImportCheck | null> {
+    const check = checkImportBatch(await readDurations(files), existing);
+    return check.problems.some((p) => p.kind !== 'unreadable') ? check : null;
+  }
+
+  async function onFile(f: File | File[], force = false, limitsChecked = false) {
     setStatus({ kind: 'idle' });
     setFlash(null);
     const files = Array.isArray(f) ? f : [f];
     if (!files.length) return;
+    setImportWarn(null);
     const primary = files[0]!;
+    setUserBackdropFile(primary);
     if (pending) {
       const savedClips = referencedClips(pending.project);
       const relinkClips = savedClips.length > 1 || (savedClips.length === 1 && savedClips[0]!.id !== 'c1');
@@ -531,6 +567,13 @@ function EditorApp() {
         fail(err);
       }
       return;
+    }
+    if (!limitsChecked) {
+      const over = await importProblems(files);
+      if (over) {
+        setImportWarn({ files, check: over, mode: 'new' });
+        return;
+      }
     }
     if (!force) {
       const warn = await checkSpace(files);
@@ -559,6 +602,11 @@ function EditorApp() {
     setSetupDone(false);
     setSetupReturning(hasCompletedSetup());
     setPrepLabel(files.length > 1 ? `${files.length} vídeos` : primary.name);
+    void readDurations(files).then((items) => {
+      if (gen !== prepGen.current || files.length < 2) return;
+      const total = items.reduce((sum, it) => sum + (it.durationSec ?? 0), 0);
+      setPrepLabel(`${files.length} vídeos · ${formatClock(total)} de ${formatClock(IMPORT_LIMITS.maxTotalSec)} usados`);
+    });
     setCreativePhase('setup');
     const previous = preparing.current;
     let release!: () => void;
@@ -567,8 +615,9 @@ function EditorApp() {
       await previous;
       if (gen !== prepGen.current) return;
       step({ label: 'Abrindo os vídeos', phase: 'abrir', fraction: null });
-      let a: Awaited<ReturnType<typeof analyze>>;
+      let a: Awaited<ReturnType<typeof import('./pipeline').analyze>>;
       if (files.length === 1) {
+        const { analyze } = await import('./pipeline');
         a = await analyze(primary, transcriber, step, { asrMode: precision.mode });
       } else {
         const { openClips, buildClipRefs, assembledWords, assembledSilences } = await import('../media/multi');
@@ -618,7 +667,7 @@ function EditorApp() {
   }
 
   /** Abre no editor o resultado de uma análise (vídeo novo, vários clipes ou um clipe do criador de clipes) e começa a salvar. */
-  function startProject(a: Awaited<ReturnType<typeof analyze>>, primary: File, name?: string) {
+  function startProject(a: Awaited<ReturnType<typeof import('./pipeline').analyze>>, primary: File, name?: string) {
     setAsrModel(a.asrModel);
     const id = newProjectId(Date.now());
     const h = createHistory(a.plan);
@@ -708,8 +757,10 @@ function EditorApp() {
     setFileName(file.name);
     setLongWork(true);
     try {
+      const { analyzeLong } = await import('./clip-pipeline');
       const long = await analyzeLong(file, transcriber, step, { asrMode: precision.mode, fs: storageAvailable() ? fs : null });
       releaseWork(clipWork);
+      const { newClipWork } = await import('./ClipMaker');
       setClipWork(newClipWork(long));
       setClipView(true);
       setStatus({ kind: 'idle' });
@@ -728,14 +779,23 @@ function EditorApp() {
   }
 
   /** Acrescentar clipes no projeto aberto sem substituir as edições existentes. */
-  async function onAddClips(files: File[]): Promise<void> {
+  async function onAddClips(files: File[], limitsChecked = false): Promise<void> {
     if (!session || !history || !files.length || addingClips.current) return;
+    setImportWarn(null);
+    if (!limitsChecked) {
+      const clipsNow = history.present.clips;
+      const over = await importProblems(files, { count: clipsNow.length, durationSec: clipsNow.reduce((sum, c) => sum + c.duration, 0) });
+      if (over) {
+        setImportWarn({ files, check: over, mode: 'add' });
+        return;
+      }
+    }
     addingClips.current = true;
     step({ label: 'Adicionando clipes ao projeto', phase: 'abrir', fraction: null });
     const initialSession = session;
     const initialHistory = history;
-    if (initialHistory.present.clips.length + files.length > 30) {
-      notify(new AppError('CLIPES_DEMAIS', `${initialHistory.present.clips.length + files.length}/30`));
+    if (initialHistory.present.clips.length + files.length > IMPORT_LIMITS.maxFiles) {
+      notify(new AppError('CLIPES_DEMAIS', `${initialHistory.present.clips.length + files.length}/${IMPORT_LIMITS.maxFiles}`));
       addingClips.current = false;
       setStatus({ kind: 'ready' });
       return;
@@ -753,6 +813,7 @@ function EditorApp() {
       const oldSilences = initialSession.clipSilences ?? unplaceRanges(existingClips, initialSession.silences);
       const allWords = { ...oldWords, ...opened.wordsByClip };
       const allSilences = { ...oldSilences, ...opened.silencesByClip };
+      const { appendClipsToPlan } = await import('../editorial/clip-append');
       const nextPlan = appendClipsToPlan(initialHistory.present, extraRefs, allWords, allSilences);
       const nextHistory = commitEdit(initialHistory, nextPlan);
       const sources = new Map(initialSession.clipSources ?? [
@@ -794,7 +855,7 @@ function EditorApp() {
       if (fs && projectId) {
         const id = projectId;
         void enqueue(async () => {
-          const { saveClipVideo } = await import('../core/project-library');
+          const { saveClipVideo } = projectLibrary;
           for (const c of opened.clips) await saveClipVideo(fs, id, c.id, c.file);
         }).then(() => setCopy('done')).catch((err) => {
           setCopy('failed');
@@ -990,11 +1051,26 @@ function EditorApp() {
       {notices.map((n) => (
         <ErrorBox key={n.code} error={n} kind="warning" onDismiss={() => setNotices((list) => list.filter((x) => x.code !== n.code))} />
       ))}
+      {importWarn && (
+        <ImportLimitWarning
+          files={importWarn.files}
+          check={importWarn.check}
+          adding={importWarn.mode === 'add'}
+          onContinue={(kept) => {
+            const mode = importWarn.mode;
+            setImportWarn(null);
+            if (mode === 'add') void onAddClips(kept, true);
+            else void onFile(kept, false, true);
+          }}
+          onLongMode={importWarn.mode === 'new' && importWarn.files.length === 1 ? () => { const f = importWarn.files[0]!; setImportWarn(null); void onLongFile(f); } : undefined}
+          onCancel={() => setImportWarn(null)}
+        />
+      )}
       {spaceWarn && (
         <div className="space-warn" data-testid="space-warning" style={{ display: 'grid', gap: 'var(--s-2)' }}>
           <ErrorBox error={spaceWarn.error} kind="warning" />
           <div className="notice-row">
-            <button className="sm primary" onClick={() => void onFile(spaceWarn.files, true)} data-testid="space-continue">
+            <button className="sm primary" onClick={() => void onFile(spaceWarn.files, true, true)} data-testid="space-continue">
               Continuar mesmo assim
             </button>
             <button className="sm" onClick={openStorage} data-testid="space-storage">
@@ -1025,6 +1101,7 @@ function EditorApp() {
   if (session && history) {
     return (
       <>
+        <Suspense fallback={<div className="editor-loading" role="status" data-testid="editor-loading"><ProgressPanel progress={{ label: 'Abrindo o editor', phase: 'abrir', fraction: null }} compact /></div>}>
         <Editor
           session={session}
           history={history}
@@ -1073,6 +1150,7 @@ function EditorApp() {
             </>
           }
         />
+        </Suspense>
         {overlays}
       </>
     );
@@ -1100,6 +1178,7 @@ function EditorApp() {
   if (clipView && clipWork)
     return (
       <>
+        <Suspense fallback={<div role="status" data-testid="clips-loading"><ProgressPanel progress={{ label: 'Abrindo os clipes', phase: 'abrir', fraction: null }} compact /></div>}>
         <ClipMaker
           work={clipWork}
           onWork={(update) => setClipWork((w) => (w ? update(w) : w))}
@@ -1111,6 +1190,7 @@ function EditorApp() {
           }}
           onStorage={openStorage}
         />
+        </Suspense>
         {overlays}
       </>
     );
@@ -1164,7 +1244,7 @@ function EditorApp() {
           />
         }
         notices={
-          (pendingNotice || flash || status.kind === 'error' || notices.length > 0 || spaceWarn) && (
+          (pendingNotice || flash || status.kind === 'error' || notices.length > 0 || spaceWarn || importWarn) && (
             <div className="land-notices">
               {flash && (
                 <p className="m4f-callout ok" role="status" data-testid="flash">
