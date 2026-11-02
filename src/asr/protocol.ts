@@ -7,7 +7,11 @@ import type { ErrorKey } from '../core/errors';
  * `windows`: janelas de até 28 s (mais 1 s de folga de cada lado), em segundos do original.
  * `ladder`: modelos em ordem de tentativa; se um falhar, o Worker passa para o próximo (ADR-0013).
  */
-export type ToWorker = { type: 'transcribe'; audio: Float32Array; language: SpeechLanguage; windows: AsrWindow[]; ladder: AsrCandidateId[] };
+export type ToWorker = {
+  type: 'transcribe'; audio: Float32Array; language: SpeechLanguage; windows: AsrWindow[]; ladder: AsrCandidateId[];
+  /** recomeço depois de um trecho travado: começa por esta janela (as anteriores já foram ouvidas) */
+  from?: number;
+};
 export type FromWorker =
   /** `loaded`/`total` em bytes somando todos os arquivos do modelo; `cached`: já estava guardado neste aparelho */
   | { type: 'progress'; stage: 'download'; fraction: number; model: AsrCandidateId; loaded: number; total: number; cached: boolean }
@@ -16,5 +20,7 @@ export type FromWorker =
   /** `doneSec`/`totalSec`: segundos de áudio já ouvidos e o total a ouvir (as janelas só de silêncio não contam) */
   | { type: 'progress'; stage: 'transcribe'; fraction: number; model: AsrCandidateId; window: number; windows: number; doneSec: number; totalSec: number }
   | { type: 'fallback'; from: AsrCandidateId; to: AsrCandidateId; key: ErrorKey; detail: string }
-  | { type: 'done'; results: WindowResult[]; model: AsrCandidateId; device: string; retried: number }
+  /** um trecho pronto (inclusive os só de silêncio), na hora: o que já foi ouvido sobrevive a um recomeço */
+  | { type: 'window'; index: number; result: WindowResult; retried: boolean }
+  | { type: 'done'; model: AsrCandidateId; device: string; retried: number }
   | { type: 'error'; key: ErrorKey; detail: string };

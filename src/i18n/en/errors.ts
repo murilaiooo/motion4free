@@ -34,6 +34,7 @@ const en: Record<string, string> = {
   "O modelo de transcrição baixou, mas não conseguiu iniciar neste navegador.": "The transcription model downloaded, but couldn't start in this browser.",
   "A transcrição da fala falhou.": "The speech transcription failed.",
   "O processo de transcrição parou inesperadamente.": "The transcription process stopped unexpectedly.",
+  "A transcrição travou no mesmo trecho do vídeo mesmo depois de recomeçar e trocar de modelo. Feche outras abas pesadas e tente de novo; se repetir, escolha a legenda Rápida em Configurações › Transcrição.": "Transcription got stuck on the same part of the video even after restarting and switching models. Close other heavy tabs and try again; if it happens again, choose Fast captions in Settings › Transcription.",
   "O servidor do modelo de transcrição respondeu com erro.": "The transcription model's server answered with an error.",
   "Não encontrei fala neste vídeo: ele fica sem legendas e sem título. Dá para escolher estilo e gerar o vídeo final.": "I found no speech in this video: it has no captions and no title. You can choose a style and create the final video.",
   "O modelo de legenda escolhido não funcionou neste aparelho; usei um modelo mais leve, e a legenda pode ter mais erros.": "The chosen caption model didn't work on this device; I used a lighter model, and the captions may have more errors.",
