@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Check, ChevronDown, ChevronUp, CircleAlert, Clock3, Download, FileVideo2, Play, SquarePen, WandSparkles } from 'lucide-react';
 import { clock } from '../editorial/highlights';
 import { BREAKDOWN_LABELS, type ScoreBreakdown } from '../editorial/clip-score';
+import { JURY_LABELS } from '../editorial/clip-jury';
 import type { ClipItem } from './ClipMaker';
 import type { TranscriptIndex } from '../editorial/clip-context';
 import { contextAround } from '../editorial/clip-context';
@@ -162,6 +163,20 @@ export function ClipReviewCard({
                 ))}
               </ul>
               <p className="hint">{moment.reasons.filter((r) => !r.startsWith('nota estimada')).slice(0, 4).join(' · ')}</p>
+            </div>
+          )}
+          {moment.jury && (
+            <div className="clip-breakdown" data-testid="clip-jury">
+              <span className="clip-inspector-label">Nota da IA ({Math.round(moment.jury.score)} de 100, metade da nota final)</span>
+              <ul>
+                {(Object.keys(JURY_LABELS) as (keyof typeof JURY_LABELS)[]).map((k) => (
+                  <li key={k}>
+                    <span>{JURY_LABELS[k]}</span>
+                    <span className="clip-breakdown-bar" aria-hidden><i style={{ width: `${Math.round(moment.jury![k] * 10)}%` }} /></span>
+                    <span className="tnum">{Math.round(moment.jury![k])}/10</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
           {review.length > 0 && (

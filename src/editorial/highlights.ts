@@ -37,6 +37,8 @@ export const MOMENT_GAP_SEC = 1;
 export interface Moment {
   /** nota por critério (0–1), da nota profissional v0.37 (clip-score.ts) */
   breakdown?: import('./clip-score').ScoreBreakdown;
+  /** notas do júri da IA (v0.39, clip-jury.ts) */
+  jury?: import('./clip-jury').JuryNotes;
   sourceEvidence?: { firstWordId: string; lastWordId: string; review: string[]; source: 'local-context' | 'ai-context' };
   userTitle?: boolean;
   userBounds?: boolean;

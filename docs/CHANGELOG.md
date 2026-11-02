@@ -21,6 +21,15 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.39.0 — 02/11/2026 — em preparação, clipes mais certeiros (ADR-0040)
+
+- Júri da IA: depois de achar os trechos, a IA escolhida dá nota de 0 a 10 em gancho, história, se funciona sozinho e valor para quem assiste. A nota final mistura metade app, metade IA, e o cartão mostra as notas. Falha vira M4F-1117 e a ordem do app continua.
+- "IA dos clipes" escolhida direto na tela de clipes: a mesma IA do app, só as regras do app, IA no navegador ou outro modelo do serviço já configurado.
+- Séries, filmes e vídeos editados: começo e fim do clipe vão para a troca de plano mais próxima (até 1,5 s), nunca por cima de fala.
+- Cenas sem fala com som forte (música, ação, aplauso) também viram sugestão, com nota modesta e aviso para conferir a imagem.
+- Sem IA: voz subindo nos 3 primeiros segundos conta como gancho, desvios ("deixa eu ver o chat", "onde eu estava") perdem nota e clipes que dizem a mesma coisa não aparecem duas vezes.
+- Testes: só unidade dos módulos novos e typecheck; teste no navegador fica com o responsável.
+
 ## v0.37.1 — 01/11/2026 — em preparação, issue #163
 
 - OpenRouter pede resposta direta (`reasoning.effort: none`) e permite uma recuperação com raciocínio limitado quando obrigatório ou quando o modelo esgota a saída pensando.
