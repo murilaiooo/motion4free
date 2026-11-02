@@ -41,6 +41,8 @@ export const ERRORS = {
   CONFERENCIA_REVISAR: { code: 'M4F-315', title: 'Conferência dupla: duas IAs ouviram a fala e discordaram em algumas palavras. Elas estão marcadas para você conferir em Legendas.' },
   SEM_PLACA_VIDEO: { code: 'M4F-313', title: 'O navegador não liberou a placa de vídeo, então a legenda foi feita só com o processador (mais devagar). A legenda sai igual; só demora mais.' },
   ASR_API_GRANDE: { code: 'M4F-312', title: 'O serviço recusou o pedaço de áudio por ser grande demais.' },
+  TRADUCAO_FALHOU: { code: 'M4F-316', title: 'A tradução local da legenda não foi concluída. A legenda original continua disponível. Tente novamente ou use a versão em inglês.' },
+  TRADUCAO_DESATUALIZADA: { code: 'M4F-317', title: 'O vídeo mudou durante a tradução. Nada foi substituído; clique em traduzir novamente.' },
   SEM_ENCODER: { code: 'M4F-401', title: 'Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador.' },
   EXPORTACAO_FALHOU: { code: 'M4F-402', title: 'A geração do vídeo falhou.' },
   EXPORTACAO_CLIPE: { code: 'M4F-404', title: 'A geração do vídeo não conseguiu ler um dos clipes.' },

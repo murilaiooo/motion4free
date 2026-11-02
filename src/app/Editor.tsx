@@ -272,7 +272,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
   const [editError, setEditError] = useState<AppError | null>(null);
   const [translationProgress, setTranslationProgress] = useState<{ done: number; total: number } | null>(null);
   const [translationBusy, setTranslationBusy] = useState(false);
-  const [translationError, setTranslationError] = useState<string | null>(null);
+  const [translationError, setTranslationError] = useState<AppError | null>(null);
   const translationAbort = useRef<AbortController | null>(null);
   const latestTranslationHistory = useRef({ history, onHistory });
   latestTranslationHistory.current = { history, onHistory };
@@ -391,7 +391,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
     const startedPlan = plan;
     const originals = startedPlan.subtitleTranslation?.original ?? startedPlan.captions;
     const groups = translationGroups(originals);
-    if (!groups.length) { setTranslationError('Não há texto para traduzir.'); return; }
+    if (!groups.length) { setTranslationError(new AppError('TRADUCAO_FALHOU', 'Não há texto para traduzir')); return; }
     const controller = new AbortController();
     translationAbort.current = controller;
     setTranslationBusy(true);
@@ -403,12 +403,12 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
       // Não sobrescrever edições feitas durante o download e a tradução.
       const current = latestTranslationHistory.current;
       if (current.history.present !== startedPlan) {
-        setTranslationError('O projeto mudou durante a tradução. Clique em traduzir novamente.');
+        setTranslationError(new AppError('TRADUCAO_DESATUALIZADA'));
         return;
       }
       current.onHistory(commitEdit(current.history, applySubtitleTranslation(startedPlan, translated)));
     } catch (err) {
-      if (!controller.signal.aborted) setTranslationError(`Não foi possível traduzir: ${err instanceof Error ? err.message : 'erro inesperado'}.`);
+      if (!controller.signal.aborted) setTranslationError(toAppError(err, 'TRADUCAO_FALHOU'));
     } finally {
       if (translationAbort.current === controller) translationAbort.current = null;
       setTranslationBusy(false);
@@ -895,9 +895,9 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
               <button type="button" className="sm" onClick={() => void translateCaptions()} disabled={off || translationBusy || !plan.captions.length} data-testid="translate-subtitles">
                 <Captions size={14} aria-hidden /> {plan.subtitleTranslation ? 'Refazer tradução inglês → português' : 'Traduzir inglês → português (beta)'}
               </button>
-              <p className="hint">Tradução local de inglês para português: baixa um modelo gratuito na primeira vez. O áudio não muda nem é enviado; revise nomes e expressões antes de exportar. O tempo da tradução é aproximado por frase.</p>
+              <p className="hint">Tradução local de inglês para português: baixa um modelo gratuito na primeira vez. Nesta etapa, o áudio não muda nem é enviado; revise nomes e expressões antes de exportar. O tempo da tradução é aproximado por frase.</p>
               {translationBusy && <p role="status" data-testid="translation-progress">{translationProgress?.done ? `Traduzindo ${translationProgress.done} de ${translationProgress.total} trechos…` : 'Carregando o modelo de tradução…'} <button type="button" className="link" onClick={() => translationAbort.current?.abort()}>Cancelar</button></p>}
-              {translationError && <p className="hint warn" role="alert" data-testid="translation-error">{translationError}</p>}
+              {translationError && <div data-testid="translation-error"><ErrorBox error={translationError} kind="warning" onDismiss={() => setTranslationError(null)} /></div>}
             </section>
             <details className="fold" open>
               <summary>Estilo das legendas</summary>

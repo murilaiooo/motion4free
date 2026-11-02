@@ -13,7 +13,7 @@ const en: Record<string, string> = {
   "A legenda acompanha o idioma original da fala. Para áudio em inglês, você também pode criar uma versão em português.": "Subtitles follow the original spoken language. For English audio, you can also create a Portuguese version.",
   "Traduzir inglês → português (beta)": "Translate English → Portuguese (beta)",
   "Refazer tradução inglês → português": "Translate English → Portuguese again",
-  "Tradução local de inglês para português: baixa um modelo gratuito na primeira vez. O áudio não muda nem é enviado; revise nomes e expressões antes de exportar. O tempo da tradução é aproximado por frase.": "Local English-to-Portuguese translation: downloads a free model the first time. Audio is unchanged and never uploaded; review names and expressions before export. Translation timing is approximate per sentence.",
+  "Tradução local de inglês para português: baixa um modelo gratuito na primeira vez. Nesta etapa, o áudio não muda nem é enviado; revise nomes e expressões antes de exportar. O tempo da tradução é aproximado por frase.": "Local English-to-Portuguese translation: downloads a free model the first time. This translation step does not change or upload the audio; review names and expressions before export. Translation timing is approximate per sentence.",
   "Carregando o modelo de tradução…": "Loading the translation model…",
   "Cancelar": "Cancel",
   "Não há texto para traduzir.": "There is no text to translate.",
