@@ -21,6 +21,14 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.42.0 — 02/11/2026
+
+- **Idioma da fala** (Configurações › Transcrição): detectar automaticamente (padrão), português ou inglês. Vídeo falado em inglês agora sai com legenda em inglês, sem forçar português (#171, parte 1).
+- **Legenda em português para vídeo em inglês (beta)**, feita no próprio computador: Legendas › Idioma da legenda › Traduzir inglês → português. O texto original continua guardado e dá para voltar a ele a qualquer momento; prévia, MP4 e SRT seguem a faixa escolhida.
+- Correção da tradução (#175): a legenda saía com ">>pt_BR<<" na tela e em francês ou espanhol, porque a biblioteca de IA deixou de passar o código do idioma ao tradutor. Agora o código chega certo, e cada trecho traduzido é conferido antes de entrar: se algum sair em outro idioma, com código interno ou estranho, nada é trocado e aparece o aviso M4F-318 (ADR-0043). Falha ao baixar o tradutor: M4F-319.
+- Correções achadas pelos testes que estavam falhando desde a v0.38: título do modelo Gigante ficava escuro sobre fundo escuro (ilegível); aspas grandes do modelo Foco saíam para fora da tela no formato quadrado; a última palavra da frase ficava sozinha numa legenda ("Três dicas | rápidas."); legenda do Luxo pequena demais para celular; Gigante, Foco e Adesivo tinham títulos iguais aos de outros modelos.
+- Testes: os 2.015 testes de unidade e os testes de navegador voltam a passar.
+
 ## v0.41.0 — 02/11/2026 — aguardando OK do responsável
 
 - Modelos de legenda em nível profissional (ADR-0042): palavra-chave maior e, em alguns modelos, numa linha só dela; brilho neon de verdade; letras em relevo; palavras inclinadas como adesivo; linhas mais juntas nas maiúsculas.
