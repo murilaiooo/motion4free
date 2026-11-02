@@ -1,12 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import type { Word } from '../src/core/types';
-import { applyJury, parseJury } from '../src/editorial/clip-jury';
+import { applyJury, juryMessages, juryRank, parseJury } from '../src/editorial/clip-jury';
 import type { Moment } from '../src/editorial/highlights';
 import { cutsFromDiffs, frameHistogram, histogramDiff, snapToCuts, SNAP_MARGIN } from '../src/editorial/scene-cuts';
 import { findSoundMoments } from '../src/editorial/sound-moments';
 
 const word = (text: string, start: number, end: number): Word => ({ id: `w${start}`, text, start, end });
 const moment = (id: string, score: number, extra: Partial<Moment> = {}): Moment => ({ id, rank: 0, start: 0, end: 20, title: id, text: 'texto', score, reasons: ['regra'], wordCount: 1, ...extra });
+
+describe('#176: júri só julga o que consegue ler', () => {
+  it('cena sem fala não vai para o júri e fica com a nota do app', async () => {
+    const list = [moment('a', 60), moment('mudo', 55, { text: '' }), moment('b', 50), moment('c', 40)];
+    let sent = '';
+    const ai = { source: 'ia-local', complete: async (m: { user: string }) => { sent = m.user; return '{"notas":[{"n":1,"gancho":2,"historia":2,"sozinho":2,"valor":2},{"n":2,"gancho":9,"historia":9,"sozinho":9,"valor":9},{"n":3,"gancho":5,"historia":5,"sozinho":5,"valor":5}]}'; } } as any;
+    const r = await juryRank(list, ai, new AbortController().signal);
+    expect(sent).not.toContain('sem fala');
+    expect(sent.match(/^\d+: /gm)).toHaveLength(3);
+    expect(r.judged).toBe(3);
+    const mudo = r.moments.find((m) => m.id === 'mudo')!;
+    expect(mudo.jury).toBeUndefined();
+    expect(mudo.score).toBe(55);
+    // a nota 9 foi para "b" (2º trecho com fala), não para a cena muda
+    expect(r.moments.find((m) => m.id === 'b')!.jury!.gancho).toBe(9);
+  });
+
+  it('menos de dois trechos com fala: sem júri; mensagem recusa trecho sem fala', async () => {
+    const ai = { source: 'ia-local', complete: async () => { throw new Error('não deveria chamar'); } } as any;
+    const r = await juryRank([moment('a', 60), moment('mudo', 55, { text: '' })], ai, new AbortController().signal);
+    expect(r.judged).toBe(0);
+    expect(() => juryMessages([moment('mudo', 1, { text: '' })], 300)).toThrow();
+    expect(juryMessages([moment('a', 1)], 300).system).toContain('não vê a imagem');
+  });
+});
 
 describe('v0.39: júri da IA', () => {
   it('lê notas em formatos diferentes e ignora números fora da lista', () => {

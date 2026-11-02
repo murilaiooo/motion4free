@@ -21,6 +21,13 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.42.1 — 02/11/2026
+
+- IA dos clipes (#176): cena sem fala não vai mais para a nota da IA. A IA só lê texto e inventava nota para o que não via, e essa nota pesava metade do ranking. A cena sem fala fica com a nota do app. A nota da IA ganhou uma escala clara (0, 3, 5, 8, 10) e aceita fala em qualquer idioma.
+- Pedido para um trecho: a IA recebia exemplos do vídeo inteiro, com campos que o trecho não pode mudar (modelo, cortes, gancho). Agora recebe exemplos próprios de trecho.
+- O pedido por texto aceita português ou inglês, e o resumo volta na língua do pedido.
+- Código antigo de ranking de clipes, que nada usava, foi removido. Inventário dos prompts: `docs/development/PROMPT_INVENTORY.md`.
+
 ## v0.42.0 — 02/11/2026
 
 - **Idioma da fala** (Configurações › Transcrição): detectar automaticamente (padrão), português ou inglês. Vídeo falado em inglês agora sai com legenda em inglês, sem forçar português (#171, parte 1).

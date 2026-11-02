@@ -37,12 +37,14 @@ one timing-dependent check (pedido-ia now seeks instead of racing play/pause).
 |---|---|---|
 | 2026-11-02 | #175 root cause | transformers.js 4.x never calls `MarianTokenizer._encode_text`; language code was plain text. Reproduced with the library's real tokenizer in `tests/marian-input.test.ts`. |
 | 2026-11-02 | #175 fix | Input ids built like Python Marian; per-passage validation (`translation-check.ts`); atomic track replacement; M4F-318/319; cue length follows the template. |
+| 2026-11-02 | v0.42.0 | PR #177 merged (`main` 05cc565); #174 closed as superseded; #175 and #171 commented. #175 stays open until the real-model test. |
+| 2026-11-02 | #176 slice A | Prompt inventory (`docs/development/PROMPT_INVENTORY.md`); jury no longer scores no-speech scenes, has anchors and a text-only rule; range-scope examples; PT/EN requests; dead `moments-ai.ts` removed (v0.42.1). |
 | 2026-11-02 | Suites | Unit 2015/2015, typecheck, build + license audit pass; full Playwright run 131 passed / 7 failed → the 7 fixed and re-run (40/40 in those files) + new `issue175-translation.spec.ts` passes. |
 
 ## Current state
 
-- Branch `claude/project-thread-hxiuyn` = PR #174 commits + #175 fix + regression fixes, version **0.42.0**.
-- Active issue: #175 (waiting for model-backed verification).
+- `main` has v0.42.0. Branch `claude/project-thread-hxiuyn` holds v0.42.1 (#176 slice A).
+- #175 is waiting for the model-backed verification (the owner's test).
 
 ## Next steps
 
@@ -50,7 +52,6 @@ one timing-dependent check (pedido-ia now seeks instead of racing play/pause).
    test on the preview/production in Brave). Pin the model revision once fetched.
 2. #171: add Russian and other Whisper languages to the source-language setting with honest support labels;
    record detected language; fixtures need consent-cleared audio.
-3. #176: produce the prompt inventory (active/test-only/legacy) with call sites; remove or document
-   `moments-ai.ts` (no production caller); fix the range-scope few-shot conflict.
+3. #176: measured A/B baseline needs real models (owner's PC). The inventory and the concrete defects are done.
 4. #170/#173: prepare a local benchmark page/script the owner can run on the RTX 5060; leave issues open with
    precise blockers.
