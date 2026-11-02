@@ -43,6 +43,8 @@ export const ERRORS = {
   ASR_API_GRANDE: { code: 'M4F-312', title: 'O serviço recusou o pedaço de áudio por ser grande demais.' },
   TRADUCAO_FALHOU: { code: 'M4F-316', title: 'A tradução local da legenda não foi concluída. A legenda original continua disponível. Tente novamente ou use a versão em inglês.' },
   TRADUCAO_DESATUALIZADA: { code: 'M4F-317', title: 'O vídeo mudou durante a tradução. Nada foi substituído; clique em traduzir novamente.' },
+  TRADUCAO_INVALIDA: { code: 'M4F-318', title: 'A tradução de um trecho saiu com problema (outro idioma, texto estranho ou código interno). Nada foi trocado: a legenda original continua. Tente de novo ou corrija o texto à mão.' },
+  TRADUCAO_MODELO: { code: 'M4F-319', title: 'Não foi possível baixar ou iniciar o modelo de tradução neste navegador. A legenda original continua; confira a internet e tente de novo.' },
   SEM_ENCODER: { code: 'M4F-401', title: 'Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador.' },
   EXPORTACAO_FALHOU: { code: 'M4F-402', title: 'A geração do vídeo falhou.' },
   EXPORTACAO_CLIPE: { code: 'M4F-404', title: 'A geração do vídeo não conseguiu ler um dos clipes.' },

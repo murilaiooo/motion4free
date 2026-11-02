@@ -3,7 +3,7 @@ import type { Caption } from '../src/core/types';
 import { editPlanSchema } from '../src/core/schema';
 import { autoEdit } from '../src/editorial/auto-edit';
 import { editCaptionText, withSegments } from '../src/editorial/ops';
-import { applySubtitleTranslation, selectSubtitleLanguage, translatedCaptions, translationGroups } from '../src/editorial/subtitle-translation';
+import { applySubtitleTranslation, selectSubtitleLanguage, translatedCaptions, translatedCueLength, translationGroups } from '../src/editorial/subtitle-translation';
 import { planCues, toSrt } from '../src/editorial/subtitles';
 import { wordsFrom } from './helpers/words';
 
@@ -25,7 +25,7 @@ describe('idioma e tradução de legendas', () => {
   });
 
   it('quebra a tradução em legendas legíveis sem inventar alinhamento de palavras', () => {
-    const groups = [{ source: 'Hello world.', start: 0.5, end: 4.5 }];
+    const groups = [{ source: 'Hello, this is an example of a rather long sentence that needs to stay readable.', start: 0.5, end: 4.5 }];
     const translated = translatedCaptions(groups, ['Olá, este é um exemplo de uma frase bastante longa que precisa ficar legível.']);
     expect(translated.length).toBeGreaterThan(1);
     expect(translated[0]!.start).toBe(0.5);
@@ -68,5 +68,22 @@ describe('idioma e tradução de legendas', () => {
     const rebuilt = withSegments(pt, { words, durationSec: 4 }, pt.segments);
     expect(rebuilt.subtitleTranslation).toBeUndefined();
     expect(rebuilt.captions.map((c) => c.text)).toEqual(base.captions.map((c) => c.text));
+  });
+});
+
+describe('tamanho das legendas traduzidas', () => {
+  it('segue o tamanho das legendas originais e fecha a legenda no fim da frase', () => {
+    const short = [caption('a', 'Hello there', 0, 1), caption('b', 'my friend', 1, 2)];
+    expect(translatedCueLength(short)).toBe(18);
+    expect(translatedCueLength([caption('a', 'x'.repeat(80), 0, 1)])).toBe(42);
+    expect(translatedCueLength([])).toBe(42);
+    const cues = translatedCaptions(
+      [{ source: 'Hi. How are you doing today, my good friend?', start: 0, end: 4 }],
+      ['Oi. Como você está hoje, meu bom amigo?'],
+      18,
+    );
+    expect(cues[0]!.text).toBe('Oi.');
+    cues.forEach((c) => expect(c.text.length).toBeLessThanOrEqual(18));
+    expect(cues.map((c) => c.text).join(' ')).toBe('Oi. Como você está hoje, meu bom amigo?');
   });
 });

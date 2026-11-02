@@ -56,7 +56,7 @@ import { AudioPanel } from './AudioPanel';
 import { KeyframePanel } from './KeyframePanel';
 import { MaskPanel } from './MaskPanel';
 import { planCues, toSrt } from '../editorial/subtitles';
-import { applySubtitleTranslation, selectSubtitleLanguage, translatedCaptions, translationGroups } from '../editorial/subtitle-translation';
+import { applySubtitleTranslation, selectSubtitleLanguage, translatedCaptions, translatedCueLength, translationGroups } from '../editorial/subtitle-translation';
 import { translateEnglishToPortuguese } from '../translation/en-pt';
 import { DEFAULT_SETUP, migrateSetupDefaults, type CreativeSetup } from '../core/production';
 import { StoryboardReview } from './production/StoryboardReview';
@@ -399,7 +399,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
     setTranslationProgress({ done: 0, total: groups.length });
     try {
       const texts = await translateEnglishToPortuguese(groups.map((g) => g.source), (done, total) => setTranslationProgress({ done, total }), controller.signal);
-      const translated = translatedCaptions(groups, texts);
+      const translated = translatedCaptions(groups, texts, translatedCueLength(originals));
       // Não sobrescrever edições feitas durante o download e a tradução.
       const current = latestTranslationHistory.current;
       if (current.history.present !== startedPlan) {

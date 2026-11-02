@@ -1,4 +1,6 @@
+import { AppError } from '../core/errors';
 import type { Caption, EditPlan } from '../core/types';
+import { checkPortugueseTranslation, describeTranslationProblem } from './translation-check';
 
 /** Grupos de fala completos para não traduzir palavras soltas fora de contexto. */
 export interface TranslationGroup {
@@ -31,18 +33,26 @@ export function translationGroups(captions: readonly Caption[]): TranslationGrou
   return result;
 }
 
-/** Quebra a tradução em frases legíveis; não associa palavras traduzidas a palavras faladas. */
-export function translatedCaptions(groups: readonly TranslationGroup[], translations: readonly string[]): Caption[] {
-  if (groups.length !== translations.length) throw new Error('Quantidade de traduções diferente dos grupos de fala');
+/**
+ * Quebra a tradução em frases legíveis; não associa palavras traduzidas a palavras faladas.
+ * Confere TODOS os trechos antes de montar qualquer legenda: um trecho em outro idioma, vazio ou com
+ * código interno (`>>pt_BR<<`) recusa a faixa inteira (M4F-318), e a legenda original fica como está.
+ */
+export function translatedCaptions(groups: readonly TranslationGroup[], translations: readonly string[], maxChars = 55): Caption[] {
+  if (groups.length !== translations.length) throw new AppError('TRADUCAO_FALHOU', 'quantidade de traduções diferente dos trechos de fala');
+  groups.forEach((group, i) => {
+    const problem = checkPortugueseTranslation(group.source, translations[i] ?? '');
+    if (problem) throw new AppError('TRADUCAO_INVALIDA', `trecho ${i + 1} de ${groups.length}: ${describeTranslationProblem(problem)}`);
+  });
   const result: Caption[] = [];
   groups.forEach((group, groupIndex) => {
-    const text = translations[groupIndex]?.replace(/\s+/g, ' ').trim() ?? '';
-    if (!text) throw new Error(`Tradução vazia no trecho ${groupIndex + 1}`);
+    const text = translations[groupIndex]!.replace(/\s+/g, ' ').trim();
     const chunks: string[] = [];
     for (const word of text.split(' ')) {
-      if (word.length > 120) throw new Error(`Palavra traduzida longa demais no trecho ${groupIndex + 1}`);
+      if (word.length > 120) throw new AppError('TRADUCAO_INVALIDA', `trecho ${groupIndex + 1}: palavra longa demais`);
       const last = chunks.length - 1;
-      if (last >= 0 && chunks[last]!.length + word.length + 1 <= 55) chunks[last] += ` ${word}`;
+      // frase terminada (. ! ? ;) fecha a legenda mesmo com espaço sobrando: leitura por ideia, não por régua
+      if (last >= 0 && chunks[last]!.length + word.length + 1 <= maxChars && !/[.!?;…]$/.test(chunks[last]!)) chunks[last] += ` ${word}`;
       else chunks.push(word);
     }
     const weights = chunks.map((s) => s.length);
@@ -56,6 +66,17 @@ export function translatedCaptions(groups: readonly TranslationGroup[], translat
     });
   });
   return result;
+}
+
+/**
+ * Tamanho de cada legenda traduzida parecido com o das legendas originais do estilo atual
+ * (estilos de Reels mostram poucas palavras por vez); entre 18 e 42 caracteres.
+ */
+export function translatedCueLength(captions: readonly Caption[]): number {
+  const texts = captions.map((c) => c.text.trim()).filter(Boolean);
+  if (texts.length === 0) return 42;
+  const avg = texts.reduce((n, t) => n + t.length, 0) / texts.length;
+  return Math.round(Math.min(42, Math.max(18, avg * 1.2)));
 }
 
 /** Mantém ambas as faixas no projeto e escolhe qual é mostrada/exportada. */

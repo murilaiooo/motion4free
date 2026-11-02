@@ -28,6 +28,8 @@ const en: Record<string, string> = {
   "Não foi possível baixar o modelo de transcrição.": "Could not download the transcription model.",
   "A tradução local da legenda não foi concluída. A legenda original continua disponível. Tente novamente ou use a versão em inglês.": "Local subtitle translation did not finish. The original captions are still available. Try again or use the English version.",
   "O vídeo mudou durante a tradução. Nada foi substituído; clique em traduzir novamente.": "The video changed during translation. Nothing was replaced; click translate again.",
+  "A tradução de um trecho saiu com problema (outro idioma, texto estranho ou código interno). Nada foi trocado: a legenda original continua. Tente de novo ou corrija o texto à mão.": "One translated passage came out wrong (another language, odd text or an internal code). Nothing was replaced: the original captions remain. Try again or fix the text by hand.",
+  "Não foi possível baixar ou iniciar o modelo de tradução neste navegador. A legenda original continua; confira a internet e tente de novo.": "Could not download or start the translation model in this browser. The original captions remain; check your connection and try again.",
   "O modelo de transcrição baixou, mas não conseguiu iniciar neste navegador.": "The transcription model downloaded, but couldn't start in this browser.",
   "A transcrição da fala falhou.": "The speech transcription failed.",
   "O processo de transcrição parou inesperadamente.": "The transcription process stopped unexpectedly.",
