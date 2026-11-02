@@ -2,6 +2,8 @@
 
 Data local: 01/11/2026. Patch preparado: **0.37.1**, branch `codex/issue-163-openrouter-thinking`, baseada na head `85848c7` da PR #162. Não publicado, sem merge na main.
 
+Correção: commit `d25d93f`, [PR #164 em rascunho](https://github.com/murilaiooo/motion4free/pull/164). A issue #163 permanece aberta até integração e confirmação do teste humano.
+
 ## Causa e mudança
 
 Na base, OpenRouter recebia esforço `low` e a leitura aceitava qualquer prosa de `reasoning`/`reasoning_content` quando `content` estava vazio. O leitor dos clipes tentava interpretar esse pensamento como JSON e terminava em M4F-1112. O microteste de conexão também podia anunciar sucesso só porque o modelo tinha pensado, sem responder.

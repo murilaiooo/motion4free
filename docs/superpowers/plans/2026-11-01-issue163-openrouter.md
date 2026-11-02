@@ -32,7 +32,7 @@
 - [x] Testar erro HTTP, cancelamento, consentimento, teto de orçamento, JSON/IDs e outros provedores.
 - [x] Rodar suíte Vitest, TypeScript, build e E2E Brave com HTTP simulado; registrar evidência e limites.
 - [x] Atualizar CHANGELOG, versão/lock, docs de erros e relatório com roteiro de teste sem terminal.
-- [ ] Revisar diff, fazer commit e abrir PR contra a branch da #162, sem merge/deploy.
+- [x] Revisar diff, fazer commit e abrir PR contra a branch da #162, sem merge/deploy.
 
 ## Progresso
 
@@ -40,3 +40,4 @@
 - A descrição da issue cita uma correção que não está na head remota da #162; implementar e provar neste patch.
 - Revisão independente: segunda rejeição HTTP400 ainda repetia outra janela. Regressão RED→GREEN; agora terminal1018 com mensagem que cobre rejeição de configuração e saída esgotada.
 - Resultado final e gate herdado: [relatório de evidência](../../release/ISSUE163-OPENROUTER-THINKING.md).
+- Correção registrada em `d25d93f`; [PR #164 em rascunho](https://github.com/murilaiooo/motion4free/pull/164). Issue aberta até integração/aceitação; nenhum deploy.
