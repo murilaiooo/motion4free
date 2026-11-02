@@ -3,6 +3,7 @@ import { briefSchema } from '../src/core/brief';
 import { AppError } from '../src/core/errors';
 import {
   AI_EXAMPLES,
+  RANGE_EXAMPLES,
   SYSTEM_PROMPT,
   askAi,
   chatTurns,
@@ -237,6 +238,22 @@ describe('IA como intérprete principal: espaço de parâmetros inteiro (v0.6)',
       expect(r.ok, e.assistant).toBe(true);
       if (r.ok) expect(r.proposal.dropped, e.assistant).toEqual([]);
     }
+  });
+
+  it('trecho usa exemplos de trecho: nenhum campo proibido para o trecho e respostas válidas (#176)', () => {
+    const forbidden = ['preset', 'goal', 'audience', 'wantsHook', 'hookIndex', 'hookStyle', 'cuts'];
+    for (const e of RANGE_EXAMPLES) {
+      const obj = JSON.parse(e.assistant) as Record<string, unknown>;
+      for (const k of forbidden) expect(obj, `${k} em ${e.assistant}`).not.toHaveProperty(k);
+      expect((obj.captions as Record<string, unknown> | undefined)?.wordsAtOnce).toBeUndefined();
+      const r = parseAiReply(e.assistant, 0);
+      expect(r.ok, e.assistant).toBe(true);
+      if (r.ok) expect(r.proposal.dropped, e.assistant).toEqual([]);
+    }
+    expect(buildAiMessages('mais calmo', [], [], 'trecho').examples).toBe(RANGE_EXAMPLES);
+    expect(buildAiMessages('mais calmo', [], [], 'video').examples).toBe(AI_EXAMPLES);
+    expect(SYSTEM_PROMPT).toContain('português ou inglês');
+    expect(SYSTEM_PROMPT).toContain('mesma língua do <pedido>');
   });
 
   it('o prompt lista o esquema: cores, legenda, emojis, cortes, unsupported e summary', () => {

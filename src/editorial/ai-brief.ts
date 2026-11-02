@@ -72,7 +72,7 @@ export type AiScope = 'video' | 'trecho';
 export function systemPrompt(scope: AiScope = 'video'): string {
   return [
     'Você é o intérprete de pedidos de um editor de vídeos curtos (Reels) no navegador.',
-    'Converta o pedido da pessoa (português do Brasil) em UM objeto JSON. Responda SOMENTE com o JSON: sem texto antes ou depois, sem comentários, sem ```.',
+    'Converta o pedido da pessoa (em português ou inglês) em UM objeto JSON. Responda SOMENTE com o JSON: sem texto antes ou depois, sem comentários, sem ```.',
     'Campos (todos opcionais; omita o que o pedido não diz):',
     `"preset": ${list(PRESET_IDS)} (o modelo: ${TEMPLATES.map((tp) => `${tp.id} = ${tp.description.split(':')[0]!.toLowerCase()}`).join('; ')})`,
     `"tone": ${list(TONES)}`,
@@ -93,7 +93,7 @@ export function systemPrompt(scope: AiScope = 'video'): string {
     '"motion": 0 a 1 (intensidade exata das animações)',
     `"scenes": objeto com chaves ${list(SCENE_TOGGLES)} e valor true (ligar) ou false (desligar)`,
     '"unsupported": lista de frases curtas com o que foi pedido e NÃO cabe em nenhum campo acima (ex.: "música de fundo")',
-    '"summary": uma frase curta em português dizendo o que você aplicou',
+    '"summary": uma frase curta, na mesma língua do <pedido>, dizendo o que você aplicou',
     'Cores sempre como "#RRGGBB" (verde "#22C55E", amarelo "#FFD400", azul "#3B82F6", vermelho "#EF4444", branco "#FFFFFF", preto "#000000", rosa "#F472B6", laranja "#FF8C1A", roxo "#8B5CF6").',
     'Regras: use só os valores listados; números dentro dos limites; não invente frases para o vídeo; "legenda verde e amarela" = texto verde e destaque amarelo; tudo o que não couber vai em "unsupported".',
     scope === 'trecho' ? 'Este pedido vale SÓ para um trecho do vídeo: não use "preset", "goal", "audience", "wantsHook", "hookIndex", "hookStyle", "cuts" nem "captions.wordsAtOnce".' : '',
@@ -124,6 +124,24 @@ export const AI_EXAMPLES: AiExample[] = [
   },
 ];
 
+const rangeUser = (pedido: string) => `<pedido>${pedido}</pedido>\n<ganchos>\n</ganchos>\n<transcricao>Eu perdi dez mil reais.</transcricao>`;
+
+/**
+ * Exemplos do escopo "trecho" (#176): só campos permitidos para um trecho. Antes o trecho reaproveitava os
+ * exemplos do vídeo inteiro, que usam "preset", "cuts", "wantsHook" e "hookStyle", justamente o que a regra
+ * do trecho proíbe; modelos pequenos copiavam o exemplo e não a regra.
+ */
+export const RANGE_EXAMPLES: AiExample[] = [
+  {
+    user: rangeUser('aqui mais calmo, sem emoji, legenda maior'),
+    assistant: '{"tone":"calmo","intensity":"baixa","forbid":["emojis"],"captions":{"scale":1.3},"unsupported":[],"summary":"Trecho mais calmo, sem emoji e com legenda maior."}',
+  },
+  {
+    user: rangeUser('make this part pop: yellow captions and a zoom'),
+    assistant: '{"intensity":"alta","captions":{"text":"#FFD400"},"scenes":{"zoom":true},"unsupported":[],"summary":"This part is livelier, with yellow captions and a zoom."}',
+  },
+];
+
 /** Impede que o texto feche a etiqueta e "saia" do bloco de dados. */
 export function escapeData(s: string): string {
   return s.replace(/[<>]/g, (c) => (c === '<' ? '‹' : '›')).replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, ' ');
@@ -141,7 +159,7 @@ export function buildAiMessages(prompt: string, words: Word[], hooks: Pick<Hook,
     `<ganchos>\n${hooks.map((h, i) => `${i}: ${escapeData(h.text)}`).join('\n')}\n</ganchos>`,
     `<transcricao>${escapeData(transcript)}</transcricao>`,
   ].join('\n');
-  return { system: systemPrompt(scope), examples: AI_EXAMPLES, user };
+  return { system: systemPrompt(scope), examples: scope === 'trecho' ? RANGE_EXAMPLES : AI_EXAMPLES, user };
 }
 
 /** Mensagem da segunda tentativa (a resposta anterior volta como "assistant"). */
