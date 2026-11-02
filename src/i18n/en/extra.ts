@@ -62,6 +62,7 @@ const en: Record<string, string> = {
   "respondeu.": "answered.",
   "Agora:": "Now:",
   "IA": "AI",
+  "Marca-texto": "Highlighter",
   // v0.38 (Parakeet, conferência dupla) e v0.39 (IA dos clipes, troca de cena)
   "A mesma IA do app ({0})": "The app's own AI ({0})",
   "Só as regras do app (sem IA)": "Only the app's rules (no AI)",
