@@ -47,5 +47,5 @@ test('página ?avaliar abre com vídeo, texto de referência e escolha do modelo
   await page.getByTestId('eval-file').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
   await page.getByTestId('eval-reference').fill('três dicas rápidas primeira dica');
   await expect(page.getByTestId('eval-run')).toBeEnabled();
-  await expect(page.getByTestId('eval-model').locator('option')).toHaveCount(9);
+  await expect(page.getByTestId('eval-model').locator('option')).toHaveCount(10);
 });

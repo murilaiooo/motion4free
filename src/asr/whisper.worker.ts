@@ -3,7 +3,7 @@ import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@hugging
 import { groupPieces, looksDegenerate, type AsrChunk, type WindowResult } from '../analysis/asr-merge';
 import type { AsrWindow } from '../analysis/asr-windows';
 import { parakeetWordsToChunks, type ParakeetWord } from '../analysis/parakeet-words';
-import { ASR_CANDIDATES, PARAKEET_FILES, whisperOptions, type AsrCandidateId } from '../core/asr-models';
+import { ASR_CANDIDATES, PARAKEET_FILES, parakeetFiles, whisperOptions, type AsrCandidateId } from '../core/asr-models';
 import { AppError, describeError, httpErrorFromUrl, networkErrorFromUrl, toAppError } from '../core/errors';
 import { HF_PREFIX, mirrorCdnUrl } from '../core/mirror';
 import type { FromWorker, ToWorker } from './protocol';
@@ -193,9 +193,11 @@ async function fetchModelFile(url: string, onBytes: (n: number) => void): Promis
  * site e depois o Hugging Face, como o Whisper. A biblioteca só é baixada quando este degrau é usado.
  */
 async function loadParakeet(id: AsrCandidateId): Promise<AsrEngineRun> {
-  const c = ASR_CANDIDATES[id];
+  const c: { repo: string; device: string; parakeetFiles?: 'int8' | 'fp16' } = ASR_CANDIDATES[id];
+  if (c.device === 'webgpu' && !('gpu' in navigator)) throw new AppError('MODELO_CARREGAR', `${id}: navegador sem WebGPU`);
+  const files = parakeetFiles(c.parakeetFiles);
   const cached = await repoCached(c.repo);
-  const total = PARAKEET_FILES.files.reduce((sum, f) => sum + f.bytes, 0);
+  const total = files.reduce((sum, f) => sum + f.bytes, 0);
   const networkFailures: AppError[] = [];
   for (const source of SOURCES) {
     if (onnxWasm) onnxWasm.wasmPaths = source.wasmPaths;
@@ -203,7 +205,7 @@ async function loadParakeet(id: AsrCandidateId): Promise<AsrEngineRun> {
     const urls: string[] = [];
     try {
       const blobs: Record<string, Blob> = {};
-      for (const f of PARAKEET_FILES.files) {
+      for (const f of files) {
         const url = `${source.remoteHost}${c.repo}/resolve/${PARAKEET_FILES.revision}/${f.name}`;
         blobs[f.key] = await fetchModelFile(url, (n) => {
           loaded += n;
@@ -223,7 +225,8 @@ async function loadParakeet(id: AsrCandidateId): Promise<AsrEngineRun> {
           encoderUrl: url('encoder'),
           decoderUrl: url('decoder'),
           tokenizerUrl: url('vocab'),
-          backend: 'wasm',
+          // na placa: encoder no WebGPU e decodificador no processador (o parakeet.js faz assim)
+          backend: c.device === 'webgpu' ? 'webgpu-hybrid' : 'wasm',
           preprocessorBackend: 'js',
         });
       } catch (err) {

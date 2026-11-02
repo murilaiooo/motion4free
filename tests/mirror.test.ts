@@ -35,7 +35,7 @@ describe('espelho do modelo', () => {
   });
 
   it('repassa os arquivos do Parakeet (encoder, decodificador e vocabulário)', () => {
-    for (const f of PARAKEET_FILES.files) {
+    for (const f of [...PARAKEET_FILES.files, ...PARAKEET_FILES.gpuFiles]) {
       const p = `/hf/${ASR_REPOS.parakeet}/resolve/${PARAKEET_FILES.revision}/${f.name}`;
       expect(upstreamUrl(p)).toBe(`https://huggingface.co${p.slice(3)}`);
     }

@@ -6,7 +6,7 @@ import { ENERGY_STEP_SEC, energyEnvelope } from '../analysis/energy';
 import { findSilences } from '../analysis/silence';
 import type { Transcriber } from '../asr/transcriber';
 import { getAsrRoute } from '../asr/route';
-import type { AsrMode } from '../core/asr-models';
+import type { AsrRequest } from '../core/asr-models';
 import { compactEnergy, loadClipJob, sameSource, saveClipJob, type ClipJob } from '../core/clip-job';
 import { AppError, describeError, toAppError } from '../core/errors';
 import type { Fs } from '../core/storage-fs';
@@ -48,7 +48,7 @@ export interface LongAnalysis {
 type Step = OnProgress;
 
 /** Abre o vídeo longo, lê o áudio em mono 16 kHz, acha silêncios e energia e transcreve. Guarda o resultado. */
-export async function analyzeLong(file: File, transcriber: Transcriber, onStep: Step, opts: { asrMode: AsrMode; fs: Fs | null }): Promise<LongAnalysis> {
+export async function analyzeLong(file: File, transcriber: Transcriber, onStep: Step, opts: { asrMode: AsrRequest; fs: Fs | null }): Promise<LongAnalysis> {
   onStep({ label: 'Abrindo o vídeo', phase: 'abrir', fraction: null });
   const media = await openMedia(file, { maxSec: LONG_MAX_SEC });
   try {

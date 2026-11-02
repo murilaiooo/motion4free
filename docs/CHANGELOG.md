@@ -27,6 +27,8 @@ A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Mo
 - Se o Parakeet não carregar, a escada desce para o Whisper small como antes (aviso M4F-307).
 - Armazenamento mostra o Parakeet v3; o espelho do site libera só os três arquivos dele.
 - Nova biblioteca `parakeet.js` 1.4.4 (MIT), no mesmo runtime ONNX do Transformers.js; avisos de licença atualizados.
+- **Cardápio "IA da legenda"** (Configurações › Transcrição): Automático (padrão) ou cinco modelos (Whisper turbo, Parakeet v3 na placa, Parakeet v3 no processador, Whisper small, Whisper base), cada um com acerto em português, velocidade, download e onde roda. A área de envio mostra a IA escolhida.
+- **Conferência dupla** (opcional): uma segunda IA de outra família ouve a fala de novo e as palavras em que as duas discordam ficam marcadas para revisar em Legendas (M4F-315; M4F-314 quando não roda).
 
 ## v0.37.1 — 01/11/2026 — em preparação, issue #163
 

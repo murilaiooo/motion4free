@@ -36,6 +36,8 @@ export interface AsrCandidate {
   downloadMB: number;
   /** segundos de processamento por minuto de fala, estimativa para um computador comum (ADR-0013) */
   secPerMinute: number;
+  /** Parakeet: qual conjunto de arquivos baixar (int8 para o processador, fp16 para a placa) */
+  parakeetFiles?: ParakeetVariant;
 }
 
 export const ASR_REPOS = {
@@ -58,7 +60,21 @@ export const PARAKEET_FILES = {
     { key: 'decoder', name: 'decoder_joint-model.int8.onnx', bytes: 18_202_004 },
     { key: 'encoder', name: 'encoder-model.int8.onnx', bytes: 652_183_999 },
   ],
+  /**
+   * Na placa de vídeo (v0.38, cardápio): encoder fp16 (1,24 GB; o int8 dá resultado errado no WebGPU, segundo
+   * quem publicou a exportação para navegador). O decodificador roda sempre no processador no parakeet.js.
+   */
+  gpuFiles: [
+    { key: 'vocab', name: 'vocab.txt', bytes: 102_132 },
+    { key: 'decoder', name: 'decoder_joint-model.int8.onnx', bytes: 18_202_004 },
+    { key: 'encoder', name: 'encoder-model.fp16.onnx', bytes: 1_238_960_452 },
+  ],
 } as const;
+
+export type ParakeetVariant = 'int8' | 'fp16';
+export function parakeetFiles(v: ParakeetVariant = 'int8') {
+  return v === 'fp16' ? PARAKEET_FILES.gpuFiles : PARAKEET_FILES.files;
+}
 
 export const ASR_CANDIDATES = {
   'turbo-webgpu': {
@@ -118,6 +134,20 @@ export const ASR_CANDIDATES = {
     dtype: 'q8',
     downloadMB: 670,
     secPerMinute: 40,
+    parakeetFiles: 'int8',
+  },
+  // Só pelo cardápio e pela conferência dupla (v0.38): Parakeet na placa com encoder fp16. Muito mais rápido
+  // que o turbo, do mesmo tamanho, mas erra um pouco mais em português; por isso não é o automático.
+  'parakeet-webgpu': {
+    id: 'parakeet-webgpu',
+    label: 'Parakeet v3 (placa de vídeo)',
+    repo: ASR_REPOS.parakeet,
+    engine: 'parakeet',
+    device: 'webgpu',
+    dtype: 'fp16',
+    downloadMB: 1260,
+    secPerMinute: 4,
+    parakeetFiles: 'fp16',
   },
   'base-webgpu': {
     id: 'base-webgpu',
@@ -311,4 +341,118 @@ export function describeMode(mode: AsrMode, c: AsrCapability): string {
   const where = first.device === 'webgpu' ? (kind === 'integrada' ? 'usa a placa de vídeo integrada' : 'usa a placa de vídeo') : 'usa o processador';
   const extra = mode === 'precisa' && first.device === 'wasm' && !c.webgpu ? '; sem placa de vídeo compatível, demora alguns minutos' : '';
   return `${first.label.replace(/ \(.*\)$/, '')}, ${where}; baixa cerca de ${formatMB(first.downloadMB)} na primeira vez${extra}.`;
+}
+
+/**
+ * Pedido de transcrição (v0.38, cardápio): o modo (escada automática), uma escada explícita, ou um desses com a
+ * conferência dupla ligada (uma segunda IA ouve de novo e as palavras em que as duas discordam ficam para revisar).
+ */
+export type AsrRequest = AsrMode | AsrCandidateId[] | { ladder: AsrMode | AsrCandidateId[]; check: boolean };
+
+export function requestLadder(r: AsrRequest, c: AsrCapability): AsrCandidateId[] {
+  const l = typeof r === 'object' && !Array.isArray(r) ? r.ladder : r;
+  return Array.isArray(l) ? l : asrLadder(l, c);
+}
+
+export function requestChecks(r: AsrRequest | undefined): boolean {
+  return !!r && typeof r === 'object' && !Array.isArray(r) && r.check;
+}
+
+/** A escada foi escolhida pelo app (modo), não pela pessoa? */
+export function requestIsAuto(r: AsrRequest): boolean {
+  const l = typeof r === 'object' && !Array.isArray(r) ? r.ladder : r;
+  return !Array.isArray(l);
+}
+
+/** Item do cardápio "IA da legenda": um modelo, escolhido na versão certa para este aparelho. */
+export interface AsrMenuEntry {
+  key: AsrMenuKey;
+  title: string;
+  /** erro por palavra em português (FLEURS pt, %), fonte em ADR-0039 */
+  ptErrorPct: number;
+  /** para que serve, em uma frase */
+  note: string;
+  /** qual degrau usar neste aparelho; null = não roda aqui */
+  pick(c: AsrCapability): AsrCandidateId | null;
+  /** por que não roda aqui (quando `pick` devolve null) */
+  why: string;
+}
+
+export type AsrMenuKey = 'turbo' | 'parakeet-gpu' | 'parakeet' | 'small' | 'base';
+export const ASR_MENU_KEYS: AsrMenuKey[] = ['turbo', 'parakeet-gpu', 'parakeet', 'small', 'base'];
+
+const hasF16Gpu = (c: AsrCapability) => c.webgpu && c.f16;
+
+export const ASR_MENU: Record<AsrMenuKey, AsrMenuEntry> = {
+  turbo: {
+    key: 'turbo',
+    title: 'Whisper large-v3-turbo',
+    ptErrorPct: 4.2,
+    note: 'O que mais acerta em português. Precisa de placa de vídeo boa.',
+    pick: (c) => (hasF16Gpu(c) ? 'turbo-webgpu' : null),
+    why: 'precisa de placa de vídeo com WebGPU e fp16',
+  },
+  'parakeet-gpu': {
+    key: 'parakeet-gpu',
+    title: 'Parakeet v3 na placa de vídeo',
+    ptErrorPct: 4.8,
+    note: 'Quase tão preciso quanto o turbo e várias vezes mais rápido. Bom para vídeos longos.',
+    pick: (c) => (hasF16Gpu(c) ? 'parakeet-webgpu' : null),
+    why: 'precisa de placa de vídeo com WebGPU e fp16',
+  },
+  parakeet: {
+    key: 'parakeet',
+    title: 'Parakeet v3 no processador',
+    ptErrorPct: 4.8,
+    note: 'O mais preciso sem placa de vídeo. Não repete frases e marca bem o tempo de cada palavra.',
+    pick: (c) => (canRunParakeet(c) ? 'parakeet-wasm' : null),
+    why: 'precisa de pelo menos 4 GB de memória',
+  },
+  small: {
+    key: 'small',
+    title: 'Whisper small',
+    ptErrorPct: 7.7,
+    note: 'Leve e rápido na placa de vídeo, mas erra mais.',
+    pick: (c) => (!c.webgpu ? 'small-wasm' : c.f16 ? 'small-webgpu' : 'small-webgpu-fp32'),
+    why: '',
+  },
+  base: {
+    key: 'base',
+    title: 'Whisper base',
+    ptErrorPct: 13.9,
+    note: 'O menor download e o mais rápido. Erra bastante: bom só para um rascunho.',
+    pick: (c) => (c.webgpu ? 'base-webgpu' : 'base-wasm'),
+    why: '',
+  },
+};
+
+/** Escada quando a pessoa escolhe um modelo: ele primeiro; se falhar, segue a escada automática (aviso M4F-307). */
+export function chosenLadder(id: AsrCandidateId, c: AsrCapability): AsrCandidateId[] {
+  return [id, ...asrLadder('precisa', c).filter((x) => x !== id)];
+}
+
+/** Velocidade em palavras para a pessoa, a partir dos segundos por minuto de fala. */
+export function speedLabel(id: AsrCandidateId): string {
+  const s = ASR_CANDIDATES[id].secPerMinute;
+  return s <= 8 ? 'muito rápida' : s <= 20 ? 'rápida' : s <= 45 ? 'média' : 'lenta';
+}
+
+/** Acerto em palavras para a pessoa, a partir do erro por palavra. */
+export function accuracyLabel(ptErrorPct: number): string {
+  return ptErrorPct <= 4.5 ? 'excelente' : ptErrorPct <= 5.5 ? 'muito bom' : ptErrorPct <= 8 ? 'bom' : 'básico';
+}
+
+/**
+ * Segunda IA da conferência dupla: sempre de outra família (Whisper ↔ Parakeet), porque modelos diferentes
+ * erram em lugares diferentes. A concordância das duas é o sinal; a discordância vira "revisar esta palavra".
+ * Lista vazia = não há segunda IA que preste neste aparelho.
+ */
+export function checkLadder(primary: AsrCandidateId, c: AsrCapability): AsrCandidateId[] {
+  if (ASR_CANDIDATES[primary].engine === 'whisper') {
+    if (!canRunParakeet(c)) return [];
+    return hasF16Gpu(c) && (gpuKind(c) === 'dedicada' || gpuKind(c) === 'desconhecida') ? ['parakeet-webgpu', 'parakeet-wasm'] : ['parakeet-wasm'];
+  }
+  if (canRunTurbo(c)) return ['turbo-webgpu', c.f16 ? 'small-webgpu' : 'small-webgpu-fp32', 'small-wasm'];
+  if (c.webgpu) return [c.f16 ? 'small-webgpu' : 'small-webgpu-fp32', 'small-wasm'];
+  return ['small-wasm'];
 }
