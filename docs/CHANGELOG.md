@@ -21,6 +21,13 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.45.1 — 02/11/2026
+
+- **Transcrição não trava mais num trecho** (relato do responsável: criador de clipes parado no trecho 14 de 140, "sem novidade há 1 min 44 s", Whisper large-v3-turbo na placa de vídeo).
+  - Cada trecho de fala tem um tempo máximo (na placa de vídeo, 6× a duração do trecho e no mínimo 150 s; no processador, 20× e no mínimo 360 s). Se passar, o app encerra o processo e continua do trecho travado: primeiro com o mesmo modelo, depois com o próximo da escada. Os trechos prontos são guardados um a um, então nada do que já foi ouvido se perde. Se o mesmo trecho travar de novo e não houver outro modelo, aparece o novo **M4F-321**.
+  - O Whisper agora tem um teto de texto por trecho, conforme a duração e a escrita do idioma. Um trecho de música ou ruído que entra em laço ("you you you…") para bem antes, em vez de rodar até o limite do modelo duas vezes.
+- Inglês: "Passou 8 min 08 s" aparecia em português na tela de progresso; agora sai "8 min 08 s elapsed".
+
 ## v0.45.0 — 02/11/2026
 
 - As 10 línguas mais faladas (pedido do responsável; ADR-0044): inglês, chinês (mandarim), hindi, espanhol, francês, árabe, bengali, português, russo e urdu.

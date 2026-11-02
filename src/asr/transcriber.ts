@@ -1,4 +1,5 @@
-import { groupPieces, mergeWindows, type RawWord } from '../analysis/asr-merge';
+import { groupPieces, mergeWindows, type RawWord, type WindowResult } from '../analysis/asr-merge';
+import { afterStall, stallLimitSec } from '../core/asr-watchdog';
 import type { AsrWindow } from '../analysis/asr-windows';
 import { crossCheck } from '../analysis/asr-crosscheck';
 import { ASR_CANDIDATES, checkLadder, ladderForLanguage, estimateMinutes, modelWhereLabel, requestChecks, requestIsAuto, requestLadder, type AsrCandidateId, type AsrRequest } from '../core/asr-models';
@@ -37,14 +38,20 @@ interface LadderRun {
 }
 
 /**
- * Roda uma escada de modelos num Worker novo. `check`: é a segunda passada da conferência dupla, e os textos
- * de progresso dizem "Conferindo" em vez de "Transcrevendo". O áudio é transferido ao Worker (fica vazio aqui).
+ * Roda uma escada de modelos num Worker. `check`: é a segunda passada da conferência dupla, e os textos
+ * de progresso dizem "Conferindo" em vez de "Transcrevendo".
+ *
+ * Vigia (v0.45.1): cada trecho tem um tempo máximo (`stallLimitSec`). Se passar, o Worker é encerrado e um novo
+ * continua do trecho travado: primeiro com o mesmo modelo, depois com o próximo da escada; sem próximo, M4F-321.
+ * Os trechos prontos chegam um a um, então nada do que já foi ouvido se perde no recomeço.
  */
-function runLadder(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: OnProgress, ladder: AsrCandidateId[], check = false): Promise<LadderRun> {
-  const worker = new Worker(new URL('./whisper.worker.ts', import.meta.url), { type: 'module' });
+export function runLadder(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: OnProgress, ladder: AsrCandidateId[], check = false): Promise<LadderRun> {
   const fallbacks: string[] = [];
   const tag = check ? 'conferir-' : '';
   const language = getAsrRoute().speechLanguage;
+  const results: (WindowResult | undefined)[] = new Array(windows.length);
+  const stalls = new Map<number, number>();
+  let step = 0;
   // Medição real (#170): carregar (download + montar) e ouvir, por modelo tentado.
   let started = performance.now();
   let listening: number | null = null;
@@ -61,70 +68,135 @@ function runLadder(audio16k: Float32Array, durationSec: number, windows: AsrWind
       cached, fallbacks: fallbacks.length, ...(error ? { error } : {}),
     });
   };
+  const switchTo = (model: AsrCandidateId) => {
+    current = model;
+    step = Math.max(step, ladder.indexOf(model));
+    started = performance.now();
+    listening = null;
+    cached = null;
+  };
   return new Promise((resolve, reject) => {
-    worker.onmessage = (e: MessageEvent<FromWorker>) => {
-      const m = e.data;
-      if (m.type === 'progress') {
-        if (m.model !== current) {
-          current = m.model;
-          started = performance.now();
-          listening = null;
-          cached = null;
-        }
-        if (m.stage === 'download') cached = m.cached;
-        if (m.stage === 'transcribe') {
-          listening ??= performance.now();
-          speechSec = m.totalSec;
-        }
-      }
-      if (m.type === 'progress' && m.stage === 'download') {
-        const c = ASR_CANDIDATES[m.model];
-        const why = check ? ' para conferir a legenda' : '';
-        onProgress({
-          label: m.cached ? `Carregando o modelo de legenda ${label(m.model)}${why}, já guardado neste aparelho` : `Baixando o modelo de legenda ${label(m.model)}${why} (só na primeira vez)`,
-          phase: `${tag}modelo-${m.model}`,
-          fraction: m.fraction,
-          // sem o tamanho do servidor, usa o tamanho conhecido do modelo
-          bytes: { loaded: m.loaded, total: m.total > 0 ? m.total : c.downloadMB * 1024 * 1024 },
-        });
-      }
-      if (m.type === 'progress' && m.stage === 'prepare') {
-        onProgress({ label: `Preparando o modelo ${label(m.model)} para ${check ? 'conferir' : 'transcrever'} (pode levar até 1 min sem mexer a barra)`, phase: `${tag}preparar-${m.model}`, fraction: null });
-      }
-      if (m.type === 'progress' && m.stage === 'transcribe') {
-        onProgress({
-          label: check ? `Conferindo a legenda com uma segunda IA (${label(m.model)})` : `Transcrevendo a fala com ${label(m.model)}`,
-          phase: `${tag}transcrever-${m.model}`,
-          fraction: m.fraction,
-          detail: `trecho ${m.window} de ${m.windows} · ${formatClock(m.doneSec)} de ${formatClock(m.totalSec)} de fala ouvidos`,
-          expectedSec: estimateMinutes(m.model, durationSec) * 60,
-        });
-      }
-      if (m.type === 'fallback') {
-        measure(m.from, ASR_CANDIDATES[m.from].device, ERRORS[m.key].code);
-        current = m.to;
-        started = performance.now();
-        listening = null;
-        cached = null;
-        fallbacks.push(`${label(m.from)} falhou (${m.detail}); tentei ${label(m.to)}`);
-        onProgress({ label: `${label(m.from)} não funcionou aqui; tentando ${label(m.to)}`, phase: `${tag}reserva-${m.to}`, fraction: null });
-      }
-      if (m.type === 'done') {
-        measure(m.model, m.device);
-        worker.terminate();
-        resolve({ words: mergeWindows(m.results, durationSec), model: m.model, fallbacks });
-      }
-      if (m.type === 'error') {
-        measure(current, ASR_CANDIDATES[current].device, ERRORS[m.key].code);
-        worker.terminate();
-        reject(new AppError(m.key, m.detail));
-      }
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      fn();
     };
-    worker.onerror = (e) => {
-      worker.terminate();
-      reject(new AppError('WORKER_FALHOU', `${e.message || 'sem mensagem'} ${e.filename ?? ''}:${e.lineno ?? ''}`));
+    const start = (from: number) => {
+      const worker = new Worker(new URL('./whisper.worker.ts', import.meta.url), { type: 'module' });
+      let watchdog: ReturnType<typeof setTimeout> | null = null;
+      // processo encerrado: mensagens que ainda estavam a caminho não contam (nem rearmam o vigia)
+      let dead = false;
+      const calm = () => {
+        if (watchdog !== null) clearTimeout(watchdog);
+        watchdog = null;
+      };
+      const stop = () => {
+        dead = true;
+        calm();
+        worker.terminate();
+      };
+      /** o trecho `index` passou do tempo: recomeça dele com o mesmo modelo, com o próximo, ou para */
+      const stalled = (index: number, limitSec: number) => {
+        stop();
+        if (settled) return;
+        const count = (stalls.get(index) ?? 0) + 1;
+        stalls.set(index, count);
+        const w = windows[index]!;
+        const where = `trecho ${index + 1} de ${windows.length} (${formatClock(w.own.start)}–${formatClock(w.own.end)}) passou de ${Math.round(limitSec)} s sem terminar`;
+        measure(current, ASR_CANDIDATES[current].device, ERRORS.TRANSCRICAO_TRAVOU.code);
+        const action = afterStall(count, step, ladder.length);
+        if (action === 'parar') {
+          finish(() => reject(new AppError('TRANSCRICAO_TRAVOU', `${label(current)}: ${where}, ${count} vezes; não há outro modelo para tentar`)));
+          return;
+        }
+        if (action === 'proximo-modelo') {
+          const to = ladder[step + 1]!;
+          fallbacks.push(`${label(current)} travou (${where}); tentei ${label(to)}`);
+          onProgress({ label: `${label(current)} travou num trecho; continuando com ${label(to)}`, phase: `${tag}reserva-${to}`, fraction: null });
+          switchTo(to);
+        } else {
+          onProgress({ label: `Um trecho demorou demais; recomeçando dele com ${label(current)} (o que já foi ouvido fica guardado)`, phase: `${tag}recomecar-${current}`, fraction: null });
+          switchTo(current);
+        }
+        start(index);
+      };
+      worker.onmessage = (e: MessageEvent<FromWorker>) => {
+        if (settled || dead) return;
+        const m = e.data;
+        if (m.type === 'progress') {
+          if (m.model !== current) switchTo(m.model);
+          if (m.stage === 'download') cached = m.cached;
+          if (m.stage === 'transcribe') {
+            listening ??= performance.now();
+            speechSec = m.totalSec;
+            // o trecho m.window começou: tem um tempo máximo para terminar
+            calm();
+            const index = m.window - 1;
+            const w = windows[index];
+            const limit = stallLimitSec(ASR_CANDIDATES[m.model].device, w ? w.feed.end - w.feed.start : 30);
+            watchdog = setTimeout(() => stalled(index, limit), limit * 1000);
+          }
+        }
+        if (m.type === 'window') {
+          calm();
+          results[m.index] = m.result;
+        }
+        if (m.type === 'progress' && m.stage === 'download') {
+          const c = ASR_CANDIDATES[m.model];
+          const why = check ? ' para conferir a legenda' : '';
+          onProgress({
+            label: m.cached ? `Carregando o modelo de legenda ${label(m.model)}${why}, já guardado neste aparelho` : `Baixando o modelo de legenda ${label(m.model)}${why} (só na primeira vez)`,
+            phase: `${tag}modelo-${m.model}`,
+            fraction: m.fraction,
+            // sem o tamanho do servidor, usa o tamanho conhecido do modelo
+            bytes: { loaded: m.loaded, total: m.total > 0 ? m.total : c.downloadMB * 1024 * 1024 },
+          });
+        }
+        if (m.type === 'progress' && m.stage === 'prepare') {
+          onProgress({ label: `Preparando o modelo ${label(m.model)} para ${check ? 'conferir' : 'transcrever'} (pode levar até 1 min sem mexer a barra)`, phase: `${tag}preparar-${m.model}`, fraction: null });
+        }
+        if (m.type === 'progress' && m.stage === 'transcribe') {
+          onProgress({
+            label: check ? `Conferindo a legenda com uma segunda IA (${label(m.model)})` : `Transcrevendo a fala com ${label(m.model)}`,
+            phase: `${tag}transcrever-${m.model}`,
+            fraction: m.fraction,
+            detail: `trecho ${m.window} de ${m.windows} · ${formatClock(m.doneSec)} de ${formatClock(m.totalSec)} de fala ouvidos`,
+            expectedSec: estimateMinutes(m.model, durationSec) * 60,
+          });
+        }
+        if (m.type === 'fallback') {
+          calm();
+          measure(m.from, ASR_CANDIDATES[m.from].device, ERRORS[m.key].code);
+          fallbacks.push(`${label(m.from)} falhou (${m.detail}); tentei ${label(m.to)}`);
+          switchTo(m.to);
+          onProgress({ label: `${label(m.from)} não funcionou aqui; tentando ${label(m.to)}`, phase: `${tag}reserva-${m.to}`, fraction: null });
+        }
+        if (m.type === 'done') {
+          stop();
+          measure(m.model, m.device);
+          const missing = results.findIndex((r) => r === undefined);
+          if (missing >= 0) {
+            finish(() => reject(new AppError('TRANSCRICAO_FALHOU', `trecho ${missing + 1} de ${windows.length} sem resultado`)));
+            return;
+          }
+          finish(() => resolve({ words: mergeWindows(results as WindowResult[], durationSec), model: m.model, fallbacks }));
+        }
+        if (m.type === 'error') {
+          stop();
+          measure(current, ASR_CANDIDATES[current].device, ERRORS[m.key].code);
+          finish(() => reject(new AppError(m.key, m.detail)));
+        }
+      };
+      worker.onerror = (e) => {
+        if (dead) return;
+        stop();
+        finish(() => reject(new AppError('WORKER_FALHOU', `${e.message || 'sem mensagem'} ${e.filename ?? ''}:${e.lineno ?? ''}`)));
+      };
+      // cópia do áudio (não transferência): um recomeço precisa dele de novo
+      worker.postMessage({ type: 'transcribe', audio: audio16k, language, windows, ladder: ladder.slice(step), from });
     };
-    worker.postMessage({ type: 'transcribe', audio: audio16k, language, windows, ladder }, [audio16k.buffer]);
+    start(0);
   });
 }
 
@@ -137,8 +209,8 @@ export class WhisperTranscriber implements Transcriber {
     const check = requestChecks(mode);
     const notices: AppError[] = [];
     if (requestIsAuto(mode) && !capability.webgpu) notices.push(new AppError('SEM_PLACA_VIDEO', 'sem WebGPU neste navegador (ou só o adaptador de software); a legenda foi feita no processador (WASM)'));
-    // a segunda passada precisa do áudio de novo: o Worker fica com o original
-    const again = check ? audio16k.slice() : null;
+    // o áudio é copiado para cada Worker (não transferido), então a segunda passada usa o mesmo
+    const again = check ? audio16k : null;
     const first = await runLadder(audio16k, durationSec, windows, onProgress, ladder);
     if (first.fallbacks.length > 0) notices.push(new AppError('MODELO_RESERVA', `${first.fallbacks.join(' | ')}. Legenda feita com ${label(first.model)}.`));
     let words = first.words;

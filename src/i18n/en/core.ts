@@ -164,6 +164,9 @@ const en: Record<string, string> = {
   "cerca de {0} min": "about {0} min",
   "cerca de {0}": "about {0}",
   "Passou {0}": "{0} elapsed",
+  // durações de formatDuration ("8 min 08 s"): sem isto, "Passou 8 min 08 s" ficava em português
+  "{0} min {1} s": "{0} min {1} s",
+  "{0} h {1} min": "{0} h {1} min",
   "(previsão)": "(estimate)",
   "{0} de {1}": "{0} of {1}",
   "{0} baixados": "{0} downloaded",

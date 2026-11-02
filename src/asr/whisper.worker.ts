@@ -1,9 +1,10 @@
 /// <reference lib="webworker" />
 import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
-import { groupPieces, looksDegenerate, type AsrChunk, type WindowResult } from '../analysis/asr-merge';
+import { groupPieces, looksDegenerate, type AsrChunk } from '../analysis/asr-merge';
 import type { AsrWindow } from '../analysis/asr-windows';
 import { parakeetWordsToChunks, type ParakeetWord } from '../analysis/parakeet-words';
 import { ASR_CANDIDATES, PARAKEET_FILES, parakeetFiles, whisperOptions, type AsrCandidateId, type SpeechLanguage } from '../core/asr-models';
+import { maxNewTokens } from '../core/asr-watchdog';
 import { AppError, describeError, httpErrorFromUrl, networkErrorFromUrl, toAppError } from '../core/errors';
 import { HF_PREFIX, mirrorCdnUrl } from '../core/mirror';
 import type { FromWorker, ToWorker } from './protocol';
@@ -83,7 +84,8 @@ async function load(id: AsrCandidateId, language: SpeechLanguage): Promise<AsrEn
   return {
     canRetry: true,
     run: async (piece, retry) => {
-      const out = await asr(piece, whisperOptions(retry, language));
+      // teto de texto pelo tamanho do trecho: um laço em música ou ruído para cedo em vez de rodar minutos
+      const out = await asr(piece, { ...whisperOptions(retry, language), max_new_tokens: maxNewTokens(piece.length / SAMPLE_RATE, language) });
       const result = Array.isArray(out) ? out[0]! : out;
       return (result.chunks ?? []) as AsrChunk[];
     },
@@ -287,7 +289,8 @@ async function dispose(asr: AsrEngineRun | null) {
 
 self.onmessage = async (e: MessageEvent<ToWorker>) => {
   const { audio, windows, ladder, language } = e.data;
-  const results: WindowResult[] = [];
+  // recomeço depois de um trecho travado (v0.45.1): os trechos antes de `from` já foram ouvidos por outro processo
+  const from = Math.max(0, Math.min(windows.length, e.data.from ?? 0));
   const failures: AppError[] = [];
   let step = 0;
   let asr: AsrEngineRun | null = null;
@@ -307,12 +310,12 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
   // progresso pelos segundos de áudio, não pelo número de janelas (janelas têm tamanhos diferentes)
   const spoken = (w: AsrWindow) => (w.skip ? 0 : Math.max(0, w.own.end - w.own.start));
   const totalSec = windows.reduce((sum, w) => sum + spoken(w), 0);
-  let doneSec = 0;
-  let i = 0;
+  let doneSec = windows.slice(0, from).reduce((sum, w) => sum + spoken(w), 0);
+  let i = from;
   while (i < windows.length) {
     const w = windows[i]!;
     if (w.skip) {
-      results.push({ window: w, chunks: [] });
+      post({ type: 'window', index: i, result: { window: w, chunks: [] }, retried: false });
       i++;
       continue;
     }
@@ -329,7 +332,8 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
     post({ type: 'progress', stage: 'transcribe', fraction: totalSec > 0 ? doneSec / totalSec : i / windows.length, model: ladder[step]!, window: i + 1, windows: windows.length, doneSec, totalSec });
     try {
       const r = await transcribeWindow(asr, audio, w);
-      results.push({ window: w, chunks: r.chunks });
+      // cada trecho sai assim que fica pronto: se um trecho seguinte travar, o já ouvido não se perde
+      post({ type: 'window', index: i, result: { window: w, chunks: r.chunks }, retried: r.retried });
       if (r.retried) retried++;
       doneSec += spoken(w);
       i++;
@@ -344,5 +348,5 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
     }
   }
   const model = ladder[Math.min(step, ladder.length - 1)]!;
-  post({ type: 'done', results, model, device: ASR_CANDIDATES[model].device, retried });
+  post({ type: 'done', model, device: ASR_CANDIDATES[model].device, retried });
 };

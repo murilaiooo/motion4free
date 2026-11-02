@@ -29,6 +29,7 @@ export const ERRORS = {
   MODELO_REDE: { code: 'M4F-301', title: 'Não foi possível baixar o modelo de transcrição.' },
   MODELO_CARREGAR: { code: 'M4F-302', title: 'O modelo de transcrição baixou, mas não conseguiu iniciar neste navegador.' },
   TRANSCRICAO_FALHOU: { code: 'M4F-303', title: 'A transcrição da fala falhou.' },
+  TRANSCRICAO_TRAVOU: { code: 'M4F-321', title: 'A transcrição travou no mesmo trecho do vídeo mesmo depois de recomeçar e trocar de modelo. Feche outras abas pesadas e tente de novo; se repetir, escolha a legenda Rápida em Configurações › Transcrição.' },
   WORKER_FALHOU: { code: 'M4F-304', title: 'O processo de transcrição parou inesperadamente.' },
   MODELO_HTTP: { code: 'M4F-305', title: 'O servidor do modelo de transcrição respondeu com erro.' },
   SEM_FALA: { code: 'M4F-306', title: 'Não encontrei fala neste vídeo: ele fica sem legendas e sem título. Dá para escolher estilo e gerar o vídeo final.' },

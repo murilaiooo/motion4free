@@ -79,6 +79,8 @@ const en: Record<string, string> = {
   "trecho {0} de {1} · {2} de {3} de fala ouvidos": "part {0} of {1} · {2} of {3} of speech heard",
   "{0} falhou ({1}); tentei {2}": "{0} failed ({1}); I tried {2}",
   "{0} não funcionou aqui; tentando {1}": "{0} didn't work here; trying {1}",
+  "{0} travou num trecho; continuando com {1}": "{0} got stuck on a passage; continuing with {1}",
+  "Um trecho demorou demais; recomeçando dele com {0} (o que já foi ouvido fica guardado)": "One passage took too long; restarting from it with {0} (what was already heard is kept)",
   "{0}. Legenda feita com {1}.": "{0}. Captions made with {1}.",
   "sem mensagem": "no message",
   "{0} falhou (M4F-302 simulado); tentei {1}. Legenda feita com {2}.": "{0} failed (simulated M4F-302); I tried {1}. Captions made with {2}.",
