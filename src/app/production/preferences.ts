@@ -1,7 +1,8 @@
-import { creativeSetupSchema, DEFAULT_SETUP, type CreativeSetup } from '../../core/production';
+import { creativeSetupSchema, DEFAULT_SETUP, migrateSetupDefaults, type CreativeSetup } from '../../core/production';
 import { z } from 'zod';
 
 export const SETUP_KEY = 'm4f.creative-setup.v1';
+const MIGRATED_KEY = 'm4f.creative-setup.auto-v041';
 const draftSchema = creativeSetupSchema.extend({ cta: z.string().max(32) });
 
 export function readSetup(): CreativeSetup {
@@ -9,7 +10,13 @@ export function readSetup(): CreativeSetup {
     const raw = localStorage.getItem(SETUP_KEY);
     if (!raw) return structuredClone(DEFAULT_SETUP);
     const result = draftSchema.safeParse(JSON.parse(raw));
-    return result.success ? result.data : structuredClone(DEFAULT_SETUP);
+    if (!result.success) return structuredClone(DEFAULT_SETUP);
+    // v0.41: uma vez só, os padrões antigos (Inter, amarelo...) viram "do modelo"
+    if (localStorage.getItem(MIGRATED_KEY) === '1') return result.data;
+    const migrated = migrateSetupDefaults(result.data);
+    localStorage.setItem(SETUP_KEY, JSON.stringify(migrated));
+    localStorage.setItem(MIGRATED_KEY, '1');
+    return migrated;
   } catch {
     return structuredClone(DEFAULT_SETUP);
   }

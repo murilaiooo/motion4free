@@ -55,7 +55,7 @@ function Footer() {
 }
 
 /** Modelos da vitrine (bem diferentes entre si). */
-const SHOWCASE = ['pop', 'podcast', 'cinema', 'neon', 'documental'];
+const SHOWCASE = ['gigante', 'foco', 'adesivo', 'neon', 'editorial'];
 
 type Feature = { icon: ReactNode; title: string; text: string };
 
@@ -433,14 +433,14 @@ export function Landing({
             <span className="lp-hand">tocando ao vivo, no seu navegador</span>
             <h2>Escolha a cara do seu vídeo</h2>
             <p>
-              15 estilos de legenda e animação para cada tipo de criador. <a href="?galeria">Ver todos os modelos</a>
+              18 estilos de legenda e animação para cada tipo de criador. <a href="?galeria">Ver todos os modelos</a>
             </p>
           </header>
           <div className="lp-reel">
             {examples.map((t, i) => (
               <figure key={t.id}>
                 <span className="lp-mini-phone">
-                  <TemplateThumb styleId={t.id} t={[1.3, 22.1, 4.6, 12.2, 8.4][i] ?? 1.3} width={180} />
+                  <TemplateThumb styleId={t.id} t={21.2} width={180} />
                 </span>
                 <figcaption>
                   <b>{t.name}</b>

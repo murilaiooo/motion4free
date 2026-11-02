@@ -42,21 +42,29 @@ export function SetupAdjustments({ value, onChange, callError = false }: { value
     </div></details>
     <details><summary>Cores e fonte</summary><div className="setup-adjustment-content">
       <h3>Cor de destaque</h3>
-      <SetupChoices label="Cor de destaque" className="setup-small-choices" value={value.accent} onSelect={accent => onChange({ accent })} options={COLORS.map(color => ({ ...color, description: 'Palavra falada e detalhes.', visual: <span className="setup-color-swatch" style={{ background: color.id }} /> }))} />
-      <label className="setup-input">Outra cor<input type="color" value={value.accent} onChange={event => onChange({ accent: event.target.value.toUpperCase() })} /></label>
+      <SetupChoices label="Cor de destaque" className="setup-small-choices" value={value.accent} onSelect={accent => onChange({ accent })} options={[
+        { id: 'auto', label: 'Do modelo', description: 'Usa as cores pensadas para o visual escolhido.', visual: <span className="setup-color-swatch setup-color-auto" /> },
+        ...COLORS.map(color => ({ ...color, description: 'Palavra falada e detalhes.', visual: <span className="setup-color-swatch" style={{ background: color.id }} /> })),
+      ]} />
+      <label className="setup-input">Outra cor<input type="color" value={value.accent === 'auto' ? '#FFD400' : value.accent} onChange={event => onChange({ accent: event.target.value.toUpperCase() })} /></label>
       <h3>Fonte das legendas</h3>
-      <SetupChoices label="Fonte das legendas" className="setup-small-choices" value={value.font} onSelect={font => onChange({ font: font as CreativeSetup['font'] })} options={[...new Set([...FONTS, value.font])].map(font => ({ id: font, label: font, description: 'Altera a letra das legendas.' }))} />
+      <SetupChoices label="Fonte das legendas" className="setup-small-choices" value={value.font} onSelect={font => onChange({ font: font as CreativeSetup['font'] })} options={[
+        { id: 'auto', label: 'Do modelo', description: 'Cada modelo tem a letra dele.' },
+        ...[...new Set([...FONTS, ...(value.font === 'auto' ? [] : [value.font])])].map(font => ({ id: font, label: font, description: 'Altera a letra das legendas.' })),
+      ]} />
     </div></details>
     <details><summary>Movimento e transições</summary><div className="setup-adjustment-content">
       <h3>Movimento</h3>
-      <SetupChoices label="Intensidade do movimento" className="setup-demo-choices" value={String(value.motion)} onSelect={motion => onChange({ motion: Number(motion) })} options={[
+      <SetupChoices label="Intensidade do movimento" className="setup-demo-choices" value={String(value.motion)} onSelect={motion => onChange({ motion: motion === 'auto' ? 'auto' : Number(motion) })} options={[
+        { id: 'auto', label: 'Do modelo', description: 'O movimento pensado para o visual escolhido.' },
         { id: '0', label: 'Sem movimento', description: 'Desliga zoom, transições e animações fortes.', visual: <MotionDemo motion={0} /> },
         { id: '0.2', label: 'Sutil', description: 'Animações contidas para não disputar com a fala.', visual: <MotionDemo motion={0.2} /> },
         { id: '0.65', label: 'Marcante', description: 'Mais presença nas animações dos textos.', visual: <MotionDemo motion={0.65} /> },
       ]} />
-      {![0, 0.2, 0.65].includes(value.motion) && <p>Intensidade personalizada mantida: {Math.round(value.motion * 100)}%.</p>}
+      {value.motion !== 'auto' && ![0, 0.2, 0.65].includes(value.motion) && <p>Intensidade personalizada mantida: {Math.round(value.motion * 100)}%.</p>}
       <h3>Transição entre cortes</h3>
       <SetupChoices label="Transições" className="setup-demo-choices" value={value.transition} onSelect={transition => onChange({ transition: transition as CreativeSetup['transition'] })} options={[
+        { id: 'auto', label: 'Do modelo', description: 'A transição pensada para o visual escolhido.' },
         { id: 'none', label: 'Corte direto', description: 'Troca de trecho sem efeito de passagem.', visual: <TransitionDemo transition="none" /> },
         { id: 'dip', label: 'Suave', description: 'Escurece brevemente na passagem.', visual: <TransitionDemo transition="dip" /> },
         { id: 'zoom', label: 'Aproximação', description: 'Um zoom curto marca a passagem.', visual: <TransitionDemo transition="zoom" /> },

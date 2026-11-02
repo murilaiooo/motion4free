@@ -189,7 +189,7 @@ const en: Record<string, string> = {
   "Tudo o que o editor faz": "Everything the editor does",
   "tocando ao vivo, no seu navegador": "playing live, in your browser",
   "Escolha a cara do seu vídeo": "Choose your video's look",
-  "15 estilos de legenda e animação para cada tipo de criador.": "15 caption and animation styles for every kind of creator.",
+  "18 estilos de legenda e animação para cada tipo de criador.": "18 caption and animation styles for every kind of creator.",
   "Ver todos os modelos": "See all templates",
   "Seu vídeo não sai daqui.": "Your video doesn't leave here.",
   "Por padrão, transcrição, edição e exportação acontecem no seu computador. Não há upload do vídeo, conta nem servidor do Motion4Free guardando o que você grava.": "By default, transcription, editing and export happen on your computer. There is no video upload, no account and no Motion4Free server keeping what you record.",

@@ -21,9 +21,18 @@ export function compileCreativeBrief(input: CreativeSetup): CreativeBrief {
   const forbid = [...new Set([...free.forbid, ...avoid.forbid])];
   if (setup.motion === 0) forbid.push('efeitos', 'zoom', 'transicoes');
   if (!setup.hook) forbid.push('titulo');
+  // v0.41: só o que a pessoa escolheu de fato entra; 'auto' deixa o modelo com a cara dele
+  // (antes, Inter + amarelo + "fade" + destaque por cor eram aplicados em todo modelo e todos ficavam iguais)
+  const captionLook: NonNullable<Look['captions']> = {
+    ...(setup.font !== 'auto' ? { font: setup.font } : {}),
+    ...(setup.accent !== 'auto' ? { highlight: setup.accent } : {}),
+    ...(setup.captionStyle === 'minimal' ? { animation: 'none' as const, highlightMode: 'color' as const } : {}),
+  };
   const guidedLook: Look = {
-    motion: setup.motion, transition: setup.transition, accent: setup.accent,
-    captions: { font: setup.font, highlight: setup.accent, animation: setup.captionStyle === 'minimal' ? 'none' : 'fade', highlightMode: 'color' },
+    ...(setup.motion !== 'auto' ? { motion: setup.motion } : {}),
+    ...(setup.transition !== 'auto' ? { transition: setup.transition } : {}),
+    ...(setup.accent !== 'auto' ? { accent: setup.accent } : {}),
+    ...(Object.keys(captionLook).length ? { captions: captionLook } : {}),
     ...(setup.cta ? { cta: setup.cta, scenes: { chamada: true } } : {}),
   };
   // Null fields mean the prompt did not choose that property. Never let parser defaults erase guided choices.

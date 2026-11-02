@@ -13,7 +13,7 @@ export const GALLERY_SHOTS = [
   { id: 'lista', label: 'Lista', t: 8.6 },
   { id: 'pergunta', label: 'Pergunta', t: 12.2 },
   { id: 'nome', label: 'Nome na tela', t: 15.8 },
-  { id: 'legenda', label: 'Legenda e palavra-chave', t: 22.1 },
+  { id: 'legenda', label: 'Legenda e palavra-chave', t: 21.2 },
   { id: 'chamada', label: 'Chamada final', t: 26.6 },
 ] as const;
 
@@ -52,7 +52,31 @@ const SAMPLE_EN: Record<string, string> = {
 
 /** Vídeo de demonstração dos modelos; `lang: 'en'` troca os textos de exemplo para inglês. */
 export function galleryPlan(style: StyleDNA, lang: 'pt' | 'en' = 'pt'): EditPlan {
-  const plan = galleryPlanPt(style);
+  const plan = translated(galleryPlanPt(style), lang);
+  return { ...plan, captions: plan.captions.flatMap((c) => chunkCaption(c, style.captions.maxWords)) };
+}
+
+/**
+ * v0.41: a prévia corta as frases como o app corta no vídeo de verdade (o Foco mostra uma palavra por vez,
+ * o Pop três...). Usa o tempo de cada palavra; a última palavra da frase não fica sozinha.
+ */
+export function chunkCaption(c: Caption, maxWords: number): Caption[] {
+  const words = c.text.split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords || c.wordStarts.length !== words.length) return [c];
+  const groups: number[][] = [];
+  for (let i = 0; i < words.length; i += maxWords) groups.push(words.slice(i, i + maxWords).map((_, k) => i + k));
+  if (groups.length > 1 && groups.at(-1)!.length === 1) groups.at(-2)!.push(groups.pop()![0]!);
+  return groups.map((g, k) => ({
+    id: k === 0 ? c.id : `${c.id}-${k}`,
+    text: g.map((i) => words[i]).join(' '),
+    start: c.wordStarts[g[0]!]!,
+    end: k === groups.length - 1 ? c.end : c.wordStarts[groups[k + 1]![0]!]!,
+    wordIds: [],
+    wordStarts: g.map((i) => c.wordStarts[i]!),
+  }));
+}
+
+function translated(plan: EditPlan, lang: 'pt' | 'en'): EditPlan {
   if (lang !== 'en') return plan;
   const tr = (text: string) => SAMPLE_EN[text] ?? text;
   return {

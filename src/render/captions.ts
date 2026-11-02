@@ -1,4 +1,4 @@
-import type { StyleDNA } from '../core/style';
+import { CAPTION_FX_OFF, type CaptionFx, type StyleDNA } from '../core/style';
 import type { Caption } from '../core/types';
 import { normalizeToken } from '../editorial/detect';
 import type { Ctx2D } from './ctx';
@@ -32,14 +32,17 @@ export function activeWord(starts: number[], t: number): number {
   return idx;
 }
 
-/** Quebra palavras (pelas larguras) em linhas que cabem em maxW; `perLine` > 0 limita as palavras por linha. */
-export function layoutLines(widths: number[], space: number, maxW: number, perLine = 0): number[][] {
+/**
+ * Quebra palavras (pelas larguras) em linhas que cabem em maxW; `perLine` > 0 limita as palavras por linha.
+ * `solo[i]` (v0.41) = a palavra i fica numa linha só dela (palavra-chave em destaque).
+ */
+export function layoutLines(widths: number[], space: number, maxW: number, perLine = 0, solo: readonly boolean[] = []): number[][] {
   const lines: number[][] = [];
   let cur: number[] = [];
   let curW = 0;
   widths.forEach((w, i) => {
     const next = cur.length ? curW + space + w : w;
-    if (cur.length && (next > maxW || (perLine > 0 && cur.length >= perLine))) {
+    if (cur.length && (solo[i] || next > maxW || (perLine > 0 && cur.length >= perLine))) {
       lines.push(cur);
       cur = [i];
       curW = w;
@@ -47,9 +50,19 @@ export function layoutLines(widths: number[], space: number, maxW: number, perLi
       cur.push(i);
       curW = next;
     }
+    if (solo[i]) {
+      lines.push(cur);
+      cur = [];
+      curW = 0;
+    }
   });
   if (cur.length) lines.push(cur);
   return lines;
+}
+
+/** Acabamento da legenda do estilo (ausente = desligado). */
+export function captionFx(style: StyleDNA): CaptionFx {
+  return style.captions.fx ?? CAPTION_FX_OFF;
 }
 
 /** Linhas com larguras parecidas (evita uma palavra sozinha na última linha), mesmo número de linhas. */
@@ -180,7 +193,6 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   const em = style.type.emphasis;
   const tokens = caption.text.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return null;
-  const shown = tokens.map((tk) => applyCase(spec, tk));
   const starts = wordTimings(caption, tokens);
   const active = activeWord(starts, t);
   const semanticAligned = caption.wordIds.length === tokens.length;
@@ -192,7 +204,13 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   });
   const isKw = tokens.map((tk, i) => keywords.has(normalizeToken(tk)) ||
     semantic[i]?.effect === 'emphasis');
-  const emScale = em.family !== spec.family ? 1.16 : 1;
+  const fx = captionFx(style);
+  // palavra-chave maior: o pedido do modelo (fx) ou, como antes, um pouco maior quando muda a família
+  // a palavra-chave segue a caixa da fonte de ênfase (Luxo: legenda em maiúsculas, palavra-chave em itálico normal)
+  const shown = tokens.map((tk, i) => applyCase(isKw[i] ? em : spec, tk));
+  const emScale = Math.max(em.family !== spec.family ? 1.16 : 1, fx.keywordScale);
+  // palavra-chave numa linha só dela (só quando a legenda tem outras palavras para acompanhar)
+  const solo = fx.keywordLine && tokens.length >= 2 && isKw.some((k) => !k) ? isKw : [];
   const maxW = opts.maxW ?? captionMaxWidth(f);
   const place = opts.place ?? null;
   const align = opts.align ?? 'center';
@@ -202,7 +220,8 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   let lines: number[][] = [];
   let space = 0;
   const perLine = C.wordsPerLine;
-  const maxLines = perLine > 0 ? Math.min(6, Math.max(C.maxLines, Math.ceil(tokens.length / perLine))) : C.maxLines;
+  const soloCount = solo.filter(Boolean).length;
+  const maxLines = Math.min(6, (perLine > 0 ? Math.max(C.maxLines, Math.ceil(tokens.length / perLine)) : C.maxLines) + soloCount * 2);
   for (let attempt = 0; attempt < 6; attempt++) {
     setFont(ctx, spec, size);
     // com caixa na palavra falada, o espaço precisa caber o respiro da caixa
@@ -212,14 +231,18 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
       else setFont(ctx, spec, size);
       return ctx.measureText(s).width;
     });
-    lines = layoutLines(widths, space, maxW, perLine);
+    lines = layoutLines(widths, space, maxW, perLine, solo);
     if (lines.length <= maxLines && Math.max(...widths) <= maxW) break;
     size *= 0.88;
   }
-  if (perLine === 0) lines = balanceLines(widths, space, maxW, lines);
+  if (perLine === 0 && soloCount === 0) lines = balanceLines(widths, space, maxW, lines);
 
-  const lineH = size * 1.2;
-  const blockH = lines.length * lineH;
+  // altura de cada linha: a da maior letra dela (linha da palavra-chave gigante é mais alta)
+  const lineH = size * fx.leading;
+  const lineHs = lines.map((line) => lineH * Math.max(...line.map((i) => (isKw[i] ? emScale : 1))));
+  const lineTops: number[] = [];
+  lineHs.reduce((acc, h, li) => ((lineTops[li] = acc), acc + h), 0);
+  const blockH = lineHs.reduce((a, b) => a + b, 0);
   const top = place ? place.y * f.h - blockH / 2 : captionTop(style, safe, blockH);
   const cx = place ? place.x * f.w : f.w / 2;
 
@@ -237,7 +260,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
       x += widths[i]! + space;
     }
   });
-  const lineY = (li: number) => top + lineH * (li + 0.5);
+  const lineY = (li: number) => top + lineTops[li]! + lineHs[li]! / 2;
 
   ctx.save();
   if (place && (place.scale !== 1 || place.rotate !== 0)) {
@@ -310,16 +333,28 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     }
     return wordX[i]! + dx;
   };
+  /** inclinação da palavra (v0.41): alterna o lado; a falada entra girando com mola */
+  const tiltOf = (i: number) => {
+    if (fx.tilt <= 0) return 0;
+    const side = i % 2 === 0 ? -1 : 1;
+    let deg = 0;
+    if (fx.tiltMode === 'all') deg = side * fx.tilt * 0.55;
+    if (isKw[i]) deg = side * fx.tilt;
+    if (i === active) deg = side * fx.tilt * springIn(progress(t, starts[i]!, 0.3), ACTIVE_SPRING);
+    return (deg * Math.PI) / 180;
+  };
   const withWord = (i: number, draw: () => void) => {
     const we = wordEnter(i);
     if (we.alpha <= 0) return;
     const y = lineY(wordLine[i]!) + we.dy;
     const sc = we.scale * activeScaleOf(i);
+    const rot = tiltOf(i);
     ctx.save();
     ctx.globalAlpha *= we.alpha;
-    if (sc !== 1) {
+    if (sc !== 1 || rot !== 0) {
       ctx.translate(xOf(i), y);
-      ctx.scale(sc, sc);
+      if (rot !== 0) ctx.rotate(rot);
+      if (sc !== 1) ctx.scale(sc, sc);
       ctx.translate(-xOf(i), -y);
     }
     draw();
@@ -333,7 +368,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     lines.forEach((line, li) => {
       const padX = size * 0.34;
       const padY = size * 0.14;
-      const boxH = lineH - 2 + padY;
+      const boxH = lineHs[li]! - 2 + padY;
       const lw = lineWidths[li]!;
       const left = align === 'left' ? cx - blockW / 2 : align === 'right' ? cx + blockW / 2 - lw : cx - lw / 2;
       let w = lw;
@@ -353,7 +388,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
       if (typing && i > active) continue;
       withWord(i, () => {
         const padX = size * 0.16;
-        const h = size * 1.12;
+        const h = size * (isKw[i] ? emScale : 1) * 1.12;
         const y = lineY(wordLine[i]!);
         setShadow(ctx, f, 'hard', 0.6);
         fillBox(ctx, { x: xOf(i) - widths[i]! / 2 - padX, y: y - h / 2, w: widths[i]! + 2 * padX, h }, style.shape.radius * h, K.box);
@@ -372,7 +407,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     const i = active;
     const we = wordEnter(i);
     const padX = size * 0.12;
-    const h = size * 1.14;
+    const h = size * (isKw[i] ? emScale : 1) * 1.14;
     const rectOf = (k: number) => ({ x: xOf(k) - widths[k]! / 2 - padX, w: widths[k]! + 2 * padX });
     let r = rectOf(i);
     let grow = 1;
@@ -407,7 +442,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     const padX = size * 0.14;
     const x0 = xOf(i) - widths[i]! / 2 - padX;
     const w = (widths[i]! + 2 * padX) * markK;
-    const h = size * 0.86;
+    const h = size * (isKw[i] ? emScale : 1) * 0.86;
     ctx.save();
     ctx.globalAlpha *= we.alpha * 0.94;
     ctx.translate(x0, y);
@@ -429,6 +464,30 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
     if (i > active) return C.upcomingAlpha;
     return mix(C.upcomingAlpha, 1, easeOutCubic(progress(t, starts[i]!, 0.12)));
   };
+  // 2c) relevo (v0.41): a letra repetida em degraus para baixo e para a direita, na cor do contorno
+  if (fx.depth > 0 && !wordBoxes && C.box === 'none') {
+    const steps = Math.max(2, Math.round(fx.depth * 7));
+    const reach = fx.depth * 15 * u;
+    // com "revelação", o relevo só aparece quando a palavra é falada (palavra apagada com relevo vira borrão)
+    const ua = C.upcomingAlpha;
+    const depthAlpha = (i: number) => (C.highlight === 'reveal' && ua < 1 ? clamp01((upcoming(i) - ua) / (1 - ua)) : 1);
+    for (let i = 0; i < tokens.length; i++) {
+      if (!visible(i) || boxed(i) || marked(i) || depthAlpha(i) <= 0) continue;
+      withWord(i, () => {
+        ctx.globalAlpha *= depthAlpha(i);
+        setFont(ctx, fontOf(i), sizeOf(i));
+        ctx.fillStyle = K.stroke;
+        ctx.strokeStyle = K.stroke;
+        ctx.lineWidth = Math.max(C.stroke, 2) * u;
+        const y = lineY(wordLine[i]!);
+        for (let k = steps; k >= 1; k--) {
+          const d = (reach * k) / steps;
+          ctx.strokeText(shown[i]!, xOf(i) + d * 0.45, y + d);
+          ctx.fillText(shown[i]!, xOf(i) + d * 0.45, y + d);
+        }
+      });
+    }
+  }
   if (C.stroke > 0) {
     for (let i = 0; i < tokens.length; i++) {
       if (!visible(i) || boxed(i) || marked(i) || wordBoxes) continue;
@@ -473,9 +532,22 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
         ctx.fillStyle = wordUnderline ? K.keyword : K.highlight;
         ctx.fillRect(xOf(i) - widths[i]! / 2, y + size * 0.52, widths[i]! * grow, Math.max(2, size * 0.08));
       }
-      if (C.stroke === 0 && plain && C.box === 'none' && opts.shadow !== false) setShadow(ctx, f, 'soft', 0.9);
+      if (C.stroke === 0 && plain && C.box === 'none' && opts.shadow !== false && fx.depth === 0) setShadow(ctx, f, 'soft', 0.9);
       if (plain) chromaBehind(ctx, f, shown[i]!, xOf(i), y);
       ctx.fillStyle = color;
+      // brilho (v0.41): a palavra falada e a palavra-chave acendem com um halo na própria cor
+      const glowing = fx.glow > 0 && plain && (i === active || isKw[i]);
+      if (glowing) {
+        ctx.save();
+        ctx.shadowColor = isKw[i] ? K.keyword : K.highlight;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.shadowBlur = fx.glow * 34 * u;
+        ctx.fillText(shown[i]!, xOf(i), y);
+        ctx.shadowBlur = fx.glow * 12 * u;
+        ctx.fillText(shown[i]!, xOf(i), y);
+        ctx.restore();
+      }
       ctx.fillText(shown[i]!, xOf(i), y);
       clearShadow(ctx);
     });

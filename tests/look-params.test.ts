@@ -8,7 +8,7 @@ import type { StyleDNA } from '../src/core/style';
 import type { Caption, SceneInstance } from '../src/core/types';
 import { autoEdit } from '../src/editorial/auto-edit';
 import { applyLook } from '../src/editorial/brief-apply';
-import { emojiForWord, emojiForWords } from '../src/editorial/emoji-pick';
+import { emojiForWord, emojiForWords, topicEmojis } from '../src/editorial/emoji-pick';
 import { interpretPrompt } from '../src/editorial/interpret';
 import { applyBrief, applyRange, type EditContext } from '../src/editorial/ops';
 import { interpretRangePrompt } from '../src/editorial/range-interpret';
@@ -264,13 +264,35 @@ describe('emojis: lista, escolha pelo sentido e desenho', () => {
     expect(emojiForWords(['vou', 'te', 'mostrar', 'dicas'])?.emoji).toBeDefined();
   });
 
+  it('emojis no contexto (v0.41): sem duplo sentido, sem palavra negada, a mais específica vence', () => {
+    // "cara" (pessoa), "real" (de verdade), "precisa", "agora", "certo", "bom": não escolhem emoji
+    for (const w of ['cara', 'real', 'precisa', 'agora', 'hoje', 'certo', 'bom', 'verdade', 'olha', 'novo', 'compreender', 'metade', 'funcionario'])
+      expect(emojiForWord(w), w).toBeNull();
+    // negado não vale ("não é caro"), mas o emoji de negação vale
+    expect(emojiForWords(['isso', 'não', 'é', 'caro'])).toBeNull();
+    expect(emojiForWords(['nunca', 'cometa', 'esse', 'erro'])?.emoji).toBe('❌');
+    // frase de duas palavras vence palavra solta; palavra exata vence começo de palavra
+    expect(emojiForWords(['o', 'link', 'na', 'bio'])?.emoji).toBe('👇');
+    expect(emojiForWords(['meu', 'treino', 'de', 'dinheirinho'])?.emoji).toBe('💪');
+    // tema do vídeo: o que mais aparece
+    expect(topicEmojis(['treino', 'de', 'perna', 'na', 'academia', 'com', 'disciplina'])[0]).toBe('💪');
+  });
+
+  it('sem palavra que combine e sem tema, o intervalo fica sem emoji (nada de emoji aleatório)', () => {
+    const plain = ['então', 'a', 'gente', 'vai', 'ver', 'isso', 'aqui', 'depois'].map((raw, i) => ({ raw, start: i * 0.8, end: i * 0.8 + 0.6 }));
+    expect(proposeEmojis(plain, 7, style({ mode: 'interval', everySec: 2 }))).toEqual([]);
+  });
+
   const style = (e: Partial<StyleDNA['emoji']>) => ({ ...POP, emoji: { ...POP.emoji, ...e } }) as StyleDNA;
   const ws = wordsFrom(SAMPLE_TEXT).map((w) => ({ raw: w.text, start: w.start, end: w.end }));
   const total = ws.at(-1)!.end;
-  it('a cada N segundos: um emoji por intervalo, sem sobrepor', () => {
+  it('a cada N segundos: no máximo um emoji por intervalo, sem sobrepor, sempre vindo da fala ou do tema do vídeo', () => {
     const out = proposeEmojis(ws, total, style({ mode: 'interval', everySec: 3 }));
-    expect(out.length).toBeGreaterThanOrEqual(Math.floor(total / 3) - 2);
+    expect(out.length).toBeGreaterThan(0);
     expect(out.length).toBeLessThanOrEqual(Math.ceil(total / 3) + 1);
+    const theme = topicEmojis(ws.map((w) => w.raw));
+    const inSpeech = new Set(ws.map((w, i) => emojiForWords(ws.slice(Math.max(0, i - 2), i + 3).map((x) => x.raw))?.emoji).filter(Boolean));
+    for (const e of out) expect(inSpeech.has(e.emoji as never) || theme.includes(e.emoji as never), e.emoji).toBe(true);
     for (let i = 1; i < out.length; i++) expect(out[i]!.start).toBeGreaterThanOrEqual(out[i - 1]!.end);
     for (const e of out) expect(isEmoji(e.emoji)).toBe(true);
     // dois emojis seguidos nunca são iguais

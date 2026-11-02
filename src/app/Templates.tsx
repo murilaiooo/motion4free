@@ -89,7 +89,7 @@ export function TemplateThumb({ styleId, t, width = 180, playing = false, classN
 }
 
 /** Instante de cada modelo que mais mostra a cara dele (legenda + título). */
-const COVER_T = 1.3;
+const COVER_T = 21.2;
 
 /** Filtros sempre à vista; o resto abre num botão visível, para os modelos não descerem para fora da tela. */
 const FEATURED_TAGS = 7;

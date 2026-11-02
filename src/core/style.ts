@@ -170,6 +170,27 @@ export const DECOR_OFF = {
 /** Marca desligada (v0.12): sem @ no canto, palavra-chave na cor do estilo. */
 export const BRAND_OFF = { handle: null, keyword: null } as const;
 
+/**
+ * Acabamento profissional da legenda (v0.41, ADR-0042). Tudo opcional: ausente = desenho de antes.
+ * - keywordScale: palavra-chave maior que as outras (1 = mesmo tamanho);
+ * - keywordLine: a palavra-chave ganha uma linha só dela (a "manchete" das legendas de criador);
+ * - glow: brilho na cor de destaque em volta da palavra falada e da palavra-chave (0 a 1);
+ * - depth: letra em relevo, uma sombra sólida em degraus na cor do contorno (0 a 1);
+ * - tilt: inclinação em graus; 'accent' inclina só a palavra falada e a palavra-chave, 'all' alterna todas;
+ * - leading: altura da linha em relação ao tamanho da letra (maiúsculas grossas pedem linhas juntas).
+ */
+export const CAPTION_FX_OFF = { keywordScale: 1, keywordLine: false, glow: 0, depth: 0, tilt: 0, tiltMode: 'accent', leading: 1.2 } as const;
+export const captionFxSchema = z.object({
+  keywordScale: z.number().min(1).max(1.8),
+  keywordLine: z.boolean(),
+  glow: z.number().min(0).max(1),
+  depth: z.number().min(0).max(1),
+  tilt: z.number().min(0).max(10),
+  tiltMode: z.enum(['accent', 'all']),
+  leading: z.number().min(0.9).max(1.5),
+});
+export type CaptionFx = z.infer<typeof captionFxSchema>;
+
 /** Emojis desligados: o que os estilos e os planos antigos (v1) usam. */
 export const EMOJI_OFF = { mode: 'off', everySec: 3, position: 'auto', size: 0.14, animation: 'pop' } as const;
 /** Cores próprias da legenda desligadas (null = cor do estilo). */
@@ -257,6 +278,8 @@ export const styleSchema = z.object({
     wordsPerLine: z.number().int().min(0).max(6),
     /** cores próprias da legenda; null = a do estilo (texto, destaque, contorno, caixa) */
     colors: z.object({ text: color.nullable(), highlight: color.nullable(), stroke: color.nullable(), box: color.nullable() }),
+    /** acabamento profissional (v0.41); ausente = como antes */
+    fx: captionFxSchema.optional(),
   }),
   /** emojis desenhados perto da fala (v2) */
   emoji: z.object({
@@ -305,7 +328,7 @@ export type StyleDNA = z.infer<typeof styleSchema>;
 export const styleV1Schema = styleSchema.extend({
   version: z.literal(1),
   type: z.object({ display: fontV1, text: fontV1, emphasis: fontV1, label: fontV1, scale: z.number().min(0.6).max(1.6) }),
-  captions: styleSchema.shape.captions.omit({ y: true, enter: true, wordsPerLine: true, colors: true }).extend({ position: z.enum(['bottom', 'middle']), size: z.number().min(0.04).max(0.12) }),
+  captions: styleSchema.shape.captions.omit({ y: true, enter: true, wordsPerLine: true, colors: true, fx: true }).extend({ position: z.enum(['bottom', 'middle']), size: z.number().min(0.04).max(0.12) }),
 }).omit({ emoji: true, decor: true, brand: true });
 export type StyleV1 = z.infer<typeof styleV1Schema>;
 

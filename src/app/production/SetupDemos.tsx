@@ -104,7 +104,7 @@ export function StyleDemo({ styleId, selected }: { styleId: string; selected: bo
       card.removeEventListener('blur', off);
     };
   }, []);
-  return <span ref={ref} className="demo-style"><TemplateThumb styleId={styleId} t={1.3} width={170} playing={!still || hover || selected} plain /></span>;
+  return <span ref={ref} className="demo-style"><TemplateThumb styleId={styleId} t={21.2} width={170} playing={!still || hover || selected} plain /></span>;
 }
 
 const WORDS = ['Uma', 'dica', 'muito', 'importante', 'pra', 'você'];

@@ -56,7 +56,7 @@ import { AudioPanel } from './AudioPanel';
 import { KeyframePanel } from './KeyframePanel';
 import { MaskPanel } from './MaskPanel';
 import { planCues, toSrt } from '../editorial/subtitles';
-import { DEFAULT_SETUP, type CreativeSetup } from '../core/production';
+import { DEFAULT_SETUP, migrateSetupDefaults, type CreativeSetup } from '../core/production';
 import { StoryboardReview } from './production/StoryboardReview';
 import { applyCreativeFinding } from '../editorial/creative-plan';
 import { evaluateDraft, reviseCreativeDirection } from '../editorial/production';
@@ -783,7 +783,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
   const P = plan.style.palette;
   const openDirection = () => {
     playerRef.current?.pause();
-    setDirectionDraft({ ...structuredClone(plan.brief.production ?? DEFAULT_SETUP), prompt: plan.brief.prompt, format: formatOf(plan.output), preset: plan.style.id as CreativeSetup['preset'], font: plan.style.type.text.family, motion: plan.style.motion.intensity, transition: plan.style.transition, accent: plan.style.palette.accent.slice(0, 7).toUpperCase() });
+    setDirectionDraft({ ...migrateSetupDefaults(structuredClone(plan.brief.production ?? DEFAULT_SETUP)), prompt: plan.brief.prompt, format: formatOf(plan.output), preset: plan.style.id as CreativeSetup['preset'] });
   };
 
   return (

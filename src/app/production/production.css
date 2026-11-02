@@ -54,6 +54,7 @@
 .setup-small-choices .setup-card-title strong { font-size: var(--fs-lg); }
 .setup-small-choices .setup-card-description { font-size: var(--fs-md); }
 .setup-color-swatch { display: block; width: 28px; height: 28px; border: 1px solid var(--line-strong); border-radius: var(--r-pill); }
+.setup-color-auto { background: conic-gradient(#FFD400, #FF2E4D, #C04BFF, #22E4FF, #4DFF91, #FFD400); }
 .setup-input { display: grid; gap: var(--s-2); font-size: var(--fs-lg); }
 .setup-input input:not([type='color']), .setup-input textarea { width: 100%; min-height: 52px; font-size: var(--fs-lg); }
 .setup-input input, .setup-input textarea { scroll-margin-block: 80px 128px; }
