@@ -13,7 +13,8 @@ import { createHistory, pushHistory, undo, redo } from '../src/engine/history';
 import { SAMPLE_TEXT, wordsFrom } from './helpers/words';
 
 const colors = { colors: ['#C81E28', '#1428C8'] };
-const brief = compileCreativeBrief(DEFAULT_SETUP);
+// desde a v0.41 o padrão é 'do modelo'; aqui a pessoa escolheu o amarelo
+const brief = compileCreativeBrief({ ...DEFAULT_SETUP, accent: '#FFD400' });
 const words = wordsFrom(SAMPLE_TEXT);
 const ctx = { durationSec: words.at(-1)!.end + 0.5, words };
 

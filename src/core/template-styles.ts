@@ -1,4 +1,7 @@
-import { CAPTION_COLORS_DEFAULT, DECOR_OFF, EMOJI_OFF, type StyleDNA } from './style';
+import { CAPTION_COLORS_DEFAULT, CAPTION_FX_OFF, DECOR_OFF, EMOJI_OFF, type CaptionFx, type StyleDNA } from './style';
+
+/** Acabamento da legenda (v0.41): só o que muda em relação ao desligado. */
+const fx = (o: Partial<CaptionFx>): CaptionFx => ({ ...CAPTION_FX_OFF, ...o });
 
 /**
  * Estilos iniciais com personalidades opostas. Diferem em tipografia, movimento,
@@ -32,7 +35,7 @@ export const EDITORIAL: StyleDNA = {
   rhythm: { overlaysPer10s: 0.7, minGapSec: 2.5, keywordEverySec: 6, zoomEverySec: 14, titleSec: 2.6, sceneSec: 2.6 },
   shape: { radius: 0, stroke: 3, shadow: 'soft', panel: 'none' },
   layout: { align: 'center', overlayY: 0.3 },
-  captions: { position: 'bottom', size: 0.07, maxChars: 26, maxWords: 5, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 0, upcomingAlpha: 0.5, activeScale: 1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'bottom', size: 0.074, maxChars: 26, maxWords: 5, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 0, upcomingAlpha: 0.42, activeScale: 1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.45, keywordLine: true, leading: 1.1 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF },
   transition: 'zoom',
@@ -66,7 +69,7 @@ export const POP: StyleDNA = {
   rhythm: { overlaysPer10s: 1.8, minGapSec: 0.8, keywordEverySec: 2.5, zoomEverySec: 5, titleSec: 1.8, sceneSec: 1.9 },
   shape: { radius: 0.22, stroke: 10, shadow: 'hard', panel: 'box' },
   layout: { align: 'center', overlayY: 0.26 },
-  captions: { position: 'middle', size: 0.088, maxChars: 20, maxWords: 3, maxLines: 2, highlight: 'box', box: 'none', stroke: 12, upcomingAlpha: 1, activeScale: 1.1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'middle', size: 0.094, maxChars: 18, maxWords: 3, maxLines: 2, highlight: 'box', box: 'none', stroke: 13, upcomingAlpha: 1, activeScale: 1.12, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.3, depth: 0.35, leading: 1.04 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF },
   transition: 'flash',
@@ -100,7 +103,7 @@ export const DOCUMENTAL: StyleDNA = {
   rhythm: { overlaysPer10s: 0.5, minGapSec: 3.5, keywordEverySec: 10, zoomEverySec: 16, titleSec: 3.2, sceneSec: 3.2 },
   shape: { radius: 0.06, stroke: 0, shadow: 'none', panel: 'box' },
   layout: { align: 'left', overlayY: 0.56 },
-  captions: { position: 'bottom', size: 0.064, maxChars: 30, maxWords: 7, maxLines: 2, highlight: 'color', box: 'line', stroke: 0, upcomingAlpha: 1, activeScale: 1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'bottom', size: 0.066, maxChars: 30, maxWords: 7, maxLines: 2, highlight: 'color', box: 'line', stroke: 0, upcomingAlpha: 1, activeScale: 1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ leading: 1.18 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF },
   transition: 'dip',
@@ -139,7 +142,7 @@ export const NEON: StyleDNA = {
   rhythm: { overlaysPer10s: 1.2, minGapSec: 1.5, keywordEverySec: 3, zoomEverySec: 6, titleSec: 2.2, sceneSec: 2.2 },
   shape: { radius: 0.5, stroke: 0, shadow: 'soft', panel: 'none' },
   layout: { align: 'center', overlayY: 0.22 },
-  captions: { position: 'middle', size: 0.084, maxChars: 16, maxWords: 2, maxLines: 2, highlight: 'color', box: 'none', stroke: 9, upcomingAlpha: 1, activeScale: 1.14, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'middle', size: 0.09, maxChars: 16, maxWords: 2, maxLines: 2, highlight: 'color', box: 'none', stroke: 7, upcomingAlpha: 1, activeScale: 1.16, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ glow: 0.85, keywordScale: 1.22, leading: 1.06 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF },
   transition: 'zoom',
@@ -169,7 +172,7 @@ export const IMPACTO: StyleDNA = {
   rhythm: { overlaysPer10s: 1.6, minGapSec: 1, keywordEverySec: 2.8, zoomEverySec: 5.5, titleSec: 1.9, sceneSec: 2 },
   shape: { radius: 0.08, stroke: 8, shadow: 'hard', panel: 'box' },
   layout: { align: 'center', overlayY: 0.27 },
-  captions: { position: 'middle', size: 0.072, maxChars: 22, maxWords: 3, maxLines: 2, highlight: 'box', box: 'word', stroke: 0, upcomingAlpha: 1, activeScale: 1.06, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT, box: '#FFFFFF' } },
+  captions: { position: 'middle', size: 0.078, maxChars: 22, maxWords: 3, maxLines: 2, highlight: 'box', box: 'word', stroke: 0, upcomingAlpha: 1, activeScale: 1.06, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT, box: '#FFFFFF' }, fx: fx({ keywordScale: 1.18, tilt: 3, leading: 1.14 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF },
   transition: 'flash',
@@ -189,7 +192,7 @@ export const MINIMAL: StyleDNA = {
   rhythm: { overlaysPer10s: 0.4, minGapSec: 4, keywordEverySec: 12, zoomEverySec: 20, titleSec: 2.8, sceneSec: 2.8 },
   shape: { radius: 0, stroke: 2, shadow: 'soft', panel: 'none' },
   layout: { align: 'center', overlayY: 0.32 },
-  captions: { position: 'bottom', size: 0.064, maxChars: 28, maxWords: 5, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 0, upcomingAlpha: 0.38, activeScale: 1, enter: 'fade', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'bottom', size: 0.066, maxChars: 28, maxWords: 5, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 0, upcomingAlpha: 0.32, activeScale: 1, enter: 'fade', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ leading: 1.16 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF, vignette: 0.2 },
   transition: 'none',
@@ -212,7 +215,7 @@ export const PODCAST: StyleDNA = {
   rhythm: { overlaysPer10s: 0.8, minGapSec: 2.5, keywordEverySec: 5, zoomEverySec: 9, titleSec: 2.4, sceneSec: 2.6 },
   shape: { radius: 0.5, stroke: 0, shadow: 'soft', panel: 'box' },
   layout: { align: 'left', overlayY: 0.36 },
-  captions: { position: 'bottom', size: 0.066, maxChars: 24, maxWords: 4, maxLines: 2, highlight: 'color', box: 'line', stroke: 0, upcomingAlpha: 1, activeScale: 1.04, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'bottom', size: 0.07, maxChars: 24, maxWords: 4, maxLines: 2, highlight: 'color', box: 'line', stroke: 0, upcomingAlpha: 1, activeScale: 1.04, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.12, leading: 1.22 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF, tag: 'live', tagText: 'Podcast' },
   transition: 'zoom',
@@ -232,7 +235,7 @@ export const TUTORIAL: StyleDNA = {
   rhythm: { overlaysPer10s: 1, minGapSec: 2, keywordEverySec: 4, zoomEverySec: 8, titleSec: 2.4, sceneSec: 2.8 },
   shape: { radius: 0.5, stroke: 6, shadow: 'soft', panel: 'box' },
   layout: { align: 'center', overlayY: 0.3 },
-  captions: { position: 'middle', size: 0.076, maxChars: 22, maxWords: 4, maxLines: 2, highlight: 'underline', box: 'none', stroke: 10, upcomingAlpha: 1, activeScale: 1.05, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'middle', size: 0.08, maxChars: 22, maxWords: 4, maxLines: 2, highlight: 'underline', box: 'none', stroke: 11, upcomingAlpha: 1, activeScale: 1.05, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.22, depth: 0.2, leading: 1.08 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF, tag: 'label', tagText: 'Tutorial', listMarker: 'circle' },
   transition: 'zoom',
@@ -252,7 +255,7 @@ export const CINEMA: StyleDNA = {
   rhythm: { overlaysPer10s: 0.5, minGapSec: 3.5, keywordEverySec: 9, zoomEverySec: 16, titleSec: 3.2, sceneSec: 3 },
   shape: { radius: 0, stroke: 1, shadow: 'soft', panel: 'none' },
   layout: { align: 'center', overlayY: 0.4 },
-  captions: { position: 'bottom', size: 0.074, maxChars: 30, maxWords: 6, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 0, upcomingAlpha: 0.45, activeScale: 1, enter: 'fade', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'bottom', size: 0.076, maxChars: 30, maxWords: 6, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 0, upcomingAlpha: 0.45, activeScale: 1, enter: 'fade', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.3, leading: 1.12 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF, letterbox: 0.085, vignette: 0.55, tint: '#FF9A3C14' },
   transition: 'dip',
@@ -272,7 +275,7 @@ export const JORNAL: StyleDNA = {
   rhythm: { overlaysPer10s: 0.9, minGapSec: 2.2, keywordEverySec: 6, zoomEverySec: 12, titleSec: 2.6, sceneSec: 2.8 },
   shape: { radius: 0, stroke: 0, shadow: 'none', panel: 'box' },
   layout: { align: 'left', overlayY: 0.42 },
-  captions: { position: 'bottom', size: 0.066, maxChars: 30, maxWords: 6, maxLines: 2, highlight: 'color', box: 'line', stroke: 0, upcomingAlpha: 1, activeScale: 1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT, box: '#FFFFFF' } },
+  captions: { position: 'bottom', size: 0.066, maxChars: 30, maxWords: 6, maxLines: 2, highlight: 'color', box: 'line', stroke: 0, upcomingAlpha: 1, activeScale: 1, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT, box: '#FFFFFF' }, fx: fx({ leading: 1.16 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF, title: 'band', tag: 'live', tagText: 'Ao vivo', ticker: true },
   transition: 'zoom',
@@ -292,7 +295,7 @@ export const RETRO: StyleDNA = {
   rhythm: { overlaysPer10s: 1.1, minGapSec: 1.8, keywordEverySec: 4, zoomEverySec: 7, titleSec: 2.2, sceneSec: 2.2 },
   shape: { radius: 0, stroke: 0, shadow: 'soft', panel: 'none' },
   layout: { align: 'center', overlayY: 0.3 },
-  captions: { position: 'middle', size: 0.1, maxChars: 18, maxWords: 3, maxLines: 2, highlight: 'color', box: 'none', stroke: 8, upcomingAlpha: 1, activeScale: 1.05, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'middle', size: 0.1, maxChars: 18, maxWords: 3, maxLines: 2, highlight: 'color', box: 'none', stroke: 8, upcomingAlpha: 1, activeScale: 1.05, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ glow: 0.45, keywordScale: 1.15, leading: 1 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF, scanlines: 0.7, chroma: 0.7, jitter: 0.6, vignette: 0.4, tint: '#3A1D5C1F', tag: 'rec', tagText: 'Play' },
   transition: 'flash',
@@ -312,7 +315,7 @@ export const TURBO: StyleDNA = {
   rhythm: { overlaysPer10s: 2, minGapSec: 0.8, keywordEverySec: 2.2, zoomEverySec: 4.5, titleSec: 1.8, sceneSec: 1.8 },
   shape: { radius: 0.18, stroke: 12, shadow: 'hard', panel: 'box' },
   layout: { align: 'center', overlayY: 0.26 },
-  captions: { position: 'middle', size: 0.086, maxChars: 18, maxWords: 3, maxLines: 2, highlight: 'color', box: 'none', stroke: 14, upcomingAlpha: 1, activeScale: 1.18, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'middle', size: 0.09, maxChars: 18, maxWords: 3, maxLines: 2, highlight: 'color', box: 'none', stroke: 14, upcomingAlpha: 1, activeScale: 1.18, enter: 'auto', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.3, depth: 0.55, tilt: 5, tiltMode: 'all', leading: 1 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF, gradient: true, chroma: 0.25, vignette: 0.3 },
   transition: 'flash',
@@ -352,7 +355,7 @@ export const MARCA_TEXTO: StyleDNA = {
   rhythm: { overlaysPer10s: 1, minGapSec: 2, keywordEverySec: 4, zoomEverySec: 9, titleSec: 2.5, sceneSec: 2.5 },
   shape: { radius: 0, stroke: 4, shadow: 'soft', panel: 'none' },
   layout: { align: 'center', overlayY: 0.3 },
-  captions: { position: 'middle', size: 0.08, maxChars: 22, maxWords: 4, maxLines: 2, highlight: 'marker', box: 'none', stroke: 8, upcomingAlpha: 1, activeScale: 1.04, enter: 'fade', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'middle', size: 0.084, maxChars: 22, maxWords: 4, maxLines: 2, highlight: 'marker', box: 'none', stroke: 8, upcomingAlpha: 1, activeScale: 1.04, enter: 'fade', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.22, tilt: 2.5, leading: 1.1 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF, title: 'marker' },
   transition: 'zoom',
@@ -372,11 +375,82 @@ export const LUXO: StyleDNA = {
   rhythm: { overlaysPer10s: 0.45, minGapSec: 4, keywordEverySec: 10, zoomEverySec: 18, titleSec: 3.2, sceneSec: 3.2 },
   shape: { radius: 0, stroke: 1, shadow: 'soft', panel: 'none' },
   layout: { align: 'center', overlayY: 0.36 },
-  captions: { position: 'bottom', size: 0.064, maxChars: 24, maxWords: 4, maxLines: 2, highlight: 'color', box: 'none', stroke: 0, upcomingAlpha: 1, activeScale: 1, enter: 'fade', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT } },
+  captions: { position: 'bottom', size: 0.056, maxChars: 24, maxWords: 4, maxLines: 2, highlight: 'color', box: 'none', stroke: 0, upcomingAlpha: 1, activeScale: 1, enter: 'fade', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.6, keywordLine: true, leading: 1.25 }) },
   emoji: { ...EMOJI_OFF },
   decor: { ...DECOR_OFF, title: 'frame', vignette: 0.45 },
   transition: 'dip',
   progress: 'none',
   zoomScale: 1.04,
   cta: 'Descubra mais',
+};
+
+/* ---------- Modelos da v0.41 (ADR-0042): o acabamento das legendas de criador de hoje ---------- */
+
+/**
+ * Foco: uma palavra por vez, enorme e condensada (Anton), no centro de baixo da tela, entrando com mola
+ * e com relevo. A palavra-chave vem em amarelo. É a legenda "palavra a palavra" dos vídeos de corte rápido.
+ */
+export const FOCO: StyleDNA = {
+  version: 2,
+  id: 'foco',
+  name: 'Foco',
+  palette: { text: '#FFFFFF', muted: '#FFFFFFD9', accent: '#FF4D6D', accent2: '#FFE135', panel: '#FF4D6D', onPanel: '#FFFFFF', scrim: '#00000000', shadow: '#000000' },
+  type: { display: font('Anton', 400, 'upper', 0.01), text: font('Anton', 400, 'upper', 0.01), emphasis: font('Anton', 400, 'upper', 0.01), label: font('Inter', 800, 'upper', 0.08), scale: 1.3 },
+  motion: { enter: 'pop', ease: 'snappy', inSec: 0.22, outSec: 0.12, intensity: 0.95, staggerSec: 0.03 },
+  rhythm: { overlaysPer10s: 1.4, minGapSec: 1, keywordEverySec: 2.5, zoomEverySec: 4.5, titleSec: 1.6, sceneSec: 1.8 },
+  shape: { radius: 0.12, stroke: 12, shadow: 'soft', panel: 'none' },
+  layout: { align: 'center', overlayY: 0.24 },
+  captions: { position: 'custom', size: 0.15, maxChars: 12, maxWords: 1, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 14, upcomingAlpha: 1, activeScale: 1, enter: 'auto', wordsPerLine: 0, y: 0.6, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.15, depth: 0.5, leading: 1 }) },
+  emoji: { ...EMOJI_OFF },
+  decor: { ...DECOR_OFF },
+  transition: 'zoom',
+  progress: 'bar',
+  zoomScale: 1.15,
+  cta: 'Segue pra mais',
+};
+
+/**
+ * Gigante: a legenda de criador mais usada hoje. Maiúsculas grossas (Montserrat 900), as palavras acendem
+ * quando são faladas e a palavra-chave ocupa uma linha só dela, bem maior, em verde-limão.
+ */
+export const GIGANTE: StyleDNA = {
+  version: 2,
+  id: 'gigante',
+  name: 'Gigante',
+  palette: { text: '#FFFFFF', muted: '#FFFFFFB3', accent: '#FFFFFF', accent2: '#C6FF3D', panel: '#0B0B0BE6', onPanel: '#0B0B0B', scrim: '#00000059', shadow: '#000000D9' },
+  type: { display: font('Montserrat', 900, 'upper', -0.02), text: font('Montserrat', 900, 'upper', -0.02), emphasis: font('Montserrat', 900, 'upper', -0.03), label: font('Montserrat', 800, 'upper', 0.06), scale: 1.2 },
+  motion: { enter: 'rise', ease: 'snappy', inSec: 0.3, outSec: 0.18, intensity: 0.7, staggerSec: 0.04 },
+  rhythm: { overlaysPer10s: 1.2, minGapSec: 1.4, keywordEverySec: 2.6, zoomEverySec: 5.5, titleSec: 2, sceneSec: 2 },
+  shape: { radius: 0.2, stroke: 0, shadow: 'soft', panel: 'none' },
+  layout: { align: 'center', overlayY: 0.26 },
+  captions: { position: 'custom', size: 0.082, maxChars: 22, maxWords: 4, maxLines: 2, highlight: 'reveal', box: 'none', stroke: 8, upcomingAlpha: 0.55, activeScale: 1.06, enter: 'auto', wordsPerLine: 0, y: 0.64, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.65, keywordLine: true, depth: 0.3, leading: 0.98 }) },
+  emoji: { ...EMOJI_OFF },
+  decor: { ...DECOR_OFF },
+  transition: 'zoom',
+  progress: 'line',
+  zoomScale: 1.1,
+  cta: 'Segue pra mais',
+};
+
+/**
+ * Adesivo: letras arredondadas em relevo roxo, cada palavra um pouco torta, como adesivos colados na tela;
+ * caem quicando, a falada fica amarela e a palavra-chave rosa e maior.
+ */
+export const ADESIVO: StyleDNA = {
+  version: 2,
+  id: 'adesivo',
+  name: 'Adesivo',
+  palette: { text: '#FFFFFF', muted: '#FFFFFFCC', accent: '#FFD23F', accent2: '#FF5FA2', panel: '#FF5FA2', onPanel: '#FFFFFF', scrim: '#00000000', shadow: '#2A1052' },
+  type: { display: font('Bungee', 400, 'upper', 0), text: font('Nunito', 900, 'upper', 0.01), emphasis: font('Nunito', 900, 'upper', 0.01), label: font('Nunito', 800, 'upper', 0.08), scale: 1.1 },
+  motion: { enter: 'drop', ease: 'snappy', inSec: 0.45, outSec: 0.2, intensity: 0.85, staggerSec: 0.05 },
+  rhythm: { overlaysPer10s: 1.5, minGapSec: 1.2, keywordEverySec: 3, zoomEverySec: 6, titleSec: 2, sceneSec: 2 },
+  shape: { radius: 0.3, stroke: 12, shadow: 'hard', panel: 'box' },
+  layout: { align: 'center', overlayY: 0.28 },
+  captions: { position: 'middle', size: 0.086, maxChars: 18, maxWords: 3, maxLines: 2, highlight: 'color', box: 'none', stroke: 14, upcomingAlpha: 1, activeScale: 1.12, enter: 'bounce', wordsPerLine: 0, y: 0.5, colors: { ...CAPTION_COLORS_DEFAULT }, fx: fx({ keywordScale: 1.25, depth: 0.85, tilt: 4, tiltMode: 'all', leading: 1.02 }) },
+  emoji: { ...EMOJI_OFF },
+  decor: { ...DECOR_OFF },
+  transition: 'zoom',
+  progress: 'bar',
+  zoomScale: 1.12,
+  cta: 'Segue pra mais',
 };

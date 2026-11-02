@@ -61,7 +61,7 @@ export function styleForBrief(preset: StyleDNA, brief: CreativeBrief): StyleDNA 
     const lively = ['energetico', 'divertido'].includes(brief.tone ?? '');
     M.inSec = r3(clamp(M.inSec * (gentle ? 1.2 : lively ? 0.8 : 1), 0.05, 1.2));
     M.outSec = r3(clamp(M.outSec * (gentle ? 1.15 : lively ? 0.85 : 1), 0.05, 1));
-    if (gentle && ['pop', 'drop'].includes(M.enter)) M.enter = 'rise';
+    // v0.41: o tom só muda o tempo; a entrada é a assinatura do modelo e fica (antes "calmo", o padrão, trocava o pulo do Pop por subida)
   }
 
   if (brief.intensity === 'baixa') {

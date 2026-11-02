@@ -6,7 +6,7 @@ import type { SceneInstance, SceneKind, Segment, Word } from '../core/types';
 import { outputDuration, placeSpan } from '../engine/timeline';
 import { findName, isQuestion, keywordScore, normalizeToken, ordinalOf, parseNumberAt, splitSentences } from './detect';
 import type { Emoji } from '../core/emoji';
-import { FALLBACK_EMOJIS, emojiForWords } from './emoji-pick';
+import { emojiForWords, topicEmojis } from './emoji-pick';
 
 /**
  * Seletor de cenas por regras. Lê as palavras (já no tempo do vídeo editado) e propõe cenas:
@@ -153,24 +153,30 @@ export const NO_SCENE_OPTIONS: SceneOptions = { forbid: new Set(), emphasize: ne
 /**
  * Emojis perto da fala (v0.6). "interval": um a cada N segundos, puxado para a palavra que sugere o emoji
  * se ela estiver perto; "keywords": só nas palavras da tabela. Nunca se sobrepõem; emoji igual seguido é evitado.
+ *
+ * v0.41 (emojis no contexto): o emoji sempre vem da fala. No intervalo sem palavra que combine, procura
+ * numa janela maior; se ainda nada, usa os emojis pedidos (receita, IA ou pedido) ou o tema do vídeo
+ * inteiro, e só se o trecho não fala de outra coisa. Sem nada disso, o intervalo fica sem emoji: emoji
+ * aleatório ("✨🔥👉" em qualquer frase) era o que aparecia errado.
  */
 export function proposeEmojis(ws: { raw: string; start: number; end: number }[], total: number, style: StyleDNA, prefer: readonly Emoji[] = []): Draft[] {
   const E = style.emoji;
   if (E.mode === 'off' || total < 1) return [];
   const out: Draft[] = [];
-  const fallback = prefer.length ? prefer : FALLBACK_EMOJIS;
+  const raws = ws.map((w) => w.raw);
+  const theme = prefer.length ? [...prefer] : topicEmojis(raws);
   let fb = 0;
   let prevEnd = -Infinity;
   let prevEmoji: Emoji | null = null;
-  const nextFallback = (): Emoji => {
-    for (let k = 0; k < fallback.length; k++) {
-      const e = fallback[(fb + k) % fallback.length]!;
-      if (e !== prevEmoji || fallback.length === 1) {
-        fb = (fb + k + 1) % fallback.length;
+  const nextTheme = (): Emoji | null => {
+    for (let k = 0; k < theme.length; k++) {
+      const e = theme[(fb + k) % theme.length]!;
+      if (e !== prevEmoji || theme.length === 1) {
+        fb = (fb + k + 1) % theme.length;
         return e;
       }
     }
-    return fallback[0]!;
+    return null;
   };
   const push = (emoji: Emoji, start: number, len: number) => {
     const a = r3(Math.max(start, prevEnd + 0.05, 0));
@@ -180,23 +186,49 @@ export function proposeEmojis(ws: { raw: string; start: number; end: number }[],
     prevEnd = b;
     prevEmoji = emoji;
   };
+  /** emoji das palavras [from, to) com duas palavras antes como contexto (para "não é caro"); índice absoluto */
+  const hitIn = (from: number, to: number) => {
+    const lo = Math.max(0, from - 2);
+    const hit = emojiForWords(raws.slice(lo, Math.min(ws.length, to + 2)));
+    if (!hit) return null;
+    const index = lo + hit.index;
+    return index >= from && index < to ? { emoji: hit.emoji, index } : null;
+  };
+  const range = (a: number, b: number): [number, number] => {
+    let from = ws.findIndex((w) => w.start >= a);
+    if (from < 0) from = ws.length;
+    let to = from;
+    while (to < ws.length && ws[to]!.start < b) to++;
+    return [from, to];
+  };
   if (E.mode === 'interval') {
     const every = E.everySec;
     const len = Math.min(2, Math.max(0.6, every * 0.8));
     for (let t = Math.min(0.5, total / 4); t < total - 0.4; t += every) {
-      // palavras perto deste instante (um pouco antes e depois)
-      const near = ws.filter((w) => w.start >= t - every * 0.4 && w.start < t + every * 0.6);
-      const hit = emojiForWords(near.map((w) => w.raw));
-      const pick = hit && hit.emoji === prevEmoji ? null : hit;
-      const at = pick ? near[pick.index]!.start : t;
-      push(pick ? pick.emoji : nextFallback(), at, len);
+      // palavras perto deste instante (um pouco antes e depois); sem acerto, uma janela maior
+      const [a, b] = range(t - every * 0.4, t + every * 0.6);
+      let hit = hitIn(a, b);
+      const spoke = hit !== null;
+      if (!hit || hit.emoji === prevEmoji) {
+        const [a2, b2] = range(t - every * 0.6, t + every);
+        const wide = hitIn(a2, b2);
+        hit = wide && wide.emoji !== prevEmoji && ws[wide.index]!.start >= prevEnd ? wide : null;
+      }
+      if (hit) {
+        push(hit.emoji, ws[hit.index]!.start, len);
+        continue;
+      }
+      // sem palavra que combine: tema do vídeo, só onde há fala (nunca em silêncio nem sobre outra palavra da tabela)
+      if (a >= b || spoke) continue;
+      const e = nextTheme();
+      if (e) push(e, t, len);
     }
   } else {
     let last = -Infinity;
     for (let i = 0; i < ws.length; i++) {
       const w = ws[i]!;
-      const hit = emojiForWords([w.raw, ws[i + 1]?.raw ?? ''].filter(Boolean));
-      if (!hit || hit.index !== 0 || w.start - last < 1.5 || hit.emoji === prevEmoji) continue;
+      const hit = hitIn(i, i + 1);
+      if (!hit || w.start - last < 1.5 || hit.emoji === prevEmoji) continue;
       push(hit.emoji, w.start, 1.4);
       last = w.start;
     }

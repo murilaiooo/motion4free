@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Check, CircleCheck } from 'lucide-react';
 import { AppError } from '../../core/errors';
 import { FORMAT_IDS, OUTPUT_FORMATS } from '../../core/formats';
 import { creativeSetupSchema, PLATFORM_LABELS, type CreativeSetup } from '../../core/production';
-import { TEMPLATE_NAMES, type TemplateId } from '../../core/templates';
+import { TEMPLATE_IDS, TEMPLATE_NAMES, type TemplateId } from '../../core/templates';
 import { ErrorBox } from '../ErrorBox';
 import { ProgressPanel } from '../ProgressPanel';
 import type { Progress } from '../../core/progress';
@@ -29,11 +29,11 @@ const EDITING_MODES: (SetupChoice & { id: CutMode; settings: Pick<CreativeSetup,
   { id: 'dynamic', label: 'Dinâmico', description: 'Encurta as pausas e usa destaques visuais mais frequentes e marcantes.', detail: 'Para uma apresentação com mais energia.', settings: { cutPolicy: 'balanced', pace: 'rapido', tone: 'energetico', motion: 0.65 } },
 ];
 const STYLE_OPTIONS: { id: TemplateId; description: string; detail: string }[] = [
-  { id: 'editorial', description: 'Títulos com serifa e composição limpa.', detail: 'Dicas, opiniões e conteúdo pessoal.' },
-  { id: 'documental', description: 'Painéis escuros e títulos sóbrios.', detail: 'Explicações, entrevistas e negócios.' },
-  { id: 'pop', description: 'Textos grandes e alto contraste.', detail: 'Conteúdo expressivo e chamadas em destaque.' },
-  { id: 'minimal', description: 'Poucos elementos disputando atenção.', detail: 'Quando a imagem e a fala são o foco.' },
-  { id: 'cinema', description: 'Títulos e composição cinematográficos.', detail: 'Relatos, histórias e apresentações.' },
+  { id: 'gigante', description: 'Palavra-chave gigante numa linha só dela.', detail: 'Dicas, vendas e opinião: o visual dos criadores de hoje.' },
+  { id: 'foco', description: 'Uma palavra por vez, enorme, no ritmo da voz.', detail: 'Vídeos rápidos que precisam prender o olho.' },
+  { id: 'adesivo', description: 'Letras de adesivo em relevo, um pouco tortas.', detail: 'Humor, dia a dia e conteúdo leve.' },
+  { id: 'pop', description: 'Caixa amarela que corre pela palavra falada.', detail: 'Conteúdo expressivo e chamadas em destaque.' },
+  { id: 'editorial', description: 'Palavra-chave em itálico dourado, como revista.', detail: 'Dicas, opiniões e conteúdo pessoal.' },
   { id: 'podcast', description: 'Destaques visuais para trechos de conversa.', detail: 'Podcasts e entrevistas.' },
 ];
 const PLATFORM_DESCRIPTIONS: Record<CreativeSetup['platform'], string> = {
@@ -41,6 +41,7 @@ const PLATFORM_DESCRIPTIONS: Record<CreativeSetup['platform'], string> = {
   youtube: 'Vídeo horizontal para assistir em tela ampla.', feed: 'Vídeo em retrato para o feed e anúncios.', other: 'Escolha o formato que quiser no próximo ajuste.',
 };
 const captionLabel = (setup: CreativeSetup) => setup.captionStyle === 'highlight' ? 'Palavra em destaque' : 'Discreta';
+const fontLabel = (setup: CreativeSetup) => setup.font === 'auto' ? 'letra do modelo' : setup.font;
 const durationLabel = (setup: CreativeSetup) => setup.durationSec ? `${setup.durationSec} segundos` : 'Vídeo completo';
 const editingMode = (setup: CreativeSetup) => EDITING_MODES.find(mode => Object.entries(mode.settings).every(([key, expected]) => setup[key as keyof CreativeSetup] === expected));
 const editingLabel = (setup: CreativeSetup) => editingMode(setup)?.label ?? 'Personalizada';
@@ -54,7 +55,7 @@ export function SetupSummary({ setup }: { setup: CreativeSetup }) {
     <div><dt>Destino</dt><dd>{PLATFORM_LABELS[setup.platform]} · {OUTPUT_FORMATS[setup.format].ratio}</dd></div>
     <div><dt>Edição</dt><dd>{editingLabel(setup)} · {durationLabel(setup).toLowerCase()}</dd></div>
     <div><dt>Visual</dt><dd>{TEMPLATE_NAMES[setup.preset]}</dd></div>
-    <div><dt>Legendas</dt><dd>{captionLabel(setup)} · {setup.font}</dd></div>
+    <div><dt>Legendas</dt><dd>{captionLabel(setup)} · {fontLabel(setup)}</dd></div>
   </dl>;
 }
 
@@ -90,7 +91,7 @@ export function CreativeSetupScreen({ value, onChange, onComplete, onBack, revis
   const recap: { label: string; value: string; step: SetupStep }[] = [
     { label: 'Destino', value: `${PLATFORM_LABELS[value.platform]} · ${OUTPUT_FORMATS[value.format].ratio}`, step: 'platform' },
     { label: 'Visual', value: TEMPLATE_NAMES[value.preset], step: 'style' },
-    { label: 'Legendas', value: `${captionLabel(value)} · ${value.font}`, step: 'captions' },
+    { label: 'Legendas', value: `${captionLabel(value)} · ${fontLabel(value)}`, step: 'captions' },
     { label: 'Cortes', value: `${editingLabel(value)} · ${durationLabel(value).toLowerCase()}`, step: 'editing' },
   ];
   const title = last && returning && !revision ? 'Usar as mesmas escolhas da última vez?' : step.title;
@@ -133,7 +134,7 @@ export function CreativeSetupScreen({ value, onChange, onComplete, onBack, revis
             ...STYLE_OPTIONS,
             ...(!STYLE_OPTIONS.some(option => option.id === value.preset) ? [{ id: value.preset, description: 'Seu modelo salvo foi mantido.', detail: 'Selecione outro apenas se quiser mudar.' }] : []),
           ].map(option => ({ ...option, label: TEMPLATE_NAMES[option.id], visual: <StyleDemo styleId={option.id} selected={value.preset === option.id} /> }))} />
-          <p className="setup-explanation">O fundo é só ilustrativo: no seu vídeo aparece a sua gravação. No editor há mais 9 modelos e você pode trocar a qualquer momento.</p>
+          <p className="setup-explanation">{`O fundo é só ilustrativo: no seu vídeo aparece a sua gravação. No editor há mais ${TEMPLATE_IDS.length - STYLE_OPTIONS.length} modelos e você pode trocar a qualquer momento.`}</p>
         </>}
         {stepId === 'captions' && <SetupChoices label="Estilo das legendas" className="setup-caption-choices" value={value.captionStyle} onSelect={captionStyle => patch({ captionStyle: captionStyle as CreativeSetup['captionStyle'] })} options={[
           { id: 'highlight', label: 'Palavra em destaque', description: 'As palavras entram uma a uma, no ritmo da voz. A palavra falada muda de cor e cresce.', detail: 'Para prender a atenção e acompanhar a fala.', visual: <CaptionDemo style="highlight" accent={value.accent} /> },

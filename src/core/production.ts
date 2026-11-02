@@ -16,10 +16,11 @@ export const creativeSetupSchema = z.object({
   durationSec: z.number().finite().int().min(15).max(180).nullable(),
   hook: z.boolean(),
   captionStyle: z.enum(['highlight', 'minimal']),
-  font: z.enum(FONT_FAMILIES),
-  accent: z.string().regex(/^#[0-9A-F]{6}$/),
-  motion: z.number().finite().min(0).max(1),
-  transition: z.enum(TRANSITIONS),
+  /** 'auto' (v0.41) = a fonte, a cor, o movimento e a transição do próprio modelo escolhido */
+  font: z.union([z.literal('auto'), z.enum(FONT_FAMILIES)]),
+  accent: z.union([z.literal('auto'), z.string().regex(/^#[0-9A-F]{6}$/)]),
+  motion: z.union([z.literal('auto'), z.number().finite().min(0).max(1)]),
+  transition: z.enum(['auto', ...TRANSITIONS]),
   cta: z.string().trim().max(32).refine(value => !value || /^[\p{L}\p{N} .,!?:;'"“”‘’@#%&$+\-/()]{2,32}$/u.test(value)),
   reference: z.string().trim().max(240),
   preserve: z.string().trim().max(240),
@@ -29,11 +30,26 @@ export const creativeSetupSchema = z.object({
 
 export type CreativeSetup = z.infer<typeof creativeSetupSchema>;
 
+/**
+ * Até a v0.40 as perguntas iniciais gravavam Inter, amarelo, movimento 35% e corte seco como se fossem
+ * escolhas, e isso apagava a cara de todo modelo. Quem ainda tem exatamente esses valores salvos passa
+ * para "do modelo" (v0.41); um valor diferente foi escolhido de propósito e fica.
+ */
+export function migrateSetupDefaults<T extends Pick<CreativeSetup, 'font' | 'accent' | 'motion' | 'transition'>>(setup: T): T {
+  return {
+    ...setup,
+    font: setup.font === 'Inter' ? 'auto' : setup.font,
+    accent: setup.accent === '#FFD400' ? 'auto' : setup.accent,
+    motion: setup.motion === 0.35 ? 'auto' : setup.motion,
+    transition: setup.transition === 'none' ? 'auto' : setup.transition,
+  };
+}
+
 export const DEFAULT_SETUP: CreativeSetup = {
   version: 1, goal: 'ensinar', audience: '', platform: 'reels', format: 'vertical',
-  preset: 'editorial', tone: 'calmo', pace: 'normal', cutPolicy: 'balanced', durationSec: null,
-  hook: true, captionStyle: 'highlight', font: 'Inter', accent: '#FFD400',
-  motion: 0.35, transition: 'none', cta: '', reference: '', preserve: '', avoid: '', prompt: '',
+  preset: 'gigante', tone: 'calmo', pace: 'normal', cutPolicy: 'balanced', durationSec: null,
+  hook: true, captionStyle: 'highlight', font: 'auto', accent: 'auto',
+  motion: 'auto', transition: 'auto', cta: '', reference: '', preserve: '', avoid: '', prompt: '',
 };
 
 export const PLATFORM_LABELS: Record<CreativeSetup['platform'], string> = {

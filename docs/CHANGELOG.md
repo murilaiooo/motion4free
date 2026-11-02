@@ -21,6 +21,15 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.41.0 — 02/11/2026 — aguardando OK do responsável
+
+- Modelos de legenda em nível profissional (ADR-0042): palavra-chave maior e, em alguns modelos, numa linha só dela; brilho neon de verdade; letras em relevo; palavras inclinadas como adesivo; linhas mais juntas nas maiúsculas.
+- Três modelos novos: **Gigante** (palavra-chave gigante em verde-limão, padrão para quem começa), **Foco** (uma palavra por vez, enorme) e **Adesivo** (letras de adesivo em relevo, tortas e quicando).
+- Correção principal: as perguntas iniciais aplicavam Inter + amarelo + "fade" em todo modelo, e todos ficavam iguais. Agora fonte, cor, movimento e transição vêm "do modelo", a não ser que você escolha outra coisa.
+- Emojis automáticos pelo contexto: sem palavras de duplo sentido ("cara", "real", "precisa", "agora"...), sem contar palavra negada ("não é caro"), a palavra mais específica vence e, sem palavra que combine, o emoji vem do assunto do vídeo ou não aparece (nada de emoji aleatório).
+- Miniaturas e galeria mostram a legenda no momento da palavra-chave e cortam a frase como o vídeo de verdade.
+- Não testado (o responsável testa).
+
 ## v0.40.1 — 02/11/2026 — publicada com OK do responsável
 
 - Em inglês, as miniaturas dos modelos (legenda, título, número, lista, nome e chamada final de exemplo) agora mostram texto em inglês e redesenham ao trocar EN/PT. O vídeo da pessoa não muda.
