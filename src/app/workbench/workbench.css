@@ -4,7 +4,7 @@
   .workbench .inspector { overflow-y: auto; }
   .workbench .stage-head { flex-wrap: wrap; padding: var(--s-2); gap: var(--s-2); }
   .workbench .summary { border: 0; background: none; padding: 0; }
-  .workbench .summary-detail { display: none; }
+  .workbench .summary-detail, .workbench .summary-sep { display: none; }
   .workbench .rail-tab { font-size: 10px; }
   .workbench .tl-area { border-top: 0; }
   .wb-divider { position: relative; background: var(--bg-0); touch-action: none; user-select: none; z-index: 4; }

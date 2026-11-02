@@ -91,6 +91,7 @@ test('galeria de modelos: filtro por etiqueta, cartão escolhido marcado e desfa
   await expect(page.locator('.tpl-card.selected .tpl-check')).toHaveCount(1);
   await page.getByTestId('style-pop').click();
   await expect(page.getByTestId('style-pop')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('tags-more').click();
   await page.getByRole('button', { name: 'Elegante', exact: true }).click();
   await expect(page.getByTestId('style-editorial')).toBeVisible();
   await expect(page.getByTestId('style-pop')).toHaveCount(0);
@@ -99,6 +100,8 @@ test('galeria de modelos: filtro por etiqueta, cartão escolhido marcado e desfa
   await page.getByRole('button', { name: 'Todos', exact: true }).click();
   await expect(page.getByTestId('style-pop')).toHaveAttribute('aria-pressed', 'false');
   // a miniatura é um quadro de verdade
+  // (miniaturas desenham ao entrar na tela; com todos os filtros abertos o Neon fica mais abaixo)
+  await page.getByTestId('style-neon').scrollIntoViewIfNeeded();
   await expect(page.getByTestId('style-neon').locator('canvas')).toHaveAttribute('data-ready', '1');
   await page.keyboard.press('Control+z');
   await expect(page.getByTestId('style-pop')).toHaveAttribute('aria-pressed', 'true');

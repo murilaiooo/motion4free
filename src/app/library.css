@@ -28,11 +28,12 @@ button.ghost.danger:hover:not(:disabled) { background: var(--red-soft); color: v
 .m4f-strong-warn { color: var(--red); font-weight: 650; }
 
 /* ---------- Meus projetos (primeira tela) ---------- */
-.projects { display: grid; gap: var(--s-3); width: 100%; min-width: 0; align-self: start; }
+.projects { display: grid; gap: var(--s-3); width: 100%; min-width: 0; align-self: start; scroll-margin-top: var(--s-6); }
+.projects-head { align-items: center; }
 .projects-head { display: flex; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; }
 .projects-head h2 { font-size: var(--fs-xl); }
 .projects-head .hint { flex: 1; }
-.proj-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); max-height: min(620px, 70dvh); overflow-y: auto; padding-right: var(--s-1); }
+.proj-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr)); align-items: start; gap: var(--s-3); max-height: min(620px, 70dvh); overflow-y: auto; padding-right: var(--s-1); }
 .proj-card { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--s-3); padding: var(--s-3); background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-lg); transition: border-color var(--dur-1) var(--ease); }
 .proj-card:hover { border-color: var(--line-strong); }
 .proj-card.broken { border-style: dashed; }
@@ -40,6 +41,7 @@ button.ghost.danger:hover:not(:disabled) { background: var(--red-soft); color: v
 .proj-thumb { display: grid; place-items: center; width: 72px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: var(--r-md); background: var(--bg-0); color: var(--text-3); border: 1px solid var(--line); }
 .proj-info { display: grid; gap: 6px; min-width: 0; align-content: start; }
 .proj-name { font-weight: 650; font-size: var(--fs-md); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; max-width: 100%; color: var(--text-1); }
+.proj-name.link { text-decoration: none; }
 .proj-name:hover:not(:disabled) { text-decoration: underline; }
 .proj-meta { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; color: var(--text-2); font-size: var(--fs-xs); }
 .proj-meta.warn { color: var(--amber); }
@@ -107,3 +109,19 @@ button.ghost.danger:hover:not(:disabled) { background: var(--red-soft); color: v
 .pmenu-trigger:hover svg { color: var(--text-1); }
 .pmenu-actions { display: flex; align-items: center; gap: 2px; padding-left: var(--s-2); border-left: 1px solid var(--line); }
 .pmenu-actions .danger, .pmenu-actions .danger svg { color: var(--red); }
+.pmenu { display: flex; align-items: center; gap: var(--s-2); }
+@media (max-width: 899px) {
+  /* celular: nome + "Meus projetos" numa linha, sem invadir desfazer/refazer */
+  .topbar-left { flex: 1 1 auto; overflow: hidden; }
+  .topbar-right { flex: none; }
+  .pmenu { gap: 0; min-width: 0; }
+  .pmenu-trigger { min-width: 0; flex: 0 1 auto; }
+  .pmenu-trigger .project-name { max-width: 100%; min-width: 0; }
+  .pmenu-actions { flex: none; }
+  .pmenu-actions { padding-left: var(--s-1); }
+}
+@media (max-width: 480px) {
+  /* no celular, "Meus projetos" já leva ao início: o logo sai para o nome do projeto caber */
+  .topbar .brand { display: none; }
+}
+.projects-empty { margin: 0; padding: var(--s-4); border: 1px dashed var(--line-strong); border-radius: var(--r-lg); color: var(--text-2); font-size: var(--fs-sm); }

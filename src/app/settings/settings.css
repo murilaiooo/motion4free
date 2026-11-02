@@ -47,7 +47,8 @@ button.link { background: none; border: 0; padding: 0; height: auto; color: var(
 .set-mode { grid-template-columns: auto 1fr; column-gap: var(--s-3); }
 .set-mode > input, .set-provider > input { position: absolute; top: var(--s-3); right: var(--s-3); opacity: 0; }
 .set-mode > svg { color: var(--text-2); margin-top: 2px; }
-.set-mode span { display: grid; gap: 6px; }
+.set-mode > span { display: grid; gap: 6px; }
+.set-mode .set-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
 .set-mode small, .set-provider small { color: var(--text-2); font-size: var(--fs-sm); line-height: 1.4; }
 .set-mode:hover, .set-provider:hover { border-color: var(--text-3); }
 .set-mode.on, .set-provider.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, var(--bg-2)); }
@@ -152,8 +153,10 @@ kbd { font-family: var(--mono); font-size: var(--fs-xs); padding: 2px 6px; borde
 @media (max-width: 760px) {
   .m4f-dialog.settings { height: 92dvh; }
   .set-layout { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-  .set-nav { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); padding: var(--s-2); gap: 4px; }
-  .set-nav-item { grid-template-columns: auto auto; flex: none; padding: var(--s-2) var(--s-3); }
+  /* todas as seções à vista no celular (2 colunas), sem rolagem escondida para o lado */
+  .set-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; border-right: 0; border-bottom: 1px solid var(--line); padding: var(--s-2); gap: 4px; }
+  .set-nav-item { grid-template-columns: auto minmax(0, 1fr); padding: var(--s-2) var(--s-3); min-height: 44px; }
+  .set-nav-item b { font-size: var(--fs-sm); }
   .set-nav-item small, .set-nav-arrow { display: none; }
   .set-body { padding: var(--s-4); }
   .set-flow { grid-template-columns: 1fr; }

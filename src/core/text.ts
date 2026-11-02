@@ -7,3 +7,8 @@ export function count(n: number, singular: string, plural: string): string {
 export function planSummary(segments: number, captions: number, words: number): string {
   return [count(segments, 'trecho', 'trechos'), count(captions, 'legenda', 'legendas'), count(words, 'palavra reconhecida', 'palavras reconhecidas')].join(' · ');
 }
+
+/** Número decimal no jeito brasileiro (vírgula), com casas fixas: dec(3.14) → "3,1". */
+export function dec(n: number, digits = 1): string {
+  return n.toFixed(digits).replace('.', ',');
+}

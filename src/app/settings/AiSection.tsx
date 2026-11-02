@@ -42,7 +42,7 @@ const catalog = new Map<ProviderId, CatalogEntry>();
 
 const MODES: { id: AiMode; title: string; text: string; tags: string[]; Icon: typeof Bot }[] = [
   { id: 'regras', title: 'Só regras', text: 'Funciona sem conta, sem internet e sem cobranças. Entende pedidos simples.', tags: ['Sem conta', 'Grátis'], Icon: ListChecks },
-  { id: 'local', title: 'IA no navegador', text: 'Baixa um modelo no computador e entende pedidos mais livres. Precisa de WebGPU.', tags: ['Local', 'Grátis'], Icon: Cpu },
+  { id: 'local', title: 'IA no navegador', text: 'Baixa um modelo no computador e entende pedidos mais livres. Precisa de um navegador com acesso à placa de vídeo (Chrome ou Edge atualizados).', tags: ['Local', 'Grátis'], Icon: Cpu },
   { id: 'provedor', title: 'Usar minha API', text: 'Conecte um serviço de IA para analisar texto. Pode consumir sua cota ou gerar cobranças.', tags: ['Opcional', 'Pode cobrar'], Icon: PlugZap },
 ];
 

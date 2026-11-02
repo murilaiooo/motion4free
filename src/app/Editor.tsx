@@ -847,7 +847,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
               <summary>Texto falado</summary>
               {asrModel && (
                 <p className="asr-model" data-testid="asr-model">
-                  <Captions size={14} aria-hidden /> Legenda feita com {asrModel}.
+                  <Captions size={14} aria-hidden /> Legenda escrita neste computador, sem enviar o áudio. <span className="muted">Modelo: {asrModel}.</span>
                 </p>
               )}
               <SemanticCuePanel plan={plan} words={ctx.words} time={time} disabled={off} onAdd={word => apply(p => addSemanticWord(p,word))} onRemove={id => apply(p => removeSemanticWord(p,id))} onReanchor={(id,word)=>apply(p=>reanchorSemanticWord(p,id,word))} onOffset={(id,frames)=>apply(p=>offsetSemanticWord(p,id,frames))} onEffect={(id,effect)=>apply(p=>setSemanticWordEffect(p,id,effect))} onSeek={seek} onSuggest={() => { const picked = suggestSemanticWords(plan, ctx.words, keywordScore); if (picked.length) apply(p => picked.reduce((acc, w) => addSemanticWord(acc, w), p)); return picked.length; }} />
@@ -990,13 +990,13 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
           {plan.brief.production && <button className="ghost sm" onClick={() => setReviewOpen(value => !value)} data-testid="review-draft">{reviewOpen ? 'Ocultar resumo' : 'Revisar rascunho'}</button>}
           <div className="summary" data-testid="summary">
             <span className="stat">
-              <span className="muted">Original</span> <b className="tnum">{ctx.durationSec.toFixed(1)} s</b>
+              <span className="muted">Original</span> <b className="tnum">{fmt1(ctx.durationSec)}</b>
             </span>
             <ChevronRight size={14} className="muted" aria-hidden />
             <span className="stat">
               <span className="muted">Editado</span>{' '}
               <b className="tnum accent" data-testid="out-duration">
-                {total.toFixed(1)} s
+                {fmt1(total)}
               </b>
             </span>
             <span className="summary-sep" aria-hidden />

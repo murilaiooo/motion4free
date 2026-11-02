@@ -88,24 +88,33 @@ export function TemplateThumb({ styleId, t, width = 180, playing = false, classN
 /** Instante de cada modelo que mais mostra a cara dele (legenda + título). */
 const COVER_T = 1.3;
 
+/** Filtros sempre à vista; o resto abre num botão visível, para os modelos não descerem para fora da tela. */
+const FEATURED_TAGS = 7;
+
 /** Galeria de modelos: cartões com quadro de verdade, etiquetas e filtro. Clicar aplica (dá para desfazer). */
 export function TemplateGallery({ current, onPick, disabled, templates }: { current: string; onPick: (id: string) => void; disabled?: boolean; templates?: TemplateInfo[] }) {
   const list = useMemo(() => templates ?? listTemplates(), [templates]);
   const tags = useMemo(() => templateTags(list), [list]);
   const [tag, setTag] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
+  const [allTags, setAllTags] = useState(false);
   const shown = filterTemplates(list, tag);
   return (
     <section className="templates" aria-label="Modelos">
-      <div className="chips scroll" role="group" aria-label="Filtrar modelos">
+      <div className="chips" role="group" aria-label="Filtrar modelos">
         <button type="button" className="chip" aria-pressed={tag === null} onClick={() => setTag(null)}>
           Todos
         </button>
-        {tags.map((t) => (
+        {(allTags ? tags : tags.slice(0, FEATURED_TAGS)).concat(!allTags && tag && tags.indexOf(tag) >= FEATURED_TAGS ? [tag] : []).map((t) => (
           <button type="button" key={t} className="chip" aria-pressed={tag === t} onClick={() => setTag(tag === t ? null : t)}>
             {t}
           </button>
         ))}
+        {tags.length > FEATURED_TAGS && (
+          <button type="button" className="chip chip-more" aria-expanded={allTags} onClick={() => setAllTags((v) => !v)} data-testid="tags-more">
+            {allTags ? 'Menos filtros' : `Mais filtros (+${tags.length - FEATURED_TAGS})`}
+          </button>
+        )}
       </div>
       <div className="template-grid">
         {shown.map((tpl) => {
