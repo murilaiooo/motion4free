@@ -5,6 +5,19 @@
  * Texto novo sem tradução aparece em português até entrar aqui (veja scripts/i18n-missing.mjs).
  */
 const en: Record<string, string> = {
+  "Idioma da legenda": "Subtitle language",
+  "Inglês (original)": "English (original)",
+  "Português (traduzido)": "Portuguese (translated)",
+  "Mantém a fala em inglês e mostra a transcrição original.": "Keeps English speech and shows the original transcript.",
+  "Mantém o áudio em inglês e mostra a legenda traduzida.": "Keeps English audio and shows the translated subtitles.",
+  "A legenda acompanha o idioma original da fala. Para áudio em inglês, você também pode criar uma versão em português.": "Subtitles follow the original spoken language. For English audio, you can also create a Portuguese version.",
+  "Traduzir inglês → português (beta)": "Translate English → Portuguese (beta)",
+  "Refazer tradução inglês → português": "Translate English → Portuguese again",
+  "Tradução local de inglês para português: baixa um modelo gratuito na primeira vez. Nesta etapa, o áudio não muda nem é enviado; revise nomes e expressões antes de exportar. O tempo da tradução é aproximado por frase.": "Local English-to-Portuguese translation: downloads a free model the first time. This translation step does not change or upload the audio; review names and expressions before export. Translation timing is approximate per sentence.",
+  "Carregando o modelo de tradução…": "Loading the translation model…",
+  "Cancelar": "Cancel",
+  "Não há texto para traduzir.": "There is no text to translate.",
+  "O projeto mudou durante a tradução. Clique em traduzir novamente.": "The project changed during translation. Click translate again.",
   "Em Configurações → IA, escolha {0}.": "In Settings → AI, choose {0}.",
   "Abra Armazenamento para liberar espaço.": "Open Storage to free up space.",
   "Estimativa do navegador: {0} disponíveis; {1} baixa cerca de {2}.{3} A estimativa pode ser menor que o espaço real (Brave).": "Browser estimate: {0} available; {1} downloads about {2}.{3} The estimate may be smaller than the real space (Brave).",

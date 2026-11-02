@@ -30,7 +30,9 @@ export async function transcribeByApi(provider: ProviderId, model: string, audio
     const form = new FormData();
     form.append('file', new Blob([encodeWav(sliceSamples(audio16k, chunk)) as BlobPart], { type: 'audio/wav' }), 'fala.wav');
     form.append('model', model);
-    form.append('language', 'pt');
+    // Sem idioma fixo, a API detecta a fala; pt/en são dicas explícitas da pessoa.
+    const language = getAsrRoute().speechLanguage;
+    if (language !== 'auto') form.append('language', language);
     form.append('response_format', 'verbose_json');
     form.append('timestamp_granularities[]', 'word');
     const ctrl = new AbortController();

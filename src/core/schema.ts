@@ -32,7 +32,7 @@ const captionV1 = z.object({
   wordIds: z.array(z.string()),
 });
 
-const caption = captionV1.extend({ wordStarts: z.array(time).max(60) });
+const caption = captionV1.extend({ wordStarts: z.array(time).max(60), translationCue: z.boolean().optional() });
 
 const base = { id: z.string().min(1), start: time, end: time };
 
@@ -177,6 +177,13 @@ export const editPlanSchema = z
     edits: editsSchema,
     music: musicSchema.nullable().optional(),
     semanticCues: semanticCuesSchema.optional(),
+    subtitleTranslation: z.object({
+      sourceLanguage: z.literal('en'),
+      targetLanguage: z.literal('pt-BR'),
+      active: z.enum(['original', 'pt-BR']),
+      original: z.array(caption).max(5000),
+      translated: z.array(caption).max(5000),
+    }).optional(),
   })
   .refine((p) => p.segments.every((s) => s.srcEnd <= p.clips.reduce((a, c) => a + c.duration, 0) + 0.01), { message: 'trecho depois do fim dos clipes' });
 

@@ -2,7 +2,7 @@ import { EMPTY_EDITS } from '../src/core/edits';
 import { describe, expect, it } from 'vitest';
 import { EMPTY_BRIEF } from '../src/core/brief';
 import { DOCUMENTAL, EDITORIAL, NEON, POP, PRESETS } from '../src/core/presets';
-import type { StyleDNA } from '../src/core/style';
+import { CAPTION_FX_OFF, type StyleDNA } from '../src/core/style';
 import type { Caption, EditPlan, RangeEdit, SceneInstance } from '../src/core/types';
 import { captionMaxWidth, drawCaption, REELS_BUTTONS_X } from '../src/render/captions';
 import { emojiPose } from '../src/render/emoji';
@@ -136,8 +136,10 @@ describe('legenda profissional (v0.7)', () => {
   });
 
   it('Pop: no instante da troca, o texto escuro fica na palavra que a caixa cobre (nunca texto escuro fora da caixa)', () => {
+    // o relevo (v0.41) desenha cópias escuras de propósito, por baixo; a regra vale para a camada de cima
+    const flat = { ...POP, captions: { ...POP.captions, fx: { ...CAPTION_FX_OFF } } };
     const at = (t: number) => {
-      const rc = draw(POP, t).rc;
+      const rc = draw(flat, t).rc;
       return { isso: word(rc, 'isso')!.fillStyle, muda: word(rc, 'muda')!.fillStyle };
     };
     // exatamente no começo de "muda", a caixa ainda está em "isso"

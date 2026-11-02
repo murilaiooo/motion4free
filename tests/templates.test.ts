@@ -21,9 +21,9 @@ const H = 1920;
 const cap = (text: string, start: number, end: number, wordStarts: number[]): Caption => ({ id: 'c', text, start, end, wordIds: [], wordStarts });
 const CAPTION = cap('isso muda tudo', 1, 2.2, [1, 1.4, 1.8]);
 
-function drawCap(style: StyleDNA, t: number, kw: string[] = []) {
+function drawCap(style: StyleDNA, t: number, kw: string[] = [], caption: Caption = CAPTION) {
   const rc = new RecordingContext();
-  drawCaption(rc.asCtx(), makeFrame(W, H, style), CAPTION, t, new Set(kw));
+  drawCaption(rc.asCtx(), makeFrame(W, H, style), caption, t, new Set(kw));
   return rc;
 }
 function drawScene(style: StyleDNA, scene: SceneInstance, t: number) {
@@ -265,12 +265,14 @@ describe('todos os modelos respeitam o look e são determinísticos', () => {
   for (const t of TEMPLATES) {
     it(`${t.id}: cor, posição e tamanho pedidos aparecem na legenda`, () => {
       const s = applyLook(t.style, { captions: { text: '#FF0000', position: 'top', scale: 1.3 } }, []);
-      const rc = drawCap(s, 2.1);
+      // modelo de uma palavra por vez (Foco) recebe uma palavra por legenda
+      const rc = drawCap(s, 2.1, [], t.style.captions.maxWords > 1 ? CAPTION : cap('isso', 1, 2.2, [1]));
       const isso = word(rc, 'isso').at(-1)!;
       expect(isso.fillStyle).toBe('#FF0000');
       expect(screenY(isso)).toBeLessThan(H * 0.35);
       const size = Number(/([\d.]+)px/.exec(isso.font)![1]);
-      expect(size).toBeGreaterThan(t.style.captions.size * W * 1.1);
+      // o tamanho da legenda tem teto de 16% da largura (esquema); o Foco já nasce perto dele
+      expect(size).toBeGreaterThanOrEqual(Math.min(t.style.captions.size * 1.1, 0.16) * W * 0.999);
     });
 
     it(`${t.id}: o mesmo instante dá o mesmo quadro, em qualquer ordem`, () => {

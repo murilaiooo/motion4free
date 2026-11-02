@@ -186,15 +186,16 @@ const ACTIVE_SPRING = { freq: 1.6, zeta: 0.42 };
  */
 export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, keywords: ReadonlySet<string>, opts: CaptionOpts = {}): Rect | null {
   const { style, u, safe } = f;
-  const C = style.captions;
+  // Texto traduzido tem tempos por frase, não por palavra. Não fingir karaoke sincronizado.
+  const C = caption.translationCue ? { ...style.captions, highlight: 'color' as const, upcomingAlpha: 1, activeScale: 1 } : style.captions;
   const K = captionColors(style);
-  const enterKind = captionEnter(style);
+  const enterKind = caption.translationCue ? 'fade' as const : captionEnter(style);
   const spec = style.type.text;
   const em = style.type.emphasis;
   const tokens = caption.text.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return null;
   const starts = wordTimings(caption, tokens);
-  const active = activeWord(starts, t);
+  const active = caption.translationCue ? -1 : activeWord(starts, t);
   const semanticAligned = caption.wordIds.length === tokens.length;
   const semantic = tokens.map((token, i) => {
     const anchored = semanticAligned ? opts.semanticEffects?.get(caption.wordIds[i]!) : undefined;

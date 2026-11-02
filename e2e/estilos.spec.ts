@@ -8,6 +8,9 @@ const STYLES = ['pop', 'neon', 'editorial', 'documental'] as const;
 const SHOTS = ['abertura', 'numero', 'lista', 'pergunta', 'nome', 'legenda', 'chamada'] as const;
 /** Modelos da v0.9: duas referências cada (abertura e legenda); o resto fica nos testes de unidade. */
 const TEMPLATES_V09 = ['impacto', 'minimal', 'podcast', 'tutorial', 'cinema', 'jornal', 'retro', 'turbo', 'datilografia', 'marca-texto', 'luxo'] as const;
+/** Modelos da v0.41 (ADR-0042). */
+const TEMPLATES_V041 = ['gigante', 'foco', 'adesivo'] as const;
+const ALL_COUNT = 4 + TEMPLATES_V09.length + TEMPLATES_V041.length;
 const SHOTS_V09 = ['abertura', 'legenda'] as const;
 
 async function openVideo(page: Page) {
@@ -91,14 +94,14 @@ test.describe('galeria de estilos', () => {
       }
       return results;
     });
-    expect(same.length).toBe(4 + TEMPLATES_V09.length);
+    expect(same.length).toBe(ALL_COUNT);
     expect(same.every(Boolean)).toBe(true);
   });
 
   test('os estilos desenham quadros diferentes entre si', async ({ page }) => {
     for (const t of [1.3, 4.6, 12.2, 22.1]) {
       const frames = await page.evaluate((tt) => window.m4fGallery!.styles().map((s) => window.m4fGallery!.render(s, tt, 270)), t);
-      expect(new Set(frames).size).toBe(4 + TEMPLATES_V09.length);
+      expect(new Set(frames).size).toBe(ALL_COUNT);
     }
   });
 

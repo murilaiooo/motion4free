@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_EDITS } from '../src/core/edits';
 import { EMPTY_BRIEF } from '../src/core/brief';
-import { POP } from '../src/core/presets';
+import { POP as POP_FX } from '../src/core/presets';
+import { CAPTION_FX_OFF } from '../src/core/style';
+
+// relevo (v0.41) repete cada palavra em camadas; aqui só interessa a camada de cima
+const POP = { ...POP_FX, captions: { ...POP_FX.captions, fx: { ...CAPTION_FX_OFF } } };
 import type { EditPlan } from '../src/core/types';
 import { drawFrame } from '../src/render/frame';
 import { addSemanticWord, activeSemanticWords, scheduledPlanCues, setSemanticWordEffect } from '../src/editorial/semantic-word-edits';

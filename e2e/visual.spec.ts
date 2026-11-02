@@ -87,7 +87,8 @@ test('transcrição: clicar numa palavra leva a prévia até ela; a palavra fala
 
 test('galeria de modelos: filtro por etiqueta, cartão escolhido marcado e desfazer', async ({ page }) => {
   await openVideo(page);
-  await expect(page.getByTestId('style-editorial')).toHaveAttribute('aria-pressed', 'true');
+  // desde a v0.41 o modelo inicial das perguntas é o Gigante
+  await expect(page.getByTestId('style-gigante')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.tpl-card.selected .tpl-check')).toHaveCount(1);
   await page.getByTestId('style-pop').click();
   await expect(page.getByTestId('style-pop')).toHaveAttribute('aria-pressed', 'true');

@@ -12,6 +12,7 @@ import { findHooks, pickHook } from './hooks';
 import { proposeScenes } from './selector';
 import type { RangeRequest } from './range-interpret';
 import { applyRangeRequest, assertCaptionEditable, assertSegmentsKeepLocks, reapplyRanges, type RangeTarget } from './ranges';
+import { sourcePlanForRebuild } from './subtitle-translation';
 import { applyReference } from './reference';
 import { withRecipe } from './recipe-apply';
 import type { ReferencePalette } from '../core/types';
@@ -85,6 +86,7 @@ function rebuildScenes(plan: EditPlan, ctx: EditContext, segments: Segment[], st
  * Legenda cujo grupo de palavras não mudou mantém o texto editado.
  */
 export function withSegments(plan: EditPlan, ctx: EditContext, input: Segment[]): EditPlan {
+  plan = sourcePlanForRebuild(plan);
   // um trecho nunca atravessa dois clipes (v0.14): a emenda entre arquivos é sempre uma emenda do plano
   const segments = splitAtClips(input, plan.clips);
   if (segments.length === 0) throw new AppError('CORTE_TOTAL');
@@ -99,6 +101,7 @@ export function planStyle(preset: StyleDNA, brief: CreativeBrief, reference: Ref
 
 /** Refaz legendas e cenas do vídeo inteiro com o estilo e o pedido atuais (trechos reaplicados por cima). */
 export function rebuildAll(plan: EditPlan, ctx: EditContext): EditPlan {
+  plan = sourcePlanForRebuild(plan);
   return reapplyRanges({ ...plan, captions: rebuildCaptions(plan, ctx, plan.segments, plan.style), scenes: rebuildScenes(plan, ctx, plan.segments, plan.style) }, ctx.words);
 }
 
@@ -121,6 +124,7 @@ export function applyRange(plan: EditPlan, ctx: EditContext, target: RangeTarget
  */
 export function applyStyle(plan: EditPlan, ctx: EditContext, styleId: string): EditPlan {
   if (plan.style.id === styleId) return plan;
+  plan = sourcePlanForRebuild(plan);
   const preset = presetById(styleId);
   if (!preset) throw new AppError('ESTILO_DESCONHECIDO', styleId);
   // a escolha manual vira o estilo do pedido; os outros ajustes do pedido (calmo, proibições...) continuam valendo
@@ -135,6 +139,7 @@ export function applyStyle(plan: EditPlan, ctx: EditContext, styleId: string): E
  * Gancho: mantém o que a pessoa escolheu antes; se o pedido quer gancho e não há escolha, usa o melhor candidato.
  */
 export function applyBrief(plan: EditPlan, ctx: EditContext, raw: CreativeBrief): EditPlan {
+  plan = sourcePlanForRebuild(plan);
   // tipo de conteúdo: o do pedido (ou null = "nenhum"); sem menção, continua o escolhido antes (v0.12)
   const niche = raw.niche === undefined ? (plan.brief.niche ?? null) : raw.niche;
   const incoming = withRecipe({ ...raw, niche });
@@ -223,5 +228,14 @@ export function editCaptionText(plan: EditPlan, captionId: string, text: string)
   const target = plan.captions.find((c) => c.id === captionId);
   if (!target || target.text === clean) return plan;
   assertCaptionEditable(plan, captionId);
-  return { ...plan, captions: plan.captions.map((c) => (c.id === captionId ? { ...c, text: clean } : c)) };
+  const update = (captions: Caption[]) => captions.map((c) => (c.id === captionId ? { ...c, text: clean } : c));
+  const translation = plan.subtitleTranslation;
+  return {
+    ...plan,
+    captions: update(plan.captions),
+    ...(translation ? { subtitleTranslation: {
+      ...translation,
+      [translation.active === 'original' ? 'original' : 'translated']: update(translation.active === 'original' ? translation.original : translation.translated),
+    } } : {}),
+  };
 }

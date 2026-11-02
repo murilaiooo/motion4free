@@ -438,7 +438,9 @@ export function drawQuote(ctx: Ctx2D, f: Frame, scene: Extract<SceneInstance, { 
     return;
   }
   // aspas grandes na cor de destaque
-  const markSize = 230 * f.u * S.type.scale;
+  // as aspas encolhem quando não cabem acima do texto (quadrado/horizontal com fonte grande): nunca saem da tela
+  const room = cy - blockH / 2 - f.safe.y;
+  const markSize = Math.max(60 * f.u, Math.min(230 * f.u * S.type.scale, room / 0.58));
   const ph = phase(S, t, scene.start, scene.end);
   ctx.save();
   const markY = cy - blockH / 2 - markSize * 0.28;

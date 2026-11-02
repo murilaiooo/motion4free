@@ -5,6 +5,19 @@
  * Texto novo sem tradução aparece em português até entrar aqui (veja scripts/i18n-missing.mjs).
  */
 const en: Record<string, string> = {
+  "Idioma falado no vídeo": "Spoken language in the video",
+  "Detectar automaticamente": "Detect automatically",
+  "Para vídeos em português, inglês ou outros idiomas compatíveis.": "For videos in Portuguese, English, or other supported languages.",
+  "Português": "Portuguese",
+  "Inglês": "English",
+  "Se você sabe que o áudio está em português.": "When you know the audio is in Portuguese.",
+  "Se você sabe que o áudio está em inglês.": "When you know the audio is in English.",
+  "Isso controla o idioma do áudio, não o idioma da interface. O Whisper reconhece outros idiomas, mas a precisão varia. O Parakeet detecta o idioma automaticamente.": "This controls the audio language, not the app's language. Whisper recognizes other languages, but accuracy varies. Parakeet detects the language automatically.",
+  "vários idiomas, incluindo português e inglês": "multiple languages, including Portuguese and English",
+  "detecção automática": "automatic detection",
+  "inglês": "English",
+  "Idioma da fala:": "Spoken language:",
+  "A qualidade depende do idioma, do modelo e do áudio.": "Quality depends on the language, model, and audio.",
   "Rápida": "Fast",
   "Precisa (recomendada)": "Accurate (recommended)",
   "Precisão da legenda": "Caption accuracy",

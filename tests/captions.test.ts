@@ -46,3 +46,11 @@ describe('legendas por estilo e tempo de cada palavra', () => {
     expect(caps.map((c) => c.text)).toEqual(['Três dicas rápidas.', 'Primeira dica', 'aqui agora mesmo']);
   });
 });
+
+describe('buildCaptions: última palavra da frase não fica sozinha', () => {
+  it('pelo limite de letras também (v0.41.1: "Três dicas | rápidas.")', () => {
+    const words = [w('1', 'Três', 0, 0.4), w('2', 'dicas', 0.4, 0.8), w('3', 'rápidas.', 0.8, 1.3)];
+    const caps = buildCaptions(words, [{ srcStart: 0, srcEnd: 2 }], { maxChars: 18, maxWords: 3, maxDurationSec: 1.6 });
+    expect(caps.map((c) => c.text)).toEqual(['Três dicas rápidas.']);
+  });
+});

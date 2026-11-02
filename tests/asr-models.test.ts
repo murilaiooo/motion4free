@@ -133,9 +133,11 @@ describe('detecção da placa de vídeo', () => {
     expect(classifyGpu({ description: 'Microsoft Basic Render Driver' })).toBe('nenhuma');
   });
 
-  it('idioma português e tarefa transcrever sempre fixos; segunda tentativa proíbe repetição', () => {
-    expect(whisperOptions()).toEqual({ language: 'portuguese', task: 'transcribe', return_timestamps: 'word' });
-    expect(whisperOptions(true)).toEqual({ language: 'portuguese', task: 'transcribe', return_timestamps: 'word', no_repeat_ngram_size: 6 });
+  it('detecta automaticamente ou respeita português/inglês, sem traduzir a fala', () => {
+    expect(whisperOptions()).toEqual({ task: 'transcribe', return_timestamps: 'word' });
+    expect(whisperOptions(false, 'pt')).toEqual({ language: 'portuguese', task: 'transcribe', return_timestamps: 'word' });
+    expect(whisperOptions(false, 'en')).toEqual({ language: 'english', task: 'transcribe', return_timestamps: 'word' });
+    expect(whisperOptions(true, 'en')).toEqual({ language: 'english', task: 'transcribe', return_timestamps: 'word', no_repeat_ngram_size: 6 });
   });
 
   it('estima o tempo de transcrição', () => {

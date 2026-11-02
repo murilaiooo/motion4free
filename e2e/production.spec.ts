@@ -7,7 +7,7 @@ test('creative setup produces an edited draft, preserves preferences and exports
   await page.getByTestId('file-input').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
   await page.getByRole('radio', { name: 'YouTube', exact: true }).click();
   await page.getByTestId('setup-next').click();
-  await page.getByRole('radio', { name: 'Documental', exact: true }).click();
+  await page.getByRole('radio', { name: 'Editorial', exact: true }).click();
   await page.getByTestId('setup-next').click();
   await page.getByTestId('setup-next').click();
   await page.getByRole('radio', { name: 'Sem cortes', exact: true }).click();
@@ -20,7 +20,7 @@ test('creative setup produces an edited draft, preserves preferences and exports
   await page.getByTestId('setup-complete').click();
   await expect(page.getByTestId('draft-review')).toBeVisible({ timeout: 60_000 });
   await expect(page.getByTestId('out-duration')).toContainText('6,0');
-  await expect(page.getByTestId('draft-review')).toContainText('Documental');
+  await expect(page.getByTestId('draft-review')).toContainText('Editorial');
   await page.screenshot({ path: info.outputPath('first-draft.png') });
   await page.getByTestId('draft-export').click();
   const download = page.getByTestId('download');
@@ -69,9 +69,9 @@ test('direction revision preserves manual text, timeline and undo history', asyn
   await page.getByRole('button', { name: 'Direção criativa', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Etapas da configuração' }).getByRole('button', { name: 'Cortes', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Visual', exact: true }).click();
-  await page.getByRole('radio', { name: 'Documental', exact: true }).click();
+  await page.getByRole('radio', { name: 'Editorial', exact: true }).click();
   await page.getByTestId('setup-skip').click();
-  await expect(page.getByTestId('draft-review')).toContainText('Documental');
+  await expect(page.getByTestId('draft-review')).toContainText('Editorial');
   expect(await page.evaluate(() => (window as any).__m4f.history.past.length)).toBe(2);
   expect(await page.evaluate(() => (window as any).__m4f.plan.edits.added[0].text)).toBe('Seu texto aqui');
   await page.getByTestId('undo').click();
