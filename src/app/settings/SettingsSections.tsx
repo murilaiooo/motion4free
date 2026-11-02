@@ -15,7 +15,7 @@ import { UnlockForm } from './AiSection';
 import { openSettings } from './route';
 import { asrProblem, asrRouteLabel, setAsrRoute, useAsrRoute } from '../../asr/route';
 import { ASR_APIS } from '../../asr/remote-plan';
-import { SPEECH_LANGUAGE } from '../../core/asr-models';
+import { SPEECH_LANGUAGE, describeGpu } from '../../core/asr-models';
 import type { ShareLine } from '../../core/privacy-status';
 import { usePrivacyStatus } from '../usePrivacyStatus';
 
@@ -126,7 +126,7 @@ export function TranscriptionSection({ precision }: { precision: AsrPrecision })
           <b>Vale para o próximo vídeo.</b> Mudar aqui não refaz a legenda de um projeto já aberto; para isso, abra o vídeo de novo.
         </li>
         <li>
-          <b>Placa de vídeo:</b> {c.webgpu ? 'compatível (a transcrição fica mais rápida).' : 'não encontrada ou não liberada pelo navegador; a transcrição usa o processador e demora mais.'}
+          <b>Placa de vídeo (detectada sozinha):</b> <span data-testid="asr-gpu">{describeGpu(c)}</span>
         </li>
         <li>
           <b>Idioma da fala:</b> {SPEECH_LANGUAGE.label}. Nesta versão o app só transcreve {SPEECH_LANGUAGE.label}: vídeos em outro idioma abrem e editam, mas a legenda e os cortes por palavra não ficam confiáveis.

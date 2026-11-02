@@ -38,6 +38,15 @@ Pedido do responsável: foco total no corte automático de clipes, com pesquisa 
 - **Seguir o rosto:** ao gerar o MP4 ou abrir no editor, se o formato muda (deitado → vertical), o recorte acompanha o rosto. Novo aviso M4F-1115 (sem rosto) e M4F-1116 (detector não carregou); o clipe sai mesmo assim.
 - **IA grátis sem M4F-1112:** a resposta da IA é lida de forma tolerante (raciocínio antes, cercas, campos diferentes, vírgula sobrando, resposta cortada). O pedido ficou menor e o OpenRouter ganhou folga para modelos que pensam (ex.: Nemotron). O detalhe do aviso mostra o começo da resposta quando ainda falhar.
 
+## v0.36.0 — 02/11/2026 — transcrição detecta a placa de vídeo sozinha
+
+Pedido do responsável: antes de usar o modelo de transcrição, o app tem que ver se o computador tem placa de vídeo e usá-la; sem placa dedicada, usar a integrada do processador; só o processador em último caso. Decisão em [ADR-0036](decisions/0036-placa-de-video-na-transcricao.md).
+
+- **Detecção automática:** o app lê o que o navegador conta da placa (WebGPU e, se o Brave esconder o nome, o WebGL) e classifica em dedicada, integrada, não identificada ou nenhuma. A pessoa não escolhe nada.
+- **Placa antes do processador:** novos degraus "Whisper small na placa de vídeo" (com fp16, e uma versão sem fp16). Modo Precisa: turbo na placa dedicada → small na placa (dedicada ou integrada) → base na placa → small no processador → base no processador. Antes, uma placa sem fp16 ou integrada pulava direto para o processador, que é bem mais lento.
+- **Mostra o que usou:** o nome do modelo na tela diz onde rodou ("Whisper small (placa de vídeo integrada: Intel UHD Graphics 620)"). Configurações › Transcrição mostra a placa detectada e, em notebook com duas placas que acabou na integrada, explica como pôr o navegador em "Alto desempenho" no Windows.
+- **Aviso novo M4F-313:** quando o navegador não libera a placa de vídeo, a legenda sai igual, mas o app avisa que usou só o processador (por isso demorou).
+
 ## v0.35.0 — 02/11/2026 — polimento pesado para a versão final
 
 Pedido do responsável: polir todos os cantos do app usando o Impeccable (crítica + polish). Crítica feita na tela renderizada (1440×900 e 390×844, tema escuro e claro) e com o detector do Impeccable; relatório em `docs/reviews/2026-11-02-v035-polimento.md`.

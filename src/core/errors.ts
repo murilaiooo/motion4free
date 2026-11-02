@@ -37,6 +37,7 @@ export const ERRORS = {
   ASR_API_BLOQUEADA: { code: 'M4F-309', title: 'Você escolheu transcrever só por API e ela não está pronta, então não transcrevi para não enviar nada sem autorização. Resolva em Configurações › Transcrição ou ligue a reserva no computador.' },
   ASR_API_FALHOU: { code: 'M4F-310', title: 'A transcrição por API falhou; usei o Whisper deste computador desta vez.' },
   ASR_API_SEM_TEMPOS: { code: 'M4F-311', title: 'O serviço transcreveu, mas não mandou o tempo de cada palavra. Sem isso a legenda e os cortes ficam fora de sincronia, então não usei essa resposta.' },
+  SEM_PLACA_VIDEO: { code: 'M4F-313', title: 'O navegador não liberou a placa de vídeo, então a legenda foi feita só com o processador (mais devagar). A legenda sai igual; só demora mais.' },
   ASR_API_GRANDE: { code: 'M4F-312', title: 'O serviço recusou o pedaço de áudio por ser grande demais.' },
   SEM_ENCODER: { code: 'M4F-401', title: 'Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador.' },
   EXPORTACAO_FALHOU: { code: 'M4F-402', title: 'A geração do vídeo falhou.' },
