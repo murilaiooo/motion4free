@@ -8,7 +8,7 @@ test('QA de produção: domínio público carrega a versão publicada e a interf
   expect(expectedCommit).toMatch(/^[0-9a-f]{7}$/);
   const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
   expect(response?.status()).toBe(200);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('sem enviar seu vídeo', { timeout: 60_000 });
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Grave do seu jeito.', { timeout: 60_000 });
   await expect(page.getByTestId('file-input')).toBeAttached();
   await expect(page.getByTestId('version')).toHaveText(/^Motion4Free v\d+\.\d+\.\d+ · [a-f0-9]{7}$/, { timeout: 60_000 });
   // No push da main a Cloudflare pode terminar depois do Actions. Verifique com retry, nunca aceite versão antiga.
@@ -17,7 +17,8 @@ test('QA de produção: domínio público carrega a versão publicada e a interf
     await expect(page.getByTestId('version')).toContainText(expectedCommit!, { timeout: 10_000 });
   }).toPass({ timeout: 240_000, intervals: [5_000, 10_000, 15_000] });
   await expect(page.locator('.lp-reel canvas').first()).toHaveAttribute('data-ready', '1', { timeout: 60_000 });
-  await expect(page.getByText('Seu vídeo nunca sai deste aparelho')).toBeVisible();
+  await expect(page.getByTestId('privacy-fact')).toBeVisible();
+  await expect(page.getByTestId('privacy-fact')).toContainText('O vídeo não sai do aparelho');
   // Acesso a galeria sem backend / login. Não envia arquivos reais para nenhum serviço.
   await page.getByRole('link', { name: 'Modelos' }).click();
   await expect(page.getByRole('heading', { name: 'Modelos, cena por cena' })).toBeVisible({ timeout: 30_000 });

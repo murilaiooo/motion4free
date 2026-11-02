@@ -1,5 +1,7 @@
 # Issue #163 — OpenRouter sem resposta após raciocínio
 
+**Atualização posterior no mesmo dia:** o responsável autorizou os merges #162/#164; a v0.36 foi preservada, a auditoria de licença foi corrigida e o conjunto passou em 1845 testes unitários e 136 E2E Brave. Veja [integração e roteiro atuais](INTEGRATION-PR162-164.md). O texto abaixo preserva a evidência da primeira entrega em rascunho.
+
 Data local: 01/11/2026. Patch preparado: **0.37.1**, branch `codex/issue-163-openrouter-thinking`, baseada na head `85848c7` da PR #162. Não publicado, sem merge na main.
 
 Correção: commit `d25d93f`, [PR #164 em rascunho](https://github.com/murilaiooo/motion4free/pull/164). A issue #163 permanece aberta até integração e confirmação do teste humano.

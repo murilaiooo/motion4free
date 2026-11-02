@@ -83,10 +83,12 @@ test('QA: trocas de formato são guardadas, sobrevivem ao reiniciar e ao desfaze
   test.setTimeout(150_000);
   await page.goto('/?asr=vazio');
   await pickVideos(page, RED);
+  await tab(page, 'Mídia');
   await expect(page.getByTestId('format-select')).toBeVisible({ timeout: 90_000 });
   await page.getByTestId('format-select').selectOption('horizontal');
   await expect(page.getByTestId('saved')).toBeVisible({ timeout: 90_000 });
   await page.reload();
+  await tab(page, 'Mídia');
   await expect(page.getByTestId('format-select')).toHaveValue('horizontal', { timeout: 90_000 });
   await page.getByTestId('undo').click();
   await expect(page.getByTestId('format-select')).toHaveValue('vertical');

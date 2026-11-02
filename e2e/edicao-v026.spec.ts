@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { tab, pickVideos } from './ui';
+import { tab, pickVideos, showNotices } from './ui';
 
 /** v0.26: escolher vários e apagar de uma vez, máscara do vídeo e animação por pontos. */
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
@@ -31,6 +31,7 @@ test('escolher vários pedaços (Ctrl + clique e botão Vários) e apagar de uma
   for (const i of [0, 1, 2]) await page.getByTestId(`tl-seg-${i}`).click();
   await expect(page.getByTestId('tl-multi-count')).toHaveText('3 escolhidos');
   await page.getByTestId('tl-delete').click();
+  await showNotices(page);
   await expect(page.getByTestId('error-M4F-525')).toBeVisible();
   await expect(segments(page)).toHaveCount(3);
   await page.keyboard.press('Escape');

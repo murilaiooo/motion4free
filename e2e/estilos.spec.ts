@@ -27,12 +27,13 @@ const canvasHash = (page: Page) =>
 
 test('troca de estilo muda a prévia, entra no desfazer e vale para o MP4', async ({ page }, info) => {
   await openVideo(page);
+  await page.getByTestId('style-pop').click();
   await expect(page.getByTestId('style-pop')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByTestId('scene-summary')).toContainText('número grande');
+  await expect(page.getByTestId('scene-summary')).toContainText('título');
   // fontes do estilo carregadas na página
   await expect.poll(() => page.evaluate(() => document.fonts.check('900 40px "Montserrat"') && document.fonts.check('400 40px "Anton"'))).toBe(true);
 
-  // quadro com o número grande no início do vídeo
+  // quadro inicial do estilo (a fala sintética não contém uma estatística)
   await page.getByTestId('player-canvas').scrollIntoViewIfNeeded();
   await expect.poll(() => canvasHash(page)).not.toBe(0);
   await page.waitForTimeout(300);

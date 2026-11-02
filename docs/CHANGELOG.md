@@ -27,6 +27,9 @@ A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Mo
 - Raciocínio sem objeto JSON completo não é resposta válida. Se persistir, M4F-1018 preserva os candidatos locais e interrompe outras janelas para poupar cota.
 - Cada tentativa passa pelo consentimento, cancelamento e orçamento; a reserva considera o `max_tokens` real, incluindo a folga de raciocínio. Não troca modelo ou serviço.
 - Regressões cobrem transporte simulado até validação dos IDs dos clipes; confirmação com Nemotron no serviço real segue pendente, sem uso de chave ou créditos nos testes automatizados.
+- Integração das PRs #162/#164 preserva a detecção de GPU e os degraus de transcrição da v0.36 que tinham sido mesclados fora da main.
+- Auditoria de licenças portátil entre Windows/Linux: notices de pacotes ausentes são conservados somente com mesma versão/SPDX/origem; arquivos de licença presentes continuam conferidos integralmente ([ADR-0038](decisions/0038-notices-entre-plataformas.md)).
+- Roteiros E2E atualizados para abrir avisos recolhidos, escolher explicitamente os estados que exercitam e comparar as referências visuais já versionadas também no Windows.
 
 ## v0.37.0 — 02/11/2026 — corte de clipes profissional
 
