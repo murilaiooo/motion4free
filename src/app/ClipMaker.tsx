@@ -101,6 +101,7 @@ function preserveCuration(previous: readonly ClipItem[], proposed: readonly Clip
 
 /** Libera os MP4 gerados (quando a lista é refeita ou o trabalho é fechado). */
 import { releaseWork } from './clip-work';
+import { localeTag } from '../i18n/locale';
 export { releaseWork };
 
 /** Avisos da IA (preparar ou ordenar): saem quando a IA é pedida de novo ou a lista é refeita. */
@@ -310,7 +311,7 @@ export function ClipMaker({
         <section className="clips-head">
           <h1>Melhores momentos de “{long.file.name.replace(/\.[^.]+$/, '')}”</h1>
           <p className="hint" data-testid="clips-meta">
-            {clock(long.durationSec)} de vídeo · {long.words.length.toLocaleString('pt-BR')} palavras transcritas
+            {clock(long.durationSec)} de vídeo · {long.words.length.toLocaleString(localeTag())} palavras transcritas
             {long.asrModel ? ` · legenda: ${long.asrModel}` : ''}
             {long.reused ? ' · análise reaproveitada (este arquivo já tinha sido analisado)' : ''}
           </p>

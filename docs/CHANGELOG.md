@@ -21,6 +21,15 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.40.0 — 02/11/2026 — aguardando OK do responsável
+
+- App em inglês e português. Na primeira visita segue o idioma do navegador (português → PT, outro → EN); o botão EN | PT fica ao lado de Configurações em todas as telas e em Configurações › Editor e aparência, e a escolha fica guardada neste navegador.
+- ~2.300 textos traduzidos: home, Meus projetos, armazenamento, perguntas iniciais, mesa de edição, linha do tempo, criador de clipes, configurações, IA e chaves, transcrição, progresso e todas as mensagens de erro (códigos M4F iguais nos dois idiomas).
+- A tradução não toca conteúdo da pessoa: fala transcrita, legenda, nomes de projeto e arquivos ficam como estão. O vídeo exportado não muda; a transcrição continua só em português.
+- Dicionário por área em `src/i18n/en/`; texto novo sem tradução aparece em português. `scripts/i18n-missing.mjs` ajuda a achar o que falta. ADR-0041.
+- Datas e números da interface seguem o idioma escolhido. Testes E2E fixam o navegador em pt-BR.
+- Não testado nesta entrega (o responsável testa).
+
 ## v0.37.1 — 01/11/2026 — em preparação, issue #163
 
 - OpenRouter pede resposta direta (`reasoning.effort: none`) e permite uma recuperação com raciocínio limitado quando obrigatório ou quando o modelo esgota a saída pensando.

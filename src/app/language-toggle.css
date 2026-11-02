@@ -1,0 +1,38 @@
+/* Botão de idioma EN/PT (v0.40): pílula com duas opções, sempre visível ao lado de Configurações. */
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 0 3px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--bg-1);
+  color: var(--text-2, inherit);
+  flex: none;
+}
+.lang-toggle .lang-icon { margin-right: 4px; opacity: 0.8; }
+.lang-toggle button {
+  height: 24px;
+  min-width: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.lang-toggle button:hover { background: var(--bg-3); }
+.lang-toggle button.on { background: var(--brand); color: var(--brand-ink); }
+.lang-toggle button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.lang-toggle.large { height: 40px; padding: 0 4px 0 12px; }
+.lang-toggle.large button { height: 32px; padding: 0 14px; font-size: var(--fs-sm); letter-spacing: 0; }
+@media (max-width: 520px) {
+  .lang-toggle:not(.large) .lang-icon { display: none; }
+  .lang-toggle:not(.large) { padding: 0 3px; }
+}
+.settings-cluster { display: inline-flex; align-items: center; gap: 8px; flex: none; }

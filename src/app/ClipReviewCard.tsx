@@ -62,7 +62,7 @@ export function ClipReviewCard({
             <label className="clip-select">
               <input type="checkbox" checked={it.checked} disabled={busy}
                 onChange={e => onToggle(e.target.checked)} data-testid="clip-check"
-                aria-label={`Selecionar clipe ${index + 1}`} />
+                aria-label={`Selecionar clipe ${index + 1}`} data-clip-number={index + 1} />
               <span>Clipe {index + 1}</span>
             </label>
             {Number.isFinite(moment.score) && moment.breakdown && (
