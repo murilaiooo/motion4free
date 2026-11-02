@@ -92,7 +92,12 @@ export function routingUsage(project: string) {
 
 /** Conservative byte-based input allowance plus requested output cap, not a provider invoice/token count. */
 export async function reserveRequest(project: string, body: string, policy: AiPolicy): Promise<void> {
-  const allowance = new TextEncoder().encode(body).length + policy.outputTokens;
+  let outputTokens = policy.outputTokens;
+  try {
+    const requested = JSON.parse(body)?.max_tokens;
+    if (Number.isSafeInteger(requested) && requested > outputTokens) outputTokens = requested;
+  } catch { /* Chamadas locais e corpos sem JSON mantêm a reserva da política. */ }
+  const allowance = new TextEncoder().encode(body).length + outputTokens;
   const reserve = () => {
     const current = projectUsage(project);
     if (current.requests + 1 > policy.projectRequests || current.reservedTokens + allowance > policy.projectTokens || sessionUsage.requests + 1 > policy.sessionRequests || sessionUsage.reservedTokens + allowance > policy.sessionTokens) throw new AppError('IA_ORCAMENTO');

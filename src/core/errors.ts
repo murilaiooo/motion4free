@@ -118,6 +118,7 @@ export const ERRORS = {
   IA_CHAVE_RECUSADA: { code: 'M4F-1009', title: 'O serviço recusou a sua chave (confira se ela está certa ou se o limite gratuito acabou); usei as regras.' },
   PRODUCAO_INVALIDA: { code: 'M4F-1016', title: 'A edição planejada não passou na validação. O vídeo original e suas preferências foram preservados. Tente novamente com uma direção mais simples.' },
   BRIEF_INVALIDO: { code: 'M4F-1017', title: 'Revise os campos da direção criativa antes de continuar. Use texto simples na chamada final e respeite os limites indicados.' },
+  IA_RACIOCINIO_SEM_RESPOSTA: { code: 'M4F-1018', title: 'O modelo não conseguiu entregar uma resposta após ajustar o raciocínio, mesmo com uma nova tentativa. Mantive as regras locais. Escolha outro modelo em Configurações ou tente novamente mais tarde.' },
   PREFERENCIAS_FALHOU: { code: 'M4F-618', title: 'Não foi possível guardar suas preferências neste navegador. Você pode continuar; elas valem nesta visita.' },
   LAYOUT_NAO_SALVO: { code: 'M4F-619', title: 'Não foi possível guardar o layout. A organização da mesa vale nesta visita.' },
   LONGO_DEMAIS: { code: 'M4F-1101', title: 'Para fazer clipes, o vídeo pode ter no máximo 2 horas. Corte o vídeo em partes e envie uma de cada vez.' },

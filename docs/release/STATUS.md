@@ -1,5 +1,7 @@
 # Estado real do release Motion4Free — 24/10/2026
 
+**Patch #163 — 01/11/2026, v0.37.1 em preparação:** correção de raciocínio sem resposta no OpenRouter, com recuperação limitada, consentimento/orçamento por envio e M4F-1018 terminal. **23 regressões e 6 E2E no Brave passaram**, TypeScript/build passaram. Suíte geral: 1830 aprovados e 1 falha herdada de portabilidade de notices de licença. Sem publicação; Nemotron real e gate humano pendentes. [Evidência e roteiro](ISSUE163-OPENROUTER-THINKING.md).
+
 **Novidade #126 (incremento):** fluxo guiado de IA por finalidade, microteste de texto no cartão com autorização individual, preço conservador do catálogo e uso de rota por tarefa no staging. A #126 permanece aberta para capacidades/custos aferidos e qualidade real. [Evidência e limitações](ISSUE126-GUIDED-AI.md).
 
 **Decisão: BLOQUEADO para publicação pública.** A branch prepara gates, corrige o teste Windows e valida dois MP4s sintéticos curtos no Brave, mas **não certifica** os demais subsistemas, a qualidade editorial, o licenciamento, toda a exportação e o desempenho em vídeos reais.

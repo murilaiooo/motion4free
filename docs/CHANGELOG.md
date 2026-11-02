@@ -21,6 +21,13 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.37.1 — 01/11/2026 — em preparação, issue #163
+
+- OpenRouter pede resposta direta (`reasoning.effort: none`) e permite uma recuperação com raciocínio limitado quando obrigatório ou quando o modelo esgota a saída pensando.
+- Raciocínio sem objeto JSON completo não é resposta válida. Se persistir, M4F-1018 preserva os candidatos locais e interrompe outras janelas para poupar cota.
+- Cada tentativa passa pelo consentimento, cancelamento e orçamento; a reserva considera o `max_tokens` real, incluindo a folga de raciocínio. Não troca modelo ou serviço.
+- Regressões cobrem transporte simulado até validação dos IDs dos clipes; confirmação com Nemotron no serviço real segue pendente, sem uso de chave ou créditos nos testes automatizados.
+
 ## v0.37.0 — 02/11/2026 — corte de clipes profissional
 
 Pedido do responsável: foco total no corte automático de clipes, com pesquisa de repositórios que ajudem a deixá-lo profissional e assertivo. Decisão em [ADR-0037](decisions/0037-corte-de-clipes-profissional.md); pesquisa resumida em [docs/research/2026-11-02-corte-de-clipes.md](research/2026-11-02-corte-de-clipes.md).

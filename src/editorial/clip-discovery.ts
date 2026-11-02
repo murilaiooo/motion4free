@@ -69,7 +69,7 @@ export interface DiscoveryReport {
 }
 
 /** Erros do serviço que não melhoram tentando a próxima parte: param a análise na hora. */
-const STOP_KEYS = new Set(['PROVEDOR_CHAVE_INVALIDA', 'PROVEDOR_SEM_PERMISSAO', 'PROVEDOR_LIMITE', 'PROVEDOR_SEM_CREDITO', 'PROVEDOR_BLOQUEADO', 'PROVEDOR_MODELO_SUMIU', 'PROVEDOR_CANCELADO', 'IA_ORCAMENTO', 'IA_COOLDOWN']);
+const STOP_KEYS = new Set(['PROVEDOR_CHAVE_INVALIDA', 'PROVEDOR_SEM_PERMISSAO', 'PROVEDOR_LIMITE', 'PROVEDOR_SEM_CREDITO', 'PROVEDOR_BLOQUEADO', 'PROVEDOR_MODELO_SUMIU', 'PROVEDOR_CANCELADO', 'IA_ORCAMENTO', 'IA_COOLDOWN', 'IA_RACIOCINIO_SEM_RESPOSTA']);
 
 /** Propose new source spans from every bounded window. Never accept model timestamps or invented title text. */
 export async function discoverContextualMoments(words: readonly Word[], duration: number, opts: MomentOptions, ai: AiChoice, signal: AbortSignal, progress: (done: number, total: number) => void): Promise<DiscoveryReport> {
@@ -104,7 +104,7 @@ export async function discoverContextualMoments(words: readonly Word[], duration
       for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
         const raw = await ai.complete({
           system: attempt ? `${system} A resposta anterior não era JSON válido. Responda apenas o objeto JSON, sem comentários.` : system,
-          examples: [], user: `<transcricao>\n${escapeData(window.body)}\n</transcricao>`,
+          examples: [], user: `<transcricao>\n${escapeData(window.body)}\n</transcricao>\nResponda agora apenas o objeto JSON.`,
         });
         if (signal.aborted) throw new AppError('PROVEDOR_CANCELADO');
         lastRaw = raw;
