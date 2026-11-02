@@ -77,6 +77,13 @@ for (const name of direct) add(name, 'raiz');
 const packages = [...installed.values()].sort((a,b) => a.name.localeCompare(b.name));
 const fingerprint = crypto.createHash('sha256').update(JSON.stringify(packages.map(p => [p.name, p.version, p.license]))).digest('hex');
 function noticeText() {
+  // npm instala pacotes opcionais por plataforma. Ausência local de LICENSE não
+  // revoga um aviso já revisado: conservar o bloco da mesma versão/SPDX/origem.
+  // Licenças presentes continuam comparadas integralmente em --check.
+  const separator = '='.repeat(68);
+  const archived = fs.existsSync(noticePath)
+    ? fs.readFileSync(noticePath, 'utf8').replace(/\r\n/g, '\n').split(separator + '\n').slice(1)
+    : [];
   const lines = [
     'MOTION4FREE — LICENÇAS E AVISOS DE BIBLIOTECAS',
     'Inventário determinístico gerado do package-lock.json e metadados npm instalados.',
@@ -92,7 +99,15 @@ function noticeText() {
     '',
   ];
   for (const item of packages.filter(item => !item.name.startsWith('@fontsource/'))) {
-    lines.push('='.repeat(68));
+    const identity = item.name + '@' + item.version + ' | SPDX ' + item.license + '\nOrigem: ' + item.repository + '\n'
+      + (item.nativeOnly ? 'Dependência opcional/nativa, não distribuída no site estático.\n' : '');
+    const previous = !item.licenseFile && archived.find(block => block.startsWith(identity + 'Aviso do pacote ('));
+    if (previous) {
+      if (Buffer.byteLength(previous) > 500000) errors.push('Aviso extraordinariamente grande: ' + item.name);
+      lines.push(separator, previous.trimEnd(), '');
+      continue;
+    }
+    lines.push(separator);
     lines.push(item.name + '@' + item.version + ' | SPDX ' + item.license);
     lines.push('Origem: ' + item.repository);
     if (item.nativeOnly) lines.push('Dependência opcional/nativa, não distribuída no site estático.');

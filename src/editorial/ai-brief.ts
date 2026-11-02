@@ -15,6 +15,7 @@ import {
   type Hook,
   type Prohibition,
 } from '../core/brief';
+import { jsonValues, stripReasoning } from './ai-json';
 import { EMOJI_SET } from '../core/emoji';
 import { AppError, describeError, type ErrorKey } from '../core/errors';
 import { TEMPLATES } from '../core/templates';
@@ -197,33 +198,21 @@ const LOOK_KEYS = ['captions', 'emoji', 'accent', 'cuts', 'transition', 'motion'
 
 /** Acha o primeiro objeto JSON completo no texto (aceita cercas ```json e texto em volta). */
 export function extractJsonObject(raw: string): { ok: true; value: unknown } | { ok: false; detail: string } {
-  // modelos que "pensam" (Qwen3) podem mandar <think>…</think> antes da resposta
-  const text = raw.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').replace(/```(?:json)?/gi, '');
+  // Leitura tolerante (v0.37): raciocínio antes (<think>), cercas ```, vírgula sobrando, comentários e rascunhos.
+  // Vale o último objeto completo da resposta (modelos que pensam escrevem rascunhos antes da resposta final).
+  const values = jsonValues(raw);
+  const objects = values.filter((v) => !Array.isArray(v));
+  if (objects.length) return { ok: true, value: objects.at(-1) };
+  if (values.length) return { ok: false, detail: 'resposta é uma lista, não um objeto' };
+  const text = stripReasoning(raw);
   const a = text.indexOf('{');
   if (a < 0) return { ok: false, detail: `sem JSON na resposta: ${raw.slice(0, 80)}` };
-  const bracket = text.indexOf('[');
-  if (bracket >= 0 && bracket < a) return { ok: false, detail: 'resposta é uma lista, não um objeto' };
-  // fecha no } que equilibra as chaves (fora de strings)
-  let depth = 0;
-  let inStr = false;
-  let esc = false;
-  for (let i = a; i < text.length; i++) {
-    const c = text[i]!;
-    if (inStr) {
-      if (esc) esc = false;
-      else if (c === '\\') esc = true;
-      else if (c === '"') inStr = false;
-      continue;
-    }
-    if (c === '"') inStr = true;
-    else if (c === '{') depth++;
-    else if (c === '}' && --depth === 0) {
-      try {
-        return { ok: true, value: JSON.parse(text.slice(a, i + 1)) };
-      } catch (err) {
-        return { ok: false, detail: `JSON inválido: ${describeError(err).slice(0, 80)}` };
-      }
-    }
+  try {
+    JSON.parse(text.slice(a));
+  } catch (err) {
+    const message = describeError(err);
+    if (/end of (json )?input|unterminated|unexpected end/i.test(message)) return { ok: false, detail: 'JSON incompleto (a resposta terminou antes de fechar o objeto)' };
+    return { ok: false, detail: `JSON inválido: ${message.slice(0, 80)}` };
   }
   return { ok: false, detail: 'JSON incompleto (a resposta terminou antes de fechar o objeto)' };
 }

@@ -1,3 +1,4 @@
+import { REASONING_HEADROOM } from '../src/ai/providers/registry';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { testModelForTask } from '../src/ai/providers/client';
 
@@ -22,7 +23,7 @@ describe('microteste por finalidade sem gastar API real (#126)', () => {
     expect(authorize).toHaveBeenCalledOnce();
     expect(beforeSend).toHaveBeenCalledOnce();
     const sent = JSON.parse(String((fetch.mock.calls[0]?.[1] as RequestInit).body));
-    expect(sent.max_tokens).toBe(128);
+    expect(sent.max_tokens).toBe(128 + REASONING_HEADROOM);
     expect(JSON.stringify(sent)).not.toMatch(/transcricao real|sk-or-synthetic/);
     expect(String((fetch.mock.calls[0]?.[0]))).toBe('https://openrouter.ai/api/v1/chat/completions');
   });

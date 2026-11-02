@@ -21,6 +21,35 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.37.1 — 01/11/2026 — em preparação, issue #163
+
+- OpenRouter pede resposta direta (`reasoning.effort: none`) e permite uma recuperação com raciocínio limitado quando obrigatório ou quando o modelo esgota a saída pensando.
+- Raciocínio sem objeto JSON completo não é resposta válida. Se persistir, M4F-1018 preserva os candidatos locais e interrompe outras janelas para poupar cota.
+- Cada tentativa passa pelo consentimento, cancelamento e orçamento; a reserva considera o `max_tokens` real, incluindo a folga de raciocínio. Não troca modelo ou serviço.
+- Regressões cobrem transporte simulado até validação dos IDs dos clipes; confirmação com Nemotron no serviço real segue pendente, sem uso de chave ou créditos nos testes automatizados.
+- Integração das PRs #162/#164 preserva a detecção de GPU e os degraus de transcrição da v0.36 que tinham sido mesclados fora da main.
+- Auditoria de licenças portátil entre Windows/Linux: notices de pacotes ausentes são conservados somente com mesma versão/SPDX/origem; arquivos de licença presentes continuam conferidos integralmente ([ADR-0038](decisions/0038-notices-entre-plataformas.md)).
+- Roteiros E2E atualizados para abrir avisos recolhidos, escolher explicitamente os estados que exercitam e comparar as referências visuais já versionadas também no Windows.
+
+## v0.37.0 — 02/11/2026 — corte de clipes profissional
+
+Pedido do responsável: foco total no corte automático de clipes, com pesquisa de repositórios que ajudem a deixá-lo profissional e assertivo. Decisão em [ADR-0037](decisions/0037-corte-de-clipes-profissional.md); pesquisa resumida em [docs/research/2026-11-02-corte-de-clipes.md](research/2026-11-02-corte-de-clipes.md).
+
+- **Nota profissional dos clipes:** cada sugestão recebe nota de 0 a 100 por 8 critérios (gancho nos primeiros segundos, emoção/opinião, conclusão, energia da voz, ritmo, termina a ideia, funciona sozinho, assunto único). A nota aparece no cartão; "Revisar trecho" mostra as barras e os motivos. Antes a nota era quase igual para todos.
+- **Começo sem enrolação:** "hum", "bom," e "então," no início saem do corte.
+- **Títulos melhores:** a frase falada mais forte do clipe, sem cortar palavras que mudam o sentido.
+- **Seguir o rosto:** ao gerar o MP4 ou abrir no editor, se o formato muda (deitado → vertical), o recorte acompanha o rosto. Novo aviso M4F-1115 (sem rosto) e M4F-1116 (detector não carregou); o clipe sai mesmo assim.
+- **IA grátis sem M4F-1112:** a resposta da IA é lida de forma tolerante (raciocínio antes, cercas, campos diferentes, vírgula sobrando, resposta cortada). O pedido ficou menor e o OpenRouter ganhou folga para modelos que pensam (ex.: Nemotron). O detalhe do aviso mostra o começo da resposta quando ainda falhar.
+
+## v0.36.0 — 02/11/2026 — transcrição detecta a placa de vídeo sozinha
+
+Pedido do responsável: antes de usar o modelo de transcrição, o app tem que ver se o computador tem placa de vídeo e usá-la; sem placa dedicada, usar a integrada do processador; só o processador em último caso. Decisão em [ADR-0036](decisions/0036-placa-de-video-na-transcricao.md).
+
+- **Detecção automática:** o app lê o que o navegador conta da placa (WebGPU e, se o Brave esconder o nome, o WebGL) e classifica em dedicada, integrada, não identificada ou nenhuma. A pessoa não escolhe nada.
+- **Placa antes do processador:** novos degraus "Whisper small na placa de vídeo" (com fp16, e uma versão sem fp16). Modo Precisa: turbo na placa dedicada → small na placa (dedicada ou integrada) → base na placa → small no processador → base no processador. Antes, uma placa sem fp16 ou integrada pulava direto para o processador, que é bem mais lento.
+- **Mostra o que usou:** o nome do modelo na tela diz onde rodou ("Whisper small (placa de vídeo integrada: Intel UHD Graphics 620)"). Configurações › Transcrição mostra a placa detectada e, em notebook com duas placas que acabou na integrada, explica como pôr o navegador em "Alto desempenho" no Windows.
+- **Aviso novo M4F-313:** quando o navegador não libera a placa de vídeo, a legenda sai igual, mas o app avisa que usou só o processador (por isso demorou).
+
 ## v0.35.0 — 02/11/2026 — polimento pesado para a versão final
 
 Pedido do responsável: polir todos os cantos do app usando o Impeccable (crítica + polish). Crítica feita na tela renderizada (1440×900 e 390×844, tema escuro e claro) e com o detector do Impeccable; relatório em `docs/reviews/2026-11-02-v035-polimento.md`.

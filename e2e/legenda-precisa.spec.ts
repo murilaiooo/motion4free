@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { closeSettings, settings, pickVideos } from './ui';
+import { closeSettings, settings, pickVideos, showNotices } from './ui';
 
 /** Precisão da legenda (v0.8): opção Rápida/Precisa, aviso de modelo reserva e página ?avaliar. */
 
@@ -25,6 +25,7 @@ test('opção "Precisão da legenda" aparece com o tamanho do download e fica le
 test('modelo preciso falha: legenda sai com o modelo leve e aviso M4F-307 diz qual foi usado', async ({ page }) => {
   await page.goto('/?asr=reserva');
   await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
+  await showNotices(page);
   const warning = page.getByTestId('warning-M4F-307');
   await expect(warning).toBeVisible({ timeout: 60_000 });
   await expect(warning).toContainText('Whisper small');
@@ -46,5 +47,5 @@ test('página ?avaliar abre com vídeo, texto de referência e escolha do modelo
   await page.getByTestId('eval-file').setInputFiles('e2e/fixtures/fala-com-pausas.webm');
   await page.getByTestId('eval-reference').fill('três dicas rápidas primeira dica');
   await expect(page.getByTestId('eval-run')).toBeEnabled();
-  await expect(page.getByTestId('eval-model').locator('option')).toHaveCount(6);
+  await expect(page.getByTestId('eval-model').locator('option')).toHaveCount(8);
 });

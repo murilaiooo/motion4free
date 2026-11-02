@@ -667,7 +667,7 @@ function EditorApp() {
   }
 
   /** Abre no editor o resultado de uma análise (vídeo novo, vários clipes ou um clipe do criador de clipes) e começa a salvar. */
-  function startProject(a: Awaited<ReturnType<typeof import('./pipeline').analyze>>, primary: File, name?: string) {
+  function startProject(a: Awaited<ReturnType<typeof import('./pipeline').analyze>>, primary: File, name?: string, faceTracks?: import('../media/face-analysis').FaceTracks) {
     setAsrModel(a.asrModel);
     const id = newProjectId(Date.now());
     const h = createHistory(a.plan);
@@ -706,6 +706,7 @@ function EditorApp() {
       clipSilences: multi?.silencesByClip,
       clipAudios: multi ? new Map(multi.clips.filter((c) => c.audio !== null).map((c): [string, import('../media/audio').DecodedAudio] => [c.id, c.audio!])) : null,
       originalVideo: { name: canonicalName, size: canonicalBlob.size, durationSec: a.media.durationSec },
+      ...(faceTracks && Object.keys(faceTracks).length ? { faceTracks } : {}),
     } as any;
     setSession(opened);
     setHistory(h);
@@ -775,7 +776,7 @@ function EditorApp() {
   function openClipInEditor(p: PreparedClip, title: string) {
     setClipView(false);
     setNotices([]);
-    startProject({ media: p.media, audio: p.audio, plan: p.plan, words: p.words, silences: p.silences, warnings: [], sourceMaps: p.sourceMaps, asrModel: clipWork?.long.asrModel ?? null }, p.file, title);
+    startProject({ media: p.media, audio: p.audio, plan: p.plan, words: p.words, silences: p.silences, warnings: p.notices, sourceMaps: p.sourceMaps, asrModel: clipWork?.long.asrModel ?? null }, p.file, title, p.faceTracks);
   }
 
   /** Acrescentar clipes no projeto aberto sem substituir as edições existentes. */

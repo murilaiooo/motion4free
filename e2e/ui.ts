@@ -1,5 +1,12 @@
 import { expect, type Page } from '@playwright/test';
 
+/** Avisos/erros do editor ficam recolhidos até a pessoa abrir o grupo. */
+export async function showNotices(page: Page) {
+  const toggle = page.getByTestId('stage-warning-toggle');
+  await expect(toggle).toBeVisible({ timeout: 60_000 });
+  if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
+}
+
 /**
  * Abre uma aba do painel de ferramentas (trilho à esquerda no computador, barra de baixo no celular).
  * v0.19: Pedido, Gancho e Trechos ficam juntos na aba IA; os dois últimos dentro de uma seção recolhível.

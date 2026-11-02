@@ -49,12 +49,40 @@ const moments: ClipItem[] = Array.from({ length: sampleCount }, (_, i) => {
     },
   };
 });
+// real=1: transcrição realista em português passa pela busca e pela nota de verdade (v0.37).
+const realScript = [
+  'Bom dia pessoal, tudo bem com vocês? Hoje o assunto é dinheiro.',
+  'Então, continuando, tem várias coisas que dá para fazer e cada um faz de um jeito.',
+  'Você sabia que noventa por cento das pessoas erram isso no primeiro emprego?',
+  'O erro é aceitar a primeira proposta sem negociar nada.',
+  'Eu perdi muito dinheiro em 2019 por causa disso, e foi horrível.',
+  'Só que foi aí que eu aprendi a regra mais importante da negociação.',
+  'Por isso hoje eu sempre peço um tempo antes de responder qualquer proposta.',
+  'Hum, bom, deixa eu ver aqui as perguntas do chat.',
+  'O maior erro de quem vende online é cobrar barato demais.',
+  'Você trabalha o mês inteiro e no final não sobra nada para você.',
+  'Calcule o custo de cada venda antes de anunciar qualquer preço.',
+  'Se inscreve no canal e ativa o sininho para não perder nada.',
+];
+const realWords = (() => {
+  const out: { id: string; text: string; start: number; end: number }[] = [];
+  let t = 1;
+  for (let round = 0; round < 3; round++) for (const sentence of realScript) {
+    for (const token of sentence.split(' ')) { out.push({ id: 'w' + out.length, text: token, start: t, end: t + .3 }); t += .36; }
+    t += .5;
+  }
+  return out.filter(word => word.end < 144);
+})();
+
 async function mount() {
-  const file = await fetch('/e2e/fixtures/long-review.webm').then(r => r.blob())
+  const fixture = params.get('fixture') === 'face' ? 'face-review' : 'long-review';
+  const file = await fetch(`/e2e/fixtures/${fixture}.webm`).then(r => r.blob())
     .then(blob => new File([blob], 'entrevista-portuguesa-exemplo-2min25.webm', { type: 'video/webm', lastModified: 100 }));
-  const validWords = exportTest ? words.filter(word => word.end <= 12.207) : words;
+  const real = params.get('real') === '1';
+  const validWords = real ? realWords : exportTest ? words.filter(word => word.end <= 12.207) : words;
   const analysis = {file, durationSec:exportTest ? 12.207 : 145, width, height, words:validWords, silences:[], energy:new Float32Array(0), energyStep:.02, warnings:[], asrModel:'Whisper base (teste)', reused:false};
-  const starter:ClipWork = { ...newClipWork(analysis), length:'curto', count: Math.min(10,sampleCount || 3), items: moments };
+  const base = newClipWork(analysis);
+  const starter:ClipWork = real ? base : { ...base, length:'curto', count: Math.min(10,sampleCount || 3), items: moments };
   function Fixture() {
     const [work,setWork]=useState<ClipWork>(starter);
     return <ClipMaker work={work} onWork={update=>setWork(prev=>update(prev))}

@@ -56,6 +56,28 @@ export const ASR_CANDIDATES = {
     downloadMB: 250,
     secPerMinute: 60,
   },
+  // Degrau do meio na placa de vídeo (v0.36): placa integrada, placa sem fp16 ou pouca memória ainda
+  // transcrevem na placa, que é bem mais rápida que o processador, antes de cair no processador.
+  'small-webgpu': {
+    id: 'small-webgpu',
+    label: 'Whisper small (placa de vídeo)',
+    repo: ASR_REPOS.small,
+    device: 'webgpu',
+    // encoder em fp16 (precisa de `shader-f16`); decodificador q4, como no turbo
+    dtype: { encoder_model: 'fp16', decoder_model_merged: 'q4' },
+    downloadMB: 380,
+    secPerMinute: 10,
+  },
+  'small-webgpu-fp32': {
+    id: 'small-webgpu-fp32',
+    label: 'Whisper small (placa de vídeo)',
+    repo: ASR_REPOS.small,
+    device: 'webgpu',
+    // placa sem fp16: encoder em fp32 (maior, mas roda em qualquer placa com WebGPU)
+    dtype: { encoder_model: 'fp32', decoder_model_merged: 'q4' },
+    downloadMB: 560,
+    secPerMinute: 12,
+  },
   'base-webgpu': {
     id: 'base-webgpu',
     label: 'Whisper base (placa de vídeo)',
@@ -78,6 +100,15 @@ export const ASR_CANDIDATES = {
 
 export type AsrCandidateId = keyof typeof ASR_CANDIDATES;
 
+/**
+ * Tipo de placa de vídeo que o navegador entregou (v0.36):
+ * - `dedicada`: placa separada (NVIDIA, AMD Radeon RX, Intel Arc A/B) ou chip Apple, forte o bastante para o modelo grande;
+ * - `integrada`: a placa que vem dentro do processador (Intel UHD/Iris, AMD Radeon Graphics/Vega, Adreno, Mali);
+ * - `desconhecida`: há WebGPU, mas o navegador escondeu o nome (o Brave faz isso para proteger a privacidade);
+ * - `nenhuma`: sem WebGPU ou só o adaptador de software (que é o processador fingindo ser placa).
+ */
+export type GpuKind = 'dedicada' | 'integrada' | 'desconhecida' | 'nenhuma';
+
 /** O que o aparelho oferece (medido em `src/asr/capability.ts`). */
 export interface AsrCapability {
   /** WebGPU com um adaptador de verdade (não o de software) */
@@ -86,20 +117,109 @@ export interface AsrCapability {
   f16: boolean;
   /** `navigator.deviceMemory` em GB (o Chrome informa no máximo 8); null quando o navegador não informa */
   memoryGB: number | null;
+  /** tipo da placa de vídeo; ausente = `dedicada` se há WebGPU (comportamento antigo), `nenhuma` se não */
+  gpu?: GpuKind;
+  /** nome curto da placa para mostrar (ex.: "NVIDIA GeForce RTX 3060"); null quando o navegador não informa */
+  gpuName?: string | null;
 }
 
-export const NO_CAPABILITY: AsrCapability = { webgpu: false, f16: false, memoryGB: null };
+export const NO_CAPABILITY: AsrCapability = { webgpu: false, f16: false, memoryGB: null, gpu: 'nenhuma', gpuName: null };
 
-/** O turbo pede placa com fp16 e pelo menos 8 GB de memória (ou memória não informada). */
+export function gpuKind(c: AsrCapability): GpuKind {
+  if (!c.webgpu) return 'nenhuma';
+  return c.gpu && c.gpu !== 'nenhuma' ? c.gpu : 'dedicada';
+}
+
+/** O que o navegador conta da placa: WebGPU (`GPUAdapterInfo`) e, de reserva, o nome do WebGL. */
+export interface GpuInfo {
+  vendor?: string;
+  architecture?: string;
+  device?: string;
+  description?: string;
+  /** `UNMASKED_RENDERER_WEBGL`, ex.: "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)" */
+  renderer?: string;
+  /** fabricante do adaptador de economia de energia; diferente do de alto desempenho = há duas placas */
+  lowPowerVendor?: string;
+}
+
+const SOFTWARE = /swiftshader|llvmpipe|softpipe|microsoft basic render|software adapter|lavapipe/i;
+
+/** Nome curto e legível a partir do texto do WebGL ("ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 …)" → "NVIDIA GeForce RTX 3060"). */
+export function gpuDisplayName(info: GpuInfo): string | null {
+  const fromRenderer = (r: string) => {
+    const m = /^ANGLE \(([^,]+),\s*([^,]+?)(?:\s+\(0x[0-9a-f]+\))?(?:\s+Direct3D.*|\s+OpenGL.*|\s+Vulkan.*|\s+Metal.*)?(?:,.*)?\)$/i.exec(r.trim());
+    return (m ? m[2]! : r).replace(/\((R|TM)\)/gi, '').replace(/\s+/g, ' ').trim();
+  };
+  const name = info.description?.trim() || (info.renderer ? fromRenderer(info.renderer) : '');
+  if (name) return name.slice(0, 60);
+  const vendor = info.vendor?.trim();
+  return vendor ? vendor.charAt(0).toUpperCase() + vendor.slice(1) : null;
+}
+
+/**
+ * Classifica a placa pelo que o navegador informou. Na dúvida devolve `desconhecida` (não `integrada`):
+ * a escada tenta o modelo da placa forte e desce sozinha se não der.
+ */
+export function classifyGpu(info: GpuInfo): GpuKind {
+  const text = [info.vendor, info.architecture, info.device, info.description, info.renderer].filter(Boolean).join(' ').toLowerCase();
+  if (SOFTWARE.test(text)) return 'nenhuma';
+  // duas placas e o navegador entregou a de alto desempenho: é a dedicada
+  const hp = (info.vendor ?? '').trim().toLowerCase();
+  const lp = (info.lowPowerVendor ?? '').trim().toLowerCase();
+  if (hp && lp && hp !== lp) return 'dedicada';
+  if (!text.trim()) return 'desconhecida';
+  if (/nvidia|geforce|quadro|\brtx\b|\bgtx\b|tesla/.test(text)) return 'dedicada';
+  if (/\bapple\b/.test(text)) return 'dedicada';
+  if (/intel/.test(text)) return /arc(\(tm\))? [ab]\d|xe-?hpg|xe2-?hpg|\bdg2\b|alchemist|battlemage/.test(text) ? 'dedicada' : 'integrada';
+  if (/amd|radeon|\bati\b/.test(text)) {
+    if (/\brx ?\d|radeon pro|radeon vii|firepro|\bw\d{4}\b/.test(text)) return 'dedicada';
+    if (/radeon(\(tm\))? graphics|vega|\b\d{3}m\b/.test(text)) return 'integrada';
+    return 'desconhecida';
+  }
+  if (/adreno|qualcomm|mali|\barm\b|powervr|imagination|img tec/.test(text)) return 'integrada';
+  return 'desconhecida';
+}
+
+/** O turbo pede placa dedicada (ou não identificada) com fp16 e pelo menos 8 GB de memória (ou memória não informada). */
 export function canRunTurbo(c: AsrCapability): boolean {
-  return c.webgpu && c.f16 && (c.memoryGB === null || c.memoryGB >= 8);
+  const kind = gpuKind(c);
+  return (kind === 'dedicada' || kind === 'desconhecida') && c.f16 && (c.memoryGB === null || c.memoryGB >= 8);
 }
 
-/** Ordem de tentativa para o modo escolhido. Sempre termina no base em WASM, que roda em qualquer navegador. */
+/**
+ * Ordem de tentativa para o modo escolhido. A placa de vídeo (dedicada ou integrada) vem sempre antes do
+ * processador, porque é bem mais rápida; o processador só entra sem WebGPU ou se a placa falhar.
+ * Sempre termina no base em WASM, que roda em qualquer navegador.
+ */
 export function asrLadder(mode: AsrMode, c: AsrCapability): AsrCandidateId[] {
-  const base: AsrCandidateId[] = c.webgpu ? ['base-webgpu', 'base-wasm'] : ['base-wasm'];
-  if (mode === 'rapida') return base;
-  return [...(canRunTurbo(c) ? (['turbo-webgpu'] as const) : []), 'small-wasm', ...base];
+  if (!c.webgpu) return mode === 'rapida' ? ['base-wasm'] : ['small-wasm', 'base-wasm'];
+  if (mode === 'rapida') return ['base-webgpu', 'base-wasm'];
+  const smallGpu: AsrCandidateId = c.f16 ? 'small-webgpu' : 'small-webgpu-fp32';
+  return [...(canRunTurbo(c) ? (['turbo-webgpu'] as const) : []), smallGpu, 'base-webgpu', 'small-wasm', 'base-wasm'];
+}
+
+/** Nome do modelo com o lugar onde rodou, ex.: "Whisper small (placa de vídeo integrada: Intel UHD Graphics 620)". */
+export function modelWhereLabel(id: AsrCandidateId, c: AsrCapability): string {
+  const cand = ASR_CANDIDATES[id];
+  if (cand.device !== 'webgpu') return cand.label;
+  const kind = gpuKind(c);
+  const what = kind === 'dedicada' ? 'placa de vídeo dedicada' : kind === 'integrada' ? 'placa de vídeo integrada' : 'placa de vídeo';
+  return cand.label.replace('(placa de vídeo)', `(${what}${c.gpuName ? `: ${c.gpuName}` : ''})`);
+}
+
+/** Frase para a pessoa: qual placa o app achou e o que faz com ela. */
+export function describeGpu(c: AsrCapability): string {
+  const name = c.gpuName ? ` (${c.gpuName})` : '';
+  switch (gpuKind(c)) {
+    case 'dedicada':
+      return `placa de vídeo dedicada${name}: a transcrição usa ela e fica bem mais rápida.`;
+    case 'integrada':
+      return `placa de vídeo integrada ao processador${name}: a transcrição usa ela, que é mais rápida que só o processador. Se o computador também tem uma placa dedicada (NVIDIA ou AMD), escolha "Alto desempenho" para o navegador nas configurações de gráficos do Windows.`;
+    case 'desconhecida':
+      return 'placa de vídeo encontrada, mas o navegador não disse o modelo (o Brave esconde por privacidade). A transcrição tenta primeiro o modelo da placa forte e, se não der, desce sozinha para um mais leve.';
+    default:
+      return 'não encontrada ou não liberada pelo navegador; a transcrição usa o processador e demora mais. Chrome, Edge e Brave atualizados costumam liberar.';
+  }
 }
 
 /** Padrão: Precisa, menos em aparelho que informa pouca memória (menos de 4 GB). */
@@ -136,7 +256,8 @@ export function whisperOptions(retry = false): { language: 'portuguese'; task: '
 /** Texto curto para a opção "Precisão da legenda": qual modelo, onde roda e o download da primeira vez. */
 export function describeMode(mode: AsrMode, c: AsrCapability): string {
   const first = ASR_CANDIDATES[asrLadder(mode, c)[0]!];
-  const where = first.device === 'webgpu' ? 'usa a placa de vídeo' : 'usa o processador';
+  const kind = gpuKind(c);
+  const where = first.device === 'webgpu' ? (kind === 'integrada' ? 'usa a placa de vídeo integrada' : 'usa a placa de vídeo') : 'usa o processador';
   const extra = mode === 'precisa' && first.device === 'wasm' ? '; sem placa de vídeo compatível, demora alguns minutos' : '';
   return `${first.label.replace(/ \(.*\)$/, '')}, ${where}; baixa cerca de ${formatMB(first.downloadMB)} na primeira vez${extra}.`;
 }

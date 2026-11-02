@@ -1,4 +1,5 @@
 import type { ErrorKey } from '../../core/errors';
+import { jsonValues } from '../../editorial/ai-json';
 import { GEMINI_ENDPOINT, REPLY_MAX_TOKENS, chatTurns, geminiRequest, geminiText, type AiMessages } from '../../editorial/ai-brief';
 
 /**
@@ -73,12 +74,44 @@ function chatMessages(m: AiMessages) {
   return chatTurns(m).map((t) => ({ role: t.role, content: t.content }));
 }
 
+function chatChoice(body: unknown) {
+  return (body as { choices?: { finish_reason?: string; message?: { content?: unknown; reasoning?: unknown; reasoning_content?: unknown } }[] })?.choices?.[0];
+}
+
 function chatText(body: unknown): string | null {
-  const c = (body as { choices?: { message?: { content?: unknown } }[] })?.choices?.[0]?.message?.content;
-  if (typeof c === 'string') return c || null;
+  const choice = chatChoice(body);
+  const message = choice?.message;
+  const c = message?.content;
+  if (typeof c === 'string' && c.trim()) return c;
   // alguns modelos devolvem o conteúdo em partes
-  if (Array.isArray(c)) return c.map((p) => (typeof p?.text === 'string' ? p.text : '')).join('') || null;
+  if (Array.isArray(c)) {
+    const joined = c.map((p) => (typeof p?.text === 'string' ? p.text : '')).join('');
+    if (joined.trim()) return joined;
+  }
+  // Um raciocínio cortado pode conter só exemplos, nunca uma resposta final.
+  if (choice?.finish_reason === 'length') return null;
+  for (const raw of [message?.reasoning, message?.reasoning_content]) {
+    if (typeof raw !== 'string') continue;
+    const object = jsonValues(raw).filter(value => value && typeof value === 'object' && !Array.isArray(value)).at(-1);
+    if (object) return JSON.stringify(object);
+  }
   return null;
+}
+
+/** Saída vazia por limite (inclusive quando o provedor omite o campo de raciocínio). */
+export function reasoningWithoutAnswer(body: unknown): boolean {
+  if (chatText(body)) return false;
+  const choice = chatChoice(body);
+  return choice?.finish_reason === 'length' || [choice?.message?.reasoning, choice?.message?.reasoning_content].some(value => typeof value === 'string' && value.trim().length > 0);
+}
+
+/** Folga para modelos que pensam antes de responder: o raciocínio também gasta o limite de saída. */
+export const REASONING_HEADROOM = 2048;
+
+/** Só chamado para uma recuperação OpenRouter; não muda mensagens, conta nem modelo. */
+export function reasoningRetryRequest(req: HttpRequest): HttpRequest {
+  const body = JSON.parse(req.body!);
+  return { ...req, body: json({ ...body, max_tokens: body.max_tokens + REASONING_HEADROOM, reasoning: { max_tokens: REASONING_HEADROOM } }) };
 }
 
 /** Nome amigável a partir do ID técnico: "llama-3.3-70b-versatile" → "Llama 3.3 70b versatile". */
@@ -142,7 +175,8 @@ const openrouter: ProviderSpec = {
     url: 'https://openrouter.ai/api/v1/chat/completions',
     method: 'POST',
     headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-    body: json({ model: modelId, messages: chatMessages(m), temperature: 0, max_tokens: maxTokens }),
+    // Tarefa estruturada: pedir resposta direta. Modelos com raciocínio obrigatório têm uma recuperação no client.
+    body: json({ model: modelId, messages: chatMessages(m), temperature: 0, max_tokens: maxTokens + REASONING_HEADROOM, reasoning: { effort: 'none' } }),
   }),
   parseCompletion: chatText,
 };

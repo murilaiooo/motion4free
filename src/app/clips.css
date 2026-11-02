@@ -234,3 +234,15 @@
 .clip-inspector-title { display: grid; gap: 7px; font-size: 12px; color: var(--text-2); font-weight: 700; }
 .clip-inspector-title textarea { display: block; resize: vertical; width: 100%; min-width: 0; min-height: 78px; box-sizing: border-box; background: var(--bg-1); border: 1px solid var(--line); padding: 12px; border-radius: 9px; color: var(--text-1); font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
 .clip-inspector-title textarea:focus { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* v0.37: nota profissional por critério e "seguir o rosto" */
+.clip-score { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 6px; background: var(--brand-soft); color: var(--brand); font-size: 11px; font-weight: 750; }
+.clip-breakdown { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg-2); }
+.clip-breakdown ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 16px; }
+.clip-breakdown li { display: grid; grid-template-columns: 9.5em 1fr 3em; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
+.clip-breakdown li .tnum { text-align: right; color: var(--text-1); }
+.clip-breakdown-bar { height: 6px; border-radius: 3px; background: var(--bg-4); overflow: hidden; }
+.clip-breakdown-bar i { display: block; height: 100%; background: var(--brand); border-radius: 3px; }
+.clips-follow-face { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 12px; color: var(--text-2); max-width: 46ch; cursor: pointer; }
+.clips-follow-face input { margin-top: 2px; accent-color: var(--brand); }
+.clips-follow-face b { color: var(--text-1); }

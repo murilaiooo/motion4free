@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
-import { tab, pickVideos } from './ui';
+import { tab, pickVideos, showNotices } from './ui';
 
 /** Entradas estranhas (v0.7): vídeo sem som, vídeo sem fala, vídeo de 1 segundo. */
 
@@ -21,6 +21,7 @@ async function exportFile(page: Page, path: string) {
 
 test('vídeo sem faixa de som: explica com código por que não há legendas e ainda exporta', async ({ page }, info) => {
   await open(page, 'e2e/fixtures/sem-audio.webm');
+  await showNotices(page);
   await expect(page.getByTestId('warning-M4F-202')).toBeVisible();
   await expect(page.getByTestId('summary')).toContainText('0 legendas');
   const input = await exportFile(page, info.outputPath('sem-audio.mp4'));
@@ -30,6 +31,7 @@ test('vídeo sem faixa de som: explica com código por que não há legendas e a
 
 test('vídeo sem fala: aviso com código e sem legendas', async ({ page }) => {
   await open(page, 'e2e/fixtures/fala-com-pausas.webm', '?asr=vazio');
+  await showNotices(page);
   await expect(page.getByTestId('warning-M4F-306')).toBeVisible();
   await expect(page.getByTestId('summary')).toContainText('0 legendas');
 });

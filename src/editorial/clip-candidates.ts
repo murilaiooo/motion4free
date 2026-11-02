@@ -2,40 +2,89 @@ import type { Word } from '../core/types';
 import { CLIP_LENGTHS, LEAD_SEC, TAIL_SEC, MAX_MOMENTS, clock, type Moment, type MomentOptions } from './highlights';
 import { buildTranscriptIndex, sentenceBounds, type TranscriptIndex } from './clip-context';
 import { CONTEXT_LABELS, contextFlags } from './context-policy';
+import { hookCached, leadingFillers, plain, scoreSpan } from './clip-score';
 
-export function groundedMoment(index: TranscriptIndex, first: number, last: number, opts: MomentOptions, source: 'local-context' | 'ai-context' = 'local-context', titleBounds?: [number, number], manual = false): Moment | null {
-  const limit = manual ? { min: 5, max: 180 } : CLIP_LENGTHS[opts.length];
+export function groundedMoment(index: TranscriptIndex, first: number, last: number, opts: MomentOptions, source: 'local-context' | 'ai-context' = 'local-context', titleBounds?: [number, number], manual = false, lazyTitle = false): Moment | null {
+  const limit = manual ? { min: 5, max: 180, ideal: 45 } : CLIP_LENGTHS[opts.length];
   if (first < 0 || last < first || last >= index.words.length) return null;
   const bounds = sentenceBounds(index, first, last, limit.max);
-  const words = index.words.slice(bounds.first, bounds.last + 1);
+  // Sem enrolação no começo ("é…", "hum", "então,"): o clipe já abre na frase de verdade (v0.37).
+  const skip = manual ? 0 : leadingFillers(index.words.slice(bounds.first, index.sentences[index.sentenceAt[bounds.first]!]!.last + 1));
+  const firstWord = bounds.first + skip;
+  const words = index.words.slice(firstWord, bounds.last + 1);
   const a = words[0]!; const b = words.at(-1)!;
   const duration = b.end - a.start;
   if (duration < limit.min || duration > limit.max) return null;
   const text = words.map((word) => word.text.trim()).join(' ');
-  const previous = index.words[bounds.first - 1]; const next = index.words[bounds.last + 1];
+  const previous = index.words[firstWord - 1]; const next = index.words[bounds.last + 1];
   const requestedStart = Math.min(a.start, Math.max(0, a.start - LEAD_SEC, previous ? previous.end + 0.02 : 0));
   const requestedEnd = Math.max(b.end, Math.min(index.duration, b.end + TAIL_SEC, next ? next.start - 0.02 : Infinity));
   const lead = a.start - requestedStart, tail = requestedEnd - b.end;
   const paddingScale = lead + tail > 0 ? Math.min(1, Math.max(0, limit.max - duration) / (lead + tail)) : 0;
   const start = a.start - lead * paddingScale, end = Math.min(start + limit.max, b.end + tail * paddingScale);
-  const questions = text.includes('?');
-  const specificity = Math.min(10, (text.match(/\d+/g)?.length ?? 0) * 2);
-  const score = Math.max(0, Math.min(100, 65 + specificity + (questions ? 4 : 0) + (source === 'ai-context' ? 3 : 0) - bounds.flags.length * 20));
-  const titleSentence = index.sentences[index.sentenceAt[titleBounds?.[0] ?? bounds.first]!]!;
-  const titleWords = titleSentence.first >= bounds.first && titleSentence.last <= bounds.last
-    ? index.words.slice(titleSentence.first, titleSentence.last + 1)
-    : index.words.slice(bounds.first, index.sentences[index.sentenceAt[bounds.first]!]!.last + 1);
-  const titleText = titleWords.map((word) => word.text.trim()).join(' ');
-  // A cropped quotation can drop 'não/if/até'. Use a whole short sentence or a neutral time label.
-  const title = titleText.length <= 60 && /[.!?…]["”')]*$/.test(titleText) ? titleText : `Trecho em ${clock(start)}`;
+  // Nota profissional (gancho, emoção, conclusão, energia, ritmo, fechamento, autonomia, assunto): clip-score.ts.
+  const rated = scoreSpan(words, { limit, energy: opts.energy, energyStep: opts.energyStep });
+  const score = Math.round(Math.max(0, Math.min(100, rated.score + (source === 'ai-context' ? 3 : 0) - bounds.flags.length * 10)) * 10) / 10;
+  // Busca local: o título só é calculado para os escolhidos no fim (withTitle), não para os milhares de candidatos.
+  const title = lazyTitle ? '' : titleFor(index, firstWord, bounds.last, titleBounds) ?? `Trecho em ${clock(start)}`;
   return {
     id: `ctx-${a.id}-${b.id}`, rank: 0, start, end,
-    title, text, score, wordCount: words.length,
+    title, text, score, wordCount: words.length, breakdown: rated.parts,
     // Alerts are review prompts, not proof of a semantic defect: do NOT distort the
     // ranking by penalizing a correct negation, a condition or a comparison.
-    reasons: [source === 'ai-context' ? 'span proposto pela IA e ancorado na transcrição' : 'candidato local por frases da gravação', 'nota estrutural estimada; não prevê visualizações', ...(bounds.flags.length ? ['precisa de revisão de contexto antes de selecionar'] : ['sem sinal estrutural óbvio de frase interrompida; confira o sentido']), ...contextFlags(text).map(flag => CONTEXT_LABELS[flag])],
+    reasons: [...rated.reasons, ...(bounds.flags.length ? ['precisa de revisão de contexto antes de selecionar'] : []), source === 'ai-context' ? 'trecho proposto pela IA e conferido na transcrição' : 'escolhido pelas regras locais', 'nota estimada; não prevê visualizações', ...contextFlags(text).map(flag => CONTEXT_LABELS[flag])],
     sourceEvidence: { firstWordId: a.id, lastWordId: b.id, review: bounds.flags, source },
   };
+}
+
+/** Frase inteira cabe até 80 caracteres (o cartão e a legenda do título aguentam; o nome do arquivo corta em 40). */
+const TITLE_MAX = 80;
+const terminal = (text: string) => /[.!?…]["”')]*$/.test(text);
+/** Palavras que mudam o sentido: um título cortado nunca pode deixá-las de fora. */
+const MEANING = /\b(nao|nunca|nem|sem|jamais|se|caso|mas|porem|exceto|ate|menos|not|never|no|if|unless|but|except)\b/;
+const LEADING_CONNECTOR = /^(e|mas|entao|ai|tipo|bom|so|and|but|so)[,]?\s+/i;
+
+function cleanTitle(text: string): string {
+  let t = text.trim();
+  const p = plain(t);
+  const m = LEADING_CONNECTOR.exec(p);
+  // tira só o conectivo do começo ("E o segredo é…" → "O segredo é…"); o resto é a fala exata
+  if (m && t.length - m[0].length >= 12) t = t.slice(m[0].length);
+  return t.charAt(0).toLocaleUpperCase('pt-BR') + t.slice(1);
+}
+
+/**
+ * Título = a frase com o gancho mais forte DENTRO do clipe, falada de verdade (nunca inventada).
+ * Frase curta e completa vale inteira; frase longa pode virar o começo até a vírgula, com "…", só se o
+ * pedaço que fica de fora não tiver palavra que muda o sentido ("não", "se", "mas", "até"…).
+ * Sem nada seguro: null (quem chama usa "Trecho em 12:05").
+ */
+export function titleFor(index: TranscriptIndex, first: number, last: number, titleBounds?: [number, number]): string | null {
+  const textOf = (a: number, b: number) => index.words.slice(a, b + 1).map((word) => word.text.trim()).join(' ');
+  const inside: { a: number; b: number; text: string; hook: number }[] = [];
+  const from = titleBounds ? index.sentenceAt[titleBounds[0]]! : index.sentenceAt[first]!;
+  const to = titleBounds ? index.sentenceAt[titleBounds[0]]! : index.sentenceAt[last]!;
+  for (let s = from; s <= to; s++) {
+    const sentence = index.sentences[s]!;
+    const a = Math.max(sentence.first, first), b = Math.min(sentence.last, last);
+    if (b < a) continue;
+    const text = textOf(a, b);
+    // O título deve casar com o começo do clipe: frases mais para o fim valem um pouco menos.
+    inside.push({ a, b, text, hook: hookCached(text) - 0.25 * ((a - first) / Math.max(1, last - first)) + (a === first ? 0.05 : 0) });
+  }
+  const ranked = inside.sort((x, y) => y.hook - x.hook);
+  const whole = ranked.find((s) => terminal(s.text) && cleanTitle(s.text).length <= TITLE_MAX && s.text.split(/\s+/).length >= 3);
+  if (whole) return cleanTitle(whole.text);
+  for (const s of ranked) {
+    if (!terminal(s.text) && s.b !== last) continue;
+    const comma = s.text.search(/[,;:]\s/);
+    if (comma < 12 || comma > TITLE_MAX) continue;
+    const kept = s.text.slice(0, comma);
+    const dropped = s.text.slice(comma + 1);
+    if (MEANING.test(plain(dropped))) continue;
+    return `${cleanTitle(kept)}…`;
+  }
+  return null;
 }
 
 /** Review-worthy quality stays first, but near-equal moments should not all come
@@ -74,6 +123,14 @@ export function rankContextualMoments(input: readonly Moment[], count: number): 
   return selected.map((moment, i) => ({ ...moment, rank: i + 1 }));
 }
 
+/** Preenche o título de um momento local que foi criado sem título (busca em vídeo longo). */
+function withTitle(index: TranscriptIndex, moment: Moment): Moment {
+  if (moment.title) return moment;
+  const a = moment.sourceEvidence ? index.positions.get(moment.sourceEvidence.firstWordId) : undefined;
+  const b = moment.sourceEvidence ? index.positions.get(moment.sourceEvidence.lastWordId) : undefined;
+  return { ...moment, title: (a !== undefined && b !== undefined ? titleFor(index, a, b) : null) ?? `Trecho em ${clock(moment.start)}` };
+}
+
 /** All sentence starts are explored, not only a heuristic top-N. Candidate memory is bounded. */
 export function findContextualMoments(words: readonly Word[], duration: number, opts: MomentOptions): Moment[] {
   const index = buildTranscriptIndex(words, duration);
@@ -95,14 +152,14 @@ export function findContextualMoments(words: readonly Word[], duration: number, 
       const last = index.sentences[b]!.last;
       const seconds = index.words[last]!.end - index.words[first]!.start;
       if (seconds < limit.min || seconds > limit.max) continue;
-      const moment = groundedMoment(index, first, last, opts);
+      const moment = groundedMoment(index, first, last, opts, 'local-context', undefined, false, true);
       if (moment) pool.push(moment);
     }
     // Retain temporal diversity across the whole recording rather than a prefix-only cap.
     if (pool.length > 600) pool = rankContextualMoments(pool, 200);
   }
   // The old finder remains an explicit UI baseline; do not allocate its all-pairs pool on this bounded path.
-  return rankContextualMoments(pool, Math.min(MAX_MOMENTS, opts.count));
+  return rankContextualMoments(pool, Math.min(MAX_MOMENTS, opts.count)).map((moment) => withTitle(index, moment));
 }
 
 /** Manual curation snaps to entire indexed sentences, then re-evaluates the new bounds. */
