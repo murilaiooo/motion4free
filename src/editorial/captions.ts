@@ -41,7 +41,9 @@ export function buildCaptions(words: Word[], segments: Segment[], opts: CaptionO
     const text = [...group, w].map((g) => g.text.trim()).join(' ');
     // a última palavra da frase (ou da fala) não fica sozinha numa legenda: cabe uma a mais
     const closes = /[.!?]$/.test(w.text.trim()) || k === placed.length - 1;
-    const orphanSaved = closes && group.length === opts.maxWords && text.length <= opts.maxChars + 8;
+    // vale tanto para o limite de palavras quanto para o de letras ("Três dicas | rápidas." virava uma palavra sozinha)
+    const slack = group.length === opts.maxWords ? 8 : Math.max(4, Math.ceil(opts.maxChars * 0.2));
+    const orphanSaved = closes && group.length > 0 && group.length <= opts.maxWords && text.length <= opts.maxChars + slack;
     const tooLong = !orphanSaved && (text.length > opts.maxChars || group.length >= opts.maxWords);
     const tooSlow = group.length > 0 && w.end - group[0]!.start > opts.maxDurationSec;
     const gap = group.length > 0 && w.start - group[group.length - 1]!.end > 0.6;

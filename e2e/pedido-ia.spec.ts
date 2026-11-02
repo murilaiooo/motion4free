@@ -30,10 +30,10 @@ const countColor = (page: Page, rgb: [number, number, number], tol = 40) =>
 test('pedido do responsável sem IA: legenda verde e amarela, emojis a cada 3 s, gancho criativo, "Ainda não sei fazer"', async ({ page }) => {
   await openVideo(page);
   await expect(page.getByTestId('brief-input')).toBeVisible();
-  // para num instante com legenda na tela (≈ 1 s) e mede o verde antes do pedido
-  await page.getByTestId('play').click();
-  await expect.poll(async () => Number((await page.getByTestId('player-time').textContent())!.split(' s')[0]!.replace(',', '.')), { timeout: 10_000 }).toBeGreaterThan(0.8);
-  await page.getByTestId('play').click();
+  // vai direto a um instante com legenda na tela (1 s) e mede o verde antes do pedido. Tocar e pausar
+  // dependia da velocidade da máquina: com a suíte em paralelo a pausa caía no intervalo entre legendas.
+  await page.getByRole('slider', { name: 'Posição na prévia' }).fill('1');
+  await expect(page.getByTestId('player-time')).toContainText('1,00');
   await expect(page.getByTestId('play')).toHaveText('Assistir');
   const greenBefore = await countColor(page, [0x22, 0xc5, 0x5e], 14);
 

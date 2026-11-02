@@ -8,7 +8,7 @@ import type { StyleDNA } from '../src/core/style';
 /** Estilo e pedido no formato antigo (v1), como estavam salvos até a v0.5. */
 function styleV1(s: StyleDNA) {
   const { emoji: _e, ...rest } = s;
-  const { y: _y, enter: _en, wordsPerLine: _w, colors: _c, ...captions } = s.captions;
+  const { y: _y, enter: _en, wordsPerLine: _w, colors: _c, fx: _fx, ...captions } = s.captions;
   return { ...rest, version: 1, captions };
 }
 const { look: _l, hookStyle: _h, unsupported: _u, summary: _s, ...briefRest } = EMPTY_BRIEF;
@@ -49,6 +49,10 @@ const valid = {
 };
 
 const v5 = { ...valid5, version: 5 as const };
+/** Estilo antigo (v1) não tem o acabamento da v0.41 (captions.fx): abre igual era, sem relevo nem brilho. */
+const { fx: _fx, ...captionsNoFx } = DEFAULT_STYLE.captions;
+const MIGRATED_STYLE = { ...DEFAULT_STYLE, captions: captionsNoFx };
+const validFromV1Style = { ...valid, style: MIGRATED_STYLE };
 const v4 = { ...valid5, version: 4 as const, style: styleV1(DEFAULT_STYLE), brief: BRIEF_V1 };
 const { ranges: _r, reference: _ref, ...v3body } = v4;
 const v3 = { ...v3body, version: 3 as const };
@@ -103,7 +107,7 @@ describe('migração v1 → v2 → v3 → v4 → v5 → v6', () => {
     const r = parseEditPlan(v3);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.plan).toEqual(valid);
+    expect(r.plan).toEqual(validFromV1Style);
   });
 
   it('rejeita trecho com fim antes do início e trecho com estilo inválido', () => {
@@ -120,7 +124,7 @@ describe('migração v1 → v2 → v3 → v4 → v5 → v6', () => {
     const r = parseEditPlan(v2);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.plan).toEqual(valid);
+    expect(r.plan).toEqual(validFromV1Style);
   });
 
   it('v2 inválido continua inválido', () => {
@@ -134,14 +138,15 @@ describe('migração v1 → v2 → v3 → v4 → v5 → v6', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.plan.version).toBe(6);
-    expect(r.plan.style).toEqual(DEFAULT_STYLE);
+    expect(r.plan.style).toEqual(MIGRATED_STYLE);
     expect((r.plan.style as any).emoji.mode).toBe('off');
     expect((r.plan.style as any).captions.colors).toEqual({ text: null, highlight: null, stroke: null, box: null });
     expect((r.plan.style as any).captions.enter).toBe('auto');
     expect(r.plan.brief).toEqual(EMPTY_BRIEF);
     expect(r.plan.ranges[0]!.look).toBeNull();
-    expect(r.plan.ranges[0]!.style).toEqual(DOCUMENTAL);
-    expect({ ...r.plan, ranges: [] }).toEqual(valid);
+    const { fx: _docFx, ...docCaptions } = DOCUMENTAL.captions;
+    expect(r.plan.ranges[0]!.style).toEqual({ ...DOCUMENTAL, captions: docCaptions });
+    expect({ ...r.plan, ranges: [] }).toEqual(validFromV1Style);
   });
 
   it('v4 com cena de emoji não existe (emoji só a partir da v5)', () => {

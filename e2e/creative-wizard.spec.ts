@@ -26,7 +26,7 @@ test('videos first: questions appear while the videos are prepared, with large c
   await page.screenshot({ path: info.outputPath('01-destino.png'), fullPage: true, animations: 'disabled' });
   await page.getByTestId('setup-next').click();
   await expect(page.getByRole('heading', { name: 'Qual visual você prefere?' })).toBeFocused();
-  await content.getByRole('radio', { name: 'Documental', exact: true }).click();
+  await content.getByRole('radio', { name: 'Editorial', exact: true }).click();
   await expect(content.locator('canvas[data-ready="1"]')).toHaveCount(6);
   await page.screenshot({ path: info.outputPath('02-visual.png'), fullPage: true, animations: 'disabled' });
   await page.getByTestId('setup-next').click();
@@ -41,7 +41,7 @@ test('videos first: questions appear while the videos are prepared, with large c
   await expect(page.getByTestId('setup-prep')).toContainText('pronto');
   await expect(page.getByTestId('setup-review')).toContainText('Sem cortes');
   await expect(page.getByTestId('setup-review')).toContainText('60 segundos');
-  await expect(page.getByTestId('setup-review')).toContainText('Documental');
+  await expect(page.getByTestId('setup-review')).toContainText('Editorial');
   await expect(page.getByTestId('setup-review')).toContainText('Discreta');
   await expect(content.locator('input:visible, select:visible, textarea:visible')).toHaveCount(0);
   await page.getByRole('button', { name: 'Alterar cortes', exact: true }).click();
@@ -54,7 +54,7 @@ test('videos first: questions appear while the videos are prepared, with large c
   await expect(page.getByTestId('draft-review')).toBeVisible({ timeout: 60_000 });
   const plan = await page.evaluate(() => (window as any).__m4f.plan);
   expect(plan.output).toMatchObject({ width: 1920, height: 1080 });
-  expect(plan.brief.production).toMatchObject({ cutPolicy: 'preserve', durationSec: null, captionStyle: 'minimal', preset: 'documental' });
+  expect(plan.brief.production).toMatchObject({ cutPolicy: 'preserve', durationSec: null, captionStyle: 'minimal', preset: 'editorial' });
   const source = new Input({ source: new FilePathSource(VIDEO), formats: ALL_FORMATS });
   const sourceDuration = await source.computeDuration();
   source.dispose();

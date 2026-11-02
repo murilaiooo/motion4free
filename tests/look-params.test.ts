@@ -4,7 +4,7 @@ import { EMOJI_FONT_FAMILY, EMOJI_SET, isEmoji, normalizeEmoji, planUsesEmoji } 
 import { lookIsEmpty, mergeLook, rangeLook, sanitizeLook, type Look } from '../src/core/look';
 import { EDITORIAL, POP, PRESETS } from '../src/core/presets';
 import { parseEditPlan } from '../src/core/schema';
-import type { StyleDNA } from '../src/core/style';
+import { CAPTION_FX_OFF, type StyleDNA } from '../src/core/style';
 import type { Caption, SceneInstance } from '../src/core/types';
 import { autoEdit } from '../src/editorial/auto-edit';
 import { applyLook } from '../src/editorial/brief-apply';
@@ -177,7 +177,8 @@ function drawCap(s: StyleDNA, t = 0.6) {
 const textCalls = (rc: RecordingContext) => rc.calls.filter((c) => c.op === 'fillText');
 
 describe('legenda desenhada com o look', () => {
-  const plain: StyleDNA = { ...POP, captions: { ...POP.captions, highlight: 'color', box: 'none', stroke: 0 } };
+  // sem o acabamento da v0.41 (relevo repete cada palavra em camadas): cada palavra = um fillText
+  const plain: StyleDNA = { ...POP, captions: { ...POP.captions, highlight: 'color', box: 'none', stroke: 0, fx: { ...CAPTION_FX_OFF } } };
   it('cor do texto e da palavra falada', () => {
     const s = look({ captions: { text: VERDE, highlight: AMARELO } }, plain);
     const calls = textCalls(drawCap(s));

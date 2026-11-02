@@ -2,7 +2,7 @@ import { EMPTY_EDITS } from '../src/core/edits';
 import { EMPTY_BRIEF } from '../src/core/brief';
 import { describe, expect, it } from 'vitest';
 import { DOCUMENTAL, EDITORIAL, POP, PRESETS } from '../src/core/presets';
-import type { StyleDNA } from '../src/core/style';
+import { CAPTION_FX_OFF, type StyleDNA } from '../src/core/style';
 import type { Caption, EditPlan, SceneInstance } from '../src/core/types';
 import { activeWord, drawCaption, layoutLines, wordTimings } from '../src/render/captions';
 import { makeFrame } from '../src/render/kit';
@@ -112,9 +112,9 @@ describe('cenas: funções puras do tempo, em todos os estilos', () => {
 
 describe('legendas estilo Reels', () => {
   const caption: Caption = { id: 'c1', text: 'Isso muda tudo', start: 1, end: 2.2, wordIds: ['1', '2', '3'], wordStarts: [1, 1.4, 1.8] };
-  const drawCap = (style: StyleDNA, t: number, kw: string[] = []) => {
+  const drawCap = (style: StyleDNA, t: number, kw: string[] = [], cap: Caption = caption) => {
     const rc = new RecordingContext();
-    drawCaption(rc.asCtx(), makeFrame(W, H, style), caption, t, new Set(kw));
+    drawCaption(rc.asCtx(), makeFrame(W, H, style), cap, t, new Set(kw));
     return rc;
   };
   const wordCall = (rc: RecordingContext, word: string) => rc.calls.find((c) => c.op === 'fillText' && String(c.args[0]).toLowerCase() === word)!;
@@ -133,15 +133,18 @@ describe('legendas estilo Reels', () => {
   });
 
   it('tamanho da fonte segue o estilo e é maior que na v0.2', () => {
+    // modelo de uma palavra por vez (Foco) nunca recebe três palavras numa legenda; testa com o que ele recebe
+    const single: Caption = { id: 'c1', text: 'muda', start: 1.4, end: 1.8, wordIds: ['2'], wordStarts: [1.4] };
     for (const style of PRESETS) {
-      const size = Number(/([\d.]+)px/.exec(wordCall(drawCap(style, 1.5), 'muda').font)![1]);
+      const cap = style.captions.maxWords > 1 ? caption : single;
+      const size = Number(/([\d.]+)px/.exec(wordCall(drawCap(style, 1.5, [], cap), 'muda').font)![1]);
       expect(size).toBeGreaterThanOrEqual(style.captions.size * W * 0.99);
       expect(size).toBeGreaterThan(67);
     }
   });
 
   it('Pop: palavra falada numa caixa amarela, em maiúsculas, com contorno nas outras', () => {
-    const rc = drawCap(POP, 1.5);
+    const rc = drawCap({ ...POP, captions: { ...POP.captions, fx: { ...CAPTION_FX_OFF } } }, 1.5);
     expect(rc.texts()).toEqual(['ISSO', 'MUDA', 'TUDO']);
     const box = rc.calls.findIndex((c) => c.op === 'fill' && c.fillStyle === POP.palette.accent);
     const muda = rc.calls.findIndex((c) => c.op === 'fillText' && c.args[0] === 'MUDA');
@@ -149,6 +152,17 @@ describe('legendas estilo Reels', () => {
     expect(box).toBeLessThan(muda);
     expect(rc.calls[muda]!.fillStyle).toBe(POP.palette.onPanel);
     expect(rc.calls.some((c) => c.op === 'strokeText' && c.args[0] === 'ISSO')).toBe(true);
+  });
+
+  it('relevo (v0.41): cópias na cor do contorno por baixo, a palavra de cima por último', () => {
+    const rc = drawCap(POP, 1.5);
+    const isso = rc.calls.filter((c) => c.op === 'fillText' && c.args[0] === 'ISSO');
+    expect(isso.length).toBeGreaterThan(1);
+    const under = isso.slice(0, -1);
+    expect(new Set(under.map((c) => c.fillStyle)).size).toBe(1);
+    expect(under[0]!.fillStyle).not.toBe(isso.at(-1)!.fillStyle);
+    expect(isso.at(-1)!.fillStyle).toBe(POP.palette.text);
+    expect(isso[0]!.args[2] as number).toBeGreaterThan(isso.at(-1)!.args[2] as number);
   });
 
   it('Editorial: palavras ainda não faladas ficam apagadas', () => {
