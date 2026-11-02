@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { ASR_MODEL_REPOS, llmModelRecord, mirrorCdnUrl, upstreamUrl } from '../src/core/mirror';
-import { ASR_CANDIDATES } from '../src/core/asr-models';
+import { ASR_CANDIDATES, ASR_REPOS, PARAKEET_FILES } from '../src/core/asr-models';
 import { DEFAULT_LLM, LLM_MODELS, localAiErrorKey } from '../src/core/llm-models';
 
 describe('espelho do modelo', () => {
   const MODEL_ID = 'onnx-community/whisper-base_timestamped';
 
-  it('repassa os três modelos de transcrição (turbo, small, base) ao Hugging Face', () => {
+  it('repassa os modelos de transcrição (Whisper turbo, small, base e Parakeet v3) ao Hugging Face', () => {
     expect(ASR_MODEL_REPOS).toEqual([
       'onnx-community/whisper-large-v3-turbo_timestamped',
       'onnx-community/whisper-small_timestamped',
       'onnx-community/whisper-base_timestamped',
+      'ysdede/parakeet-tdt-0.6b-v3-onnx',
     ]);
     for (const repo of ASR_MODEL_REPOS) {
       expect(upstreamUrl(`/hf/${repo}/resolve/main/config.json`)).toBe(`https://huggingface.co/${repo}/resolve/main/config.json`);
@@ -22,6 +23,7 @@ describe('espelho do modelo', () => {
   it('repassa cada arquivo ONNX que a escada de modelos pede (dtype -> sufixo do Transformers.js)', () => {
     const suffix = { fp32: '', fp16: '_fp16', q8: '_quantized', q4: '_q4' } as const;
     for (const c of Object.values(ASR_CANDIDATES)) {
+      if (c.engine !== 'whisper') continue;
       const dt = typeof c.dtype === 'string' ? { encoder_model: c.dtype, decoder_model_merged: c.dtype } : c.dtype;
       for (const [file, d] of Object.entries(dt)) {
         const p = `/hf/${c.repo}/resolve/main/onnx/${file}${suffix[d]}.onnx`;
@@ -30,6 +32,15 @@ describe('espelho do modelo', () => {
     }
     // pesos grandes em arquivo separado (external data) também passam
     expect(upstreamUrl(`/hf/${ASR_MODEL_REPOS[0]}/resolve/main/onnx/encoder_model_fp16.onnx_data`)).not.toBeNull();
+  });
+
+  it('repassa os arquivos do Parakeet (encoder, decodificador e vocabulário)', () => {
+    for (const f of PARAKEET_FILES.files) {
+      const p = `/hf/${ASR_REPOS.parakeet}/resolve/${PARAKEET_FILES.revision}/${f.name}`;
+      expect(upstreamUrl(p)).toBe(`https://huggingface.co${p.slice(3)}`);
+    }
+    // outro arquivo do mesmo usuário do Hugging Face não passa
+    expect(upstreamUrl('/hf/ysdede/outro-modelo/resolve/main/encoder-model.int8.onnx')).toBeNull();
   });
 
   it('repassa arquivos do modelo usado pelo app ao Hugging Face', () => {

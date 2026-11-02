@@ -21,8 +21,10 @@ export default {
     // O encoder turbo tem 1,27 GB. O CDN Xet serve CORS, mas o caminho Cloudflare
     // Worker -> CDN expirou a credencial assinada mesmo após desativar o cache.
     // Entregue ao navegador uma URL assinada NOVA (não os bytes), sem servidor M4F.
-    const directCdn = url.pathname.startsWith(`${HF_PREFIX}${ASR_REPOS.turbo}/resolve/`)
-      && /\/onnx\/[^/]+\.onnx(?:_data)?$/.test(url.pathname);
+    // O encoder do Parakeet (652 MB, v0.38) segue o mesmo caminho.
+    const directCdn = (url.pathname.startsWith(`${HF_PREFIX}${ASR_REPOS.turbo}/resolve/`)
+      && /\/onnx\/[^/]+\.onnx(?:_data)?$/.test(url.pathname))
+      || (url.pathname.startsWith(`${HF_PREFIX}${ASR_REPOS.parakeet}/resolve/`) && /\/encoder-model[\w.]*\.onnx$/.test(url.pathname));
     const upstreamRequest = directCdn ? `${upstream}?download=true` : upstream;
     const upstreamHeaders = new Headers();
     const range = request.headers.get('range');

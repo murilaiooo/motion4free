@@ -21,6 +21,13 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.38.0 — 02/11/2026 — em preparação, não testada com o modelo real
+
+- Legenda no modo Precisa sem placa dedicada passa a usar o **Parakeet TDT 0.6B v3** da NVIDIA no processador (~670 MB na primeira vez): erra bem menos em português que o Whisper small (≈ 4,8% contra 7,7% no FLEURS), não repete frases em laço e dá o tempo de cada palavra direto do modelo. Placa dedicada continua no Whisper turbo; modo Rápida continua no Whisper base ([ADR-0039](decisions/0039-parakeet-v3-na-transcricao.md)).
+- Se o Parakeet não carregar, a escada desce para o Whisper small como antes (aviso M4F-307).
+- Armazenamento mostra o Parakeet v3; o espelho do site libera só os três arquivos dele.
+- Nova biblioteca `parakeet.js` 1.4.4 (MIT), no mesmo runtime ONNX do Transformers.js; avisos de licença atualizados.
+
 ## v0.37.1 — 01/11/2026 — em preparação, issue #163
 
 - OpenRouter pede resposta direta (`reasoning.effort: none`) e permite uma recuperação com raciocínio limitado quando obrigatório ou quando o modelo esgota a saída pensando.

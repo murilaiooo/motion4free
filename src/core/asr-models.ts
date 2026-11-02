@@ -1,9 +1,15 @@
 /**
- * Modelos de transcrição (Whisper) e a escolha de qual usar em cada aparelho (ADR-0013).
+ * Modelos de transcrição e a escolha de qual usar em cada aparelho (ADR-0013, ADR-0036, ADR-0039).
  *
- * Todos são exportações ONNX "_timestamped" da comunidade onnx-community no Hugging Face: elas devolvem a
+ * Whisper: exportações ONNX "_timestamped" da comunidade onnx-community no Hugging Face; elas devolvem a
  * atenção cruzada do decodificador, que o Transformers.js 4.3.1 precisa para dar o tempo de cada palavra
  * (`return_timestamps: 'word'`). Licença: Whisper da OpenAI (código e pesos MIT; ver docs/licencas.md).
+ *
+ * Parakeet TDT 0.6B v3 (NVIDIA, CC-BY-4.0, v0.38): reconhece a fala de uma vez (não escreve palavra por
+ * palavra como o Whisper), por isso é bem mais rápido no processador, não entra em laço repetindo frases e
+ * dá o tempo de cada palavra direto da saída do modelo. Em português erra menos que o Whisper small e o
+ * medium e só perde para o large-v3/turbo (FLEURS pt: ~4,8–5,0% contra 7,7% do small; ADR-0039). Roda pela
+ * biblioteca parakeet.js (MIT) no mesmo onnxruntime-web do Transformers.js.
  *
  * A escolha é uma "escada": se um degrau não carregar ou falhar no meio, o Worker desce para o próximo
  * sem parar a transcrição (aviso M4F-307). Os tamanhos são estimativas do download na primeira vez.
@@ -13,6 +19,8 @@ export type AsrMode = 'rapida' | 'precisa';
 export const ASR_MODES: AsrMode[] = ['rapida', 'precisa'];
 
 export type AsrDevice = 'webgpu' | 'wasm';
+/** Qual motor roda o modelo: Whisper pelo Transformers.js ou Parakeet pelo parakeet.js. */
+export type AsrEngine = 'whisper' | 'parakeet';
 /** dtype por arquivo do modelo (nomes do Transformers.js: fp32, fp16, q8 = `_quantized`, q4 = `_q4`). */
 export type AsrDtype = 'fp32' | 'fp16' | 'q8' | 'q4' | { encoder_model: 'fp32' | 'fp16' | 'q8' | 'q4'; decoder_model_merged: 'fp32' | 'fp16' | 'q8' | 'q4' };
 
@@ -21,6 +29,7 @@ export interface AsrCandidate {
   /** nome para a pessoa */
   label: string;
   repo: string;
+  engine: AsrEngine;
   device: AsrDevice;
   dtype: AsrDtype;
   /** download aproximado na primeira vez, em MB */
@@ -33,6 +42,22 @@ export const ASR_REPOS = {
   turbo: 'onnx-community/whisper-large-v3-turbo_timestamped',
   small: 'onnx-community/whisper-small_timestamped',
   base: 'onnx-community/whisper-base_timestamped',
+  // Exportação ONNX de nvidia/parakeet-tdt-0.6b-v3 no formato que o parakeet.js lê (vocab.txt com ids).
+  parakeet: 'ysdede/parakeet-tdt-0.6b-v3-onnx',
+} as const;
+
+/**
+ * Arquivos do Parakeet para o processador: encoder int8 (652 MB) + decodificador int8 (18 MB) + vocabulário.
+ * O pré-processamento (espectrograma) é feito em JavaScript pelo parakeet.js, sem baixar o `nemo128.onnx`.
+ * Tamanhos conferidos na listagem do repositório (nov/2026); a revisão fica fixa para não mudar sozinha.
+ */
+export const PARAKEET_FILES = {
+  revision: 'main',
+  files: [
+    { key: 'vocab', name: 'vocab.txt', bytes: 102_132 },
+    { key: 'decoder', name: 'decoder_joint-model.int8.onnx', bytes: 18_202_004 },
+    { key: 'encoder', name: 'encoder-model.int8.onnx', bytes: 652_183_999 },
+  ],
 } as const;
 
 export const ASR_CANDIDATES = {
@@ -40,6 +65,7 @@ export const ASR_CANDIDATES = {
     id: 'turbo-webgpu',
     label: 'Whisper large-v3-turbo (placa de vídeo)',
     repo: ASR_REPOS.turbo,
+    engine: 'whisper',
     device: 'webgpu',
     // Encoder em fp16 (precisão quase igual ao fp32, metade do tamanho); decodificador q4 (é ele que roda
     // uma vez por palavra, e no turbo tem só 4 camadas). Mesma combinação da demonstração oficial do Transformers.js.
@@ -51,6 +77,7 @@ export const ASR_CANDIDATES = {
     id: 'small-wasm',
     label: 'Whisper small (processador)',
     repo: ASR_REPOS.small,
+    engine: 'whisper',
     device: 'wasm',
     dtype: 'q8',
     downloadMB: 250,
@@ -62,6 +89,7 @@ export const ASR_CANDIDATES = {
     id: 'small-webgpu',
     label: 'Whisper small (placa de vídeo)',
     repo: ASR_REPOS.small,
+    engine: 'whisper',
     device: 'webgpu',
     // encoder em fp16 (precisa de `shader-f16`); decodificador q4, como no turbo
     dtype: { encoder_model: 'fp16', decoder_model_merged: 'q4' },
@@ -72,16 +100,30 @@ export const ASR_CANDIDATES = {
     id: 'small-webgpu-fp32',
     label: 'Whisper small (placa de vídeo)',
     repo: ASR_REPOS.small,
+    engine: 'whisper',
     device: 'webgpu',
     // placa sem fp16: encoder em fp32 (maior, mas roda em qualquer placa com WebGPU)
     dtype: { encoder_model: 'fp32', decoder_model_merged: 'q4' },
     downloadMB: 560,
     secPerMinute: 12,
   },
+  // Degrau do meio no processador (v0.38): erra bem menos que o Whisper small e é mais rápido que ele no
+  // processador. Pede pelo menos 4 GB de memória (o encoder ocupa ~1 GB depois de montado).
+  'parakeet-wasm': {
+    id: 'parakeet-wasm',
+    label: 'Parakeet v3 (processador)',
+    repo: ASR_REPOS.parakeet,
+    engine: 'parakeet',
+    device: 'wasm',
+    dtype: 'q8',
+    downloadMB: 670,
+    secPerMinute: 40,
+  },
   'base-webgpu': {
     id: 'base-webgpu',
     label: 'Whisper base (placa de vídeo)',
     repo: ASR_REPOS.base,
+    engine: 'whisper',
     device: 'webgpu',
     dtype: 'fp32',
     downloadMB: 290,
@@ -91,6 +133,7 @@ export const ASR_CANDIDATES = {
     id: 'base-wasm',
     label: 'Whisper base (processador)',
     repo: ASR_REPOS.base,
+    engine: 'whisper',
     device: 'wasm',
     dtype: 'q8',
     downloadMB: 80,
@@ -186,16 +229,24 @@ export function canRunTurbo(c: AsrCapability): boolean {
   return (kind === 'dedicada' || kind === 'desconhecida') && c.f16 && (c.memoryGB === null || c.memoryGB >= 8);
 }
 
+/** O Parakeet no processador pede pelo menos 4 GB de memória (ou memória não informada). */
+export function canRunParakeet(c: AsrCapability): boolean {
+  return c.memoryGB === null || c.memoryGB >= 4;
+}
+
 /**
- * Ordem de tentativa para o modo escolhido. A placa de vídeo (dedicada ou integrada) vem sempre antes do
- * processador, porque é bem mais rápida; o processador só entra sem WebGPU ou se a placa falhar.
+ * Ordem de tentativa para o modo escolhido (ADR-0039).
+ * - Placa dedicada: Whisper turbo na placa (o mais preciso em português).
+ * - Depois, ou sem placa forte: Parakeet v3 no processador, que erra bem menos que o Whisper small.
+ * - Se o Parakeet não carregar: Whisper small na placa (dedicada ou integrada) e, por fim, no processador.
  * Sempre termina no base em WASM, que roda em qualquer navegador.
  */
 export function asrLadder(mode: AsrMode, c: AsrCapability): AsrCandidateId[] {
-  if (!c.webgpu) return mode === 'rapida' ? ['base-wasm'] : ['small-wasm', 'base-wasm'];
+  const parakeet: AsrCandidateId[] = canRunParakeet(c) ? ['parakeet-wasm'] : [];
+  if (!c.webgpu) return mode === 'rapida' ? ['base-wasm'] : [...parakeet, 'small-wasm', 'base-wasm'];
   if (mode === 'rapida') return ['base-webgpu', 'base-wasm'];
   const smallGpu: AsrCandidateId = c.f16 ? 'small-webgpu' : 'small-webgpu-fp32';
-  return [...(canRunTurbo(c) ? (['turbo-webgpu'] as const) : []), smallGpu, 'base-webgpu', 'small-wasm', 'base-wasm'];
+  return [...(canRunTurbo(c) ? (['turbo-webgpu'] as const) : []), ...parakeet, smallGpu, 'base-webgpu', 'small-wasm', 'base-wasm'];
 }
 
 /** Nome do modelo com o lugar onde rodou, ex.: "Whisper small (placa de vídeo integrada: Intel UHD Graphics 620)". */
@@ -258,6 +309,6 @@ export function describeMode(mode: AsrMode, c: AsrCapability): string {
   const first = ASR_CANDIDATES[asrLadder(mode, c)[0]!];
   const kind = gpuKind(c);
   const where = first.device === 'webgpu' ? (kind === 'integrada' ? 'usa a placa de vídeo integrada' : 'usa a placa de vídeo') : 'usa o processador';
-  const extra = mode === 'precisa' && first.device === 'wasm' ? '; sem placa de vídeo compatível, demora alguns minutos' : '';
+  const extra = mode === 'precisa' && first.device === 'wasm' && !c.webgpu ? '; sem placa de vídeo compatível, demora alguns minutos' : '';
   return `${first.label.replace(/ \(.*\)$/, '')}, ${where}; baixa cerca de ${formatMB(first.downloadMB)} na primeira vez${extra}.`;
 }
