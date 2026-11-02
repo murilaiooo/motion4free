@@ -86,6 +86,9 @@ const WEAK_OPENERS: RegExp[] = [
   /^(bom dia|boa tarde|boa noite|ola|oi|fala (galera|pessoal|ai)|e ai (galera|pessoal)|sejam bem.?vindos|bem.?vindos|hello|hi guys|what'?s up)\b/,
   /^(como (eu )?(estava|tava) (falando|dizendo)|voltando|continuando|retomando|enfim|bom,? entao|entao,? gente|deixa eu (ver|pensar|olhar|ler|abrir)|vamos (ver|la)|pergunta do chat|perguntas do chat)\b/,
 ];
+/** Desvios que quebram a história no meio de um clipe (lives, podcasts, aulas). */
+const TANGENT = /\b(deixa eu (ver|ler|olhar|abrir) (o |aqui )?(chat|comentario|pergunta|slide|tela)|perguntas? do chat|voltando ao (assunto|tema)|onde (eu )?(estava|parei)|perdi o fio|cade o (slide|link)|ta me ouvindo|voces estao me ouvindo|caiu a (live|conexao)|let me (check|read) the chat)\b/;
+
 /** Chamadas para ação e patrocínio: raramente viram um bom clipe. */
 const CTA = /\b(se inscreve|se inscreva|inscreva.se|deixa (o|seu) like|ativa o sininho|link na descricao|link na bio|cupom|patrocin|subscribe|smash (that|the) like)\b/;
 
@@ -235,6 +238,9 @@ export function scoreSpan(words: readonly Word[], ctx: ScoreContext): SpanScore 
     const median = medianOf(ctx.energy);
     const m = median === null ? null : meanDbBetween(ctx.energy, start, end, ctx.energyStep ?? ENERGY_STEP_SEC);
     if (m !== null && median !== null) energia = clamp01(0.5 + (m - median) / 8);
+    // Voz subindo logo no começo (v0.39): quem rola o feed decide nos primeiros 3 s.
+    const opening = median === null ? null : meanDbBetween(ctx.energy, start, Math.min(end, start + 3), ctx.energyStep ?? ENERGY_STEP_SEC);
+    if (opening !== null && median !== null) energia = clamp01(0.7 * energia + 0.3 * clamp01(0.5 + (opening - median) / 6));
   }
 
   const ritmo = clamp01(1 - Math.abs(spoken.length / dur - IDEAL_WPS) / 2.2);
@@ -260,6 +266,8 @@ export function scoreSpan(words: readonly Word[], ctx: ScoreContext): SpanScore 
   // Tamanho perto do ideal pedido.
   raw += 4 * clamp01(1 - Math.abs(dur - ctx.limit.ideal) / Math.max(1, ctx.limit.max - ctx.limit.min)) - 2;
   if (CTA.test(plainText)) raw -= 12;
+  // Desvio no meio do clipe ("deixa eu ver o chat", "voltando", "cadê o slide"): quebra a história (v0.39).
+  if (TANGENT.test(plainText)) raw -= 8;
 
   const score = Math.round(Math.min(100, Math.max(0, raw)) * 10) / 10;
   return { score, parts, reasons: reasonsOf(parts, openingText, dead / dur) };

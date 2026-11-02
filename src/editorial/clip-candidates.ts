@@ -1,4 +1,5 @@
 import type { Word } from '../core/types';
+import { findSoundMoments } from './sound-moments';
 import { CLIP_LENGTHS, LEAD_SEC, TAIL_SEC, MAX_MOMENTS, clock, type Moment, type MomentOptions } from './highlights';
 import { buildTranscriptIndex, sentenceBounds, type TranscriptIndex } from './clip-context';
 import { CONTEXT_LABELS, contextFlags } from './context-policy';
@@ -92,16 +93,33 @@ export function titleFor(index: TranscriptIndex, first: number, last: number, ti
  * novelty (max +14 points); everything else is filled by the original ranking.
  * This is NOT an estimate of views or semantic understanding.
  */
-export function rankContextualMoments(input: readonly Moment[], count: number): Moment[] {
+export function rankContextualMoments(input: readonly Moment[], count: number, dedupe = true): Moment[] {
   const sorted = [...input].sort((a, b) => (a.sourceEvidence?.review.length ?? 0) - (b.sourceEvidence?.review.length ?? 0) || b.score - a.score || a.start - b.start);
   const limit = Math.min(600, Math.max(1, count));
   const selected: Moment[] = [];
   const midpoint = (moment: Moment) => (moment.start + moment.end) / 2;
   const positions = sorted.map(midpoint);
   const temporalSpan = sorted.length ? Math.max(1, Math.max(...positions) - Math.min(...positions)) : 1;
+  // Dois clipes que dizem a mesma coisa (palestra repetida, bordão, "como eu disse antes") contam como sobrepostos (v0.39).
+  const contentOf = new Map<Moment, Set<string>>();
+  const content = (m: Moment) => {
+    let set = contentOf.get(m);
+    if (!set) {
+      set = new Set((plain(m.text).match(/[a-z0-9]+/g) ?? []).filter((t) => t.length >= 5));
+      contentOf.set(m, set);
+    }
+    return set;
+  };
+  const sameContent = (a: Moment, b: Moment) => {
+    const x = content(a), y = content(b);
+    if (x.size < 8 || y.size < 8) return false;
+    let shared = 0;
+    for (const t of x) if (y.has(t)) shared++;
+    return shared / Math.min(x.size, y.size) > 0.7;
+  };
   const noOverlap = (candidate: Moment) => selected.every(other => {
     const overlap = Math.max(0, Math.min(candidate.end, other.end) - Math.max(candidate.start, other.start));
-    return overlap / Math.max(0.001, Math.min(candidate.end - candidate.start, other.end - other.start)) <= 0.5;
+    return overlap / Math.max(0.001, Math.min(candidate.end - candidate.start, other.end - other.start)) <= 0.5 && !(dedupe && sameContent(candidate, other));
   });
   for (let i = 0; i < Math.min(limit, 20); i++) {
     let choice: Moment | null = null;
@@ -156,8 +174,10 @@ export function findContextualMoments(words: readonly Word[], duration: number, 
       if (moment) pool.push(moment);
     }
     // Retain temporal diversity across the whole recording rather than a prefix-only cap.
-    if (pool.length > 600) pool = rankContextualMoments(pool, 200);
+    if (pool.length > 600) pool = rankContextualMoments(pool, 200, false);
   }
+  // Filmes, séries, shows: cenas fortes sem fala também concorrem (v0.39), com nota modesta.
+  if (opts.energy && opts.energyStep) pool.push(...findSoundMoments(words, duration, opts.energy, opts.energyStep, limit));
   // The old finder remains an explicit UI baseline; do not allocate its all-pairs pool on this bounded path.
   return rankContextualMoments(pool, Math.min(MAX_MOMENTS, opts.count)).map((moment) => withTitle(index, moment));
 }

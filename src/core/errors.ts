@@ -138,6 +138,7 @@ export const ERRORS = {
   CLIPES_IA_PARCIAL: { code: 'M4F-1114', title: 'A IA leu só parte do vídeo. Os clipes da parte lida foram revistos pela IA; os outros vieram das regras locais e estão marcados assim.' },
   CLIPE_SEM_ROSTO: { code: 'M4F-1115', title: 'Não encontrei um rosto neste clipe, então o enquadramento ficou no centro. Você pode mover o vídeo no editor.' },
   CLIPE_ROSTO_FALHOU: { code: 'M4F-1116', title: 'Não consegui procurar o rosto neste clipe (o navegador não carregou o detector de rosto). O clipe saiu com enquadramento central; você pode mover o vídeo no editor.' },
+  CLIPES_JURI_FALHOU: { code: 'M4F-1117', title: 'A IA não conseguiu dar notas aos clipes; mantive a ordem do app. Tente de novo ou escolha outra IA para os clipes.' },
   CLIPE_LOTE_FALHOU: { code: 'M4F-1108', title: 'Um dos clipes não pôde ser gerado; os outros continuaram normalmente.' },
   MEMORIA_LONGO: { code: 'M4F-1109', title: 'O aparelho ficou sem memória para ler o áudio do vídeo longo. Feche outras abas ou envie um pedaço menor do vídeo.' },
   IA_SEM_MODELO: { code: 'M4F-1201', title: 'Nenhum modelo de IA foi escolhido. Escolha um em Configurações › IA e provedores; desta vez usei as regras.' },

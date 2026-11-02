@@ -246,3 +246,10 @@
 .clips-follow-face { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 12px; color: var(--text-2); max-width: 46ch; cursor: pointer; }
 .clips-follow-face input { margin-top: 2px; accent-color: var(--brand); }
 .clips-follow-face b { color: var(--text-1); }
+
+/* v0.39: escolher a IA dos clipes */
+.clips-ai-picker { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-width: 0; }
+.clips-ai-picker label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; flex: 1 1 320px; }
+.clips-ai-picker select { min-height: 38px; max-width: 100%; flex: 1 1 240px; min-width: 0; }
+.clips-ai-picker > .hint { flex-basis: 100%; margin: 0; }
+@media (max-width: 640px) { .clips-ai-picker, .clips-ai-picker label { display: grid; justify-items: stretch; } }
