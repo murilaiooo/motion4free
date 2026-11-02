@@ -17,7 +17,7 @@ type Choice = AsrMode | AsrCandidateId;
 const CHOICES: { value: Choice; label: string }[] = [
   { value: 'precisa', label: 'Precisa (escolha automática do app)' },
   { value: 'rapida', label: 'Rápida (escolha automática do app)' },
-  ...(Object.keys(ASR_CANDIDATES) as AsrCandidateId[]).map((id) => ({ value: id as Choice, label: `Só ${ASR_CANDIDATES[id].label}` })),
+  ...(Object.keys(ASR_CANDIDATES) as AsrCandidateId[]).map((id) => ({ value: id as Choice, label: `Só ${ASR_CANDIDATES[id].label}${id === 'small-webgpu-fp32' ? ' sem fp16' : ''}` })),
 ];
 
 interface Outcome {

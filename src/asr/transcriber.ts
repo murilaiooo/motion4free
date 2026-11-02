@@ -1,6 +1,6 @@
 import { groupPieces, mergeWindows, type RawWord } from '../analysis/asr-merge';
 import type { AsrWindow } from '../analysis/asr-windows';
-import { ASR_CANDIDATES, asrLadder, estimateMinutes, type AsrCandidateId, type AsrMode } from '../core/asr-models';
+import { ASR_CANDIDATES, asrLadder, estimateMinutes, modelWhereLabel, type AsrCandidateId, type AsrMode } from '../core/asr-models';
 import { AppError } from '../core/errors';
 import { formatClock } from '../core/bytes';
 import type { OnProgress } from '../core/progress';
@@ -26,9 +26,12 @@ const label = (id: AsrCandidateId) => ASR_CANDIDATES[id].label;
 
 export class WhisperTranscriber implements Transcriber {
   async transcribe(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: OnProgress, mode: AsrMode | AsrCandidateId[] = 'precisa'): Promise<TranscriptResult> {
-    const ladder = Array.isArray(mode) ? mode : asrLadder(mode, await detectAsrCapability());
+    // A placa de vídeo é detectada aqui, sem a pessoa escolher: dedicada > integrada > processador (v0.36).
+    const capability = await detectAsrCapability();
+    const ladder = Array.isArray(mode) ? mode : asrLadder(mode, capability);
     const worker = new Worker(new URL('./whisper.worker.ts', import.meta.url), { type: 'module' });
     const notices: AppError[] = [];
+    if (!Array.isArray(mode) && !capability.webgpu) notices.push(new AppError('SEM_PLACA_VIDEO', 'sem WebGPU neste navegador (ou só o adaptador de software); usei o Whisper no processador (WASM)'));
     const fallbacks: string[] = [];
     return new Promise((resolve, reject) => {
       worker.onmessage = (e: MessageEvent<FromWorker>) => {
@@ -62,7 +65,7 @@ export class WhisperTranscriber implements Transcriber {
         if (m.type === 'done') {
           worker.terminate();
           if (fallbacks.length > 0) notices.push(new AppError('MODELO_RESERVA', `${fallbacks.join(' | ')}. Legenda feita com ${label(m.model)}.`));
-          resolve({ words: mergeWindows(m.results, durationSec), model: label(m.model), notices });
+          resolve({ words: mergeWindows(m.results, durationSec), model: modelWhereLabel(m.model, capability), notices });
         }
         if (m.type === 'error') {
           worker.terminate();
