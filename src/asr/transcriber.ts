@@ -2,11 +2,12 @@ import { groupPieces, mergeWindows, type RawWord } from '../analysis/asr-merge';
 import type { AsrWindow } from '../analysis/asr-windows';
 import { crossCheck } from '../analysis/asr-crosscheck';
 import { ASR_CANDIDATES, checkLadder, estimateMinutes, modelWhereLabel, requestChecks, requestIsAuto, requestLadder, type AsrCandidateId, type AsrRequest } from '../core/asr-models';
-import { AppError } from '../core/errors';
+import { AppError, ERRORS } from '../core/errors';
 import { formatClock } from '../core/bytes';
 import type { OnProgress } from '../core/progress';
 import { detectAsrCapability } from './capability';
 import { getAsrRoute } from './route';
+import { recordPerf } from '../app/perf-store';
 import type { FromWorker } from './protocol';
 import type { AsrChunk } from './words';
 
@@ -43,9 +44,39 @@ function runLadder(audio16k: Float32Array, durationSec: number, windows: AsrWind
   const worker = new Worker(new URL('./whisper.worker.ts', import.meta.url), { type: 'module' });
   const fallbacks: string[] = [];
   const tag = check ? 'conferir-' : '';
+  const language = getAsrRoute().speechLanguage;
+  // Medição real (#170): carregar (download + montar) e ouvir, por modelo tentado.
+  let started = performance.now();
+  let listening: number | null = null;
+  let current: AsrCandidateId = ladder[0]!;
+  let cached: boolean | null = null;
+  let speechSec = 0;
+  const measure = (model: AsrCandidateId, device: string, error?: string) => {
+    const now = performance.now();
+    recordPerf({
+      kind: 'asr', at: new Date().toISOString(), model, device, check, language,
+      speechSec: error ? 0 : speechSec,
+      loadSec: ((listening ?? now) - started) / 1000,
+      inferSec: listening === null ? 0 : (now - listening) / 1000,
+      cached, fallbacks: fallbacks.length, ...(error ? { error } : {}),
+    });
+  };
   return new Promise((resolve, reject) => {
     worker.onmessage = (e: MessageEvent<FromWorker>) => {
       const m = e.data;
+      if (m.type === 'progress') {
+        if (m.model !== current) {
+          current = m.model;
+          started = performance.now();
+          listening = null;
+          cached = null;
+        }
+        if (m.stage === 'download') cached = m.cached;
+        if (m.stage === 'transcribe') {
+          listening ??= performance.now();
+          speechSec = m.totalSec;
+        }
+      }
       if (m.type === 'progress' && m.stage === 'download') {
         const c = ASR_CANDIDATES[m.model];
         const why = check ? ' para conferir a legenda' : '';
@@ -70,14 +101,21 @@ function runLadder(audio16k: Float32Array, durationSec: number, windows: AsrWind
         });
       }
       if (m.type === 'fallback') {
+        measure(m.from, ASR_CANDIDATES[m.from].device, ERRORS[m.key].code);
+        current = m.to;
+        started = performance.now();
+        listening = null;
+        cached = null;
         fallbacks.push(`${label(m.from)} falhou (${m.detail}); tentei ${label(m.to)}`);
         onProgress({ label: `${label(m.from)} não funcionou aqui; tentando ${label(m.to)}`, phase: `${tag}reserva-${m.to}`, fraction: null });
       }
       if (m.type === 'done') {
+        measure(m.model, m.device);
         worker.terminate();
         resolve({ words: mergeWindows(m.results, durationSec), model: m.model, fallbacks });
       }
       if (m.type === 'error') {
+        measure(current, ASR_CANDIDATES[current].device, ERRORS[m.key].code);
         worker.terminate();
         reject(new AppError(m.key, m.detail));
       }
@@ -86,7 +124,7 @@ function runLadder(audio16k: Float32Array, durationSec: number, windows: AsrWind
       worker.terminate();
       reject(new AppError('WORKER_FALHOU', `${e.message || 'sem mensagem'} ${e.filename ?? ''}:${e.lineno ?? ''}`));
     };
-    worker.postMessage({ type: 'transcribe', audio: audio16k, language: getAsrRoute().speechLanguage, windows, ladder }, [audio16k.buffer]);
+    worker.postMessage({ type: 'transcribe', audio: audio16k, language, windows, ladder }, [audio16k.buffer]);
   });
 }
 

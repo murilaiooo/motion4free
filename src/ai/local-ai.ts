@@ -2,6 +2,7 @@ import { AppError, describeError } from '../core/errors';
 import { LLM_MODELS, localAiErrorKey, type LlmKey } from '../core/llm-models';
 import { llmModelRecord } from '../core/mirror';
 import { REPLY_MAX_TOKENS, chatTurns, type AiMessages, type Completer } from '../editorial/ai-brief';
+import { recordPerf } from '../app/perf-store';
 
 /**
  * IA no navegador (opcional): Qwen2.5 0.5B (leve), Qwen2.5 1.5B (padrão) ou Qwen3 4B (forte) via WebLLM, na GPU (WebGPU) num Worker.
@@ -44,6 +45,7 @@ export async function loadLocalAi(key: LlmKey, onProgress: (fraction: number, te
   let unloadFn: () => Promise<void> = async () => undefined;
   const promise = (async () => {
     try {
+      const loadStart = performance.now();
       const webllm = await import('@mlc-ai/web-llm');
       const worker = new Worker(new URL('./webllm.worker.ts', import.meta.url), { type: 'module' });
       const origin = import.meta.env.DEV ? null : self.location.origin;
@@ -60,6 +62,8 @@ export async function loadLocalAi(key: LlmKey, onProgress: (fraction: number, te
         await e.unload();
         worker.terminate();
       };
+      // tempo de carregar entra só na primeira medição depois de abrir o modelo (#170)
+      let loadSec: number | null = (performance.now() - loadStart) / 1000;
       const timeoutMs = model.timeoutSec * 1000;
       const complete: Completer = async (m: AiMessages) => {
         const run = e.chat.completions.create({
@@ -75,11 +79,25 @@ export async function loadLocalAi(key: LlmKey, onProgress: (fraction: number, te
         const timeout = new Promise<never>((_, reject) => {
           timer = setTimeout(() => reject(new AppError('IA_LOCAL_FALHOU', `sem resposta em ${model.timeoutSec} s`)), timeoutMs);
         });
+        const asked = performance.now();
+        const measure = (extra: { promptTokens?: number; replyTokens?: number; prefillPerSec?: number; decodePerSec?: number; error?: string }) => {
+          recordPerf({
+            kind: 'llm', at: new Date().toISOString(), model: key, loadSec,
+            promptTokens: extra.promptTokens ?? null, replyTokens: extra.replyTokens ?? null,
+            prefillPerSec: extra.prefillPerSec ?? null, decodePerSec: extra.decodePerSec ?? null,
+            totalSec: (performance.now() - asked) / 1000, ...(extra.error ? { error: extra.error } : {}),
+          });
+          loadSec = null;
+        };
         try {
           const reply = await Promise.race([run, timeout]);
+          const u = reply.usage;
+          measure({ promptTokens: u?.prompt_tokens, replyTokens: u?.completion_tokens, prefillPerSec: u?.extra?.prefill_tokens_per_s, decodePerSec: u?.extra?.decode_tokens_per_s });
           return reply.choices[0]?.message?.content ?? '';
         } catch (err) {
-          throw toAppError(err);
+          const e = toAppError(err);
+          measure({ error: e.code });
+          throw e;
         } finally {
           clearTimeout(timer);
         }
