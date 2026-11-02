@@ -13,7 +13,7 @@ const NAV: { id: SettingsSection; title: string; sub: string; Icon: typeof Info 
   { id: 'ia', title: 'IA e provedores', sub: 'Como o app entende seus pedidos, chaves e modelos', Icon: Sparkles },
   { id: 'transcricao', title: 'Transcrição', sub: 'Precisão da legenda e modelos locais', Icon: Captions },
   { id: 'armazenamento', title: 'Armazenamento', sub: 'Projetos, downloads e espaço usado', Icon: HardDrive },
-  { id: 'editor', title: 'Editor e aparência', sub: 'Tema, painéis e atalhos', Icon: SlidersHorizontal },
+  { id: 'editor', title: 'Editor e aparência', sub: 'Idioma, tema, painéis e atalhos', Icon: SlidersHorizontal },
   { id: 'privacidade', title: 'Privacidade e segurança', sub: 'O que sai do computador, chaves e autorizações', Icon: ShieldCheck },
   { id: 'sobre', title: 'Sobre e diagnóstico', sub: 'Versão, recursos do navegador e erros', Icon: Info },
 ];

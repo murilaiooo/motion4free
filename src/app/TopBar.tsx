@@ -1,6 +1,7 @@
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { Check, CloudOff, Download, Moon, Redo2, Settings, Sun, Undo2 } from 'lucide-react';
 import { openSettings, type SettingsSection } from './settings/route';
+import { LanguageToggle } from './LanguageToggle';
 
 export type SaveState = 'saved' | 'saving' | 'off';
 
@@ -51,8 +52,20 @@ export function ThemeToggle() {
   );
 }
 
-/** Botão de Configurações, sempre visível (com nome, não só ícone) em todas as telas. */
+/**
+ * Botão de Configurações, sempre visível (com nome, não só ícone) em todas as telas.
+ * Desde a v0.40 vem junto do botão de idioma EN/PT, para o idioma também estar em todas as telas.
+ */
 export function SettingsButton({ section, compact = false }: { section?: SettingsSection; compact?: boolean }) {
+  return (
+    <span className="settings-cluster">
+      <LanguageToggle />
+      <SettingsOnlyButton section={section} compact={compact} />
+    </span>
+  );
+}
+
+function SettingsOnlyButton({ section, compact }: { section?: SettingsSection; compact: boolean }) {
   return (
     <button className="ghost settings-btn" onClick={() => openSettings(section)} data-testid="open-settings" aria-label="Configurações" data-tip="IA, legenda, armazenamento, aparência e privacidade">
       <Settings size={17} aria-hidden />

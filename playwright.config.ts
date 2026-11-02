@@ -9,6 +9,8 @@ export default defineConfig({
   timeout: 120_000,
   use: {
     baseURL: 'http://localhost:4173',
+    // os testes leem os textos em português; sem isto o app abriria em inglês (idioma do navegador de teste)
+    locale: 'pt-BR',
     launchOptions: process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
   },
   webServer: {

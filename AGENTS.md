@@ -32,6 +32,7 @@ Documentar decisões arquiteturais em ADR, atualizar docs com testes e exemplos 
 ## Erros e versão (pedido do responsável, 20/10/2026)
 - Todo problema que o usuário pode ver tem um código próprio `M4F-xxx` em `src/core/errors.ts`, documentado em `docs/erros.md`. Nunca mostrar mensagem genérica; erro novo ganha código novo.
 - Toda mudança publicada sobe a versão em `package.json` e ganha entrada em `docs/CHANGELOG.md`. A versão e o commit aparecem no rodapé do app.
+- O app tem inglês e português (ADR-0041). Escreva o texto em português no componente, como sempre, e acrescente a tradução em `src/i18n/en/<área>.ts`; sem tradução o texto só aparece em português. Não localize elementos pelo texto ou `aria-label` (mudam com o idioma): use `data-*`.
 
 ## Critérios para mudanças futuras
 Uma mudança em motor de corte exige casos de fala, sync e áudio. Motion exige teste de frames/seek e licenças. IA exige validação semântica, custo e regressão. Export exige arquivo real e inspeção, não apenas sucesso da UI.

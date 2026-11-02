@@ -28,6 +28,7 @@ import { onCredentialChange } from '../../ai/credentials/keys';
 import { PRICING_LABEL, PROVIDERS, PROVIDER_IDS, keyLooksWrong, priceText, type ModelInfo, type ProviderId } from '../../ai/providers/registry';
 import { ErrorBox } from '../ErrorBox';
 import { LocalModelPicker, activeAiScope, getAiSettings, onAiSettingsChange, setAiSettings, useAiSettings, useWebGpu, type AiMode } from '../AiOptions';
+import { localeTag } from '../../i18n/locale';
 
 /**
  * Configurações › IA e provedores (v0.27, issue #73): como o app entende os pedidos por texto.
@@ -477,7 +478,7 @@ function ProviderPanel({ id, task }: { id: ProviderId; task: TextAiTask }) {
       {key && models && (
         <div className="set-sub" data-testid="model-list">
           <p className="set-sub-title">Escolha e teste um modelo</p>
-          <p className="hint">Para: <b>{PURPOSES.find(item => item.id === task)?.label}</b>. Catálogo consultado em {loaded && new Date(loaded.at).toLocaleString('pt-BR')}. Teste e depois clique em “Usar nesta tarefa” para aplicar só a essa função. O botão “Usar este” altera a configuração principal, mesmo sem teste. Preços e compatibilidade dependem do serviço e da sua conta.</p>
+          <p className="hint">Para: <b>{PURPOSES.find(item => item.id === task)?.label}</b>. Catálogo consultado em {loaded && new Date(loaded.at).toLocaleString(localeTag())}. Teste e depois clique em “Usar nesta tarefa” para aplicar só a essa função. O botão “Usar este” altera a configuração principal, mesmo sem teste. Preços e compatibilidade dependem do serviço e da sua conta.</p>
           <label className="set-check">
             <input type="checkbox" checked={consent} onChange={(event) => setAiSettings({ consent: event.target.checked ? [...s.consent.filter(c => c !== id), id] : s.consent.filter(c => c !== id) })} data-testid="consent-quick" />
             <span>Autorizo pedidos de teste contendo <b>apenas texto fictício</b> ao {p.name}. Cada envio ainda precisa da minha confirmação. Não autoriza áudio ou vídeo.</span>
@@ -548,7 +549,7 @@ function ProviderPanel({ id, task }: { id: ProviderId; task: TextAiTask }) {
                         </button>
                       )}
                       {cardTest?.id === m.id && cardTest.kind === 'ok' && <>
-                        <small className="hint" role="status">Microteste de texto concluído em {cardTest.elapsedMs === undefined ? '?' : `${(cardTest.elapsedMs / 1000).toFixed(1).replace('.', ',')} s`} ({cardTest.at ? new Date(cardTest.at).toLocaleTimeString('pt-BR') : 'agora'}). Não comprova qualidade em vídeos reais.</small>
+                        <small className="hint" role="status">Microteste de texto concluído em {cardTest.elapsedMs === undefined ? '?' : `${(cardTest.elapsedMs / 1000).toFixed(1).replace('.', ',')} s`} ({cardTest.at ? new Date(cardTest.at).toLocaleTimeString(localeTag()) : 'agora'}). Não comprova qualidade em vídeos reais.</small>
                         <button type="button" className="sm primary" onClick={() => selectForTask(m)} data-testid={`task-use-model-${m.id}`}>Usar nesta tarefa</button>
                       </>}
                       {activeForTask === m.id && <small className="hint" role="status" data-testid={`task-active-${m.id}`}>Escolhido para {PURPOSES.find(item => item.id === task)?.label}. {key && consent ? 'Chave e autorização abertas nesta aba.' : 'Precisa de chave e autorização válidas.'}</small>}

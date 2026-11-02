@@ -95,7 +95,7 @@ export function ClipReviewWorkspace({
             <div className="clips-preview-quick">
               <button className="sm ghost" onClick={() => {
                 setExpanded(playingItem.uid);
-                document.querySelector(`[data-testid="clip-card"]:has([aria-label="Selecionar clipe ${work.items.indexOf(playingItem) + 1}"])`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                document.querySelector(`[data-testid="clip-card"]:has([data-clip-number="${work.items.indexOf(playingItem) + 1}"])`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
               }}>
                 <Layers2 size={14} aria-hidden /> Revisar este clipe
               </button>

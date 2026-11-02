@@ -2,6 +2,8 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
 import { registerOfflineShell } from './app/offline-shell';
+import { startI18n } from './i18n/dom';
+import { EN } from './i18n/dictionary';
 import './app/theme.css';
 import './app/app.css';
 import './app/cards.css';
@@ -12,6 +14,9 @@ try {
 } catch {
   // sem armazenamento: tema escuro
 }
+
+// idioma (v0.40): traduz a tela antes do primeiro desenho; o botão EN/PT troca na hora
+startI18n(EN);
 
 registerOfflineShell();
 

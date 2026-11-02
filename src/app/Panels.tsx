@@ -6,6 +6,7 @@ import { diffPlans } from '../editorial/diff';
 import { referenceFromPixels } from '../editorial/reference';
 import { History, ImageUp, RotateCcw, Save, Sparkles, Trash2 } from 'lucide-react';
 import { ErrorBox } from './ErrorBox';
+import { localeTag } from '../i18n/locale';
 
 const fmt = (s: number) => `${s.toFixed(1).replace('.', ',')} s`;
 
@@ -153,7 +154,7 @@ export function VersionsPanel({
             <li key={v.id} className={`card version ${comparing === v.id ? 'comparing' : ''}`} data-testid={`version-${v.id}`}>
               <div className="version-head">
                 <b>{v.name}</b>
-                <small className="hint">{new Date(v.savedAt).toLocaleString('pt-BR')}</small>
+                <small className="hint">{new Date(v.savedAt).toLocaleString(localeTag())}</small>
               </div>
               <div className="version-actions">
                 <button className="sm" onClick={() => onRestore(v)} disabled={disabled} data-testid={`version-restore-${v.id}`}>

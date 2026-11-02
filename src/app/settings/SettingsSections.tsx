@@ -17,6 +17,7 @@ import { asrProblem, asrRouteLabel, setAsrRoute, useAsrRoute } from '../../asr/r
 import { ASR_APIS } from '../../asr/remote-plan';
 import { SPEECH_LANGUAGE, describeGpu } from '../../core/asr-models';
 import type { ShareLine } from '../../core/privacy-status';
+import { LanguageToggle } from '../LanguageToggle';
 import { usePrivacyStatus } from '../usePrivacyStatus';
 
 /* ---------- Transcrição ---------- */
@@ -185,6 +186,11 @@ export function AppearanceSection() {
   const [reset, setReset] = useState<'no' | 'yes' | 'failed'>('no');
   return (
     <div className="stack">
+      <div className="set-sub" data-testid="settings-language">
+        <p className="set-sub-title">Idioma do app</p>
+        <p className="hint">O app segue o idioma do navegador na primeira visita. A escolha fica guardada neste navegador. Não muda a fala nem as legendas do vídeo.</p>
+        <LanguageToggle large />
+      </div>
       <div className="set-sub">
         <p className="set-sub-title">Tema</p>
         <p className="hint">As cores da tela do app. Não muda nada no vídeo que você exporta.</p>
