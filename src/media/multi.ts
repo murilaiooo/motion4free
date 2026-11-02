@@ -1,3 +1,4 @@
+import type { AsrRequest } from '../core/asr-models';
 import type { ClipRef, Framing } from '../core/types';
 import type { Word, TimeRange } from '../core/types';
 import { clipLayout, placeRanges, placeWords } from '../engine/clips';
@@ -42,7 +43,7 @@ export async function openClips(
   files: File[],
   transcriber?: Transcriber,
   onStep?: OnProgress,
-  asrMode?: string,
+  asrMode?: AsrRequest,
   firstClipNumber = 1,
 ): Promise<MultiSessionInput> {
   if (files.length === 0) throw new AppError('SEM_VIDEO');
@@ -88,7 +89,7 @@ export async function openClips(
         inner({ label: 'Procurando silêncios', phase: 'silencios', fraction: null });
         silences = findSilences(mono, 16000);
         if (transcriber) {
-          const r = await transcriber.transcribe(mono.slice(), media.durationSec, planAsr(silences, media.durationSec), inner, asrMode as any);
+          const r = await transcriber.transcribe(mono.slice(), media.durationSec, planAsr(silences, media.durationSec), inner, asrMode);
           words = toWords(cleanTranscript(r.words, silences)).map((w) => ({ ...w, id: `${id}:${w.id}` })); // IDs únicos entre clipes
           asrModel ??= r.model;
           warnings.push(...r.notices);

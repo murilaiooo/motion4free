@@ -19,6 +19,11 @@ function commit(): string {
 export default defineConfig({
   base: './',
   plugins: [react()],
+  resolve: {
+    // O parakeet.js importa `onnxruntime-web`; o Transformers.js usa `onnxruntime-web/webgpu`. Apontar os
+    // dois para a mesma entrada evita carregar o runtime (e o .wasm de ~25 MB) duas vezes (ADR-0039).
+    alias: [{ find: /^onnxruntime-web$/, replacement: 'onnxruntime-web/webgpu' }],
+  },
   worker: { format: 'es' },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),

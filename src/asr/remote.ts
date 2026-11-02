@@ -2,7 +2,7 @@ import { AppError } from '../core/errors';
 import { formatClock } from '../core/bytes';
 import type { OnProgress } from '../core/progress';
 import type { AsrWindow } from '../analysis/asr-windows';
-import type { AsrCandidateId, AsrMode } from '../core/asr-models';
+import type { AsrRequest } from '../core/asr-models';
 import { getKey } from '../ai/credentials/keys';
 import { PROVIDERS, allowedUrl, providerErrorKey, type ProviderId } from '../ai/providers/registry';
 import { ASR_APIS, encodeWav, parseVerboseWords, planAsrChunks, sliceSamples } from './remote-plan';
@@ -65,7 +65,7 @@ export async function transcribeByApi(provider: ProviderId, model: string, audio
  */
 export class RoutedTranscriber implements Transcriber {
   constructor(private local: Transcriber) {}
-  async transcribe(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: OnProgress, mode?: AsrMode | AsrCandidateId[]): Promise<TranscriptResult> {
+  async transcribe(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: OnProgress, mode?: AsrRequest): Promise<TranscriptResult> {
     const route = getAsrRoute();
     if (route.kind !== 'api') return this.local.transcribe(audio16k, durationSec, windows, onProgress, mode);
     const problem = asrProblem(route);

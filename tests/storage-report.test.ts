@@ -84,6 +84,7 @@ describe('classificação dos arquivos em cache', () => {
   it('modelo de legenda pelo repositório (espelho do site ou Hugging Face direto)', () => {
     expect(classifyCacheEntry('transformers-cache', `${SITE}/hf/onnx-community/whisper-small_timestamped/resolve/main/x.onnx`)).toMatchObject({ kind: 'asr-model', label: 'Whisper small' });
     expect(classifyCacheEntry('transformers-cache', 'https://huggingface.co/onnx-community/whisper-tiny/resolve/main/x.onnx')).toMatchObject({ kind: 'asr-model', label: 'whisper-tiny' });
+    expect(classifyCacheEntry('motion4free-parakeet', `${SITE}/hf/ysdede/parakeet-tdt-0.6b-v3-onnx/resolve/main/encoder-model.int8.onnx`)).toMatchObject({ id: 'asr:ysdede/parakeet-tdt-0.6b-v3-onnx', kind: 'asr-model', label: 'Parakeet v3' });
   });
   it('modelo de IA pelos pesos e pela biblioteca WebGPU', () => {
     expect(classifyCacheEntry('webllm/model', `${SITE}/hf/mlc-ai/Qwen3-4B-q4f16_1-MLC/resolve/main/a.bin`)).toMatchObject({ id: 'ai:forte', kind: 'ai-model' });
