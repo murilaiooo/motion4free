@@ -5,6 +5,7 @@ import { filterTemplates, listTemplates, templateTags, type TemplateInfo } from 
 import { ensureFonts } from '../media/fonts';
 import { paintBackdrop, renderShot } from './Gallery';
 import { onUserBackdrop, userBackdrop } from './thumb-backdrop';
+import { useLocale } from './LanguageToggle';
 
 let backdrop: HTMLCanvasElement | null = null;
 const getBackdrop = () => (backdrop ??= paintBackdrop(540, 960));
@@ -40,6 +41,8 @@ const DEMO_SEC = 28;
  */
 export function TemplateThumb({ styleId, t, width = 180, playing = false, className = '', plain = false }: { styleId: string; t: number; width?: number; playing?: boolean; className?: string; plain?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // idioma do texto de exemplo (v0.40.1): redesenha ao trocar EN/PT
+  const locale = useLocale();
   const [ready, setReady] = useState(false);
   const [seen, setSeen] = useState(false);
   // só baixa as fontes e desenha quando o cartão chega perto da tela (15 modelos, ~13 famílias de letra)
@@ -79,7 +82,7 @@ export function TemplateThumb({ styleId, t, width = 180, playing = false, classN
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [ready, playing, styleId, t, plain, userBg]);
+  }, [ready, playing, styleId, t, plain, userBg, locale]);
   const dpr = typeof devicePixelRatio === 'number' ? Math.min(2, devicePixelRatio) : 1;
   const w = Math.round(width * dpr);
   return <canvas ref={ref} className={`tpl-thumb ${className}`} width={w} height={Math.round((w * 16) / 9)} aria-hidden data-ready={ready ? '1' : '0'} data-backdrop={userBg ? 'user' : 'demo'} />;

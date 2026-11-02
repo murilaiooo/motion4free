@@ -21,7 +21,53 @@ function cap(id: string, text: string, start: number, end: number, wordStarts: n
   return { id, text, start, end, wordIds: [], wordStarts };
 }
 
-export function galleryPlan(style: StyleDNA): EditPlan {
+/** Textos do vídeo de demonstração em inglês (v0.40.1): mesmo número de palavras, para o tempo de cada uma bater. */
+const SAMPLE_EN: Record<string, string> = {
+  'Três dicas que mudam tudo': 'Three tips that change everything',
+  'Noventa por cento desistem': 'Ninety percent just quit',
+  'Segundo, durma bem': 'Second, sleep well',
+  'Oi, meu nome é Ana Souza': 'Hi, my name is Ana Souza',
+  'O segredo é ter consistência': 'The secret is staying consistent',
+  'Siga para mais dicas': 'Follow for more tips',
+  'desistem antes de três meses': 'quit before three months',
+  'Comece pequeno': 'Start small',
+  'Durma bem': 'Sleep well',
+  'Anote o progresso': 'Track your progress',
+  'Você sabe por que a maioria desiste?': 'Do you know why most people quit?',
+  segredo: 'secret',
+  'Siga para mais': 'Follow for more',
+  'Segue pra mais': 'Follow for more',
+  'Continue acompanhando': 'Keep watching',
+  'Clique no link': 'Click the link',
+  'siga para mais': 'follow for more',
+  'Ouça o episódio completo': 'Listen to the full episode',
+  'Salve para não esquecer': 'Save it for later',
+  'Assista até o fim': 'Watch until the end',
+  'Acompanhe as notícias': 'Follow the news',
+  'Segue pro próximo nível': 'Follow for the next level',
+  'Siga para a próxima página': 'Follow for the next page',
+  'Salva e compartilha': 'Save and share',
+  'Descubra mais': 'Discover more',
+};
+
+/** Vídeo de demonstração dos modelos; `lang: 'en'` troca os textos de exemplo para inglês. */
+export function galleryPlan(style: StyleDNA, lang: 'pt' | 'en' = 'pt'): EditPlan {
+  const plan = galleryPlanPt(style);
+  if (lang !== 'en') return plan;
+  const tr = (text: string) => SAMPLE_EN[text] ?? text;
+  return {
+    ...plan,
+    captions: plan.captions.map((c) => ({ ...c, text: tr(c.text) })),
+    scenes: plan.scenes.map((sc) => {
+      const out: Record<string, unknown> = { ...sc };
+      for (const key of ['text', 'label', 'subtitle'] as const) if (typeof out[key] === 'string') out[key] = tr(out[key] as string);
+      if (Array.isArray(out.items)) out.items = (out.items as { text: string; at: number }[]).map((it) => ({ ...it, text: tr(it.text) }));
+      return out as unknown as typeof sc;
+    }),
+  };
+}
+
+function galleryPlanPt(style: StyleDNA): EditPlan {
   return {
     version: 6,
     clips: [{ id: 'c1', name: '', duration: 28, framing: null }],

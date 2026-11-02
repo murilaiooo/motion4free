@@ -3,6 +3,8 @@ import { presetById } from '../core/presets';
 import type { StyleDNA } from '../core/style';
 import { TEMPLATES } from '../core/templates';
 import { GALLERY_SHOTS, galleryPlan } from '../editorial/sample';
+import { getLocale } from '../i18n/locale';
+import { useLocale } from './LanguageToggle';
 import { ensureFonts } from '../media/fonts';
 import { drawFrame } from '../render/frame';
 
@@ -64,7 +66,7 @@ export function paintBackdrop(w: number, h: number): HTMLCanvasElement {
 /** Desenha um quadro do plano de demonstração no estilo pedido. */
 export function renderShot(canvas: HTMLCanvasElement, styleId: string, t: number, backdrop: HTMLCanvasElement): void {
   const style = presetById(styleId)!;
-  const plan = galleryPlan(style);
+  const plan = galleryPlan(style, getLocale());
   const ctx = canvas.getContext('2d')!;
   const s = canvas.width / plan.output.width;
   ctx.setTransform(s, 0, 0, s, 0, 0);
@@ -78,6 +80,7 @@ declare global {
 }
 
 export function Gallery() {
+  const locale = useLocale();
   const [ready, setReady] = useState(false);
   const backdrop = useRef<HTMLCanvasElement | null>(null);
   const refs = useRef(new Map<string, HTMLCanvasElement>());
@@ -140,7 +143,7 @@ export function Gallery() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [locale]);
 
   return (
     <section className="gallery" data-testid="gallery" data-ready={ready ? '1' : '0'}>

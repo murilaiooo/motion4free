@@ -21,6 +21,11 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.40.1 — 02/11/2026 — publicada com OK do responsável
+
+- Em inglês, as miniaturas dos modelos (legenda, título, número, lista, nome e chamada final de exemplo) agora mostram texto em inglês e redesenham ao trocar EN/PT. O vídeo da pessoa não muda.
+- Não testado (o responsável testa).
+
 ## v0.40.0 — 02/11/2026 — publicada com OK do responsável
 
 - App em inglês e português. Na primeira visita segue o idioma do navegador (português → PT, outro → EN); o botão EN | PT fica ao lado de Configurações em todas as telas e em Configurações › Editor e aparência, e a escolha fica guardada neste navegador.
