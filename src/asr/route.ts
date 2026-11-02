@@ -10,6 +10,8 @@ import { ASR_APIS, isAsrProvider } from './remote-plan';
  */
 export interface AsrRoute {
   kind: 'local' | 'api';
+  /** Idioma falado, independente da língua da interface e da legenda. */
+  speechLanguage: 'auto' | 'pt' | 'en';
   provider: ProviderId | null;
   model: string | null;
   /** serviços para os quais a pessoa autorizou enviar o áudio da fala */
@@ -19,7 +21,7 @@ export interface AsrRoute {
 }
 
 const KEY = 'm4f-asr';
-const DEFAULTS: AsrRoute = { kind: 'local', provider: null, model: null, audioConsent: [], fallbackLocal: true };
+const DEFAULTS: AsrRoute = { kind: 'local', speechLanguage: 'auto', provider: null, model: null, audioConsent: [], fallbackLocal: true };
 
 function read(): AsrRoute {
   try {
@@ -29,6 +31,7 @@ function read(): AsrRoute {
     const model = provider && typeof raw.model === 'string' && ASR_APIS[provider]!.models.some((m) => m.id === raw.model) ? raw.model : provider ? ASR_APIS[provider]!.models[0]!.id : null;
     return {
       kind: raw.kind === 'api' ? 'api' : 'local',
+      speechLanguage: raw.speechLanguage === 'pt' || raw.speechLanguage === 'en' ? raw.speechLanguage : 'auto',
       provider,
       model,
       audioConsent: Array.isArray(raw.audioConsent) ? raw.audioConsent.filter(isProviderId).filter(isAsrProvider) : [],

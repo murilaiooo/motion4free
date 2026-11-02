@@ -56,6 +56,8 @@ import { AudioPanel } from './AudioPanel';
 import { KeyframePanel } from './KeyframePanel';
 import { MaskPanel } from './MaskPanel';
 import { planCues, toSrt } from '../editorial/subtitles';
+import { applySubtitleTranslation, selectSubtitleLanguage, translatedCaptions, translationGroups } from '../editorial/subtitle-translation';
+import { translateEnglishToPortuguese } from '../translation/en-pt';
 import { DEFAULT_SETUP, migrateSetupDefaults, type CreativeSetup } from '../core/production';
 import { StoryboardReview } from './production/StoryboardReview';
 import { applyCreativeFinding } from '../editorial/creative-plan';
@@ -268,6 +270,13 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
   };
   const [editingEl, setEditingEl] = useState<ElementRef | null>(null);
   const [editError, setEditError] = useState<AppError | null>(null);
+  const [translationProgress, setTranslationProgress] = useState<{ done: number; total: number } | null>(null);
+  const [translationBusy, setTranslationBusy] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
+  const translationAbort = useRef<AbortController | null>(null);
+  const latestTranslationHistory = useRef({ history, onHistory });
+  latestTranslationHistory.current = { history, onHistory };
+  useEffect(() => () => { translationAbort.current?.abort(); }, [session.media]);
   const [playerError, setPlayerError] = useState<AppError | null>(null);
   const [exporting, setExporting] = useState<number | null>(null);
   const exportProgressInfo = useMemo(() => (exporting === null ? null : exportProgress(exporting, 'Gerando o vídeo final')), [exporting]);
@@ -376,6 +385,36 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
     },
     [history, onHistory],
   );
+
+  async function translateCaptions() {
+    if (translationAbort.current || !plan.captions.length) return;
+    const startedPlan = plan;
+    const originals = startedPlan.subtitleTranslation?.original ?? startedPlan.captions;
+    const groups = translationGroups(originals);
+    if (!groups.length) { setTranslationError('Não há texto para traduzir.'); return; }
+    const controller = new AbortController();
+    translationAbort.current = controller;
+    setTranslationBusy(true);
+    setTranslationError(null);
+    setTranslationProgress({ done: 0, total: groups.length });
+    try {
+      const texts = await translateEnglishToPortuguese(groups.map((g) => g.source), (done, total) => setTranslationProgress({ done, total }), controller.signal);
+      const translated = translatedCaptions(groups, texts);
+      // Não sobrescrever edições feitas durante o download e a tradução.
+      const current = latestTranslationHistory.current;
+      if (current.history.present !== startedPlan) {
+        setTranslationError('O projeto mudou durante a tradução. Clique em traduzir novamente.');
+        return;
+      }
+      current.onHistory(commitEdit(current.history, applySubtitleTranslation(startedPlan, translated)));
+    } catch (err) {
+      if (!controller.signal.aborted) setTranslationError(`Não foi possível traduzir: ${err instanceof Error ? err.message : 'erro inesperado'}.`);
+    } finally {
+      if (translationAbort.current === controller) translationAbort.current = null;
+      setTranslationBusy(false);
+      setTranslationProgress(null);
+    }
+  }
 
   /** Como apply, mas a operação também diz o que selecionar depois (pedaço colado, elemento novo...). */
   const run = useCallback(
@@ -839,6 +878,27 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
             </section>
           </div>
           <div role="tabpanel" id="panel-legendas" aria-labelledby="tab-legendas" hidden={tab !== 'legendas'} className="stack">
+            <section className="stack" data-testid="subtitle-language-panel">
+              <h3 className="section-title">Idioma da legenda</h3>
+              {plan.subtitleTranslation ? (
+                <div className="set-options">
+                  <label className="set-option">
+                    <input type="radio" name="subtitle-track" checked={plan.subtitleTranslation.active === 'original'} onChange={() => apply((p) => selectSubtitleLanguage(p, 'original'))} disabled={off || translationBusy} data-testid="subtitle-track-original" />
+                    <span><b>Inglês (original)</b><small className="hint">Mantém a fala em inglês e mostra a transcrição original.</small></span>
+                  </label>
+                  <label className="set-option">
+                    <input type="radio" name="subtitle-track" checked={plan.subtitleTranslation.active === 'pt-BR'} onChange={() => apply((p) => selectSubtitleLanguage(p, 'pt-BR'))} disabled={off || translationBusy} data-testid="subtitle-track-pt" />
+                    <span><b>Português (traduzido)</b><small className="hint">Mantém o áudio em inglês e mostra a legenda traduzida.</small></span>
+                  </label>
+                </div>
+              ) : <p className="hint">A legenda acompanha o idioma original da fala. Para áudio em inglês, você também pode criar uma versão em português.</p>}
+              <button type="button" className="sm" onClick={() => void translateCaptions()} disabled={off || translationBusy || !plan.captions.length} data-testid="translate-subtitles">
+                <Captions size={14} aria-hidden /> {plan.subtitleTranslation ? 'Refazer tradução inglês → português' : 'Traduzir inglês → português (beta)'}
+              </button>
+              <p className="hint">Tradução local de inglês para português: baixa um modelo gratuito na primeira vez. O áudio não muda nem é enviado; revise nomes e expressões antes de exportar. O tempo da tradução é aproximado por frase.</p>
+              {translationBusy && <p role="status" data-testid="translation-progress">{translationProgress?.done ? `Traduzindo ${translationProgress.done} de ${translationProgress.total} trechos…` : 'Carregando o modelo de tradução…'} <button type="button" className="link" onClick={() => translationAbort.current?.abort()}>Cancelar</button></p>}
+              {translationError && <p className="hint warn" role="alert" data-testid="translation-error">{translationError}</p>}
+            </section>
             <details className="fold" open>
               <summary>Estilo das legendas</summary>
               <CaptionStylePanel plan={plan} onApply={apply} disabled={off} />

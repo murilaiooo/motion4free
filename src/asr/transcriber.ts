@@ -6,6 +6,7 @@ import { AppError } from '../core/errors';
 import { formatClock } from '../core/bytes';
 import type { OnProgress } from '../core/progress';
 import { detectAsrCapability } from './capability';
+import { getAsrRoute } from './route';
 import type { FromWorker } from './protocol';
 import type { AsrChunk } from './words';
 
@@ -85,7 +86,7 @@ function runLadder(audio16k: Float32Array, durationSec: number, windows: AsrWind
       worker.terminate();
       reject(new AppError('WORKER_FALHOU', `${e.message || 'sem mensagem'} ${e.filename ?? ''}:${e.lineno ?? ''}`));
     };
-    worker.postMessage({ type: 'transcribe', audio: audio16k, language: 'portuguese', windows, ladder }, [audio16k.buffer]);
+    worker.postMessage({ type: 'transcribe', audio: audio16k, language: getAsrRoute().speechLanguage, windows, ladder }, [audio16k.buffer]);
   });
 }
 

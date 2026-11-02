@@ -10,7 +10,7 @@ const thirtyOne = () => { const buffer = readFileSync(SHORT); return Array.from(
 test('#154: the editor limits are shown before choosing, and 31 videos are caught before any work', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('import-limits')).toContainText('até 30 vídeos, 3 min cada, 10 min somados');
-  await expect(page.getByTestId('import-limits')).toContainText('fala em português');
+  await expect(page.getByTestId('import-limits')).toContainText('fala em vários idiomas');
   await page.getByTestId('file-input').setInputFiles(thirtyOne());
   const warn = page.getByTestId('import-limit-warning');
   await expect(warn).toBeVisible({ timeout: 30_000 });
@@ -69,6 +69,19 @@ test('#153: privacy says what leaves the computer now, per data type', async ({ 
   await expect(page.getByTestId('privacy-audio')).toHaveAttribute('data-state', 'blocked');
   await expect(page.getByTestId('privacy-audio')).toContainText('nada é enviado');
   await expect(page.getByTestId('privacy-video')).toHaveAttribute('data-state', 'local');
+});
+
+test('transcription language can be chosen independently of the UI and persists after reopening settings', async ({ page }) => {
+  await page.goto('/');
+  await settings(page, 'transcricao');
+  await expect(page.getByTestId('asr-language-auto')).toBeChecked();
+  await page.getByTestId('asr-language-en').check();
+  await expect(page.getByTestId('asr-language-en')).toBeChecked();
+  await settings(page, 'privacidade');
+  await settings(page, 'transcricao');
+  await expect(page.getByTestId('asr-language-en')).toBeChecked();
+  await page.getByTestId('asr-language-pt').check();
+  await expect(page.getByTestId('asr-language-pt')).toBeChecked();
 });
 
 test('#153: the landing does not promise that audio never leaves when the API route is authorized', async ({ page }) => {

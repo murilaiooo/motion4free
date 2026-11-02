@@ -3,7 +3,7 @@ import { env, pipeline, type AutomaticSpeechRecognitionPipeline } from '@hugging
 import { groupPieces, looksDegenerate, type AsrChunk, type WindowResult } from '../analysis/asr-merge';
 import type { AsrWindow } from '../analysis/asr-windows';
 import { parakeetWordsToChunks, type ParakeetWord } from '../analysis/parakeet-words';
-import { ASR_CANDIDATES, PARAKEET_FILES, parakeetFiles, whisperOptions, type AsrCandidateId } from '../core/asr-models';
+import { ASR_CANDIDATES, PARAKEET_FILES, parakeetFiles, whisperOptions, type AsrCandidateId, type SpeechLanguage } from '../core/asr-models';
 import { AppError, describeError, httpErrorFromUrl, networkErrorFromUrl, toAppError } from '../core/errors';
 import { HF_PREFIX, mirrorCdnUrl } from '../core/mirror';
 import type { FromWorker, ToWorker } from './protocol';
@@ -77,13 +77,13 @@ interface AsrEngineRun {
 }
 
 /** Carrega um degrau da escada com o motor certo. */
-async function load(id: AsrCandidateId): Promise<AsrEngineRun> {
+async function load(id: AsrCandidateId, language: SpeechLanguage): Promise<AsrEngineRun> {
   if (ASR_CANDIDATES[id].engine === 'parakeet') return loadParakeet(id);
   const asr = await loadWhisper(id);
   return {
     canRetry: true,
     run: async (piece, retry) => {
-      const out = await asr(piece, whisperOptions(retry));
+      const out = await asr(piece, whisperOptions(retry, language));
       const result = Array.isArray(out) ? out[0]! : out;
       return (result.chunks ?? []) as AsrChunk[];
     },
@@ -286,7 +286,7 @@ async function dispose(asr: AsrEngineRun | null) {
 }
 
 self.onmessage = async (e: MessageEvent<ToWorker>) => {
-  const { audio, windows, ladder } = e.data;
+  const { audio, windows, ladder, language } = e.data;
   const results: WindowResult[] = [];
   const failures: AppError[] = [];
   let step = 0;
@@ -318,7 +318,7 @@ self.onmessage = async (e: MessageEvent<ToWorker>) => {
     }
     if (!asr) {
       try {
-        asr = await load(ladder[step]!);
+        asr = await load(ladder[step]!, language);
       } catch (err) {
         if (fallBack(err, 'MODELO_CARREGAR')) continue;
         const last = failures[failures.length - 1]!;

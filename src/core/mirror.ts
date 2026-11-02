@@ -23,7 +23,7 @@ export const CDN_PREFIX = '/cdn/';
 export const GH_PREFIX = '/gh/';
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
-const HF_REPOS = [...ASR_MODEL_REPOS, ...MODELS.map((m) => m.repo)];
+const HF_REPOS = [...ASR_MODEL_REPOS, ...MODELS.map((m) => m.repo), 'Xenova/opus-mt-en-ROMANCE'];
 const HF_PATH = new RegExp(`^${HF_PREFIX}(${HF_REPOS.map(esc).join('|')})\\/resolve\\/[\\w.-]+\\/[\\w./-]+$`);
 const CDN_PATH = /^\/cdn\/npm\/onnxruntime-web@[\w.-]+\/dist\/[\w.-]+$/;
 const GH_PATH = new RegExp(`^${GH_PREFIX}(${MODELS.map((m) => esc(m.lib)).join('|')})$`);

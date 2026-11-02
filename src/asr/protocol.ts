@@ -1,13 +1,13 @@
 import type { AsrWindow } from '../analysis/asr-windows';
 import type { WindowResult } from '../analysis/asr-merge';
-import type { AsrCandidateId } from '../core/asr-models';
+import type { AsrCandidateId, SpeechLanguage } from '../core/asr-models';
 import type { ErrorKey } from '../core/errors';
 
 /**
  * `windows`: janelas de até 28 s (mais 1 s de folga de cada lado), em segundos do original.
  * `ladder`: modelos em ordem de tentativa; se um falhar, o Worker passa para o próximo (ADR-0013).
  */
-export type ToWorker = { type: 'transcribe'; audio: Float32Array; language: string; windows: AsrWindow[]; ladder: AsrCandidateId[] };
+export type ToWorker = { type: 'transcribe'; audio: Float32Array; language: SpeechLanguage; windows: AsrWindow[]; ladder: AsrCandidateId[] };
 export type FromWorker =
   /** `loaded`/`total` em bytes somando todos os arquivos do modelo; `cached`: já estava guardado neste aparelho */
   | { type: 'progress'; stage: 'download'; fraction: number; model: AsrCandidateId; loaded: number; total: number; cached: boolean }

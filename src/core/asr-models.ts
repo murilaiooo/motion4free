@@ -323,15 +323,16 @@ export function estimateMinutes(id: AsrCandidateId, durationSec: number): number
  * não tem beam search de verdade nem a troca de temperatura do Whisper original). Na segunda tentativa de
  * uma janela com cara de laço, proíbe repetir sequências de 6 tokens.
  */
-/**
- * Idioma da fala que o app transcreve nesta versão. Telas (início, preparo, Configurações) leem
- * daqui para avisar ANTES da escolha do arquivo (#6): o vídeo abre em qualquer idioma, mas a legenda
- * e os cortes por palavra só são confiáveis em português.
- */
-export const SPEECH_LANGUAGE = { code: 'pt', whisper: 'portuguese', label: 'português' } as const;
+/** Modelos Whisper multilíngues; o modo automático deixa o próprio modelo identificar a fala. */
+export const SPEECH_LANGUAGE = { label: 'vários idiomas, incluindo português e inglês' } as const;
+export type SpeechLanguage = 'auto' | 'pt' | 'en';
 
-export function whisperOptions(retry = false): { language: 'portuguese'; task: 'transcribe'; return_timestamps: 'word'; no_repeat_ngram_size?: number } {
-  return { language: SPEECH_LANGUAGE.whisper, task: 'transcribe', return_timestamps: 'word', ...(retry ? { no_repeat_ngram_size: 6 } : {}) };
+export function whisperOptions(retry = false, language: SpeechLanguage = 'auto'):
+  { language?: 'portuguese' | 'english'; task: 'transcribe'; return_timestamps: 'word'; no_repeat_ngram_size?: number } {
+  return {
+    ...(language === 'pt' ? { language: 'portuguese' as const } : language === 'en' ? { language: 'english' as const } : {}),
+    task: 'transcribe', return_timestamps: 'word', ...(retry ? { no_repeat_ngram_size: 6 } : {}),
+  };
 }
 
 /** Texto curto para a opção "Precisão da legenda": qual modelo, onde roda e o download da primeira vez. */

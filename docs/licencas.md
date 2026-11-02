@@ -58,6 +58,15 @@ Não são empacotados no site: o navegador baixa sob demanda, pelo espelho (`/hf
 
 MIT, Apache-2.0 e CC-BY-4.0 permitem uso comercial; a CC-BY-4.0 pede atribuição, feita aqui e em Configurações › Sobre. **Reconferir nas páginas dos modelos antes de divulgar**: o ambiente de desenvolvimento não alcança o Hugging Face (ver [ADR-0013](decisions/0013-legenda-precisa.md)).
 
+## Tradução opcional inglês → português nas legendas
+
+| Recurso | Procedência | Licença | Distribuição |
+|---|---|---|---|
+| OPUS-MT en-ROMANCE / MarianMT (pesos) | [Helsinki-NLP/opus-mt-en-ROMANCE](https://huggingface.co/Helsinki-NLP/opus-mt-en-ROMANCE), projeto OPUS-MT do grupo Language Technology Research Group, Universidade de Helsinque | **CC-BY-4.0**: atribuição à equipe original, link para a licença e indicação de conversão | pesos não empacotados; baixados só ao pedir tradução |
+| Conversão ONNX para Transformers.js | [Xenova/opus-mt-en-ROMANCE](https://huggingface.co/Xenova/opus-mt-en-ROMANCE), derivada dos pesos acima, quantização int8 | respeita a atribuição CC-BY-4.0 dos pesos originais; a conversão ONNX é identificada | modelo baixado sob demanda do Hugging Face ou espelho `/hf/…` |
+
+A tradução roda com Transformers.js/ONNX Runtime Web no navegador, **em CPU (WASM)**; o vídeo e a transcrição não são enviados a APIs de IA. A faixa original em inglês é preservada. O idioma de destino é solicitado com o token `>>pt_BR<<`. A licença CC-BY-4.0 pode ser consultada em [creativecommons.org/licenses/by/4.0/](https://creativecommons.org/licenses/by/4.0/). A duração de cada frase traduzida é estimada a partir do alinhamento do áudio original, sem prometer sincronização palavra a palavra.
+
 ## IA opcional no navegador (desde a v0.4.0)
 Só é baixada se a pessoa ligar "IA no navegador" no painel avançado; o resto do app não depende dela.
 

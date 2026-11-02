@@ -38,6 +38,17 @@ export interface Caption {
    * distribuição proporcional ao tamanho das palavras.
    */
   wordStarts: number[];
+  /** Tradução de frase: os tempos pertencem à frase, não a cada palavra traduzida. */
+  translationCue?: boolean;
+}
+
+/** Faixas de legenda preservadas para alternar entre áudio inglês e texto português. */
+export interface SubtitleTranslation {
+  sourceLanguage: 'en';
+  targetLanguage: 'pt-BR';
+  active: 'original' | 'pt-BR';
+  original: Caption[];
+  translated: Caption[];
 }
 
 interface SceneBase {
@@ -177,6 +188,7 @@ export interface EditPlan {
   brief: CreativeBrief;
   segments: Segment[];
   captions: Caption[];
+  subtitleTranslation?: SubtitleTranslation;
   scenes: SceneInstance[];
   /** Opcional em projetos antigos; destaques seguem a fala, cortes e cópias. */
   semanticCues?: SemanticWordCue[];
