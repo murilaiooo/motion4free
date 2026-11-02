@@ -7,7 +7,7 @@ import { outputDuration, outputToSource } from '../engine/timeline';
 import { drawFrame } from '../render/frame';
 import type { DecodedAudio } from './audio';
 import { chooseCodecs } from './codecs';
-import { ensureEmojiFont, ensureFonts } from './fonts';
+import { ensureEmojiFont, ensureFonts, planNeedsCyrillic } from './fonts';
 import { planUsesEmoji } from '../core/emoji';
 import type { OpenedMedia } from './input';
 import { CLIP_CROSSFADE_SEC, spliceAudio } from './splice';
@@ -70,7 +70,7 @@ async function exportPlanUnsafe(media: OpenedMedia, audio: DecodedAudio | null, 
   const duration = Math.min(outputDuration(plan.segments), opts.maxDurationSec ?? Infinity);
   const frames = Math.floor(duration * fps);
   const codecs = await chooseCodecs(width, height);
-  const fonts = await ensureFonts(stylesOf(plan));
+  const fonts = await ensureFonts(stylesOf(plan), { cyrillic: planNeedsCyrillic(plan) });
   const emoji = planUsesEmoji(plan) ? await ensureEmojiFont() : { ok: true, detail: '' };
 
   const canvas = new OffscreenCanvas(width, height);
@@ -132,7 +132,7 @@ async function exportPlanUnsafeMulti(
   const duration = Math.min(outputDuration(plan.segments), opts.maxDurationSec ?? Infinity);
   const frames = Math.floor(duration * fps);
   const codecs = await chooseCodecs(width, height);
-  const fonts = await ensureFonts(stylesOf(plan));
+  const fonts = await ensureFonts(stylesOf(plan), { cyrillic: planNeedsCyrillic(plan) });
   const emoji = planUsesEmoji(plan) ? await ensureEmojiFont() : { ok: true, detail: '' };
 
   const canvas = new OffscreenCanvas(width, height);

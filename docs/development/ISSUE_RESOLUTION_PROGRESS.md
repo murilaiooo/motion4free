@@ -39,19 +39,24 @@ one timing-dependent check (pedido-ia now seeks instead of racing play/pause).
 | 2026-11-02 | #175 fix | Input ids built like Python Marian; per-passage validation (`translation-check.ts`); atomic track replacement; M4F-318/319; cue length follows the template. |
 | 2026-11-02 | v0.42.0 | PR #177 merged (`main` 05cc565); #174 closed as superseded; #175 and #171 commented. #175 stays open until the real-model test. |
 | 2026-11-02 | #176 slice A | Prompt inventory (`docs/development/PROMPT_INVENTORY.md`); jury no longer scores no-speech scenes, has anchors and a text-only rule; range-scope examples; PT/EN requests; dead `moments-ai.ts` removed (v0.42.1). |
-| 2026-11-02 | Suites | Unit 2015/2015, typecheck, build + license audit pass; full Playwright run 131 passed / 7 failed → the 7 fixed and re-run (40/40 in those files) + new `issue175-translation.spec.ts` passes. |
+| 2026-11-02 | v0.42.1 | PR #178 merged (`main` 2009017). |
+| 2026-11-02 | Suites (v0.42.x) | Unit 2015/2015, typecheck, build + license audit pass; full Playwright run 131 passed / 7 failed → the 7 fixed and re-run (40/40 in those files) + new `issue175-translation.spec.ts` passes. |
+
+| 2026-11-02 | #171 slice B (v0.43.0) | Spanish and Russian spoken-language options (Whisper, same model); Cyrillic subsets for every template face (or a close Cyrillic fallback) loaded only when the plan has Cyrillic text, used by preview, thumbnail and export; translation refuses a non-English source before any download (M4F-320) and rejects non-Latin output. Unit 2016/2016, typecheck, build + license audit, Playwright 141 passed / 2 skipped. |
 
 ## Current state
 
-- `main` has v0.42.0. Branch `claude/project-thread-hxiuyn` holds v0.42.1 (#176 slice A).
+- `main` has v0.42.1; branch `claude/project-thread-hxiuyn` holds v0.43.0 (#171 slice B).
 - #175 is waiting for the model-backed verification (the owner's test).
+- #171 stays open: per-segment language, detected-language record and WER fixtures need consent-cleared audio
+  and real model runs (Spanish/Russian accuracy is unmeasured).
 
 ## Next steps
 
 1. Run the translation with the real model (needs `huggingface.co` allowed in the environment, or the owner's
    test on the preview/production in Brave). Pin the model revision once fetched.
-2. #171: add Russian and other Whisper languages to the source-language setting with honest support labels;
-   record detected language; fixtures need consent-cleared audio.
+2. #171: Spanish/Russian done in v0.43.0. Remaining: per-segment language, recorded detected language, WER
+   fixtures with consent-cleared audio.
 3. #176: measured A/B baseline needs real models (owner's PC). The inventory and the concrete defects are done.
 4. #170/#173: prepare a local benchmark page/script the owner can run on the RTX 5060; leave issues open with
    precise blockers.

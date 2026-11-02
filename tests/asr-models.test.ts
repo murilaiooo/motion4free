@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ASR_CANDIDATES, NO_CAPABILITY, PARAKEET_FILES, asrLadder, canRunParakeet, canRunTurbo, classifyGpu, defaultAsrMode, describeGpu, describeMode, estimateMinutes, formatMB, gpuDisplayName, modelWhereLabel, whisperOptions, type AsrCapability } from '../src/core/asr-models';
+import { ASR_CANDIDATES, NO_CAPABILITY, PARAKEET_FILES, asrLadder, canRunParakeet, canRunTurbo, classifyGpu, defaultAsrMode, describeGpu, describeMode, estimateMinutes, formatMB, gpuDisplayName, modelWhereLabel, whisperOptions, isSpeechLanguage, SPEECH_LANGUAGES, type AsrCapability } from '../src/core/asr-models';
 
 const GPU: AsrCapability = { webgpu: true, f16: true, memoryGB: 8, gpu: 'dedicada', gpuName: 'NVIDIA GeForce RTX 3060' };
 const IGPU: AsrCapability = { webgpu: true, f16: true, memoryGB: 8, gpu: 'integrada', gpuName: 'Intel UHD Graphics 620' };
@@ -138,6 +138,14 @@ describe('detecção da placa de vídeo', () => {
     expect(whisperOptions(false, 'pt')).toEqual({ language: 'portuguese', task: 'transcribe', return_timestamps: 'word' });
     expect(whisperOptions(false, 'en')).toEqual({ language: 'english', task: 'transcribe', return_timestamps: 'word' });
     expect(whisperOptions(true, 'en')).toEqual({ language: 'english', task: 'transcribe', return_timestamps: 'word', no_repeat_ngram_size: 6 });
+    // #171: espanhol e russo como dica; nunca a tarefa "translate"
+    expect(whisperOptions(false, 'es')).toEqual({ language: 'spanish', task: 'transcribe', return_timestamps: 'word' });
+    expect(whisperOptions(false, 'ru')).toEqual({ language: 'russian', task: 'transcribe', return_timestamps: 'word' });
+    expect(isSpeechLanguage('ru')).toBe(true);
+    expect(isSpeechLanguage('auto')).toBe(true);
+    expect(isSpeechLanguage('klingon')).toBe(false);
+    expect(isSpeechLanguage('toString')).toBe(false);
+    expect(Object.keys(SPEECH_LANGUAGES)).toEqual(['pt', 'en', 'es', 'ru']);
   });
 
   it('estima o tempo de transcrição', () => {

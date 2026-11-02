@@ -44,6 +44,7 @@ export const ERRORS = {
   TRADUCAO_FALHOU: { code: 'M4F-316', title: 'A tradução local da legenda não foi concluída. A legenda original continua disponível. Tente novamente ou use a versão em inglês.' },
   TRADUCAO_DESATUALIZADA: { code: 'M4F-317', title: 'O vídeo mudou durante a tradução. Nada foi substituído; clique em traduzir novamente.' },
   TRADUCAO_INVALIDA: { code: 'M4F-318', title: 'A tradução de um trecho saiu com problema (outro idioma, texto estranho ou código interno). Nada foi trocado: a legenda original continua. Tente de novo ou corrija o texto à mão.' },
+  TRADUCAO_ORIGEM: { code: 'M4F-320', title: 'A tradução de legendas só funciona para fala em inglês por enquanto, e esta legenda não parece estar em inglês. Nada foi trocado.' },
   TRADUCAO_MODELO: { code: 'M4F-319', title: 'Não foi possível baixar ou iniciar o modelo de tradução neste navegador. A legenda original continua; confira a internet e tente de novo.' },
   SEM_ENCODER: { code: 'M4F-401', title: 'Este navegador não consegue gerar vídeo. Use Chrome ou Edge atualizados no computador.' },
   EXPORTACAO_FALHOU: { code: 'M4F-402', title: 'A geração do vídeo falhou.' },

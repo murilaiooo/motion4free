@@ -151,8 +151,9 @@ for (const name of ['licencas-fontes.txt', 'licencas-icones.txt'])
 const fontNotice = fs.readFileSync(path.join(root, 'public/licencas-fontes.txt'), 'utf8');
 const records = [];
 function classifyAsset(file, abs) {
-  if (/^assets\/[a-z0-9-]+-latin-\d+-(?:normal|italic)-[A-Za-z0-9_-]+\.woff2$/i.test(file)) {
-    const name = fontNames.find(font => file.startsWith('assets/' + font + '-latin-'));
+  // subconjuntos latino e cirílico (#171) do mesmo pacote @fontsource, mesma licença OFL
+  if (/^assets\/[a-z0-9-]+-(?:latin|cyrillic)-\d+-(?:normal|italic)-[A-Za-z0-9_-]+\.woff2$/i.test(file)) {
+    const name = fontNames.find(font => file.startsWith('assets/' + font + '-latin-') || file.startsWith('assets/' + font + '-cyrillic-'));
     if (!name) errors.push('Fonte não inventariada: ' + file);
     else {
       const metadata = installed.get('@fontsource/' + name);

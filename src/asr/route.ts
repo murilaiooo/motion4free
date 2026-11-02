@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { getKey } from '../ai/credentials/keys';
 import { PROVIDERS, isProviderId, type ProviderId } from '../ai/providers/registry';
+import { isSpeechLanguage, type SpeechLanguage } from '../core/asr-models';
 import { ASR_APIS, isAsrProvider } from './remote-plan';
 
 /**
@@ -11,7 +12,7 @@ import { ASR_APIS, isAsrProvider } from './remote-plan';
 export interface AsrRoute {
   kind: 'local' | 'api';
   /** Idioma falado, independente da língua da interface e da legenda. */
-  speechLanguage: 'auto' | 'pt' | 'en';
+  speechLanguage: SpeechLanguage;
   provider: ProviderId | null;
   model: string | null;
   /** serviços para os quais a pessoa autorizou enviar o áudio da fala */
@@ -31,7 +32,7 @@ function read(): AsrRoute {
     const model = provider && typeof raw.model === 'string' && ASR_APIS[provider]!.models.some((m) => m.id === raw.model) ? raw.model : provider ? ASR_APIS[provider]!.models[0]!.id : null;
     return {
       kind: raw.kind === 'api' ? 'api' : 'local',
-      speechLanguage: raw.speechLanguage === 'pt' || raw.speechLanguage === 'en' ? raw.speechLanguage : 'auto',
+      speechLanguage: isSpeechLanguage(raw.speechLanguage) ? raw.speechLanguage : 'auto',
       provider,
       model,
       audioConsent: Array.isArray(raw.audioConsent) ? raw.audioConsent.filter(isProviderId).filter(isAsrProvider) : [],

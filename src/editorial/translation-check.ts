@@ -63,6 +63,8 @@ export function checkPortugueseTranslation(source: string, translated: string): 
   const text = translated.replace(/\s+/g, ' ').trim();
   if (!text || !/\p{L}|\d/u.test(text)) return 'vazia';
   if (CONTROL.test(text)) return 'marcador';
+  // letras de outro alfabeto (ex.: russo copiado sem traduzir) nunca são português
+  if (/[\u0400-\u04FF\u0370-\u03FF\u0590-\u06FF\u3040-\u30FF\u4E00-\u9FFF]/.test(text)) return 'outro-idioma';
 
   const out = words(text);
   const src = words(source);
@@ -78,6 +80,16 @@ export function checkPortugueseTranslation(source: string, translated: string): 
   // espanhol/francês/italiano: qualquer sinal claro que empate ou supere o português
   if (foreign >= 1 && foreign >= e.pt) return 'outro-idioma';
   return null;
+}
+
+/**
+ * A fala original parece inglês? O tradutor local só sabe inglês → português; com fala em russo,
+ * português ou espanhol ele devolveria lixo. Usa o texto inteiro (sinal forte), não legenda por legenda.
+ */
+export function sourceLooksEnglish(text: string): boolean {
+  if (/[\u0400-\u04FF]/.test(text)) return false;
+  const e = languageEvidence(text);
+  return e.en >= 2 && e.en > Math.max(e.pt, e.es, e.fr, e.it);
 }
 
 /** Explicação curta (para o detalhe do erro) do problema encontrado num trecho. */
