@@ -100,7 +100,7 @@ const ASR_LABELS: Record<string, string> = {
 };
 const ASR_DETAILS: Record<string, string> = {
   [ASR_REPOS.turbo]: 'Legenda no modo Precisa, na placa de vídeo',
-  [ASR_REPOS.small]: 'Legenda no modo Precisa, no processador',
+  [ASR_REPOS.small]: 'Legenda no modo Precisa, na placa integrada ou no processador',
   [ASR_REPOS.base]: 'Legenda no modo Rápida (e reserva)',
 };
 
