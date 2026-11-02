@@ -145,7 +145,9 @@ describe('detecção da placa de vídeo', () => {
     expect(isSpeechLanguage('auto')).toBe(true);
     expect(isSpeechLanguage('klingon')).toBe(false);
     expect(isSpeechLanguage('toString')).toBe(false);
-    expect(Object.keys(SPEECH_LANGUAGES)).toEqual(['pt', 'en', 'es', 'ru']);
+    expect(Object.keys(SPEECH_LANGUAGES)).toEqual(['en', 'zh', 'hi', 'es', 'fr', 'ar', 'bn', 'pt', 'ru', 'ur']);
+    expect(whisperOptions(false, 'zh')).toEqual({ language: 'chinese', task: 'transcribe', return_timestamps: 'word' });
+    expect(whisperOptions(false, 'ur')).toEqual({ language: 'urdu', task: 'transcribe', return_timestamps: 'word' });
   });
 
   it('estima o tempo de transcrição', () => {

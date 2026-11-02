@@ -38,8 +38,8 @@ describe('StyleDNA', () => {
   });
 
   it('cssFont gera fonte com reserva do sistema', () => {
-    expect(cssFont(EDITORIAL.type.emphasis, 80)).toBe('italic 400 80px "Instrument Serif", "Cormorant Garamond", Georgia, serif');
-    expect(cssFont(POP.type.text, 95.04)).toBe('900 95.04px "Montserrat", system-ui, sans-serif');
+    expect(cssFont(EDITORIAL.type.emphasis, 80)).toBe('italic 400 80px "Instrument Serif", "Cormorant Garamond", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans Bengali", "Noto Sans SC", Georgia, serif');
+    expect(cssFont(POP.type.text, 95.04)).toBe('900 95.04px "Montserrat", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans Bengali", "Noto Sans SC", system-ui, sans-serif');
   });
 
   it('fontsOf lista cada fonte uma vez', () => {

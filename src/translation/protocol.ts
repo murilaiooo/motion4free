@@ -1,16 +1,29 @@
-/** Mensagens entre o editor e o Worker do tradutor local (inglês → português do Brasil). */
+import type { LanguageCode } from '../core/languages';
+
+/** Mensagens entre o editor e o Worker do tradutor local (qualquer par das 10 línguas, v0.45.0). */
 
 /**
- * Modelo de tradução local: conversão ONNX (Xenova) do Helsinki-NLP OPUS-MT en-ROMANCE.
- * Pesos CC-BY-4.0 (atribuição em docs/licencas.md); baixados sob demanda, fora do bundle.
+ * Modelos de tradução locais, baixados sob demanda (fora do bundle), conversões ONNX da Xenova:
+ * - `opus`: Helsinki-NLP OPUS-MT en-ROMANCE (pesos CC-BY-4.0), só inglês → português (ADR-0043);
+ * - `m2m`: Meta M2M100 418M (MIT), de qualquer uma para qualquer uma das 10 línguas (ADR-0044).
  */
-export const TRANSLATION_MODEL = { repo: 'Xenova/opus-mt-en-ROMANCE', revision: 'main' } as const;
+export const TRANSLATION_MODELS = {
+  opus: { repo: 'Xenova/opus-mt-en-ROMANCE', revision: 'main' },
+  m2m: { repo: 'Xenova/m2m100_418M', revision: 'main' },
+} as const;
+export type TranslationEngine = keyof typeof TRANSLATION_MODELS;
 
-export interface TranslationToWorker { texts: string[] }
+/** Inglês → português continua no OPUS-MT, já corrigido e conferido (#175); o resto vai pelo M2M100. */
+export function translationEngine(from: LanguageCode, to: LanguageCode): TranslationEngine {
+  return from === 'en' && to === 'pt' ? 'opus' : 'm2m';
+}
+
+export interface TranslationToWorker { texts: string[]; from: LanguageCode; to: LanguageCode }
 
 export type TranslationErrorCode = 'TRADUCAO_FALHOU' | 'TRADUCAO_MODELO' | 'TRADUCAO_INVALIDA';
 
 export type TranslationFromWorker =
   | { type: 'progress'; done: number; total: number }
+  | { type: 'download'; loaded: number; total: number }
   | { type: 'done'; texts: string[] }
   | { type: 'error'; code: TranslationErrorCode; message: string };

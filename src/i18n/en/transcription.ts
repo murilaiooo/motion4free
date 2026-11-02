@@ -108,6 +108,17 @@ const en: Record<string, string> = {
   "Copiar relatório de desempenho": "Copy performance report",
   "Apagar medições": "Delete measurements",
   "O relatório traz só a versão, o navegador, a placa de vídeo e os tempos. Nenhum nome de arquivo, texto da legenda, pedido ou chave. A memória mostrada é a do computador informada pelo navegador, não a da placa de vídeo.": "The report only has the version, the browser, the graphics card and the times. No file name, caption text, request or key. The memory shown is the computer's, as reported by the browser, not the graphics card's.",
+  "O modelo descobre o idioma sozinho. Para chinês, hindi, árabe, bengali e urdu, escolha o idioma: acerta mais.": "The model finds the language by itself. For Chinese, Hindi, Arabic, Bengali and Urdu, pick the language: it is more accurate.",
+  "Chinês (mandarim)": "Chinese (Mandarin)",
+  "Francês": "French",
+  "Árabe": "Arabic",
+  "chinês (mandarim)": "Chinese (Mandarin)",
+  "francês": "French",
+  "árabe": "Arabic",
+  "hindi": "Hindi",
+  "bengali": "Bengali",
+  "urdu": "Urdu",
+  "Isso controla o idioma do áudio, não o idioma da interface. As 10 línguas mais faladas do mundo. O Whisper reconhece todas; o Parakeet só as europeias (inglês, espanhol, francês, português e russo), e nas outras o app usa o Whisper sozinho. A precisão varia com o idioma e o áudio.": "This controls the audio language, not the app's language. The world's 10 most spoken languages. Whisper recognizes all of them; Parakeet only the European ones (English, Spanish, French, Portuguese and Russian), and for the others the app uses Whisper alone. Accuracy varies with the language and the audio.",
 };
 
 export default en;

@@ -10,9 +10,9 @@ describe('#171: legenda em russo', () => {
       if (CYRILLIC_FAMILIES.has(f)) expect(fb).toBeNull();
       else expect(CYRILLIC_FAMILIES.has(fb!), f).toBe(true);
     }
-    expect(cssFont({ family: 'Anton', weight: 400, style: 'normal' }, 100)).toBe('400 100px "Anton", "Inter", system-ui, sans-serif');
-    expect(cssFont({ family: 'Montserrat', weight: 900, style: 'normal' }, 100)).toBe('900 100px "Montserrat", system-ui, sans-serif');
-    expect(cssFont({ family: 'Instrument Serif', weight: 400, style: 'italic' }, 50)).toContain('"Cormorant Garamond", Georgia');
+    expect(cssFont({ family: 'Anton', weight: 400, style: 'normal' }, 100)).toBe('400 100px "Anton", "Inter", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans Bengali", "Noto Sans SC", system-ui, sans-serif');
+    expect(cssFont({ family: 'Montserrat', weight: 900, style: 'normal' }, 100)).toBe('900 100px "Montserrat", "Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans Bengali", "Noto Sans SC", system-ui, sans-serif');
+    expect(cssFont({ family: 'Instrument Serif', weight: 400, style: 'italic' }, 50)).toContain('"Cormorant Garamond", "Noto Sans Arabic"');
   });
 
   it('detecta cirílico e agrupa legendas em russo normalmente', () => {

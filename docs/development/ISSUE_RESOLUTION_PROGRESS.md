@@ -45,10 +45,12 @@ one timing-dependent check (pedido-ia now seeks instead of racing play/pause).
 | 2026-11-02 | #171 slice B (v0.43.0) | Spanish and Russian spoken-language options (Whisper, same model); Cyrillic subsets for every template face (or a close Cyrillic fallback) loaded only when the plan has Cyrillic text, used by preview, thumbnail and export; translation refuses a non-English source before any download (M4F-320) and rejects non-Latin output. Unit 2016/2016, typecheck, build + license audit, Playwright 141 passed / 2 skipped. |
 | 2026-11-02 | v0.43.0 | PR #179 merged (`main` fc9ad20); #171 and #172 commented, both stay open. |
 | 2026-11-02 | #170/#173 measurement (v0.44.0) | Real per-run timings for ASR and local AI recorded in the browser, shown in Settings → Transcription with a copyable report (`docs/development/HARDWARE_MEASUREMENT.md`). This is the instrument for the owner's RTX 5060 baseline; no figures exist yet. Unit 2021/2021, build, Playwright 142 passed / 2 skipped. |
+| 2026-11-02 | v0.44.0 | PR #180 merged (`main` e6202e3); #170 and #173 commented. |
+| 2026-11-02 | 10 languages (v0.45.0) | Owner (20:41): ES/RU were examples; speech, captions and translation must cover the 10 most spoken languages (en zh hi es fr ar bn pt ru ur). Shared table `core/languages.ts`; Parakeet removed for non-European languages; Noto Sans SC/Arabic/Devanagari/Bengali loaded on demand; RTL layout; Chinese per-character words and line breaks; any-to-any translation through M2M100 418M (MIT), OPUS-MT kept for en→pt; per-pair output validation; schema migration of `pt-BR` tracks (ADR-0044). Unit 2033/2033, build + audit, Playwright 149 passed / 2 skipped. Real-model quality per language unmeasured. |
 
 ## Current state
 
-- `main` has v0.43.0; branch `claude/project-thread-hxiuyn` holds v0.44.0 (measurement for #170/#173).
+- `main` has v0.44.0; branch `claude/project-thread-hxiuyn` holds v0.45.0 (10 languages).
 - #175 is waiting for the model-backed verification (the owner's test).
 - #171 stays open: per-segment language, detected-language record and WER fixtures need consent-cleared audio
   and real model runs (Spanish/Russian accuracy is unmeasured).

@@ -368,8 +368,14 @@ export function hasCyrillic(text: string): boolean {
 export function cssFont(f: Pick<FontSpec, 'family' | 'weight' | 'style'>, sizePx: number): string {
   const fallback = SERIF_FAMILIES.has(f.family) ? 'Georgia, serif' : MONO_FAMILIES.has(f.family) ? 'ui-monospace, monospace' : HAND_FAMILIES.has(f.family) ? 'cursive' : 'system-ui, sans-serif';
   const cyr = cyrillicFallback(f.family);
-  return `${f.style === 'italic' ? 'italic ' : ''}${f.weight} ${Math.round(sizePx * 100) / 100}px "${f.family}", ${cyr ? `"${cyr}", ` : ''}${fallback}`;
+  return `${f.style === 'italic' ? 'italic ' : ''}${f.weight} ${Math.round(sizePx * 100) / 100}px "${f.family}", ${cyr ? `"${cyr}", ` : ''}${SCRIPT_FALLBACKS}, ${fallback}`;
 }
+
+/**
+ * Reservas para as escritas que as fontes dos modelos não têm (chinês, árabe/urdu, hindi, bengali; v0.45.0).
+ * Cada uma só é usada nas letras que a fonte do modelo não desenha, e só é baixada quando o texto precisa.
+ */
+export const SCRIPT_FALLBACKS = '"Noto Sans Arabic", "Noto Sans Devanagari", "Noto Sans Bengali", "Noto Sans SC"';
 
 /** Peso disponível da família mais perto do pedido (empate: o mais forte). */
 export function nearestWeight(family: FontFamily, weight: number, style: 'normal' | 'italic' = 'normal'): { weight: number; style: 'normal' | 'italic' } {

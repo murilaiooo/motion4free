@@ -1,3 +1,4 @@
+import { LANGUAGES, isLanguageCode, type LanguageCode } from './languages';
 /**
  * Modelos de transcrição e a escolha de qual usar em cada aparelho (ADR-0013, ADR-0036, ADR-0039).
  *
@@ -327,21 +328,16 @@ export function estimateMinutes(id: AsrCandidateId, durationSec: number): number
 export const SPEECH_LANGUAGE = { label: 'vários idiomas, incluindo português e inglês' } as const;
 
 /**
- * Idiomas da fala que a pessoa pode escolher (#171). Todos são reconhecidos pelo Whisper multilíngue e
- * pelo Parakeet v3; o russo usa letras cirílicas, que as fontes do app cobrem em src/media/fonts.ts.
+ * Idiomas da fala que a pessoa pode escolher (#171): as 10 línguas mais faladas (`core/languages.ts`).
+ * Todas são reconhecidas pelo Whisper multilíngue; o Parakeet v3 só nas europeias (`ladderForLanguage`).
  * Escolher um idioma é uma dica para o modelo, nunca uma tradução.
  */
-export const SPEECH_LANGUAGES = {
-  pt: { whisper: 'portuguese', label: 'Português' },
-  en: { whisper: 'english', label: 'Inglês' },
-  es: { whisper: 'spanish', label: 'Espanhol' },
-  ru: { whisper: 'russian', label: 'Russo' },
-} as const;
-export type SpokenLanguage = keyof typeof SPEECH_LANGUAGES;
+export const SPEECH_LANGUAGES = LANGUAGES;
+export type SpokenLanguage = LanguageCode;
 export type SpeechLanguage = 'auto' | SpokenLanguage;
 
 export function isSpeechLanguage(v: unknown): v is SpeechLanguage {
-  return v === 'auto' || (typeof v === 'string' && Object.hasOwn(SPEECH_LANGUAGES, v));
+  return v === 'auto' || isLanguageCode(v);
 }
 
 export function whisperOptions(retry = false, language: SpeechLanguage = 'auto'):
@@ -370,6 +366,17 @@ export type AsrRequest = AsrMode | AsrCandidateId[] | { ladder: AsrMode | AsrCan
 export function requestLadder(r: AsrRequest, c: AsrCapability): AsrCandidateId[] {
   const l = typeof r === 'object' && !Array.isArray(r) ? r.ladder : r;
   return Array.isArray(l) ? l : asrLadder(l, c);
+}
+
+/**
+ * Tira da escada os modelos que não conhecem o idioma escolhido: o Parakeet v3 só sabe 25 línguas europeias
+ * e, com chinês, hindi, árabe, bengali ou urdu, escreveria outra coisa. Se não sobrar nada (a pessoa escolheu
+ * só o Parakeet no cardápio), usa a escada automática do Whisper para o modo Precisa.
+ */
+export function ladderForLanguage(ladder: readonly AsrCandidateId[], language: SpeechLanguage, c: AsrCapability): AsrCandidateId[] {
+  if (language === 'auto' || LANGUAGES[language].parakeet) return [...ladder];
+  const kept = ladder.filter((id) => ASR_CANDIDATES[id].engine !== 'parakeet');
+  return kept.length > 0 ? kept : asrLadder('precisa', c).filter((id) => ASR_CANDIDATES[id].engine !== 'parakeet');
 }
 
 export function requestChecks(r: AsrRequest | undefined): boolean {

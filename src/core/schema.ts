@@ -1,3 +1,4 @@
+import { LANGUAGE_CODES, type LanguageCode } from './languages';
 import { z } from 'zod';
 import { IMPORT_LIMITS } from './import-limits';
 import { EMPHASES, EMPTY_BRIEF, LEVELS, PACES, PROHIBITIONS, TONES, briefSchema, briefV1Schema, migrateBrief } from './brief';
@@ -177,13 +178,14 @@ export const editPlanSchema = z
     edits: editsSchema,
     music: musicSchema.nullable().optional(),
     semanticCues: semanticCuesSchema.optional(),
+    // v0.42–v0.44 gravavam só inglês → 'pt-BR' (active 'pt-BR'); desde a v0.45 qualquer par das 10 línguas
     subtitleTranslation: z.object({
-      sourceLanguage: z.literal('en'),
-      targetLanguage: z.literal('pt-BR'),
-      active: z.enum(['original', 'pt-BR']),
+      sourceLanguage: z.enum(LANGUAGE_CODES as [LanguageCode, ...LanguageCode[]]),
+      targetLanguage: z.union([z.enum(LANGUAGE_CODES as [LanguageCode, ...LanguageCode[]]), z.literal('pt-BR')]).transform((v): LanguageCode => (v === 'pt-BR' ? 'pt' : v)),
+      active: z.enum(['original', 'translated', 'pt-BR']).transform((v): 'original' | 'translated' => (v === 'pt-BR' ? 'translated' : v)),
       original: z.array(caption).max(5000),
       translated: z.array(caption).max(5000),
-    }).optional(),
+    }).refine((t) => t.sourceLanguage !== t.targetLanguage, { message: 'tradução para o mesmo idioma' }).optional(),
   })
   .refine((p) => p.segments.every((s) => s.srcEnd <= p.clips.reduce((a, c) => a + c.duration, 0) + 0.01), { message: 'trecho depois do fim dos clipes' });
 

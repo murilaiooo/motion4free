@@ -46,7 +46,7 @@ describe('idioma e tradução de legendas', () => {
     const groups = translationGroups(plan.captions);
     const translated = translatedCaptions(groups, groups.map(() => 'Olá mundo, tudo bem com você hoje?'));
     const pt = applySubtitleTranslation(plan, translated);
-    expect(pt.subtitleTranslation?.active).toBe('pt-BR');
+    expect(pt.subtitleTranslation).toMatchObject({ active: 'translated', sourceLanguage: 'en', targetLanguage: 'pt' });
     expect(toSrt(planCues(pt))).toContain('Olá mundo');
     expect(editPlanSchema.safeParse(pt).success).toBe(true);
 
@@ -54,7 +54,7 @@ describe('idioma e tradução de legendas', () => {
     expect(en.captions).toEqual(plan.captions);
     expect(toSrt(planCues(en))).not.toContain('Olá mundo');
     const edited = editCaptionText(en, en.captions[0]!.id, 'Corrected English');
-    const backToPt = selectSubtitleLanguage(edited, 'pt-BR');
+    const backToPt = selectSubtitleLanguage(edited, 'translated');
     expect(backToPt.captions).toEqual(translated);
     expect(selectSubtitleLanguage(backToPt, 'original').captions[0]!.text).toBe('Corrected English');
   });

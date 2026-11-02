@@ -6,9 +6,9 @@ Bibliotecas nativas Sharp/libvips/onnxruntime-node NÃO são enviadas pelo site.
 Fontes têm avisos em /licencas-fontes.txt; ícones em /licencas-icones.txt.
 Modelos de IA são obtidos sob demanda por URL externa, não incluídos aqui.
 MIT do Motion4Free não altera nenhuma licença de terceiros.
-Fingerprint SHA-256 do grafo: 1c9d75caf6f7fcc1b36a07db4c3eb0d7f7ae784cc9de1543b01b47eb0b8f8cac
+Fingerprint SHA-256 do grafo: e74381a10a9ef39f122c8cab286a01216d8314343c6c46b67660e897ad6cfe3a
 
-Pacotes do grafo de produção: 101 (incluindo 20 famílias de fontes).
+Pacotes do grafo de produção: 105 (incluindo 24 famílias de fontes).
 
 ====================================================================
 @emnapi/runtime@1.11.3 | SPDX MIT

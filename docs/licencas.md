@@ -27,6 +27,10 @@ Todas sob a **SIL Open Font License 1.1 (OFL)**, que permite usar, embutir e red
 | Caveat | `@fontsource/caveat@5.3.0` | latin 700 | 2014 The Caveat Project Authors (github.com/googlefonts/caveat) | Marca-texto (títulos, ênfase) (desde a v0.9.0) |
 | Kalam | `@fontsource/kalam@5.3.0` | latin 700 | 2014 Indian Type Foundry (info@indiantypefoundry.com) | Marca-texto (legendas, rótulos) (desde a v0.9.0) |
 | Playfair Display | `@fontsource/playfair-display@5.3.0` | latin 400 normal e itálico | 2017 The Playfair Display Project Authors (github.com/clauseggers/Playfair-Display), com nome reservado "Playfair Display" | Luxo (títulos, ênfase) (desde a v0.9.0) |
+| Noto Sans SC | `@fontsource/noto-sans-sc@5.3.1` | 700, só os pedaços (unicode-range) com os caracteres chineses da legenda | Google Inc. (github.com/notofonts/noto-cjk) | Reserva para chinês em todos os modelos (desde a v0.45.0) |
+| Noto Sans Arabic | `@fontsource/noto-sans-arabic@5.3.0` | arabic 700 | 2022 The Noto Project Authors (github.com/notofonts/arabic) | Reserva para árabe e urdu (desde a v0.45.0) |
+| Noto Sans Devanagari | `@fontsource/noto-sans-devanagari@5.3.0` | devanagari 700 | 2022 The Noto Project Authors (github.com/notofonts/devanagari) | Reserva para hindi (desde a v0.45.0) |
+| Noto Sans Bengali | `@fontsource/noto-sans-bengali@5.3.0` | bengali 700 | 2025 The Noto Project Authors (github.com/notofonts/bengali) | Reserva para bengali (desde a v0.45.0) |
 
 - **Procedência:** pacotes oficiais do projeto Fontsource no registro npm (os mesmos arquivos do Google Fonts, sem acesso ao Google Fonts em tempo de execução). A licença `OFL-1.1` está declarada no `package.json` de cada pacote e o arquivo `LICENSE` de cada um foi conferido em 20/10/2026.
 - **Subconjunto latino** (`latin`): cobre todos os acentos do português. Cada arquivo tem de 18 a 40 KB (limite da Cloudflare: 25 MiB por arquivo).
@@ -64,6 +68,8 @@ MIT, Apache-2.0 e CC-BY-4.0 permitem uso comercial; a CC-BY-4.0 pede atribuiçã
 |---|---|---|---|
 | OPUS-MT en-ROMANCE / MarianMT (pesos) | [Helsinki-NLP/opus-mt-en-ROMANCE](https://huggingface.co/Helsinki-NLP/opus-mt-en-ROMANCE), projeto OPUS-MT do grupo Language Technology Research Group, Universidade de Helsinque | **CC-BY-4.0**: atribuição à equipe original, link para a licença e indicação de conversão | pesos não empacotados; baixados só ao pedir tradução |
 | Conversão ONNX para Transformers.js | [Xenova/opus-mt-en-ROMANCE](https://huggingface.co/Xenova/opus-mt-en-ROMANCE), derivada dos pesos acima, quantização int8 | respeita a atribuição CC-BY-4.0 dos pesos originais; a conversão ONNX é identificada | modelo baixado sob demanda do Hugging Face ou espelho `/hf/…` |
+| M2M100 418M (pesos) | [facebook/m2m100_418M](https://huggingface.co/facebook/m2m100_418M), Meta AI (Fan et al., 2020, "Beyond English-Centric Multilingual Machine Translation") | **MIT** | pesos não empacotados; baixados só ao pedir uma tradução que não seja inglês → português (desde a v0.45.0) |
+| Conversão ONNX para Transformers.js | [Xenova/m2m100_418M](https://huggingface.co/Xenova/m2m100_418M), derivada dos pesos acima, quantização int8 | MIT, como os pesos originais | modelo baixado sob demanda do Hugging Face ou espelho `/hf/…` |
 
 A tradução roda com Transformers.js/ONNX Runtime Web no navegador, **em CPU (WASM)**; o vídeo e a transcrição não são enviados a APIs de IA. A faixa original em inglês é preservada. O idioma de destino é solicitado com o token `>>pt_BR<<`. A licença CC-BY-4.0 pode ser consultada em [creativecommons.org/licenses/by/4.0/](https://creativecommons.org/licenses/by/4.0/). A duração de cada frase traduzida é estimada a partir do alinhamento do áudio original, sem prometer sincronização palavra a palavra.
 

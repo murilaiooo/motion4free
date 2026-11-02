@@ -1,3 +1,4 @@
+import type { LanguageCode } from './languages';
 import type { CreativeBrief, Emphasis, Level, Pace, Prohibition, Tone } from './brief';
 import type { StyleDNA } from './style';
 import type { Emoji } from './emoji';
@@ -43,10 +44,11 @@ export interface Caption {
 }
 
 /** Faixas de legenda preservadas para alternar entre áudio inglês e texto português. */
+/** Faixa traduzida guardada ao lado da original (v0.42; qualquer par das 10 línguas desde a v0.45). */
 export interface SubtitleTranslation {
-  sourceLanguage: 'en';
-  targetLanguage: 'pt-BR';
-  active: 'original' | 'pt-BR';
+  sourceLanguage: LanguageCode;
+  targetLanguage: LanguageCode;
+  active: 'original' | 'translated';
   original: Caption[];
   translated: Caption[];
 }
