@@ -102,6 +102,8 @@ test('pedido num trecho muda só o trecho; o que mudou aparece; antes/depois e d
 
 test('trava o trecho, troca o estilo e o trecho não muda; versões; recarrega; exporta MP4', async ({ page }, info) => {
   await openVideo(page);
+  await tab(page, 'Modelos');
+  await page.getByTestId('style-pop').click();
   await select(page, 1.6, 2.9);
   await askRange(page, 'destaque isso');
   await page.getByTestId('range-lock').click();

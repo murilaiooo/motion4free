@@ -1,11 +1,16 @@
 import { assertProviderReady, noteProviderFailure, noteProviderSuccess } from '../routing';
 import { AppError } from '../../core/errors';
 import type { AiMessages, Completer } from '../../editorial/ai-brief';
-import { PROVIDERS, allowedUrl, providerErrorKey, sortModels, type HttpRequest, type ModelInfo, type ProviderId } from './registry';
+import { PROVIDERS, allowedUrl, providerErrorKey, reasoningRetryRequest, reasoningWithoutAnswer, sortModels, type HttpRequest, type ModelInfo, type ProviderId } from './registry';
 
 const LIST_TIMEOUT_MS = 20_000;
 const COMPLETE_TIMEOUT_MS = 45_000;
 const MAX_PAGES = 10;
+
+/** Sinal interno sanitizado: não guardar nem exibir o corpo de erro remoto. */
+class ReasoningRequired extends AppError {
+  constructor() { super('PROVEDOR_ERRO', 'openrouter.ai HTTP 400'); }
+}
 
 async function send(id: ProviderId, req: HttpRequest, _key: string, timeoutMs: number, outer?: AbortSignal): Promise<unknown> {
   if (!allowedUrl(id, req.url)) throw new AppError('PROVEDOR_BLOQUEADO', PROVIDERS[id].host);
@@ -26,6 +31,10 @@ async function send(id: ProviderId, req: HttpRequest, _key: string, timeoutMs: n
     if (outer?.aborted) throw new AppError('PROVEDOR_CANCELADO');
     if (!res.ok) {
       noteProviderFailure(id, res.status, res.headers.get('retry-after'));
+      if (id === 'openrouter' && res.status === 400 && providerErrorKey(res.status, text) === 'PROVEDOR_ERRO'
+        && /reasoning|thinking/i.test(text) && /mandatory|required|cannot.{0,30}disabl|does not support.{0,30}none|unsupported.{0,30}none/i.test(text)) {
+        throw new ReasoningRequired();
+      }
       // Não exibir corpo remoto: pode ecoar chave, transcrição ou dados da conta, mesmo truncado.
       throw new AppError(providerErrorKey(res.status, text), `${host} HTTP ${res.status}`);
     }
@@ -76,16 +85,32 @@ export interface CompletionOptions {
   timeoutMs?: number;
 }
 
-export function providerCompleter(id: ProviderId, key: string, modelId: string, options: CompletionOptions = {}): Completer {
-  const spec = PROVIDERS[id];
-  return async (messages: AiMessages) => {
+/** Uma recuperação por raciocínio; cada envio repassa consentimento, orçamento e cancelamento. */
+async function completeBody(id: ProviderId, key: string, modelId: string, messages: AiMessages, options: CompletionOptions, maxTokens?: number): Promise<unknown> {
+  let req = PROVIDERS[id].completeRequest(key, modelId, messages, maxTokens);
+  for (let attempt = 0; attempt < 2; attempt++) {
     if (options.signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
-    const req = spec.completeRequest(key, modelId, messages, options.maxTokens);
     if (options.authorize && !await options.authorize(req.body ?? '')) throw new AppError('PROVEDOR_CANCELADO');
     if (options.signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
     assertProviderReady(id);
     await options.beforeSend?.(req.body ?? '');
-    const body = await send(id, req, key, options.timeoutMs ?? COMPLETE_TIMEOUT_MS, options.signal);
+    try {
+      const body = await send(id, req, key, options.timeoutMs ?? COMPLETE_TIMEOUT_MS, options.signal);
+      if (id !== 'openrouter' || !reasoningWithoutAnswer(body)) return body;
+      if (attempt === 1) throw new AppError('IA_RACIOCINIO_SEM_RESPOSTA', PROVIDERS[id].host);
+    } catch (err) {
+      if (!(err instanceof ReasoningRequired)) throw err;
+      if (attempt === 1) throw new AppError('IA_RACIOCINIO_SEM_RESPOSTA', err.detail);
+    }
+    req = reasoningRetryRequest(req);
+  }
+  throw new AppError('IA_RACIOCINIO_SEM_RESPOSTA');
+}
+
+export function providerCompleter(id: ProviderId, key: string, modelId: string, options: CompletionOptions = {}): Completer {
+  const spec = PROVIDERS[id];
+  return async (messages: AiMessages) => {
+    const body = await completeBody(id, key, modelId, messages, options, options.maxTokens);
     const text = spec.parseCompletion(body);
     if (!text?.trim()) throw new AppError('IA_RESPOSTA_INVALIDA', spec.host);
     return text;
@@ -120,12 +145,7 @@ export async function testModelForTask(id: ProviderId, key: string, modelId: str
   const sample = MICROTESTS[task];
   const expected = task === 'creative-brief' ? 'rapido' : task === 'moment-ranking' ? 'B' : 'amarelo';
   const messages: AiMessages = { system: sample.system, examples: [], user: sample.user };
-  const req = spec.completeRequest(key, modelId, messages, 128);
-  if (options.authorize && !await options.authorize(req.body ?? '')) throw new AppError('PROVEDOR_CANCELADO');
-  if (options.signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
-  assertProviderReady(id);
-  await options.beforeSend?.(req.body ?? '');
-  const body = await send(id, req, key, options.timeoutMs ?? COMPLETE_TIMEOUT_MS, options.signal);
+  const body = await completeBody(id, key, modelId, messages, options, 128);
   const text = spec.parseCompletion(body);
   if (!text?.trim()) throw new AppError('PROVEDOR_SEM_TEXTO', spec.host);
   let parsed: Record<string, unknown>;
@@ -140,11 +160,6 @@ export async function testModelForTask(id: ProviderId, key: string, modelId: str
 export async function testModel(id: ProviderId, key: string, modelId: string, options: CompletionOptions = {}): Promise<void> {
   const spec = PROVIDERS[id];
   const messages: AiMessages = { system: 'Responda somente com o JSON {"ok":true}.', examples: [], user: 'Teste de conexão do Motion4Free.' };
-  const req = spec.completeRequest(key, modelId, messages, 128);
-  if (options.authorize && !await options.authorize(req.body ?? '')) throw new AppError('PROVEDOR_CANCELADO');
-  if (options.signal?.aborted) throw new AppError('PROVEDOR_CANCELADO');
-  assertProviderReady(id);
-  await options.beforeSend?.(req.body ?? '');
-  const body = await send(id, req, key, options.timeoutMs ?? COMPLETE_TIMEOUT_MS, options.signal);
+  const body = await completeBody(id, key, modelId, messages, options, 128);
   if (!spec.parseCompletion(body)?.trim()) throw new AppError('PROVEDOR_SEM_TEXTO', spec.host);
 }

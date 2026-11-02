@@ -3,6 +3,9 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: 'e2e',
   globalSetup: './e2e/global-setup.ts',
+  // Referências versionadas: comparar também no Brave/Windows, com as mesmas
+  // tolerâncias de fontes declaradas nos testes, sem gerar baseline novo por SO.
+  snapshotPathTemplate: '{testDir}/{testFilePath}-snapshots/{arg}-linux{ext}',
   timeout: 120_000,
   use: {
     baseURL: 'http://localhost:4173',

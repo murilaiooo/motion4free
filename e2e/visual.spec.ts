@@ -129,7 +129,7 @@ test('atalhos e prévia: espaço toca e pausa, área segura do Reels liga e desl
 
 test('exportar pela barra do topo mostra progresso, o vídeo e o botão de baixar; dá para fechar', async ({ page }) => {
   await openVideo(page);
-  await page.getByRole('button', { name: 'Exportar' }).click();
+  await page.getByRole('button', { name: 'Exportar', exact: true }).click();
   const panel = page.getByTestId('export-panel');
   await expect(panel).toBeVisible();
   await expect(page.getByTestId('download')).toBeVisible({ timeout: 90_000 });

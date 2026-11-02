@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { ALL_FORMATS, FilePathSource, Input } from 'mediabunny';
-import { editCaption, originalView, tab, pickVideos } from './ui';
+import { editCaption, originalView, tab, pickVideos, showNotices } from './ui';
 
 const FIXTURE = 'e2e/fixtures/fala-com-pausas.webm';
 
@@ -30,6 +30,7 @@ test('edita legenda, desfaz e refaz', async ({ page }) => {
 
   // legenda vazia é recusada com código próprio e nada muda
   await editCaption(page, 'c2', '   ');
+  await showNotices(page);
   await expect(page.getByTestId('error-M4F-501')).toBeVisible();
   await expect(page.getByTestId('caption-c2')).toHaveText('Primeira dica de ouro!');
 

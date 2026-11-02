@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { pickVideos } from './ui';
+import { pickVideos, showNotices } from './ui';
 
 /**
  * Linha do tempo Edição (v0.17): dividir, apagar, copiar, recortar, colar, duplicar e mudar a ordem
@@ -83,6 +83,7 @@ test('legenda não copia sozinha: aviso com código próprio', async ({ page }) 
   await page.getByTestId('tl-cap-c1').click();
   await expect(page.getByTestId('element-panel')).toBeVisible();
   await page.getByTestId('tl-copy').click();
+  await showNotices(page);
   await expect(page.getByTestId('error-M4F-519')).toBeVisible();
 });
 

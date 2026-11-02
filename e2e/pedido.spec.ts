@@ -66,6 +66,7 @@ test('escolhe um gancho da própria fala e exporta um MP4 válido', async ({ pag
   await expect(page.getByTestId('hook-0')).toBeVisible();
   await expect(page.getByTestId('hook-1')).toBeVisible();
   await expect(page.getByTestId('hook-2')).toHaveCount(0);
+  await page.getByTestId('hook-none').check();
   await expect(page.getByTestId('hook-none')).toBeChecked();
 
   // "gancho forte" escolhe o melhor candidato

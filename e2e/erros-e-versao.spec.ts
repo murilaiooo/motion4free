@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { pickVideos } from './ui';
+import { pickVideos, showNotices } from './ui';
 
 test('mostra a versão do app no rodapé', async ({ page }) => {
   await page.goto('/');
@@ -9,6 +9,7 @@ test('mostra a versão do app no rodapé', async ({ page }) => {
 test('falha ao baixar o modelo mostra código M4F-301 e ainda edita o vídeo', async ({ page }) => {
   await page.goto('/?asr=falha');
   await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
+  await showNotices(page);
   const warning = page.getByTestId('warning-M4F-301');
   await expect(warning).toBeVisible({ timeout: 60_000 });
   await expect(warning).toContainText('huggingface.co');
