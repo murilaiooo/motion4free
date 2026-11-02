@@ -21,6 +21,16 @@
 
 A versão aparece no rodapé da primeira tela e na barra de baixo do editor (`Motion4Free vX.Y.Z · commit`). Cada mudança publicada sobe a versão em `package.json`.
 
+## v0.45.0 — 02/11/2026
+
+- As 10 línguas mais faladas (pedido do responsável; ADR-0044): inglês, chinês (mandarim), hindi, espanhol, francês, árabe, bengali, português, russo e urdu.
+  - **Fala:** dá para escolher qualquer uma em Configurações → Transcrição. O Parakeet só é usado nas línguas europeias; nas outras, o app usa o Whisper.
+  - **Legenda:** chinês, hindi, bengali, árabe e urdu ganharam fontes próprias (Noto Sans), baixadas só quando o vídeo tem essas letras. O árabe e o urdu vão da direita para a esquerda, com a palavra falada destacada nesse sentido. O chinês junta os caracteres sem espaço, quebra a linha entre caracteres e conta o tamanho como aparece na tela. O SRT sai sem os espaços internos.
+  - **Tradução:** em Legendas, "A legenda está em" (detectado sozinho, dá para corrigir) e "Traduzir para" qualquer uma das outras 9. Inglês → português continua no modelo afinado de antes; os outros pares usam o M2M100 (Meta, licença MIT, 100 línguas), baixado na primeira vez com o progresso em MB. Cada trecho é conferido (escrita e língua certas, nada de código interno) antes de trocar a legenda.
+  - **M4F-320** agora quer dizer que o idioma escolhido não bate com a legenda.
+  - Projetos antigos com tradução inglês → português abrem normalmente.
+- A qualidade real em cada língua ainda não foi medida com vídeos de verdade; a tradução segue como beta.
+
 ## v0.44.0 — 02/11/2026
 
 - Desempenho medido (#170, #173): o app anota, neste navegador, quanto tempo cada transcrição e cada resposta da IA local levaram de verdade. Para cada uma guarda o modelo, a placa de vídeo ou o processador, o tempo para carregar, o tempo para ouvir a fala (e quantas vezes mais rápido que o tempo real) e as fichas por segundo da IA. Falhas e trocas de modelo também entram, com o código M4F. Veja em Configurações → Transcrição → "Desempenho medido neste computador", com botões para copiar o relatório e apagar as medições. Nada é enviado, e o relatório não leva nome de arquivo, legenda, pedido nem chave.

@@ -16,6 +16,7 @@ import { openSettings } from './route';
 import { asrProblem, asrRouteLabel, setAsrRoute, useAsrRoute } from '../../asr/route';
 import { ASR_APIS } from '../../asr/remote-plan';
 import { describeGpu, SPEECH_LANGUAGES, type AsrCapability } from '../../core/asr-models';
+import { LANGUAGE_CODES } from '../../core/languages';
 import type { ShareLine } from '../../core/privacy-status';
 import { LanguageToggle, useLocale } from '../LanguageToggle';
 import { clearPerf, usePerfEntries } from '../perf-store';
@@ -173,20 +174,17 @@ export function TranscriptionSection({ precision }: { precision: AsrPrecision })
         <legend className="set-sub-title">Idioma falado no vídeo</legend>
         <div className="set-options">
           {([
-            ['auto', 'Detectar automaticamente', 'Para vídeos em português, inglês ou outros idiomas compatíveis.'],
-            ['pt', 'Português', 'Se você sabe que o áudio está em português.'],
-            ['en', 'Inglês', 'Se você sabe que o áudio está em inglês.'],
-            ['es', 'Espanhol', 'Se você sabe que o áudio está em espanhol.'],
-            ['ru', 'Russo', 'Se você sabe que o áudio está em russo. A legenda sai em letras russas.'],
-          ] as const).map(([value, label, detail]) => (
+            ['auto', 'Detectar automaticamente', 'O modelo descobre o idioma sozinho. Para chinês, hindi, árabe, bengali e urdu, escolha o idioma: acerta mais.'] as const,
+            ...LANGUAGE_CODES.map((code) => [code, SPEECH_LANGUAGES[code].label, SPEECH_LANGUAGES[code].native] as const),
+          ]).map(([value, label, detail]) => (
             <label className="set-option" key={value}>
               <input type="radio" name="asr-speech-language" value={value} checked={route.speechLanguage === value}
                 onChange={() => setAsrRoute({ speechLanguage: value })} data-testid={`asr-language-${value}`} />
-              <span><b>{label}</b><small className="hint">{detail}</small></span>
+              <span><b>{label}</b><small className="hint" translate={value === 'auto' ? undefined : 'no'}>{detail}</small></span>
             </label>
           ))}
         </div>
-        <p className="hint">Isso controla o idioma do áudio, não o idioma da interface. O Whisper reconhece outros idiomas, mas a precisão varia. O Parakeet detecta o idioma automaticamente.</p>
+        <p className="hint">Isso controla o idioma do áudio, não o idioma da interface. As 10 línguas mais faladas do mundo. O Whisper reconhece todas; o Parakeet só as europeias (inglês, espanhol, francês, português e russo), e nas outras o app usa o Whisper sozinho. A precisão varia com o idioma e o áudio.</p>
       </fieldset>
 
       {route.kind === 'local' && <CaptionDemo />}

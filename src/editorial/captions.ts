@@ -1,6 +1,7 @@
 import type { Caption, Segment, Word } from '../core/types';
 import type { StyleDNA } from '../core/style';
 import { placeSpan } from '../engine/timeline';
+import { SENTENCE_END, visualLength, wordWeight } from '../core/languages';
 
 export interface CaptionOptions {
   maxChars: number;
@@ -37,19 +38,23 @@ export function buildCaptions(words: Word[], segments: Segment[], opts: CaptionO
     group = [];
   };
 
+  // palavras e letras contadas como aparecem na tela (chinês: caractere vale meia palavra e duas letras)
+  const weightOf = (g: Word[]) => g.reduce((n, x) => n + wordWeight(x.text), 0);
   placed.forEach((w, k) => {
     const text = [...group, w].map((g) => g.text.trim()).join(' ');
+    const len = visualLength(text);
+    const count = weightOf(group);
     // a última palavra da frase (ou da fala) não fica sozinha numa legenda: cabe uma a mais
-    const closes = /[.!?]$/.test(w.text.trim()) || k === placed.length - 1;
+    const closes = SENTENCE_END.test(w.text.trim()) || k === placed.length - 1;
     // vale tanto para o limite de palavras quanto para o de letras ("Três dicas | rápidas." virava uma palavra sozinha)
-    const slack = group.length === opts.maxWords ? 8 : Math.max(4, Math.ceil(opts.maxChars * 0.2));
-    const orphanSaved = closes && group.length > 0 && group.length <= opts.maxWords && text.length <= opts.maxChars + slack;
-    const tooLong = !orphanSaved && (text.length > opts.maxChars || group.length >= opts.maxWords);
+    const slack = count === opts.maxWords ? 8 : Math.max(4, Math.ceil(opts.maxChars * 0.2));
+    const orphanSaved = closes && group.length > 0 && count <= opts.maxWords && len <= opts.maxChars + slack;
+    const tooLong = !orphanSaved && (len > opts.maxChars || count >= opts.maxWords);
     const tooSlow = group.length > 0 && w.end - group[0]!.start > opts.maxDurationSec;
     const gap = group.length > 0 && w.start - group[group.length - 1]!.end > 0.6;
     if (group.length > 0 && (tooLong || tooSlow || gap)) flush();
     group.push(w);
-    if (/[.!?]$/.test(w.text.trim())) flush();
+    if (SENTENCE_END.test(w.text.trim())) flush();
   });
   flush();
   return captions;

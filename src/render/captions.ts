@@ -7,6 +7,7 @@ import { easeInQuad, easeOutExpo, mix, springIn, stagger, wiggle } from './motio
 import { chromaBehind } from './decor';
 import { isTall, unitFor, type Rect } from './layout';
 import { onBox } from '../core/color';
+import { dominantScript, isHanChar } from '../core/languages';
 import { alphaOf, applyCase, captionFrac, clearShadow, fillBox, setFont, setShadow, type Frame } from './kit';
 
 /** Início de cada palavra: os tempos reais quando batem com o texto, senão proporcional ao tamanho das palavras. */
@@ -21,6 +22,30 @@ export function wordTimings(caption: Pick<Caption, 'start' | 'end' | 'wordStarts
     acc += l;
     return s;
   });
+}
+
+/**
+ * Palavras para desenhar: separadas por espaço; um trecho chinês sem espaços (tradução, texto digitado) vira um
+ * caractere por vez, com a pontuação grudada no caractere de antes, para a linha poder quebrar.
+ */
+export function layoutTokens(text: string): string[] {
+  const out: string[] = [];
+  for (const token of text.split(/\s+/).filter(Boolean)) {
+    const chars = [...token];
+    if (chars.filter(isHanChar).length < 2) {
+      out.push(token);
+      continue;
+    }
+    let cur = '';
+    for (const ch of chars) {
+      if (cur && isHanChar(ch) && !/[\u3000-\u303F\uFF00-\uFFEF]/.test(ch)) {
+        out.push(cur);
+        cur = ch;
+      } else cur += ch;
+    }
+    if (cur) out.push(cur);
+  }
+  return out;
 }
 
 /** Índice da palavra sendo falada em `t` (-1 antes da primeira). */
@@ -192,8 +217,12 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   const enterKind = caption.translationCue ? 'fade' as const : captionEnter(style);
   const spec = style.type.text;
   const em = style.type.emphasis;
-  const tokens = caption.text.split(/\s+/).filter(Boolean);
+  const tokens = layoutTokens(caption.text);
   if (tokens.length === 0) return null;
+  // escrita (v0.45.0): chinês junta as palavras quase sem espaço; árabe e urdu vão da direita para a esquerda
+  const script = dominantScript(caption.text);
+  const han = script === 'han';
+  const rtl = script === 'arabic';
   const starts = wordTimings(caption, tokens);
   const active = caption.translationCue ? -1 : activeWord(starts, t);
   const semanticAligned = caption.wordIds.length === tokens.length;
@@ -226,7 +255,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   for (let attempt = 0; attempt < 6; attempt++) {
     setFont(ctx, spec, size);
     // com caixa na palavra falada, o espaço precisa caber o respiro da caixa
-    space = ctx.measureText(' ').width + size * (C.box === 'word' ? 0.3 : C.highlight === 'box' || C.highlight === 'marker' ? 0.18 : 0.06);
+    space = (han ? size * 0.04 : ctx.measureText(' ').width) + size * (C.box === 'word' ? 0.3 : C.highlight === 'box' || C.highlight === 'marker' ? 0.18 : 0.06);
     widths = shown.map((s, i) => {
       if (isKw[i]) setFont(ctx, em, size * emScale);
       else setFont(ctx, spec, size);
@@ -255,7 +284,8 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   lines.forEach((line, li) => {
     const lineW = lineWidths[li]!;
     let x = align === 'left' ? cx - blockW / 2 : align === 'right' ? cx + blockW / 2 - lineW : cx - lineW / 2;
-    for (const i of line) {
+    // da direita para a esquerda: a primeira palavra fica na ponta direita da linha
+    for (const i of rtl ? [...line].reverse() : line) {
       wordX[i] = x + widths[i]! / 2;
       wordLine[i] = li;
       x += widths[i]! + space;
@@ -296,6 +326,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
   }
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'center';
+  if (rtl && 'direction' in ctx) (ctx as { direction: CanvasDirection }).direction = 'rtl';
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
@@ -332,7 +363,7 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
       if (j < i) dx += growth[j]! / 2;
       else if (j > i) dx -= growth[j]! / 2;
     }
-    return wordX[i]! + dx;
+    return wordX[i]! + (rtl ? -dx : dx);
   };
   /** inclinação da palavra (v0.41): alterna o lado; a falada entra girando com mola */
   const tiltOf = (i: number) => {
@@ -377,6 +408,12 @@ export function drawCaption(ctx: Ctx2D, f: Frame, caption: Caption, t: number, k
         const shownIdx = line.filter((i) => i <= active);
         if (shownIdx.length === 0) return;
         const last = shownIdx[shownIdx.length - 1]!;
+        if (rtl) {
+          // a caixa cresce da direita para a esquerda
+          const from = wordX[last]! - widths[last]! / 2;
+          fillBox(ctx, { x: from - padX, y: lineY(li) - boxH / 2, w: left + lw - from + 2 * padX, h: boxH }, style.shape.radius * boxH, K.box);
+          return;
+        }
         w = wordX[last]! + widths[last]! / 2 - left;
       }
       fillBox(ctx, { x: left - padX, y: lineY(li) - boxH / 2, w: w + 2 * padX, h: boxH }, style.shape.radius * boxH, K.box);

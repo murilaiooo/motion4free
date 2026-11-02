@@ -1,7 +1,7 @@
 import { groupPieces, mergeWindows, type RawWord } from '../analysis/asr-merge';
 import type { AsrWindow } from '../analysis/asr-windows';
 import { crossCheck } from '../analysis/asr-crosscheck';
-import { ASR_CANDIDATES, checkLadder, estimateMinutes, modelWhereLabel, requestChecks, requestIsAuto, requestLadder, type AsrCandidateId, type AsrRequest } from '../core/asr-models';
+import { ASR_CANDIDATES, checkLadder, ladderForLanguage, estimateMinutes, modelWhereLabel, requestChecks, requestIsAuto, requestLadder, type AsrCandidateId, type AsrRequest } from '../core/asr-models';
 import { AppError, ERRORS } from '../core/errors';
 import { formatClock } from '../core/bytes';
 import type { OnProgress } from '../core/progress';
@@ -132,7 +132,8 @@ export class WhisperTranscriber implements Transcriber {
   async transcribe(audio16k: Float32Array, durationSec: number, windows: AsrWindow[], onProgress: OnProgress, mode: AsrRequest = 'precisa'): Promise<TranscriptResult> {
     // A placa de vídeo é detectada aqui, sem a pessoa escolher: dedicada > integrada > processador (v0.36).
     const capability = await detectAsrCapability();
-    const ladder = requestLadder(mode, capability);
+    const language = getAsrRoute().speechLanguage;
+    const ladder = ladderForLanguage(requestLadder(mode, capability), language, capability);
     const check = requestChecks(mode);
     const notices: AppError[] = [];
     if (requestIsAuto(mode) && !capability.webgpu) notices.push(new AppError('SEM_PLACA_VIDEO', 'sem WebGPU neste navegador (ou só o adaptador de software); a legenda foi feita no processador (WASM)'));
@@ -143,7 +144,7 @@ export class WhisperTranscriber implements Transcriber {
     let words = first.words;
     let model = modelWhereLabel(first.model, capability);
     if (again) {
-      const second = checkLadder(first.model, capability);
+      const second = ladderForLanguage(checkLadder(first.model, capability), language, capability).filter((id) => ASR_CANDIDATES[id].engine !== ASR_CANDIDATES[first.model].engine);
       if (second.length === 0) {
         notices.push(new AppError('CONFERENCIA_FALHOU', `não há segunda IA de outra família que rode neste aparelho (legenda feita com ${label(first.model)})`));
       } else {

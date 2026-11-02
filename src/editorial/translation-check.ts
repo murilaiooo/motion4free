@@ -1,5 +1,7 @@
+import { LANGUAGES, arabicOrUrdu, dominantScript, scriptCounts, visualLength, type LanguageCode, type Script } from '../core/languages';
+
 /**
- * Conferência de cada trecho traduzido para português do Brasil (#175).
+ * Conferência de cada trecho traduzido (#175; qualquer par das 10 línguas desde a v0.45.0).
  *
  * O tradutor local é multilíngue (OPUS-MT en-ROMANCE): se o código de idioma não chega ao modelo,
  * ele devolve francês, espanhol ou o próprio código (`>>pt_BR<<`). Este módulo recusa essas saídas
@@ -9,10 +11,10 @@
  * fraca de propósito: só recusa quando há evidência clara de outro idioma, nunca por falta de prova.
  */
 
-export type TranslationProblem = 'vazia' | 'marcador' | 'outro-idioma' | 'ingles' | 'repeticao' | 'tamanho';
+export type TranslationProblem = 'vazia' | 'marcador' | 'outro-idioma' | 'ingles' | 'original' | 'repeticao' | 'tamanho';
 
 /** Códigos de controle e tokens internos que nunca podem aparecer numa legenda. */
-const CONTROL = /(>>\s*[\w-]+\s*<<)|(&gt;&gt;)|(<\/?s>)|(<unk>)|(<pad>)|▁/i;
+const CONTROL = /(>>\s*[\w-]+\s*<<)|(__[a-z]{2,3}__)|(&gt;&gt;)|(<\/?s>)|(<unk>)|(<pad>)|▁/i;
 
 const words = (s: string) => s.toLowerCase().normalize('NFC').match(/[\p{L}']+/gu) ?? [];
 
@@ -92,13 +94,103 @@ export function sourceLooksEnglish(text: string): boolean {
   return e.en >= 2 && e.en > Math.max(e.pt, e.es, e.fr, e.it);
 }
 
+/**
+ * Palavras frequentes que só existem numa das quatro línguas latinas (as que existem em duas, como "de", "que",
+ * "no", "nada", "a", ficam de fora). Contagem equilibrada, sem favorecer o português, para reconhecer a origem.
+ */
+const MARKERS: Record<'en' | 'es' | 'fr' | 'pt', Set<string>> = {
+  en: new Set(['the', 'and', 'you', 'is', 'are', 'this', 'that', 'of', 'to', 'it', "it's", 'with', 'have', 'was', 'what', 'for', 'not', 'be', 'do', "don't", 'we', 'they', 'your', 'my', 'just', 'can', 'will', 'would', 'there', 'about', 'because', 'when', 'which', 'who', 'need', 'anything', 'else', 'first', 'tip']),
+  es: new Set(['el', 'y', 'es', 'los', 'las', 'del', 'muy', 'pero', 'más', 'qué', 'yo', 'tú', 'usted', 'está', 'están', 'también', 'cuando', 'ahora', 'aquí', 'hay', 'eso', 'esto', 'lo', 'le', 'su', 'sus', 'con', 'sin', 'una', 'necesitas', 'puedes', 'tienes', 'hacer', 'gracias', 'bueno', 'consejo', 'verdad', 'primer', 'siempre', 'mucho', 'ellos', 'nosotros', 'cómo', 'dónde', 'porque']),
+  fr: new Set(['le', 'les', 'des', 'est', 'et', 'vous', 'nous', 'je', 'pas', 'une', 'qui', 'dans', 'pour', 'avec', 'ce', 'cette', 'très', 'sont', 'du', 'il', 'elle', 'ne', 'au', 'aux', "c'est", "n'est", "n'avez", 'rien', "d'autre", 'besoin', 'premier', 'conseil', 'merci', 'oui', 'mais', 'tout', 'faire', 'avez', 'peut', 'aussi', 'ici', 'maintenant', 'comme', 'quand', 'parce']),
+  pt: new Set(['não', 'você', 'vocês', 'é', 'uma', 'um', 'do', 'da', 'dos', 'das', 'em', 'com', 'isso', 'isto', 'também', 'mais', 'muito', 'ele', 'ela', 'eu', 'mas', 'já', 'só', 'está', 'são', 'então', 'aqui', 'agora', 'precisa', 'dica', 'primeira', 'obrigado', 'obrigada', 'coisa', 'fazer', 'tem', 'pra', 'nós', 'eles', 'elas', 'porque', 'como', 'onde', 'sempre']),
+};
+
+/** Pontos de cada língua latina (palavras exclusivas e sinais gráficos: ñ ¿ ¡ ção ã õ ç è). */
+export function latinScores(text: string): Record<'en' | 'es' | 'fr' | 'pt', number> {
+  const score = { en: 0, es: 0, fr: 0, pt: 0 };
+  for (const w of words(text)) {
+    for (const k of ['en', 'es', 'fr', 'pt'] as const) if (MARKERS[k].has(w) && !(['en', 'es', 'fr', 'pt'] as const).some((o) => o !== k && MARKERS[o].has(w))) score[k]++;
+    if (/(ção|ções|ões)$/.test(w) || /[ãõç]/.test(w)) score.pt++;
+    if (/ñ/.test(w) || /(ción|ciones)$/.test(w)) score.es++;
+    if (/[èùœîûëêà]/.test(w) && !/[ãõ]/.test(w)) score.fr++;
+  }
+  if (/[¿¡]/.test(text)) score.es++;
+  return score;
+}
+
+/** Línguas de escrita latina que a contagem de palavras sabe reconhecer. */
+const LATIN_EVIDENCE: Partial<Record<LanguageCode, 'en' | 'es' | 'fr' | 'pt'>> = { pt: 'pt', es: 'es', fr: 'fr', en: 'en' };
+
+/**
+ * Em qual das 10 línguas o texto está (para saber de onde traduzir). A escrita decide chinês, hindi, bengali,
+ * russo e árabe/urdu; nas latinas, a contagem de palavras (inglês, espanhol, francês, português).
+ * null quando não há sinal claro: aí a pessoa escolhe.
+ */
+export function detectTextLanguage(text: string): LanguageCode | null {
+  const script = dominantScript(text);
+  if (script === 'han') return 'zh';
+  if (script === 'devanagari') return 'hi';
+  if (script === 'bengali') return 'bn';
+  if (script === 'cyrillic') return 'ru';
+  if (script === 'arabic') return arabicOrUrdu(text);
+  if (script !== 'latin') return null;
+  const e = latinScores(text);
+  const ranked = (['en', 'pt', 'es', 'fr'] as const).map((k) => [k, e[k]] as const).sort((a, b) => b[1] - a[1]);
+  const [first, second] = ranked;
+  if (!first || first[1] < 2 || first[1] === second![1]) return null;
+  return first[0];
+}
+
+const SHARE_SCRIPTS: Exclude<Script, 'latin'>[] = ['cyrillic', 'han', 'devanagari', 'bengali', 'arabic'];
+
+/**
+ * Confere um trecho traduzido de `from` para `to`. Devolve o problema encontrado ou null se pode ser usado.
+ * Recusa: texto vazio, código interno do tradutor, escrita errada (chinês saindo em latim, português com letras
+ * russas), texto que voltou no idioma de origem, laço de repetição e texto muito maior que a fala.
+ */
+export function checkTranslation(source: string, translated: string, to: LanguageCode, from: LanguageCode): TranslationProblem | null {
+  if (to === 'pt' && from === 'en') return checkPortugueseTranslation(source, translated);
+  const text = translated.replace(/\s+/g, ' ').trim();
+  if (!text || !/\p{L}|\d/u.test(text)) return 'vazia';
+  if (CONTROL.test(text)) return 'marcador';
+
+  const target = LANGUAGES[to].script;
+  const counts = scriptCounts(text);
+  const letters = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (target === 'latin') {
+    // letras de outra escrita nunca são inglês, espanhol, francês ou português
+    if (SHARE_SCRIPTS.some((sc) => counts[sc] > 0) || /[\u0370-\u03FF\u0590-\u05FF\u3040-\u30FF]/.test(text)) return 'outro-idioma';
+  } else if (letters > 0 && counts[target] / letters < 0.6) {
+    // nomes próprios em latim podem aparecer; a maior parte tem de estar na escrita do destino
+    return LANGUAGES[from].script !== target && counts[LANGUAGES[from].script] / letters >= 0.6 ? 'original' : 'outro-idioma';
+  }
+  if (target === 'arabic' && counts.arabic >= 15 && arabicOrUrdu(text) !== to) return 'outro-idioma';
+
+  // laço de geração: o mesmo pedaço repetido seguido (chinês: caracteres; outras: palavras)
+  const units = target === 'han' ? [...text].filter((ch) => /\p{L}/u.test(ch)) : words(text);
+  const run = target === 'han' ? 6 : 4;
+  for (let i = run - 1; i < units.length; i++) if (units.slice(i - run + 1, i + 1).every((u) => u === units[i])) return 'repeticao';
+  if (visualLength(text) > visualLength(source) * 3 + 40) return 'tamanho';
+
+  // voltou sem traduzir: igual à origem, ou com mais sinais da língua de origem que da de destino
+  if (text.toLowerCase() === source.replace(/\s+/g, ' ').trim().toLowerCase() && [...source].length >= 8) return 'original';
+  const fromKey = LATIN_EVIDENCE[from];
+  const toKey = LATIN_EVIDENCE[to];
+  if (fromKey && toKey) {
+    const e = latinScores(text);
+    if (e[fromKey] >= 3 && e[fromKey] > e[toKey] * 2) return 'original';
+  }
+  return null;
+}
+
 /** Explicação curta (para o detalhe do erro) do problema encontrado num trecho. */
 export function describeTranslationProblem(problem: TranslationProblem): string {
   switch (problem) {
     case 'vazia': return 'tradução vazia';
     case 'marcador': return 'código interno do tradutor no texto';
-    case 'outro-idioma': return 'saiu em outro idioma (não português)';
+    case 'outro-idioma': return 'saiu em outro idioma ou outra escrita';
     case 'ingles': return 'voltou em inglês, sem tradução';
+    case 'original': return 'voltou no idioma original, sem tradução';
     case 'repeticao': return 'texto repetido sem parar';
     case 'tamanho': return 'texto muito maior que a fala original';
   }

@@ -1,3 +1,5 @@
+import { isHanChar } from '../core/languages';
+
 export interface Rect {
   x: number;
   y: number;
@@ -49,13 +51,17 @@ export function unitFor(w: number, h: number): number {
   return Math.min(w, h) / 1080;
 }
 
-/** Quebra texto em linhas que cabem em maxWidth, usando a função de medida do canvas. */
+/**
+ * Quebra texto em linhas que cabem em maxWidth, usando a função de medida do canvas.
+ * Chinês (sem espaço entre palavras) quebra entre caracteres, sem inventar espaço (v0.45.0).
+ */
 export function wrapText(text: string, maxWidth: number, measure: (s: string) => number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
+  const words = text.split(/\s+/).filter(Boolean).flatMap((w) => ([...w].filter(isHanChar).length >= 2 ? hanPieces(w) : [w]));
   const lines: string[] = [];
   let line = '';
   for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
+    const glue = line && isHanChar([...line].pop()!) && isHanChar([...word][0]!) ? '' : ' ';
+    const candidate = line ? `${line}${glue}${word}` : word;
     if (line && measure(candidate) > maxWidth) {
       lines.push(line);
       line = word;
@@ -65,4 +71,18 @@ export function wrapText(text: string, maxWidth: number, measure: (s: string) =>
   }
   if (line) lines.push(line);
   return lines;
+}
+
+/** Um caractere chinês por pedaço; pontuação fica com o de antes. */
+function hanPieces(token: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  for (const ch of token) {
+    if (cur && isHanChar(ch) && !/[\u3000-\u303F\uFF00-\uFFEF]/.test(ch)) {
+      out.push(cur);
+      cur = ch;
+    } else cur += ch;
+  }
+  if (cur) out.push(cur);
+  return out;
 }

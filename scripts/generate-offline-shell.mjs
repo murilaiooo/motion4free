@@ -9,7 +9,8 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const LIMIT_BYTES = 16 * 1024 * 1024;
-const EXCLUDED = /^(?:webllm\.worker|whisper\.worker|ort-wasm)/;
+// fontes das escritas das 10 línguas (chinês ~3,5 MB em pedaços): baixadas só quando o texto pede
+const EXCLUDED = /^(?:webllm\.worker|whisper\.worker|ort-wasm|noto-sans-(?:sc|arabic|devanagari|bengali)-)/;
 const ELIGIBLE = /\.(?:js|css|woff2?)$/i;
 
 export function generateOfflineShell(directory = resolve('dist')) {

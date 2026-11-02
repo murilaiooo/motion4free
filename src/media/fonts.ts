@@ -188,7 +188,7 @@ export function cyrillicSpecs(f: Pick<FontSpec, 'family' | 'weight' | 'style'>):
  * Carrega as fontes do estilo antes de desenhar (tela principal e Worker). Nunca rejeita.
  * `cyrillic`: a legenda tem letras russas; baixa também os arquivos cirílicos (#171).
  */
-export async function ensureFonts(style: StyleDNA | StyleDNA[], opts: { cyrillic?: boolean } = {}): Promise<FontsResult> {
+export async function ensureFonts(style: StyleDNA | StyleDNA[], opts: { cyrillic?: boolean; text?: string } = {}): Promise<FontsResult> {
   const seen = new Set<string>();
   const specs = (Array.isArray(style) ? style : [style]).flatMap(fontsOf).filter((f) => {
     const k = `${f.family}|${f.weight}|${f.style}`;
@@ -198,9 +198,23 @@ export async function ensureFonts(style: StyleDNA | StyleDNA[], opts: { cyrillic
   });
   const cyr = opts.cyrillic ? specs.flatMap(cyrillicSpecs).filter((f, i, all) => all.findIndex((g) => g.family === f.family && g.weight === f.weight && g.style === f.style) === i) : [];
   const jobs = [...specs.map((f) => ({ f, run: load(f) })), ...cyr.map((f) => ({ f, run: load(f, true) }))];
+  // chinês, árabe/urdu, hindi e bengali: fontes de reserva baixadas só quando o texto tem essas letras (v0.45.0)
+  const scripts = opts.text && NEEDS_SCRIPT_FONT.test(opts.text)
+    ? import('./script-fonts').then((m) => m.loadScriptFonts(opts.text!)).catch((err: unknown) => [`fontes de outras escritas: ${String(err)}`])
+    : Promise.resolve([] as string[]);
   const results = await Promise.allSettled(jobs.map((j) => j.run));
   const failed = results.map((r, i) => (r.status === 'rejected' ? `${jobs[i]!.f.family} ${jobs[i]!.f.weight}: ${String(r.reason)}` : '')).filter(Boolean);
+  failed.push(...(await scripts));
   return { ok: failed.length === 0, detail: failed.join('; ') };
+}
+
+/** Letras que pedem fonte de reserva (árabe, devanágari, bengali, chinês e pontuação CJK). */
+const NEEDS_SCRIPT_FONT = /[\u0600-\u06FF\u0750-\u077F\u0900-\u09FF\u2E80-\u9FFF\uF900-\uFAFF\uFB50-\uFDFF\uFE70-\uFEFF\uFF00-\uFFEF]/;
+
+/** Tudo o que a legenda e os textos do vídeo precisam de fonte: cirílico e as outras escritas (#171). */
+export function planFontNeeds(plan: Pick<EditPlan, 'captions' | 'scenes'> & { edits?: unknown; subtitleTranslation?: unknown }): { cyrillic: boolean; text: string } {
+  const text = JSON.stringify([plan.captions, plan.scenes, plan.edits ?? null, plan.subtitleTranslation ?? null]);
+  return { cyrillic: hasCyrillic(text), text };
 }
 
 /** O vídeo tem texto em letras cirílicas (legendas, cenas, textos adicionados ou a faixa original guardada)? */

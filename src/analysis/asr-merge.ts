@@ -31,6 +31,9 @@ export function foldAccents(text: string): string {
  * ("cada" + "j" + "anela") é colado na anterior, para a legenda nunca partir uma palavra.
  * `firstIsNew`: o primeiro pedaço é palavra nova mesmo sem espaço (início de janela).
  */
+/** caractere chinês (ideograma CJK) */
+const HAN = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/;
+
 export function groupPieces(chunks: AsrChunk[], offset = 0, firstIsNew = true): RawWord[] {
   const words: RawWord[] = [];
   for (const [i, c] of chunks.entries()) {
@@ -39,7 +42,10 @@ export function groupPieces(chunks: AsrChunk[], offset = 0, firstIsNew = true): 
     const start = c.timestamp[0] + offset;
     const end = c.timestamp[1] === null ? start + 0.3 : c.timestamp[1] + offset;
     const prev = words[words.length - 1];
-    const isNew = /^\s/.test(c.text) || (firstIsNew && i === 0);
+    // chinês não tem espaço entre palavras: cada pedaço com caractere chinês é uma palavra (tempo próprio)
+    // (a pontuação colada, como "，" ou "。", fica com a palavra de antes)
+    const punct = /^[\p{P}\p{S}]+$/u.test(text);
+    const isNew = /^\s/.test(c.text) || (firstIsNew && i === 0) || (!punct && (HAN.test(text[0]!) || (!!prev && HAN.test(prev.text.slice(-1)))));
     if (prev && !isNew) {
       prev.text += text;
       prev.end = Math.max(prev.end, end);

@@ -1,6 +1,7 @@
 import { AppError } from '../core/errors';
 import type { Caption, EditPlan } from '../core/types';
-import { checkPortugueseTranslation, describeTranslationProblem } from './translation-check';
+import { SENTENCE_END, isHanChar, readableText, visualLength, type LanguageCode } from '../core/languages';
+import { checkTranslation, describeTranslationProblem } from './translation-check';
 
 /** Grupos de fala completos para não traduzir palavras soltas fora de contexto. */
 export interface TranslationGroup {
@@ -19,43 +20,66 @@ export function translationGroups(captions: readonly Caption[]): TranslationGrou
     count = 0;
   };
   for (const caption of [...captions].sort((a, b) => a.start - b.start)) {
-    const text = caption.text.replace(/\s+/g, ' ').trim();
+    const text = readableText(caption.text);
     if (!text) continue;
-    if (current && (caption.start - current.end > 0.65 || current.source.length + text.length + 1 > 110 || caption.end - current.start > 9 || count >= 6)) flush();
+    if (current && (caption.start - current.end > 0.65 || visualLength(current.source) + visualLength(text) + 1 > 110 || caption.end - current.start > 9 || count >= 6)) flush();
     if (current) {
-      current.source += ` ${text}`;
+      // chinês não leva espaço entre legendas
+      current.source += isHanChar([...current.source].pop()!) && isHanChar([...text][0]!) ? text : ` ${text}`;
       current.end = caption.end;
     } else current = { source: text, start: caption.start, end: caption.end };
     count++;
-    if (/[.!?…]["'”’)]?$/.test(text)) flush();
+    if (SENTENCE_END.test(text)) flush();
   }
   flush();
   return result;
 }
 
+/** Pedaços que podem ir para a próxima legenda: palavras, ou um caractere chinês por vez (pontuação grudada). */
+function cueUnits(text: string): string[] {
+  const out: string[] = [];
+  for (const word of text.split(' ')) {
+    if ([...word].filter(isHanChar).length < 2) {
+      out.push(word);
+      continue;
+    }
+    let cur = '';
+    for (const ch of word) {
+      if (cur && isHanChar(ch) && !/[\u3000-\u303F\uFF00-\uFFEF]/.test(ch)) {
+        out.push(cur);
+        cur = ch;
+      } else cur += ch;
+    }
+    if (cur) out.push(cur);
+  }
+  return out.filter(Boolean);
+}
+
 /**
  * Quebra a tradução em frases legíveis; não associa palavras traduzidas a palavras faladas.
  * Confere TODOS os trechos antes de montar qualquer legenda: um trecho em outro idioma, vazio ou com
- * código interno (`>>pt_BR<<`) recusa a faixa inteira (M4F-318), e a legenda original fica como está.
+ * código interno (`>>pt_BR<<`, `__pt__`) recusa a faixa inteira (M4F-318), e a legenda original fica como está.
+ * `maxChars` é medido como aparece na tela (um caractere chinês ocupa duas letras).
  */
-export function translatedCaptions(groups: readonly TranslationGroup[], translations: readonly string[], maxChars = 55): Caption[] {
+export function translatedCaptions(groups: readonly TranslationGroup[], translations: readonly string[], maxChars = 55, to: LanguageCode = 'pt', from: LanguageCode = 'en'): Caption[] {
   if (groups.length !== translations.length) throw new AppError('TRADUCAO_FALHOU', 'quantidade de traduções diferente dos trechos de fala');
   groups.forEach((group, i) => {
-    const problem = checkPortugueseTranslation(group.source, translations[i] ?? '');
+    const problem = checkTranslation(group.source, translations[i] ?? '', to, from);
     if (problem) throw new AppError('TRADUCAO_INVALIDA', `trecho ${i + 1} de ${groups.length}: ${describeTranslationProblem(problem)}`);
   });
   const result: Caption[] = [];
   groups.forEach((group, groupIndex) => {
     const text = translations[groupIndex]!.replace(/\s+/g, ' ').trim();
     const chunks: string[] = [];
-    for (const word of text.split(' ')) {
-      if (word.length > 120) throw new AppError('TRADUCAO_INVALIDA', `trecho ${groupIndex + 1}: palavra longa demais`);
+    for (const unit of cueUnits(text)) {
+      if (visualLength(unit) > 120) throw new AppError('TRADUCAO_INVALIDA', `trecho ${groupIndex + 1}: palavra longa demais`);
       const last = chunks.length - 1;
-      // frase terminada (. ! ? ;) fecha a legenda mesmo com espaço sobrando: leitura por ideia, não por régua
-      if (last >= 0 && chunks[last]!.length + word.length + 1 <= maxChars && !/[.!?;…]$/.test(chunks[last]!)) chunks[last] += ` ${word}`;
-      else chunks.push(word);
+      const glue = last >= 0 && isHanChar([...chunks[last]!].pop()!) && isHanChar([...unit][0]!) ? '' : ' ';
+      // frase terminada (. ! ? ; 。 ।…) fecha a legenda mesmo com espaço sobrando: leitura por ideia, não por régua
+      if (last >= 0 && visualLength(chunks[last]! + glue + unit) <= maxChars && !SENTENCE_END.test(chunks[last]!) && !/[;；]$/.test(chunks[last]!)) chunks[last] += glue + unit;
+      else chunks.push(unit);
     }
-    const weights = chunks.map((s) => s.length);
+    const weights = chunks.map((c) => visualLength(c));
     const total = weights.reduce((n, x) => n + x, 0);
     let cumulative = 0;
     chunks.forEach((chunk, i) => {
@@ -75,21 +99,21 @@ export function translatedCaptions(groups: readonly TranslationGroup[], translat
 export function translatedCueLength(captions: readonly Caption[]): number {
   const texts = captions.map((c) => c.text.trim()).filter(Boolean);
   if (texts.length === 0) return 42;
-  const avg = texts.reduce((n, t) => n + t.length, 0) / texts.length;
+  const avg = texts.reduce((n, t) => n + visualLength(t), 0) / texts.length;
   return Math.round(Math.min(42, Math.max(18, avg * 1.2)));
 }
 
 /** Mantém ambas as faixas no projeto e escolhe qual é mostrada/exportada. */
-export function applySubtitleTranslation(plan: EditPlan, translated: Caption[]): EditPlan {
+export function applySubtitleTranslation(plan: EditPlan, translated: Caption[], from: LanguageCode = 'en', to: LanguageCode = 'pt'): EditPlan {
   const original = plan.subtitleTranslation?.original ?? plan.captions;
   return {
     ...plan,
     captions: translated,
-    subtitleTranslation: { sourceLanguage: 'en', targetLanguage: 'pt-BR', active: 'pt-BR', original, translated },
+    subtitleTranslation: { sourceLanguage: from, targetLanguage: to, active: 'translated', original, translated },
   };
 }
 
-export function selectSubtitleLanguage(plan: EditPlan, active: 'original' | 'pt-BR'): EditPlan {
+export function selectSubtitleLanguage(plan: EditPlan, active: 'original' | 'translated'): EditPlan {
   const track = plan.subtitleTranslation;
   if (!track || track.active === active) return plan;
   return { ...plan, captions: active === 'original' ? track.original : track.translated, subtitleTranslation: { ...track, active } };

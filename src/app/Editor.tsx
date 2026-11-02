@@ -16,7 +16,7 @@ import { commitEdit } from '../editorial/commands';
 import { outputDuration, outputToSource } from '../engine/timeline';
 import type { DecodedAudio } from '../media/audio';
 import { exportInBackground } from '../media/export-client';
-import { ensureEmojiFont, ensureFonts, planNeedsCyrillic } from '../media/fonts';
+import { ensureEmojiFont, ensureFonts, planFontNeeds } from '../media/fonts';
 import { planUsesEmoji } from '../core/emoji';
 import { ZOOM_LIMITS } from '../core/edits';
 import { useAiSettings } from './AiOptions';
@@ -57,8 +57,10 @@ import { KeyframePanel } from './KeyframePanel';
 import { MaskPanel } from './MaskPanel';
 import { planCues, toSrt } from '../editorial/subtitles';
 import { applySubtitleTranslation, selectSubtitleLanguage, translatedCaptions, translatedCueLength, translationGroups } from '../editorial/subtitle-translation';
-import { translateEnglishToPortuguese } from '../translation/en-pt';
-import { sourceLooksEnglish } from '../editorial/translation-check';
+import { translateTexts } from '../translation/translate';
+import { formatBytes } from '../core/bytes';
+import { LANGUAGES, LANGUAGE_CODES, readableText, type LanguageCode } from '../core/languages';
+import { detectTextLanguage } from '../editorial/translation-check';
 import { DEFAULT_SETUP, migrateSetupDefaults, type CreativeSetup } from '../core/production';
 import { StoryboardReview } from './production/StoryboardReview';
 import { applyCreativeFinding } from '../editorial/creative-plan';
@@ -271,7 +273,10 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
   };
   const [editingEl, setEditingEl] = useState<ElementRef | null>(null);
   const [editError, setEditError] = useState<AppError | null>(null);
-  const [translationProgress, setTranslationProgress] = useState<{ done: number; total: number } | null>(null);
+  const [translationProgress, setTranslationProgress] = useState<{ done: number; total: number; loaded?: number; bytes?: number } | null>(null);
+  // idioma em que a legenda está escrita (null = o detectado) e para qual traduzir (v0.45.0: as 10 línguas)
+  const [sourceChoice, setSourceChoice] = useState<LanguageCode | null>(null);
+  const [targetChoice, setTargetChoice] = useState<LanguageCode | null>(null);
   const [translationBusy, setTranslationBusy] = useState(false);
   const [translationError, setTranslationError] = useState<AppError | null>(null);
   const translationAbort = useRef<AbortController | null>(null);
@@ -327,7 +332,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
   // fontes do estilo atual antes de desenhar; as dos outros estilos ficam prontas para a troca ser instantânea
   useEffect(() => {
     let alive = true;
-    void ensureFonts(stylesOf(shown), { cyrillic: planNeedsCyrillic(shown) }).then((r) => {
+    void ensureFonts(stylesOf(shown), planFontNeeds(shown)).then((r) => {
       if (!alive) return;
       setFontError(r.ok ? null : new AppError('FONTE_FALHOU', r.detail));
       playerRef.current?.redraw();
@@ -387,28 +392,42 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
     [history, onHistory],
   );
 
+  const translationOriginals = plan.subtitleTranslation?.original ?? plan.captions;
+  const detectedLanguage = useMemo(() => detectTextLanguage(translationOriginals.map((c) => readableText(c.text)).join(' ')), [translationOriginals]);
+  const sourceLanguage: LanguageCode | null = sourceChoice ?? plan.subtitleTranslation?.sourceLanguage ?? detectedLanguage;
+  const preferredTarget: LanguageCode = targetChoice ?? plan.subtitleTranslation?.targetLanguage ?? (sourceLanguage === 'pt' ? 'en' : 'pt');
+  const targetLanguage: LanguageCode = preferredTarget === sourceLanguage ? (sourceLanguage === 'pt' ? 'en' : 'pt') : preferredTarget;
+
   async function translateCaptions() {
     if (translationAbort.current || !plan.captions.length) return;
     const startedPlan = plan;
     const originals = startedPlan.subtitleTranslation?.original ?? startedPlan.captions;
     const groups = translationGroups(originals);
     if (!groups.length) { setTranslationError(new AppError('TRADUCAO_FALHOU', 'Não há texto para traduzir')); return; }
-    if (!sourceLooksEnglish(groups.map((g) => g.source).join(' '))) { setTranslationError(new AppError('TRADUCAO_ORIGEM')); return; }
+    // o idioma escolhido tem de bater com a escrita da legenda (ex.: "russo" com letras latinas vira lixo)
+    const from = sourceLanguage;
+    const seen = detectTextLanguage(groups.map((g) => g.source).join(' '));
+    if (!from || (seen !== null && seen !== from && LANGUAGES[seen].script !== LANGUAGES[from].script) || (seen === null && LANGUAGES[from].script !== 'latin')) {
+      setTranslationError(new AppError('TRADUCAO_ORIGEM', from ? `escolhido: ${LANGUAGES[from].label}; a legenda parece ${seen ? LANGUAGES[seen].label : 'outro idioma'}` : 'idioma da legenda não reconhecido'));
+      return;
+    }
+    const to = targetLanguage;
     const controller = new AbortController();
     translationAbort.current = controller;
     setTranslationBusy(true);
     setTranslationError(null);
     setTranslationProgress({ done: 0, total: groups.length });
     try {
-      const texts = await translateEnglishToPortuguese(groups.map((g) => g.source), (done, total) => setTranslationProgress({ done, total }), controller.signal);
-      const translated = translatedCaptions(groups, texts, translatedCueLength(originals));
+      const texts = await translateTexts(groups.map((g) => g.source), from, to, (done, total) => setTranslationProgress({ done, total }), controller.signal,
+        (loaded, bytes) => setTranslationProgress((p) => ({ done: p?.done ?? 0, total: p?.total ?? groups.length, loaded, bytes })));
+      const translated = translatedCaptions(groups, texts, translatedCueLength(originals), to, from);
       // Não sobrescrever edições feitas durante o download e a tradução.
       const current = latestTranslationHistory.current;
       if (current.history.present !== startedPlan) {
         setTranslationError(new AppError('TRADUCAO_DESATUALIZADA'));
         return;
       }
-      current.onHistory(commitEdit(current.history, applySubtitleTranslation(startedPlan, translated)));
+      current.onHistory(commitEdit(current.history, applySubtitleTranslation(startedPlan, translated, from, to)));
     } catch (err) {
       if (!controller.signal.aborted) setTranslationError(toAppError(err, 'TRADUCAO_FALHOU'));
     } finally {
@@ -886,19 +905,34 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
                 <div className="set-options">
                   <label className="set-option">
                     <input type="radio" name="subtitle-track" checked={plan.subtitleTranslation.active === 'original'} onChange={() => apply((p) => selectSubtitleLanguage(p, 'original'))} disabled={off || translationBusy} data-testid="subtitle-track-original" />
-                    <span><b>Inglês (original)</b><small className="hint">Mantém a fala em inglês e mostra a transcrição original.</small></span>
+                    <span><b>{LANGUAGES[plan.subtitleTranslation.sourceLanguage].label} (original)</b><small className="hint">Mostra a transcrição da fala, como foi dita.</small></span>
                   </label>
                   <label className="set-option">
-                    <input type="radio" name="subtitle-track" checked={plan.subtitleTranslation.active === 'pt-BR'} onChange={() => apply((p) => selectSubtitleLanguage(p, 'pt-BR'))} disabled={off || translationBusy} data-testid="subtitle-track-pt" />
-                    <span><b>Português (traduzido)</b><small className="hint">Mantém o áudio em inglês e mostra a legenda traduzida.</small></span>
+                    <input type="radio" name="subtitle-track" checked={plan.subtitleTranslation.active === 'translated'} onChange={() => apply((p) => selectSubtitleLanguage(p, 'translated'))} disabled={off || translationBusy} data-testid="subtitle-track-translated" />
+                    <span><b>{LANGUAGES[plan.subtitleTranslation.targetLanguage].label} (traduzido)</b><small className="hint">O áudio continua o mesmo; só a legenda muda de idioma.</small></span>
                   </label>
                 </div>
-              ) : <p className="hint">A legenda acompanha o idioma original da fala. Para áudio em inglês, você também pode criar uma versão em português.</p>}
-              <button type="button" className="sm" onClick={() => void translateCaptions()} disabled={off || translationBusy || !plan.captions.length} data-testid="translate-subtitles">
-                <Captions size={14} aria-hidden /> {plan.subtitleTranslation ? 'Refazer tradução inglês → português' : 'Traduzir inglês → português (beta)'}
+              ) : <p className="hint">A legenda acompanha o idioma da fala. Você pode criar uma versão traduzida para qualquer uma das 10 línguas mais faladas; a original fica guardada.</p>}
+              <div className="set-row" data-testid="translation-languages">
+                <label className="field">
+                  <span>A legenda está em</span>
+                  <select value={sourceLanguage ?? ''} onChange={(e) => setSourceChoice((e.target.value || null) as LanguageCode | null)} disabled={off || translationBusy || !!plan.subtitleTranslation} data-testid="translation-source">
+                    {!sourceLanguage && <option value="">Escolha o idioma</option>}
+                    {LANGUAGE_CODES.map((code) => <option key={code} value={code}>{LANGUAGES[code].label}{code === detectedLanguage ? ' (detectado)' : ''}</option>)}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Traduzir para</span>
+                  <select value={targetLanguage} onChange={(e) => setTargetChoice(e.target.value as LanguageCode)} disabled={off || translationBusy} data-testid="translation-target">
+                    {LANGUAGE_CODES.filter((code) => code !== sourceLanguage).map((code) => <option key={code} value={code}>{LANGUAGES[code].label}</option>)}
+                  </select>
+                </label>
+              </div>
+              <button type="button" className="sm" onClick={() => void translateCaptions()} disabled={off || translationBusy || !plan.captions.length || !sourceLanguage} data-testid="translate-subtitles">
+                <Captions size={14} aria-hidden /> {plan.subtitleTranslation ? 'Refazer a tradução' : 'Traduzir a legenda (beta)'}
               </button>
-              <p className="hint">Tradução local de inglês para português: baixa um modelo gratuito na primeira vez. Nesta etapa, o áudio não muda nem é enviado; revise nomes e expressões antes de exportar. O tempo da tradução é aproximado por frase.</p>
-              {translationBusy && <p role="status" data-testid="translation-progress">{translationProgress?.done ? `Traduzindo ${translationProgress.done} de ${translationProgress.total} trechos…` : 'Carregando o modelo de tradução…'} <button type="button" className="link" onClick={() => translationAbort.current?.abort()}>Cancelar</button></p>}
+              <p className="hint">Tradução neste computador: baixa um modelo gratuito na primeira vez (inglês → português usa um modelo menor e mais afinado; os outros pares usam um modelo de 100 línguas). Nada é enviado. Revise nomes e expressões antes de exportar; o tempo da tradução é aproximado por frase.</p>
+              {translationBusy && <p role="status" data-testid="translation-progress">{translationProgress?.done ? `Traduzindo ${translationProgress.done} de ${translationProgress.total} trechos…` : translationProgress?.bytes ? `Baixando o modelo de tradução: ${formatBytes(translationProgress.loaded ?? 0)} de ${formatBytes(translationProgress.bytes)}…` : 'Carregando o modelo de tradução…'} <button type="button" className="link" onClick={() => translationAbort.current?.abort()}>Cancelar</button></p>}
               {translationError && <div data-testid="translation-error"><ErrorBox error={translationError} kind="warning" onDismiss={() => setTranslationError(null)} /></div>}
             </section>
             <details className="fold" open>

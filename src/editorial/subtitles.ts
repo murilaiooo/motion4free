@@ -1,6 +1,7 @@
 import type { EditPlan } from '../core/types';
 import { outputDuration } from '../engine/timeline';
 import { resolvePlan } from './elements';
+import { readableText } from '../core/languages';
 
 export interface Cue {
   start: number;
@@ -25,7 +26,7 @@ export function srtTime(sec: number): string {
 export function planCues(plan: EditPlan): Cue[] {
   const total = outputDuration(plan.segments);
   const cues = resolvePlan(plan)
-    .captions.map(({ caption }) => ({ start: Math.max(0, caption.start), end: Math.min(total, caption.end), text: caption.text.replace(/\s+/g, ' ').trim() }))
+    .captions.map(({ caption }) => ({ start: Math.max(0, caption.start), end: Math.min(total, caption.end), text: readableText(caption.text) }))
     .filter((c) => c.text && c.end - c.start > 0.01)
     .sort((a, b) => a.start - b.start);
   // uma legenda acaba quando a seguinte começa: os players não mostram duas linhas ao mesmo tempo
