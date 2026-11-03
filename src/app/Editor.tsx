@@ -418,7 +418,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
     setTranslationError(null);
     setTranslationProgress({ done: 0, total: groups.length });
     try {
-      const texts = await translateTexts(groups.map((g) => g.source), from, to, (done, total) => setTranslationProgress({ done, total }), controller.signal,
+      const { texts, model } = await translateTexts(groups.map((g) => g.source), from, to, (done, total) => setTranslationProgress({ done, total }), controller.signal,
         (loaded, bytes) => setTranslationProgress((p) => ({ done: p?.done ?? 0, total: p?.total ?? groups.length, loaded, bytes })));
       const translated = translatedCaptions(groups, texts, translatedCueLength(originals), to, from);
       // Não sobrescrever edições feitas durante o download e a tradução.
@@ -427,7 +427,7 @@ export function Editor({ session, history, onHistory, onFaceTracks, versions, on
         setTranslationError(new AppError('TRADUCAO_DESATUALIZADA'));
         return;
       }
-      current.onHistory(commitEdit(current.history, applySubtitleTranslation(startedPlan, translated, from, to)));
+      current.onHistory(commitEdit(current.history, applySubtitleTranslation(startedPlan, translated, from, to, model)));
     } catch (err) {
       if (!controller.signal.aborted) setTranslationError(toAppError(err, 'TRADUCAO_FALHOU'));
     } finally {

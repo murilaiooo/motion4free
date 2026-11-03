@@ -1,5 +1,5 @@
 import { AppError } from '../core/errors';
-import type { Caption, EditPlan } from '../core/types';
+import type { Caption, EditPlan, TranslationModelRevision } from '../core/types';
 import { SENTENCE_END, isHanChar, readableText, visualLength, type LanguageCode } from '../core/languages';
 import { checkTranslation, describeTranslationProblem } from './translation-check';
 
@@ -104,12 +104,12 @@ export function translatedCueLength(captions: readonly Caption[]): number {
 }
 
 /** Mantém ambas as faixas no projeto e escolhe qual é mostrada/exportada. */
-export function applySubtitleTranslation(plan: EditPlan, translated: Caption[], from: LanguageCode = 'en', to: LanguageCode = 'pt'): EditPlan {
+export function applySubtitleTranslation(plan: EditPlan, translated: Caption[], from: LanguageCode = 'en', to: LanguageCode = 'pt', model?: TranslationModelRevision): EditPlan {
   const original = plan.subtitleTranslation?.original ?? plan.captions;
   return {
     ...plan,
     captions: translated,
-    subtitleTranslation: { sourceLanguage: from, targetLanguage: to, active: 'translated', original, translated },
+    subtitleTranslation: { ...(model && { model }), sourceLanguage: from, targetLanguage: to, active: 'translated', original, translated },
   };
 }
 

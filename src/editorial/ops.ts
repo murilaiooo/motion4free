@@ -228,7 +228,8 @@ export function editCaptionText(plan: EditPlan, captionId: string, text: string)
   const target = plan.captions.find((c) => c.id === captionId);
   if (!target || target.text === clean) return plan;
   assertCaptionEditable(plan, captionId);
-  const update = (captions: Caption[]) => captions.map((c) => (c.id === captionId ? { ...c, text: clean } : c));
+  const correction = plan.subtitleTranslation?.active === 'translated' ? { text: clean, manuallyEdited: true } : { text: clean };
+  const update = (captions: Caption[]) => captions.map((c) => c.id === captionId ? { ...c, ...correction } : c);
   const translation = plan.subtitleTranslation;
   return {
     ...plan,

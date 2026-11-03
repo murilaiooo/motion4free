@@ -13,7 +13,7 @@ export function translateTexts(
   onProgress: (done: number, total: number) => void,
   signal: AbortSignal,
   onDownload: (loaded: number, total: number) => void = () => undefined,
-): Promise<string[]> {
+): Promise<Extract<TranslationFromWorker, { type: 'done' }>> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) { reject(new AppError('TRADUCAO_FALHOU', 'Tradução cancelada')); return; }
     const worker = new Worker(new URL('./translate.worker.ts', import.meta.url), { type: 'module' });
@@ -25,7 +25,7 @@ export function translateTexts(
       const result = event.data;
       if (result.type === 'progress') onProgress(result.done, result.total);
       else if (result.type === 'download') onDownload(result.loaded, result.total);
-      else if (result.type === 'done') { finish(); resolve(result.texts); }
+      else if (result.type === 'done') { finish(); resolve(result); }
       else { finish(); reject(new AppError(result.code, result.message)); }
     };
     const message: TranslationToWorker = { texts: [...texts], from, to };

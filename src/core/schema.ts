@@ -33,7 +33,7 @@ const captionV1 = z.object({
   wordIds: z.array(z.string()),
 });
 
-const caption = captionV1.extend({ wordStarts: z.array(time).max(60), translationCue: z.boolean().optional() });
+const caption = captionV1.extend({ wordStarts: z.array(time).max(60), translationCue: z.boolean().optional(), manuallyEdited: z.boolean().optional() });
 
 const base = { id: z.string().min(1), start: time, end: time };
 
@@ -180,6 +180,7 @@ export const editPlanSchema = z
     semanticCues: semanticCuesSchema.optional(),
     // v0.42–v0.44 gravavam só inglês → 'pt-BR' (active 'pt-BR'); desde a v0.45 qualquer par das 10 línguas
     subtitleTranslation: z.object({
+      model: z.object({ repo: z.string().max(150).regex(/^[\w.-]+\/[\w.-]+$/), revision: z.string().regex(/^[a-f0-9]{40}$/) }).optional(),
       sourceLanguage: z.enum(LANGUAGE_CODES as [LanguageCode, ...LanguageCode[]]),
       targetLanguage: z.union([z.enum(LANGUAGE_CODES as [LanguageCode, ...LanguageCode[]]), z.literal('pt-BR')]).transform((v): LanguageCode => (v === 'pt-BR' ? 'pt' : v)),
       active: z.enum(['original', 'translated', 'pt-BR']).transform((v): 'original' | 'translated' => (v === 'pt-BR' ? 'translated' : v)),

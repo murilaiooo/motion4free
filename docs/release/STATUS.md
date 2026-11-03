@@ -1,5 +1,7 @@
 # Estado real do release Motion4Free — 24/10/2026
 
+**03/11/2026 — #172, candidata v0.45.4.** Nova tradução local registra a revisão de origem e distingue correções manuais. O teste russo → português usa pesos reais e duas frases sintéticas. Teste no Brave: traduza, corrija uma legenda, baixe o SRT, reabra o projeto e alterne para a faixa original.
+
 **03/11/2026 — #171, candidata v0.45.3.** O parser remoto preserva tempos curtos e recusa fala sem tempos válidos (M4F-311). No Brave/Windows, o Whisper base/WASM transcreveu as dez palavras de uma frase sintética em inglês, com tempos positivos em auto e inglês explícito. Faltam amostras humanas multilíngues e avaliação de deriva temporal.
 
 **03/11/2026 — #175, candidata v0.45.2.** Brave/Windows com OPUS-MT q8/WASM traduziu duas legendas sintéticas em inglês para português. SRT e retorno à faixa original conferidos. A revisão dos pesos é fixa. A aceitação no vídeo particular do responsável está pendente.
