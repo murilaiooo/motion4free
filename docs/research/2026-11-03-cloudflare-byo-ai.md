@@ -44,3 +44,45 @@ No site Motion4Free, o rodapé informava v0.45.1 (40ef39e). A resposta HTML tem 
 Separadamente, enviamos OPTIONS com a origem do editor, método POST e cabeçalhos solicitados `authorization,content-type`. A API GraphQL respondeu 400. A rota de inferência com ID de conta fictício respondeu 405. Nenhuma dessas duas respostas forneceu `Access-Control-Allow-Origin`. Não foram enviados áudio, credenciais válidas ou pedidos de inferência. A resposta para a conta fictícia não certifica o comportamento de uma conta habilitada.
 
 O MCP no Codex e a CLI do desenvolvedor têm autenticação própria. O sucesso do login nessas ferramentas não comprova login, inferência ou leitura de consumo pelo navegador do usuário final. Mantemos o provedor experimental fora do produto até a prova da arquitetura na conta de teste.
+
+## Prova autenticada na conta de teste, 03/11/2026
+
+O conector Cloudflare do Codex autenticou uma única conta. A consulta de catálogo retornou o modelo `@cf/meta/m2m100-1.2b`. Uma chamada de inferência com texto sintético, origem `en` e destino `pt`, traduziu “Good morning.” como “Boa manhã”. A API retornou sucesso. A expressão esperada no uso comum brasileiro seria “Bom dia”. O teste demonstra transporte e execução, mas não qualifica o modelo para publicar legendas sem revisão.
+
+A introspecção autenticada confirmou `AccountAiInferenceAdaptiveGroupsSum.totalNeurons` e a dimensão `modelId`. Para consultar o total agregado do dia, usamos a operação abaixo sem dimensão de modelo. As variáveis de tempo são a meia-noite UTC do dia e o instante da consulta. A variável de conta fica fora da documentação e dos logs.
+
+```graphql
+query UsoDoDia($account: String!, $start: Time!, $end: Time!) {
+  viewer {
+    accounts(filter: { accountTag: $account }) {
+      aiInferenceAdaptiveGroups(
+        limit: 1
+        filter: { datetime_geq: $start, datetime_leq: $end }
+      ) {
+        count
+        sum { totalNeurons }
+      }
+    }
+  }
+}
+```
+
+Antes da chamada e na primeira consulta posterior (15:57 UTC), a API retornou a conta com zero linhas agregadas e sem erro. Nesse estado a interface deve indicar que ainda não recebeu um total medido. Calcular 10.000 Neurons restantes a partir de uma lista vazia exibiria uma precisão que a resposta não oferece. A requisição ocorreu pelo conector de desenvolvimento. OAuth público do editor, concordância com o painel e execução via Worker próprio continuam como gates separados.
+
+### Worker temporário com binding de AI
+
+Com autorização do responsável, criamos um Worker exclusivo para o teste e desativamos as URLs de prévia. O endpoint aceitava uma única operação fixa, com frase sintética, origem local exata, validade de dez minutos e credencial aleatória de 256 bits mantida em memória no cliente. O servidor comparava o hash da credencial. Um Durable Object SQLite reservava o uso em transação antes da inferência, para impedir repetição inclusive entre instâncias.
+
+| Tentativa | Resultado observado |
+| --- | --- |
+| POST sem credencial enviado pelo Brave | HTTP 401 |
+| POST com credencial e origem incorreta pelo cliente HTTP de teste | HTTP 403 |
+| POST pelo Brave, com preflight, origem permitida e credencial válida | HTTP 200; para “Thank you.”, a saída foi “Obrigado você.” |
+| Segundo POST com a mesma credencial | HTTP 409 |
+| Limpeza | Rota desativada, Worker excluído, consulta posterior HTTP 404 / código Cloudflare 10007 |
+
+O teste executou o binding real a partir de uma página de QA local. Demonstra que o Worker do usuário pode intermediar a operação protegida; a versão publicada do editor ainda não consegue chamá-lo com sua CSP atual. A credencial descartável do laboratório não constitui onboarding público. A saída pouco natural do segundo exemplo reforça a necessidade de avaliação bilíngue antes de oferecer esse modelo para legendas.
+
+Às 15:59:54 UTC, o agregado do dia passou a reportar uma operação e 0,3105 Neuron (arredondado). Havia duas respostas de inferência bem-sucedidas no teste. Uma consulta logo após o processamento, portanto, não representa saldo disponível em tempo real.
+
+A listagem posterior dos namespaces Durable Objects não encontrou nenhum associado ao Worker temporário. Uma nova leitura de analytics sofreu limitação de taxa com orientação explícita de aguardar cinco minutos. O futuro painel deve preservar o último valor e seu horário durante essa espera.
