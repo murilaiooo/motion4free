@@ -70,3 +70,35 @@ test('Portuguese captions can be translated to any of the 10 languages through t
   expect(requested.some((u) => u.includes('opus-mt'))).toBe(false);
   expect(await page.evaluate(() => JSON.stringify((window as any).__m4f.plan.captions))).toBe(before);
 });
+
+test('real OPUS model translates English captions into Portuguese (#175)', async ({ page }, info) => {
+  test.skip(process.env.M4F_REAL_TRANSLATION !== '1', 'Opt in to downloading OPUS-MT weights');
+  test.setTimeout(360_000);
+  const modelRequests: string[] = [];
+  page.context().on('request', (request) => {
+    if (request.url().includes('Xenova/opus-mt-en-ROMANCE/resolve/')) modelRequests.push(request.url());
+  });
+  await page.goto('/');
+  await pickVideos(page, 'e2e/fixtures/fala-com-pausas.webm');
+  await expect(page.getByTestId('out-duration')).toBeVisible({ timeout: 60_000 });
+  const ids = await page.evaluate(() => (window as any).__m4f.plan.captions.map((c: { id: string }) => c.id) as string[]);
+  const inputs = ['This is bizarre.', 'How are you today?'];
+  for (const [index, id] of ids.entries()) await editCaption(page, id, inputs[index % inputs.length]!);
+  const captions = () => page.evaluate(() => (window as any).__m4f.plan.captions.map((c: { text: string }) => c.text) as string[]);
+  const original = await captions();
+  await page.getByTestId('translate-subtitles').click();
+  const translated = page.getByTestId('subtitle-track-translated');
+  await expect(translated.or(page.getByTestId('translation-error'))).toBeVisible({ timeout: 300_000 });
+  expect(await page.getByTestId('translation-error').allTextContents()).toEqual([]);
+  await expect(translated).toBeChecked();
+  const cues = await captions();
+  await info.attach('synthetic-translations', { body: JSON.stringify(cues), contentType: 'application/json' });
+  expect(modelRequests.some((url) => url.includes('/9d2ba69ac80c8e8453c3d9a1e2323a0e7b8ca3cd/onnx/'))).toBe(true);
+  expect(cues).toEqual(['Isso é bizarro.', 'Como você está hoje?']);
+  const download = page.waitForEvent('download');
+  await page.getByTestId('download-srt').click();
+  const srt = await (await import('node:fs/promises')).readFile((await (await download).path())!, 'utf8');
+  for (const cue of cues) expect(srt).toContain(cue);
+  await page.getByTestId('subtitle-track-original').check();
+  expect(await captions()).toEqual(original);
+});

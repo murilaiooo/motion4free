@@ -37,7 +37,8 @@ recebe o idioma, copia os pedaços para a saída e escolhe o idioma mais prováv
 
 - A detecção de idioma usa palavras e sinais exclusivos de cada língua; em frases de uma ou duas palavras ela
   é fraca de propósito e só recusa com evidência clara. Não substitui revisão humana do sentido.
-- O caminho de sucesso com o modelo real **não foi executado** no ambiente na nuvem (huggingface.co bloqueado
-  pela rede do ambiente). A falha de download foi testada no navegador (`e2e/issue175-translation.spec.ts`).
-  A #175 só fecha depois do teste com o modelo real e do OK do responsável no vídeo dele.
-- A versão do modelo ainda é `main` no Hugging Face; fixar o commit exato junto com o teste real.
+- Em 03/11/2026, o Brave no Windows executou inferência real na revisão fixa
+  `9d2ba69ac80c8e8453c3d9a1e2323a0e7b8ca3cd`. O caminho de cache inclui a revisão.
+  Quem já baixou os pesos por `main` precisa de conexão para o primeiro uso desta versão.
+- O teste sintético complementa a regressão de falha de download. A aceitação no vídeo
+  original do responsável continua pendente para encerrar a #175.

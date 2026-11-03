@@ -1,3 +1,7 @@
+## 0.45.2 — Tradução local EN → PT (#175)
+
+- O tradutor OPUS-MT usa a revisão fixa do modelo na primeira transferência e nas seguintes. Teste opcional no Brave cobre inferência real, SRT e retorno às legendas originais.
+
 ## 0.31.0 — UNTESTED / AWAITING QA
 
 - #29: structural storyboard and allowlisted current-edit graph; bounded repetition review with explicit undoable action.
