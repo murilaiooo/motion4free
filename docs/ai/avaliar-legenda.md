@@ -25,3 +25,7 @@ Copie para o feedback: o modelo, o acerto, a duração do vídeo, o tempo gasto 
 - WER puro em `src/analysis/wer.ts` (`wordErrorRate`, `align`, `topErrors`), testado em `tests/wer.test.ts`. Normalização: minúsculas, NFC, sem pontuação, hífen e barra separam palavras; acentos contam (opção `ignoreAccents`). Números escritos ("três" × "3") contam como erro: na referência, escreva como o Whisper costuma escrever, ou anote à parte.
 - A página está em `src/app/Evaluate.tsx`: mesmo caminho do editor (silêncios → `planAsr` → Worker → `mergeWindows` → `cleanTranscript`).
 - O ambiente de desenvolvimento não alcança o Hugging Face nem tem placa de vídeo: os números de acerto e tempo só existem depois de rodar no computador de alguém. Não publicar números sem esse teste.
+
+### Regressão local de inglês (#171)
+
+O teste opcional `e2e/issue171-real-asr.spec.ts` gera um vídeo curto com FFmpeg/flite e usa a página de avaliação com Whisper base no processador. Rode no Brave com `M4F_REAL_ASR=1`, `CHROMIUM_PATH` apontando para o executável e `npm run e2e -- e2e/issue171-real-asr.spec.ts`. A primeira execução baixa o modelo. A referência é a mesma nos modos automático e inglês. O teste verifica o texto e os intervalos positivos das dez palavras. Ele não mede deriva em relação a uma anotação humana.
