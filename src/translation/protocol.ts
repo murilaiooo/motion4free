@@ -8,7 +8,7 @@ import type { LanguageCode } from '../core/languages';
  * - `m2m`: Meta M2M100 418M (MIT), de qualquer uma para qualquer uma das 10 línguas (ADR-0044).
  */
 export const TRANSLATION_MODELS = {
-  opus: { repo: 'Xenova/opus-mt-en-ROMANCE', revision: 'main' },
+  opus: { repo: 'Xenova/opus-mt-en-ROMANCE', revision: '9d2ba69ac80c8e8453c3d9a1e2323a0e7b8ca3cd' },
   m2m: { repo: 'Xenova/m2m100_418M', revision: 'main' },
 } as const;
 export type TranslationEngine = keyof typeof TRANSLATION_MODELS;
