@@ -1,3 +1,7 @@
+## 0.45.3 — Tempos de palavras na transcrição por API (#171)
+
+- Preserva intervalos curtos e coloca palavras em ordem pelo tempo real. Descarta tempos fora do áudio. Quando há fala mas nenhum intervalo válido, usa o erro de tempos ausentes já existente e respeita a preferência de reserva local.
+
 ## 0.45.2 — Tradução local EN → PT (#175)
 
 - O tradutor OPUS-MT usa a revisão fixa do modelo na primeira transferência e nas seguintes. Teste opcional no Brave cobre inferência real, SRT e retorno às legendas originais.

@@ -1,5 +1,7 @@
 # Estado real do release Motion4Free — 24/10/2026
 
+**03/11/2026 — #171, candidata v0.45.3.** O parser remoto preserva tempos curtos e recusa fala sem tempos válidos (M4F-311). No Brave/Windows, o Whisper base/WASM transcreveu as dez palavras de uma frase sintética em inglês, com tempos positivos em auto e inglês explícito. Faltam amostras humanas multilíngues e avaliação de deriva temporal.
+
 **03/11/2026 — #175, candidata v0.45.2.** Brave/Windows com OPUS-MT q8/WASM traduziu duas legendas sintéticas em inglês para português. SRT e retorno à faixa original conferidos. A revisão dos pesos é fixa. A aceitação no vídeo particular do responsável está pendente.
 
 **Atualização 01/11/2026 — integração v0.37.1 autorizada pelo responsável:** as PRs #162/#164 serão integradas juntas, preservando a v0.36/GPU. **1845 testes unitários, 136 E2E Brave (2 skips opcionais), TypeScript/build e MP4 H.264/AAC passaram.** A falha de portabilidade de notices mencionada abaixo foi corrigida preservando copyright. [Evidência, autorização, limites e roteiro](INTEGRATION-PR162-164.md). Os registros de 24/10 abaixo são históricos; esta autorização de manutenção não equivale à certificação de beta ou qualidade humana de IA.

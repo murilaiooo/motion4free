@@ -107,19 +107,19 @@ export function parseVerboseWords(json: unknown, chunk: AsrChunk): RawWord[] | n
   if (!json || typeof json !== 'object') return null;
   const words = (json as { words?: unknown }).words;
   if (!Array.isArray(words)) return null;
-  const length = chunk.end - chunk.start;
+  const transcript = (json as { text?: unknown }).text;
   const out: RawWord[] = [];
-  let last = chunk.start;
   for (const item of words) {
     if (!item || typeof item !== 'object') continue;
     const { word, start, end } = item as { word?: unknown; start?: unknown; end?: unknown };
-    if (typeof word !== 'string' || typeof start !== 'number' || typeof end !== 'number' || !Number.isFinite(start) || !Number.isFinite(end)) continue;
+    if (typeof word !== 'string' || !word.trim()) continue;
     const text = word.trim();
-    if (!text) continue;
-    const s = Math.max(last, chunk.start + Math.min(Math.max(0, start), length));
-    const e = Math.max(s + 0.01, chunk.start + Math.min(Math.max(0, end), length));
-    out.push({ text, start: s, end: Math.min(e, chunk.end) });
-    last = s;
+    if (typeof start !== 'number' || typeof end !== 'number' || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+    const sourceStart = Math.max(chunk.start, chunk.start + start);
+    const sourceEnd = Math.min(chunk.end, chunk.start + end);
+    if (sourceEnd <= sourceStart) continue;
+    out.push({ text, start: sourceStart, end: sourceEnd });
   }
-  return out;
+  if (out.length === 0 && (words.length > 0 || (typeof transcript === 'string' && transcript.trim()))) return null;
+  return out.sort((a, b) => a.start - b.start);
 }

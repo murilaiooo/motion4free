@@ -32,8 +32,40 @@ describe('issue #127: transcrição por API', () => {
   });
 
   it('desloca os tempos para o vídeo e nunca inventa tempos', () => {
-    const words = parseVerboseWords({ words: [{ word: ' Olá', start: 0.1, end: 0.4 }, { word: 'mundo', start: 0.3, end: 0.9 }, { word: '', start: 1, end: 2 }, { word: 'x', start: 'a', end: 1 }] }, { start: 100, end: 110 });
+    const words = parseVerboseWords({ words: [{ word: ' Olá', start: 0.1, end: 0.4 }, { word: 'mundo', start: 0.3, end: 0.9 }, { word: '', start: 1, end: 2 }] }, { start: 100, end: 110 });
     expect(words).toEqual([{ text: 'Olá', start: 100.1, end: 100.4 }, { text: 'mundo', start: 100.3, end: expect.closeTo(100.9) }]);
     expect(parseVerboseWords({ text: 'sem palavras' }, { start: 0, end: 5 })).toBeNull();
+  });
+});
+
+describe('source word timing from multilingual providers (#171)', () => {
+  const chunk = { start: 100, end: 105 };
+  it('keeps genuine short words and clips intervals to the recorded chunk', () => {
+    const words = [
+      { word: 'Привет', start: -0.1, end: 0.2 },
+      { word: 'fim', start: 4, end: 6 },
+      { word: 'fora', start: 8, end: 9 },
+      { word: 'I', start: 1, end: 1.005 },
+    ];
+    expect(parseVerboseWords({ words }, chunk)).toEqual([
+      { text: 'Привет', start: 100, end: 100.2 },
+      { text: 'I', start: 101, end: 101.005 },
+      { text: 'fim', start: 104, end: 105 },
+    ]);
+  });
+
+  it('never accepts a partial transcript that drops a spoken negation', () => {
+    for (const [start, end] of [[1, 1], [2, 1], ['invalid', 1]]) {
+      const words = [{ word: 'do', start: 0, end: 0.5 }, { word: 'not', start, end }, { word: 'go', start: 2, end: 3 }];
+      expect(parseVerboseWords({ words }, chunk)).toBeNull();
+    }
+  });
+
+  it('distinguishes silence from nonempty speech with unusable timestamps', () => {
+    expect(parseVerboseWords({ words: [], text: '' }, chunk)).toEqual([]);
+    expect(parseVerboseWords({ words: [], text: 'fala' }, chunk)).toBeNull();
+    for (const [start, end] of [[1, 1], [2, 1], [-2, -1], [5, 6]]) {
+      expect(parseVerboseWords({ words: [{ word: 'fala', start, end }] }, chunk)).toBeNull();
+    }
   });
 });
