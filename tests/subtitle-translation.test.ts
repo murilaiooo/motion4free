@@ -59,6 +59,17 @@ describe('idioma e tradução de legendas', () => {
     expect(selectSubtitleLanguage(backToPt, 'original').captions[0]!.text).toBe('Corrected English');
   });
 
+  it('keeps the producing model revision through save and edit without backfilling old tracks', () => {
+    const plan = autoEdit(4, [], wordsFrom('Hello world how are you today', 0.4));
+    const translated = [caption('translation', 'Olá mundo', 0, 1)];
+    const model = { repo: 'Xenova/opus-mt-en-ROMANCE', revision: '9d2ba69ac80c8e8453c3d9a1e2323a0e7b8ca3cd' };
+    const track = applySubtitleTranslation(plan, translated, 'en', 'pt', model);
+    const edited = editCaptionText(track, 'translation', 'Olá!');
+    expect(editPlanSchema.parse(edited).subtitleTranslation?.model).toEqual(model);
+    expect(editPlanSchema.parse(edited).subtitleTranslation?.translated[0]?.manuallyEdited).toBe(true);
+    expect(track.subtitleTranslation?.translated[0]?.manuallyEdited).toBeUndefined();
+    expect(editPlanSchema.parse(applySubtitleTranslation(plan, translated)).subtitleTranslation?.model).toBeUndefined();
+  });
   it('revisão da linha do tempo cancela a tradução antiga e preserva a fonte em inglês', () => {
     const words = wordsFrom('Hello world how are you today', 0.4);
     const base = autoEdit(4, [], words);

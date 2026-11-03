@@ -41,3 +41,9 @@ A língua de origem é reconhecida pela escrita e, nas latinas, por palavras exc
 - A qualidade real do Whisper e do M2M100 nessas línguas não foi medida: o ambiente de desenvolvimento não alcança o Hugging Face. Isso precisa de vídeos reais e de revisão humana por língua.
 - O tamanho exato do download do M2M100 em int8 não foi conferido. A tela mostra os bytes reais durante o download.
 - O M2M100 418M é um modelo pequeno: em frases idiomáticas ele erra mais que o OPUS-MT. A faixa traduzida é marcada como beta e a original fica guardada.
+
+## Verificação posterior em 03/11/2026
+
+O Brave no Windows carregou o M2M100 q8 e traduziu duas frases sintéticas de russo para português. “Доброе утро.” saiu como “Boa manhã.” e “Большое спасибо.” como “Muito obrigado.”. A primeira expressão pede revisão para “Bom dia.”. Essa amostra não qualifica outros pares nem legendas longas. A partir da v0.45.4 os pesos usam a revisão fixa `9c374f0b7aca709787cea97b047bfbbd1559d177`.
+
+A faixa guarda o repositório e a revisão que o Worker reportou no resultado final. Corrigir uma legenda traduzida marca a legenda individual como editada manualmente. Faixas antigas sem esses campos continuam válidas; o editor não atribui retrospectivamente um modelo a elas.

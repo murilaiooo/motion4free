@@ -41,11 +41,20 @@ export interface Caption {
   wordStarts: number[];
   /** Tradução de frase: os tempos pertencem à frase, não a cada palavra traduzida. */
   translationCue?: boolean;
+  /** A pessoa corrigiu o texto desta legenda traduzida. */
+  manuallyEdited?: boolean;
 }
 
 /** Faixas de legenda preservadas para alternar entre áudio inglês e texto português. */
 /** Faixa traduzida guardada ao lado da original (v0.42; qualquer par das 10 línguas desde a v0.45). */
+export interface TranslationModelRevision {
+  repo: string;
+  revision: string;
+}
+
 export interface SubtitleTranslation {
+  /** Modelo que gerou a faixa; ausente em projetos anteriores à v0.45.4. */
+  model?: TranslationModelRevision;
   sourceLanguage: LanguageCode;
   targetLanguage: LanguageCode;
   active: 'original' | 'translated';

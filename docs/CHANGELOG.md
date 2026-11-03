@@ -1,3 +1,7 @@
+## 0.45.4 — Origem das legendas traduzidas (#172)
+
+- Projetos novos ou antigos que gerarem uma tradução local passam a guardar o nome e a revisão exata do modelo. O M2M100 usa pesos fixos; a primeira tradução multilíngue após atualizar precisa de conexão para baixá-los. Faixas anteriores continuam legíveis e editáveis.
+
 ## 0.45.3 — Tempos de palavras na transcrição por API (#171)
 
 - Preserva intervalos curtos e coloca palavras em ordem pelo tempo real. Descarta tempos fora do áudio. Quando há fala mas nenhum intervalo válido, usa o erro de tempos ausentes já existente e respeita a preferência de reserva local.

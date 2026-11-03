@@ -1,3 +1,4 @@
+import type { TranslationModelRevision } from '../core/types';
 import type { LanguageCode } from '../core/languages';
 
 /** Mensagens entre o editor e o Worker do tradutor local (qualquer par das 10 línguas, v0.45.0). */
@@ -9,7 +10,7 @@ import type { LanguageCode } from '../core/languages';
  */
 export const TRANSLATION_MODELS = {
   opus: { repo: 'Xenova/opus-mt-en-ROMANCE', revision: '9d2ba69ac80c8e8453c3d9a1e2323a0e7b8ca3cd' },
-  m2m: { repo: 'Xenova/m2m100_418M', revision: 'main' },
+  m2m: { repo: 'Xenova/m2m100_418M', revision: '9c374f0b7aca709787cea97b047bfbbd1559d177' },
 } as const;
 export type TranslationEngine = keyof typeof TRANSLATION_MODELS;
 
@@ -25,5 +26,5 @@ export type TranslationErrorCode = 'TRADUCAO_FALHOU' | 'TRADUCAO_MODELO' | 'TRAD
 export type TranslationFromWorker =
   | { type: 'progress'; done: number; total: number }
   | { type: 'download'; loaded: number; total: number }
-  | { type: 'done'; texts: string[] }
+  | { type: 'done'; texts: string[]; model: TranslationModelRevision }
   | { type: 'error'; code: TranslationErrorCode; message: string };

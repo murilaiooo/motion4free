@@ -114,7 +114,7 @@ self.onmessage = async (event: MessageEvent<TranslationToWorker>) => {
       output.push(accepted);
       send({ type: 'progress', done: i + 1, total: texts.length });
     }
-    send({ type: 'done', texts: output });
+    send({ type: 'done', texts: output, model: TRANSLATION_MODELS[engine] });
   } catch (err) {
     send({ type: 'error', code: 'TRADUCAO_FALHOU', message: err instanceof Error ? err.message.slice(0, 350) : 'Falha ao traduzir legendas' });
   } finally {
